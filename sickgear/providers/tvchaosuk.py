@@ -28,7 +28,6 @@ from bs4_parser import BS4Parser
 from dateutil.parser import parse
 
 from _23 import unquote_plus
-from six import iteritems
 
 
 class TVChaosUKProvider(generic.TorrentProvider):
@@ -38,7 +37,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         self.url_base = 'https://tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login',
+                     'login_action': f'{self.url_base}login',
                      'search': self.url_base + 'torrents/filter?%s' % '&'.join(
                          ['search=%s', 'page=0', 'tmdb=', 'imdb=', 'tvdb=', 'description=', 'uploader=', 'view=list',
                           'start_year=', 'end_year=', 'sorting=created_at', 'direction=desc', 'qty=100', '_token=%s',
@@ -76,8 +75,8 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
-            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
+            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_string = unquote_plus(search_string)
@@ -101,7 +100,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                         except (BaseException, Exception):
                             pass
                 if attempts:
-                    logger.log('%s %s after %s attempts' % (mode, fetch, attempts+1))
+                    logger.log(f'{mode} {fetch} after {attempts + 1} attempts')
 
                 cnt = len(items[mode])
                 try:
@@ -149,7 +148,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     del soup
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string.replace('%', '%%'), self.name)['Cache' == mode])
+                                 (f'search string: {search_string.replace("%", "%%")}', self.name)['Cache' == mode])
 
                 if mode in 'Season' and len(items[mode]):
                     break
@@ -189,7 +188,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
             new_parts[2] = ('E%02d', ' Pack %d')[any([re.search('(?i)season|series', title),
                                                       mode in 'Season'])] % new_parts[2]
             sxe_build = 'S%02d%s' % tuple(new_parts[1:3])
-            title = '%s`%s`%s' % (new_parts[0], sxe_build, new_parts[-1])
+            title = f'{new_parts[0]}`{sxe_build}`{new_parts[-1]}'
         for yr in years:
             # noinspection RegExpRedundantEscape
             title = re.sub(r'\{\{yr\}\}', yr, title, count=1)
@@ -201,28 +200,28 @@ class TVChaosUKProvider(generic.TorrentProvider):
             try:
                 dout = parse(''.join(d[1:4])).strftime('%Y-%m-%d')
                 dnew = dout[0: not any(d[2]) and 4 or not any(d[1]) and 7 or len(dout)]
-                title = title.replace(''.join(d), '%s%s%s' % (('', ' ')[1 < len(d[0])], dnew, ('', ' ')[1 < len(d[4])]))
+                title = title.replace(''.join(d), f'{("", " ")[1 < len(d[0])]}{dnew}{("", " ")[1 < len(d[4])]}')
             except (BaseException, Exception):
                 pass
         if dated:
             add_pad = re.findall(r'((?:19|20)\d\d[-]\d\d[-]\d\d)([\w\W])', title)
             if any(add_pad) and add_pad[0][1] not in [' ', '.']:
                 title = title.replace(''.join(
-                    add_pad[0]), '%s %s' % (add_pad[0][0], add_pad[0][1]))
+                    add_pad[0]), f'{add_pad[0][0]} {add_pad[0][1]}')
             title = re.sub(r'(?sim)(.*?)(?:Episode|Season).\d+.(.*)', r'\1\2', title)
 
         t = ['']
         bl = r'[*\[({]+\s*'
         br = r'\s*[})\]*]+'
-        title = re.sub('(?i)(.*?)(%sproper%s)(.*)' % (bl, br), r'\1\3\2', title)
+        title = re.sub(f'(?i)(.*?)({bl}proper{br})(.*)', r'\1\3\2', title)
         for r in (r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?'):
-            m = re.findall('(.*%s)(.*)' % r, title)
+            m = re.findall(f'(.*{r})(.*)', title)
             if any(m) and len(m[0][0]) > len(t[0]):
                 t = m[0]
         t = ([title], t)[any(t)]
 
         tags = [re.findall(x, t[-1], flags=re.X) for x in
-                ('(?i)%sProper%s|\bProper\b$' % (bl, br),
+                (f'(?i){bl}Proper{br}|\x08Proper\x08$',
                  r'(?i)(?:\d{3,4}(?:[pi]|hd)|hd(?:tv)?\s*\d{3,4}(?:[pi])?)',
                  '''
                  (?i)(hr.ws.pdtv|blu.?ray|hddvd|
@@ -239,11 +238,11 @@ class TVChaosUKProvider(generic.TorrentProvider):
             ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
         title = re.sub(r'([hx]26[45])p', r'\1', title)
         for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
-                  ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
+                  (f'(?i){bl}(Proper){br}', r'`\1`'), (rf'{bl}\s*{br}', '`')]:
             title = re.sub(r[0], r[1], title)
 
         title = re.sub(r'[][]', '', title)
-        title = '%s%s-nogrp' % (('', t[0])[1 < len(t)], title)
+        title = f'{("", t[0])[1 < len(t)]}{title}-nogrp'
         for r in [(r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', ' ')]:
             title = re.sub(r[0], r[1], title)
 
@@ -264,7 +263,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
             try:
                 sxxexx_r = r'(?i)S\d\d+E\d\d+'
                 if dnew and re.search(sxxexx_r, title):
-                    titles += [re.sub(sxxexx_r, dnew, re.sub(r'[_.\-\s]?%s' % dnew, '', title))]
+                    titles += [re.sub(sxxexx_r, dnew, re.sub(rf'[_.\-\s]?{dnew}', '', title))]
             except (BaseException, Exception):
                 pass
 
@@ -288,10 +287,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
             end = [item]
             if pre_post and (sxe or dated):
                 divider = ':'
-                tail = re.findall(r'(?i)^([^%s]+)(.*)' % divider, item)[0]
+                tail = re.findall(rf'(?i)^([^{divider}]+)(.*)', item)[0]
                 if tail[1]:  # show name divider found
                     parts = [tail[0].strip()]
-                    end = [tail[1].lstrip('%s ' % divider)]
+                    end = [tail[1].lstrip(f'{divider} ')]
                 else:
                     parts = [pre_post[0][0]]
                     end = [pre_post[0][1]]
@@ -326,7 +325,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
             super(TVChaosUKProvider, self)._episode_strings(
                 ep_obj, scene=False, date_detail=(
                     lambda date: ['%s %s %s'.lstrip('0') % x for x in
-                                  [((d[-1], '%s' % m, y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
+                                  [((d[-1], f'{m}', y), (d, m, y)) + (((d, mf, y),), ())[m == mf]
                                    for (d, m, mf, y) in [(date.strftime(x) for x in ('%d', '%b', '%B', '%Y'))]][0]]),
                 ep_detail=(lambda e: [naming_ep_type[2] % e] + (
                     [], ['%(episodenumber)d of' % e])[1 == try_int(e.get('seasonnumber'))]), **kwargs)

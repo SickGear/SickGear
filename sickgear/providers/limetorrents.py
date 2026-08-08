@@ -33,7 +33,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'LimeTorrents')
 
         self.url_home = ['https://www.limetorrents.cc/'] + \
-                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
+                        [f'https://{b64decodestring(x)}/' for x in [''.join(x) for x in [
                             [re.sub(r'[F\sp]+', '', x[::-1]) for x in [
                                 'XZFtlpGb', 'lJn pcvR', 'nFLpzRnb', 'v xpmYuV', 'CZlt F2Y', '=F QXYs5']],
                             [re.sub(r'[K\sP]+', '', x[::-1]) for x in [

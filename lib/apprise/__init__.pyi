@@ -13,6 +13,7 @@ from .manager_config import ConfigurationManager as ConfigurationManager
 from .manager_plugins import NotificationManager as NotificationManager
 from .persistent_store import PersistentStore as PersistentStore
 from .plugins.base import NotifyBase as NotifyBase
+from .tag import AppriseTag as AppriseTag
 from .url import PrivacyMode as PrivacyMode, URLBase as URLBase
 
-__all__ = ['CONFIG_FORMATS', 'CONTENT_INCLUDE_MODES', 'CONTENT_LOCATIONS', 'LOGGER_NAME', 'NOTIFY_FORMATS', 'NOTIFY_IMAGE_SIZES', 'NOTIFY_TYPES', 'OVERFLOW_MODES', 'PERSISTENT_STORE_MODES', 'PERSISTENT_STORE_STATES', 'Apprise', 'AppriseAsset', 'AppriseAttachment', 'AppriseConfig', 'AppriseLocale', 'AttachBase', 'AttachmentManager', 'ConfigBase', 'ConfigFormat', 'ConfigurationManager', 'ContentIncludeMode', 'ContentLocation', 'LogCapture', 'NotificationManager', 'NotifyBase', 'NotifyFormat', 'NotifyImageSize', 'NotifyType', 'OverflowMode', 'PersistentStore', 'PersistentStoreMode', 'PrivacyMode', 'URLBase', 'decorators', 'exception', 'logger', 'logging']
+__all__ = ['CONFIG_FORMATS', 'CONTENT_INCLUDE_MODES', 'CONTENT_LOCATIONS', 'LOGGER_NAME', 'NOTIFY_FORMATS', 'NOTIFY_IMAGE_SIZES', 'NOTIFY_TYPES', 'OVERFLOW_MODES', 'PERSISTENT_STORE_MODES', 'PERSISTENT_STORE_STATES', 'Apprise', 'AppriseAsset', 'AppriseAttachment', 'AppriseConfig', 'AppriseLocale', 'AppriseTag', 'AttachBase', 'AttachmentManager', 'ConfigBase', 'ConfigFormat', 'ConfigurationManager', 'ContentIncludeMode', 'ContentLocation', 'LogCapture', 'NotificationManager', 'NotifyBase', 'NotifyFormat', 'NotifyImageSize', 'NotifyType', 'OverflowMode', 'PersistentStore', 'PersistentStoreMode', 'PrivacyMode', 'URLBase', 'decorators', 'exception', 'logger', 'logging']

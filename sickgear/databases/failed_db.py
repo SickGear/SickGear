@@ -18,8 +18,6 @@
 from .. import db
 from ..common import Quality
 
-from six import iteritems
-
 MIN_DB_VERSION = 1
 MAX_DB_VERSION = 2
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
@@ -83,13 +81,13 @@ class AddIndexerToTables(HistoryStatus):
     def execute(self):
         self.add_column('history', 'indexer', 'NUMERIC')
 
-        main_db = db.DBConnection('sickbeard.db')
-        show_ids = {s['prod_id']: s['tv_id'] for s in
-                    main_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id FROM tv_shows')}
-        cl = []
-        for s_id, i in iteritems(show_ids):
-            cl.append(['UPDATE history SET indexer = ? WHERE showid = ?', [i, s_id]])
-        self.connection.mass_action(cl)
+        with db.DBConnection('sickbeard.db') as sg_db:
+            show_ids = {s['prod_id']: s['tv_id'] for s in
+                        sg_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id FROM tv_shows')}
+        sql_l = []
+        for s_id, i in show_ids.items():
+            sql_l.append(['UPDATE history SET indexer = ? WHERE showid = ?', [i, s_id]])
+        self.connection.mass_action(sql_l)
 
         if self.connection.has_table('backup_history'):
             self.connection.action(

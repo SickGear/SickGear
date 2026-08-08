@@ -101,7 +101,6 @@ class ConfigFile(ConfigBase):
                 self.max_buffer_size > 0
                 and os.path.getsize(self.path) > self.max_buffer_size
             ):
-
                 # Content exceeds maximum buffer size
                 self.logger.error(
                     "File size exceeds maximum allowable buffer length"

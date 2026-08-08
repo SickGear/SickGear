@@ -22,12 +22,12 @@ class NotifyTwitter(NotifyBase):
     setup_url: str
     attachment_support: bool
     title_maxlen: int
-    twitter_lookup: str
-    twitter_whoami: str
-    twitter_dm: str
     twitter_tweet: str
-    __tweet_non_gif_images_batch: int
+    twitter_whoami: str
+    twitter_lookup: str
+    twitter_dm: str
     twitter_media: str
+    __tweet_non_gif_images_batch: int
     request_rate_per_sec: int
     ratelimit_reset: Incomplete
     ratelimit_remaining: int
@@ -49,17 +49,21 @@ class NotifyTwitter(NotifyBase):
     def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
         """Perform Twitter Notification."""
     def _send_tweet(self, body, title: str = '', notify_type=..., attachments=None, **kwargs):
-        """Twitter Public Tweet."""
+        """Twitter Public Tweet via X API v2."""
     def _send_dm(self, body, title: str = '', notify_type=..., attachments=None, **kwargs):
-        """Twitter Direct Message."""
-    def _whoami(self, lazy: bool = True):
-        """Looks details of current authenticated user."""
-    def _user_lookup(self, screen_name, lazy: bool = True):
-        """Looks up a screen name and returns the user id.
+        """Twitter Direct Message via X API v2.
 
-        the screen_name can be a list/set/tuple as well
+        Requires a Basic or higher X API subscription.
+        Free-tier accounts will receive a 403 error.
         """
-    def _fetch(self, url, payload=None, method: str = 'POST', json: bool = True):
+    def _whoami(self, lazy: bool = True):
+        """Looks up details of the current authenticated user via v2."""
+    def _user_lookup(self, usernames, lazy: bool = True):
+        """Looks up usernames and returns user IDs via v2.
+
+        usernames can be a list/set/tuple as well.
+        """
+    def _fetch(self, url, payload=None, method: str = 'POST', json: bool = True, extra=None):
         """Wrapper to Twitter API requests object."""
     @property
     def body_maxlen(self):

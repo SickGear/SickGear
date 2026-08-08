@@ -30,8 +30,6 @@ from bs4_parser import BS4Parser
 from exceptions_helper import AuthException
 from json_helper import json_dumps
 
-from six import iteritems
-
 
 class BTNProvider(generic.TorrentProvider):
 
@@ -41,8 +39,8 @@ class BTNProvider(generic.TorrentProvider):
         self.url_base = 'https://broadcasthe.net/'
         self.url_api = 'https://api.broadcasthe.net'
 
-        self.urls = {'config_provider_home_uri': self.url_base, 'login': self.url_base + 'login.php',
-                     'search': self.url_base + 'torrents.php?searchstr=%s&action=basic&%s'}
+        self.urls = {'config_provider_home_uri': self.url_base, 'login': f'{self.url_base}login.php',
+                     'search': f'{self.url_base}torrents.php?searchstr=%s&action=basic&%s'}
 
         self.proper_search_terms = ['%.proper.%', '%.repack.%']
 
@@ -64,13 +62,13 @@ class BTNProvider(generic.TorrentProvider):
     def _check_auth(self, **kwargs):
 
         if not self.api_key and not (self.username and self.password):
-            raise AuthException('Must set Api key or Username/Password for %s in config provider options' % self.name)
+            raise AuthException(f'Must set Api key or Username/Password for {self.name} in config provider options')
         return True
 
     def _check_response(self, data, url, post_data=None, post_json=None):
         if not self.should_skip(log_warning=False):
             if data and 'Call Limit' in data:
-                self.tmr_limit_update('1', 'h', '150/hr %s' % data)
+                self.tmr_limit_update('1', 'h', f'150/hr {data}')
                 self.log_failure_url(url, post_data, post_json)
             else:
                 logger.warning(f'Action prematurely ended. {self.name} server error response = {data}')
@@ -93,7 +91,7 @@ class BTNProvider(generic.TorrentProvider):
                 else:
                     search_param and params.update(search_param)
                 age and params.update(dict(age='<=%i' % age))  # age in seconds
-                search_string = 'tvdb' in params and '%s %s' % (params.pop('series'), params['name']) or ''
+                search_string = 'tvdb' in params and f'{params.pop("series")} {params["name"]}' or ''
 
                 json_rpc = (lambda param_dct, items_per_page=1000, offset=0:
                             '{"jsonrpc": "2.0", "id": "%s", "method": "getTorrents", "params": ["%s", %s, %s, %s]}' %
@@ -155,7 +153,7 @@ class BTNProvider(generic.TorrentProvider):
                                 found_torrents.update(data_json['torrents'])
 
                     cnt = len(results)
-                    for torrentid, torrent_info in iteritems(found_torrents):
+                    for torrentid, torrent_info in found_torrents.items():
                         seeders, leechers, size = (try_int(n, n) for n in [torrent_info.get(x) for x in
                                                                            ('Seeders', 'Leechers', 'Size')])
                         if self._reject_item(seeders, leechers, container=self.reject_m2ts and (
@@ -167,7 +165,7 @@ class BTNProvider(generic.TorrentProvider):
                             results.append((title, url, seeders, self._bytesizer(size)))
 
                     self._log_search(mode, len(results) - cnt,
-                                     ('search_param: ' + str(search_param), self.name)['Cache' == mode])
+                                     (f'search_param: {search_param!s}', self.name)['Cache' == mode])
 
                     results = self._sort_seeding(mode, results)
                     break   # search first tvdb item only
@@ -180,7 +178,7 @@ class BTNProvider(generic.TorrentProvider):
             return super(BTNProvider, self)._authorised(
                 post_params={'login': 'Log In!'},
                 logged_in=(lambda y='': 'casThe' in y[0:512] and '<title>Index' in y[0:512]))
-        raise AuthException('Password or Username for %s is empty in config provider options' % self.name)
+        raise AuthException(f'Password or Username for {self.name} is empty in config provider options')
 
     def html(self, mode, search_string, results):
 
@@ -215,9 +213,9 @@ class BTNProvider(generic.TorrentProvider):
                     if 2 > len(tbl_rows):
                         raise generic.HaltParseException
 
-                    rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
-                        'cats': r'(?i)cat\[(?:%s)\]' % self._categories_string(mode, template='', delimiter='|'),
-                        'get': 'download'})])
+                    rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
+                        'cats': rf'(?i)cat\[(?:{self._categories_string(mode, template="", delimiter="|")})\]',
+                        'get': 'download'}.items()])
 
                     head = None
                     for tr in tbl_rows[1:]:
@@ -291,9 +289,9 @@ class BTNProvider(generic.TorrentProvider):
             # Search for the year of the air by date show
             base_params['name'] = str(ep_obj.airdate).split('-')[0]
         elif ep_obj.show_obj.is_anime:
-            base_params['name'] = '%s' % ep_obj.scene_absolute_number
+            base_params['name'] = f'{ep_obj.scene_absolute_number}'
         else:
-            base_params['name'] = 'Season %s' % (ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)]
+            base_params['name'] = f'Season {(ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)]}'
 
         return [dict(Season=self.search_params(ep_obj, base_params))]
 
@@ -311,7 +309,7 @@ class BTNProvider(generic.TorrentProvider):
             # combined with the series identifier should result in just one episode
             base_params['name'] = date_str.replace('-', '.')
         elif ep_obj.show_obj.is_anime:
-            base_params['name'] = '%s' % ep_obj.scene_absolute_number
+            base_params['name'] = f'{ep_obj.scene_absolute_number}'
         else:
             # Do a general name search for the episode, formatted like SXXEYY
             season, episode = ((ep_obj.season, ep_obj.episode),

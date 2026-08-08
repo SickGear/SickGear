@@ -37,7 +37,7 @@ class MediaProcess(Job):
     def _main():
 
         if not os.path.isdir(sickgear.TV_DOWNLOAD_DIR):
-            logger.error('Automatic media processing attempted but dir %s doesn\'t exist' % sickgear.TV_DOWNLOAD_DIR)
+            logger.error(f'Automatic media processing attempted but dir {sickgear.TV_DOWNLOAD_DIR} doesn\'t exist')
             return
 
         if not os.path.isabs(sickgear.TV_DOWNLOAD_DIR):

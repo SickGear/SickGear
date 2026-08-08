@@ -167,7 +167,7 @@ if not os.path.isfile(cleaned_file) or os.path.exists(test):
         ('lib', 'html5lib', 'treewalkers', 'genshistream.py'),
     ]]:
         for ext in ['', 'c', 'o']:
-            name = '%s.py%s' % (os.path.splitext(dead_file)[:-1][0], ext)
+            name = f'{os.path.splitext(dead_file)[:-1][0]}.py{ext}'
             if os.path.exists(name):
                 try:
                     os.remove(name)

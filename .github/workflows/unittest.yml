@@ -14,21 +14,19 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.14', '3.13', '3.12', '3.11', '3.10']
-        os:
-          - windows-latest
-          - ubuntu-latest
-          - macos-latest
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v7
       - name: 'Set up Python ${{ matrix.python-version }} on ${{ matrix.os }}'
-        uses: actions/setup-python@v6.1.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: '${{ matrix.python-version }}'
       - if: ${{ 'windows-latest' != matrix.os }}
-        run: export BOTO_CONFIG=/dev/null
-      - if: ${{ 'windows-latest' != matrix.os }}
-        run: 'export PYTHONPATH=$PYTHONPATH:$(pwd)'
-      - name: 'Set up test env'
+        run: |
+          # set non Windows env vars
+          export BOTO_CONFIG=/dev/null
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+      - name: 'Set common test env'
         run: |
           pip install responses
           pip install -r requirements.txt

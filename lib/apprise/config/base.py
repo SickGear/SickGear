@@ -36,6 +36,7 @@ from ..asset import AppriseAsset
 from ..logger import logging
 from ..manager_config import ConfigurationManager
 from ..manager_plugins import NotificationManager
+from ..tag import AppriseTag
 from ..url import URLBase
 from ..utils.cwe312 import cwe312_url
 from ..utils.parse import GET_SCHEMA_RE, parse_bool, parse_list, parse_urls
@@ -147,7 +148,8 @@ class ConfigBase(URLBase):
         if fmt:
             try:
                 self.config_format = (
-                    fmt if isinstance(fmt, common.ConfigFormat)
+                    fmt
+                    if isinstance(fmt, common.ConfigFormat)
                     else common.ConfigFormat(fmt.lower())
                 )
 
@@ -224,7 +226,6 @@ class ConfigBase(URLBase):
         # Configuration files were detected; recursively populate them
         # If we have been configured to do so
         for url in configs:
-
             if self.recursion > 0:
                 # Attempt to acquire the schema at the very least to allow
                 # our configuration based urls.
@@ -245,7 +246,7 @@ class ConfigBase(URLBase):
 
                     # Some basic validation
                     if schema not in C_MGR:
-                        ConfigBase.logger.warning(
+                        ConfigBase.logger.error(
                             f"Unsupported include schema {schema}."
                         )
                         continue
@@ -260,7 +261,7 @@ class ConfigBase(URLBase):
                 results = C_MGR[schema].parse_url(url)
                 if not results:
                     # Failed to parse the server URL
-                    self.logger.warning(
+                    self.logger.error(
                         f"Unparseable include URL {loggable_url}"
                     )
                     continue
@@ -274,7 +275,6 @@ class ConfigBase(URLBase):
                 ) or C_MGR[
                     schema
                 ].allow_cross_includes == common.ContentIncludeMode.NEVER:
-
                     # Prevent the loading if insecure base protocols
                     ConfigBase.logger.warning(
                         f"Including {schema}:// based configuration is"
@@ -304,7 +304,7 @@ class ConfigBase(URLBase):
 
                 except Exception as e:
                     # the arguments are invalid or can not be used.
-                    self.logger.warning(
+                    self.logger.error(
                         f"Could not load include URL: {loggable_url}"
                     )
                     self.logger.debug(f"Loading Exception: {e!s}")
@@ -517,10 +517,12 @@ class ConfigBase(URLBase):
         #     definitions (accepting commas) followed by an equal sign we know
         #     we're dealing with a TEXT format.
 
-        # Define what a valid line should look like
+        # Define what a valid line should look like.
+        # The tag group allows an optional "N:" priority prefix so that
+        # "2:endpoint=ntfy://..." is recognised as TEXT format.
         valid_line_re = re.compile(
             r"^\s*(?P<line>([;#]+(?P<comment>.*))|"
-            r"(?P<text>((?P<tag>[ \t,a-z0-9_-]+)=)?[a-z0-9]+://.*)|"
+            r"(?P<text>((?P<tag>[ \t,a-z0-9_:-]+)=)?[a-z0-9]+://.*)|"
             r")?$",
             re.I,
         )
@@ -541,7 +543,6 @@ class ConfigBase(URLBase):
         # iterate over each line of the file to attempt to detect it
         # stop the moment a the type has been determined
         for line, entry in enumerate(content, start=1):
-
             result = valid_line_re.match(entry)
             if not result:
                 # Invalid syntax
@@ -590,7 +591,8 @@ class ConfigBase(URLBase):
 
         try:
             config_format = (
-                config_format if isinstance(config_format, common.ConfigFormat)
+                config_format
+                if isinstance(config_format, common.ConfigFormat)
                 else common.ConfigFormat(config_format.lower())
             )
 
@@ -658,10 +660,12 @@ class ConfigBase(URLBase):
         # Prepare our Asset Object
         asset = asset if isinstance(asset, AppriseAsset) else AppriseAsset()
 
-        # Define what a valid line should look like
+        # Define what a valid line should look like.
+        # The tags group allows an optional leading "N:" priority prefix so
+        # that entries like "2:endpoint=ntfy://..." are parsed correctly.
         valid_line_re = re.compile(
             r"^\s*(?P<line>([;#]+(?P<comment>.*))|"
-            r"(\s*(?P<tags>[a-z0-9, \t_-]+)\s*=|=)?\s*"
+            r"(\s*(?P<tags>[a-z0-9, \t_:-]+)\s*=|=)?\s*"
             r"((?P<url>[a-z0-9]{1,32}://.*)|(?P<assign>[a-z0-9, \t_-]+))|"
             r"include\s+(?P<config>.+))?\s*$",
             re.I,
@@ -752,8 +756,9 @@ class ConfigBase(URLBase):
                 url, secure_logging=asset.secure_logging
             )
             if results is None:
-                # Failed to parse the server URL
-                ConfigBase.logger.warning(
+                # url_to_dict() already logged an error with the URL;
+                # repeat at debug level with line number for context.
+                ConfigBase.logger.debug(
                     f"Unparseable URL {loggable_url} on line {line}."
                 )
                 continue
@@ -762,15 +767,29 @@ class ConfigBase(URLBase):
             # notifications if any were set
             results["tag"] = set(parse_list(result.group("tags"), cast=str))
 
+            # A retry count on a service tag (e.g. "alerts:3=slack://...") is
+            # not valid here: per-service retry belongs on the URL (?retry=N)
+            # and call-time retry overrides belong on the notify() filter.
+            if any(
+                AppriseTag.parse(t).retry is not None for t in results["tag"]
+            ):
+                ConfigBase.logger.warning(
+                    "You can not specify a retry count as part of a service"
+                    f" tag on line {line}; use ?retry=N in the URL instead."
+                )
+                continue
+
             # Set our Asset Object
             results["asset"] = asset
 
             # Store our preloaded entries
-            preloaded.append({
-                "results": results,
-                "line": line,
-                "loggable_url": loggable_url,
-            })
+            preloaded.append(
+                {
+                    "results": results,
+                    "line": line,
+                    "loggable_url": loggable_url,
+                }
+            )
 
         #
         # Normalize Tag Groups
@@ -809,7 +828,7 @@ class ConfigBase(URLBase):
 
             except Exception as e:
                 # the arguments are invalid or can not be used.
-                ConfigBase.logger.warning(
+                ConfigBase.logger.error(
                     "Could not load URL {} on line {}.".format(
                         entry["loggable_url"], entry["line"]
                     )
@@ -863,7 +882,6 @@ class ConfigBase(URLBase):
         tokens = tokens.copy()
 
         for kw, meta in N_MGR[schema].template_kwargs.items():
-
             # Determine our prefix:
             prefix = meta.get("prefix", "+")
 
@@ -911,7 +929,6 @@ class ConfigBase(URLBase):
         class_templates = plugins.details(N_MGR[schema])
 
         for key in list(tokens.keys()):
-
             if key not in class_templates["args"]:
                 # No need to handle non-arg entries
                 continue
@@ -951,7 +968,6 @@ class ConfigBase(URLBase):
             if re.search(
                 r"^(choice:)?string", meta.get("type"), re.IGNORECASE
             ) and not isinstance(value, str):
-
                 # Ensure our format is as expected
                 value = str(value)
 

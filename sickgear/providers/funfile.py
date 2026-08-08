@@ -24,8 +24,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class FunFileProvider(generic.TorrentProvider):
 
@@ -34,8 +32,8 @@ class FunFileProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.funfile.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse.php?%s&search=%s&incldead=0&showspam=1'}
+                     'login_action': f'{self.url_base}login.php',
+                     'search': f'{self.url_base}browse.php?%s&search=%s&incldead=0&showspam=1'}
 
         self.categories = {'shows': [7], 'anime': [44]}
 
@@ -59,9 +57,9 @@ class FunFileProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'detail', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'detail', 'get': 'download'}.items()])
         for mode in search_params:
-            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile(f'(?i)cat=(?:{self._categories_string(mode, template="", delimiter="|")})')
             for search_string in search_params[mode]:
                 search_url = self.urls['search'] % (self._categories_string(mode), search_string)
 

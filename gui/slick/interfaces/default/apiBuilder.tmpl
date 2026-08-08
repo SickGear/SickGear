@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <title>API Builder</title>
-<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID">
-<link rel="stylesheet" type="text/css" href="$sbRoot/css/light.css?v=$sbPID">
+<link rel="stylesheet" href="$sbRoot/css/style.css?v=$sbPID">
+<link rel="stylesheet" href="$sbRoot/css/light.css?v=$sbPID">
 <script>
 <!--
 sbRoot = "$sbRoot";
@@ -13,7 +13,7 @@ sbRoot = "$sbRoot";
 <script src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
 <script src="$sbRoot/js/apibuilder.js?v=$sbPID"></script>
 
-<style type="text/css">
+<style>
 <!--
 #apibuilder select {padding: 2px 2px 2px 6px; display: block; float: left; margin: auto 8px 4px auto}
 #apibuilder select option {padding: 1px 6px; line-height: 1.2em}
@@ -65,8 +65,7 @@ addOption("Command", "SickBeard", "?cmd=sb");
 addOption("Command", "List Commands", "?cmd=listcommands", "","", "default");
 addList("Command", "Help", "?cmd=help", "sg.functions-list", "","", "default");
 #from sickgear.webapi import _functionMaper
-#from six import iterkeys
-#for $k in sorted(iterkeys(_functionMaper), key=lambda x: x.replace('sg.', '').replace('sb.', ''))
+#for $k in sorted(_functionMaper.keys(), key=lambda x: x.replace('sg.', '').replace('sb.', ''))
 addOption("sg.functions-list", "$k", "&subject=$k", "", "", "#echo ('sb', 'sg')['sg' in $k]#")
 #end for
 addList("Command", "SickBeard.AddRootDir", "?cmd=sb.addrootdir", "sb.addrootdir");
@@ -164,7 +163,6 @@ addList("Command", "SickGear.Show.Update", "?cmd=sg.show.update", "sg.indexerid"
 addList("Command", "Shows", "?cmd=shows", "shows");
 addList("Command", "SickGear.Shows", "?cmd=sg.shows", "shows");
 addList("Command", "SickGear.Shows.BrowseTrakt", "?cmd=sg.shows.browsetrakt", "sg.shows.browsetrakt");
-addOption("Command", "SickGear.ListTraktAccounts", "?cmd=sg.listtraktaccounts");
 addOption("Command", "Shows.Stats", "?cmd=shows.stats");
 addOption("Command", "SickGear.Shows.Stats", "?cmd=sg.shows.stats");
 addOption("Command", "SickGear.Shows.ForceUpdate", "?cmd=sg.shows.forceupdate");
@@ -175,13 +173,6 @@ addOption("sg.shows.browsetrakt", "New Shows", "&type=newshows");
 addOption("sg.shows.browsetrakt", "New Seasons", "&type=newseasons");
 addOption("sg.shows.browsetrakt", "Popular", "&type=popular");
 addOption("sg.shows.browsetrakt", "Trending", "&type=trending");
-addList("sg.shows.browsetrakt", "Recommended", "&type=recommended", "sg.traktaccounts");
-addList("sg.shows.browsetrakt", "Watchlist", "&type=watchlist", "sg.traktaccounts");
-
-#from sickgear import TRAKT_ACCOUNTS
-#for $a in $TRAKT_ACCOUNTS
-addOption("sg.traktaccounts", "$TRAKT_ACCOUNTS[$a].name", "&account_id=$a");
-#end for
 
 addOption("sg.forcesearch", "Recent Search", "&searchtype=recent", 1);
 addOption("sg.forcesearch", "Backlog Search", "&searchtype=backlog");

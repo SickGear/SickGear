@@ -61,7 +61,7 @@ def folders_at_path(path, include_parent=False, include_files=False):
         if 'nt' == os.name:
             entries = [{'currentPath': r'\My Computer'}]
             for letter in get_win_drives():
-                letter_path = '%s:\\' % letter
+                letter_path = f'{letter}:\\'
                 entries.append({'name': letter_path, 'path': letter_path})
             return entries
         else:
@@ -78,7 +78,7 @@ def folders_at_path(path, include_parent=False, include_files=False):
     try:
         file_list = get_file_list(path, include_files)
     except OSError as e:
-        logger.warning('Unable to open %s: %r / %s' % (path, e, ex(e)))
+        logger.warning(f'Unable to open {path}: {e!r} / {ex(e)}')
         file_list = get_file_list(parent_path, include_files)
 
     file_list = sorted(file_list, key=lambda x: os.path.basename(x['name']).lower())

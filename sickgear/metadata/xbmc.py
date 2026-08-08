@@ -122,9 +122,9 @@ class XBMCMetadata(xbmc_12plus.XBMC12PlusMetadata):
         if 0 == season:
             season_poster_filename = 'season-specials'
         else:
-            season_poster_filename = 'season' + str(season).zfill(2)
+            season_poster_filename = f'season{str(season).zfill(2)}'
 
-        return os.path.join(show_obj.location, season_poster_filename + '.tbn')
+        return os.path.join(show_obj.location, f'{season_poster_filename}.tbn')
 
 
 # present a standard "interface" from the module

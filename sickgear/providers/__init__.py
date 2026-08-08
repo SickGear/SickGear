@@ -22,8 +22,6 @@ from .newznab import NewznabConstants
 from .. import logger
 import sickgear
 
-from six import iteritems, itervalues
-
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, List, Union
@@ -35,10 +33,10 @@ __all__ = [
     'filesharingtalk',
     'omgwtfnzbs',
     # torrent
-    'alpharatio', 'bithdtv', 'blutopia', 'btn',
+    'alpharatio', 'bithdtv', 'btn',
     'custom01', 'custom11', 'eztv', 'fano', 'filelist', 'funfile',
     'hdbits', 'hdspace', 'hdtorrents',
-    'immortalseed', 'iptorrents', 'limetorrents', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
+    'immortalseed', 'iptorrents', 'limetorrents', 'milkie', 'nebulance', 'nyaa',
     'pretome', 'privatehd', 'ptf',
     'scenehd', 'scenetime', 'shazbat', 'showrss', 'snowfl', 'speedapp', 'speedcd',
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'tvchaosuk',
@@ -48,9 +46,9 @@ __all__ = [
     ]
 for module in __all__:
     try:
-        m = importlib.import_module('.' + module, 'sickgear.providers')
+        m = importlib.import_module(f'.{module}', 'sickgear.providers')
         globals().update({n: getattr(m, n) for n in m.__all__} if hasattr(m, '__all__')
-                         else dict(filter(lambda t: '_' != t[0][0], iteritems(m.__dict__))))
+                         else dict(filter(lambda t: '_' != t[0][0], m.__dict__.items())))
     except ImportError as e:
         if 'custom' != module[0:6]:
             raise e
@@ -74,8 +72,8 @@ def sorted_sources():
             new_list.append(provider_dict[curModule])
 
     if not sickgear.PROVIDER_ORDER:
-        nzb = list(filter(lambda p: p.providerType == generic.GenericProvider.NZB, itervalues(provider_dict)))
-        tor = list(filter(lambda p: p.providerType != generic.GenericProvider.NZB, itervalues(provider_dict)))
+        nzb = list(filter(lambda p: p.providerType == generic.GenericProvider.NZB, provider_dict.values()))
+        tor = list(filter(lambda p: p.providerType != generic.GenericProvider.NZB, provider_dict.values()))
         new_list = sorted(filter(lambda p: not p.anime_only, nzb), key=lambda v: v.get_id()) + \
             sorted(filter(lambda p: not p.anime_only, tor), key=lambda v: v.get_id()) + \
             sorted(filter(lambda p: p.anime_only, nzb), key=lambda v: v.get_id()) + \
@@ -243,7 +241,7 @@ def _get_module_by_name(name):
         return sys.modules[prefix + name]
     elif cprov in name:
         return None
-    raise Exception('Can\'t find %s%s in providers' % (prefix, name))
+    raise Exception(f'Can\'t find {prefix}{name} in providers')
 
 
 def get_by_id(provider_id):

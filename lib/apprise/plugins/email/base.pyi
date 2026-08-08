@@ -8,6 +8,15 @@ from ..base import NotifyBase as NotifyBase
 from .common import AppriseEmailException as AppriseEmailException, EmailMessage as EmailMessage, SECURE_MODES as SECURE_MODES, SecureMailMode as SecureMailMode, WebBaseLogin as WebBaseLogin
 from _typeshed import Incomplete
 
+class PGPMode:
+    """PGP security mode for outbound email."""
+    NONE: str
+    SIGN: str
+    ENCRYPT: str
+
+PGP_MODES: Incomplete
+PGP_MODE_DEFAULT: Incomplete
+
 class NotifyEmail(NotifyBase):
     """
     A wrapper to Email Notifications
@@ -37,10 +46,12 @@ class NotifyEmail(NotifyBase):
     host: Incomplete
     secure: bool
     port: Incomplete
+    pgp_mode: Incomplete
+    use_wkd: Incomplete
     pgp: Incomplete
     pgp_key: Incomplete
-    use_pgp: Incomplete
-    def __init__(self, smtp_host=None, from_addr=None, secure_mode=None, targets=None, cc=None, bcc=None, reply_to=None, headers=None, use_pgp=None, pgp_key=None, **kwargs) -> None:
+    pgp_privkey: Incomplete
+    def __init__(self, smtp_host=None, from_addr=None, secure_mode=None, targets=None, cc=None, bcc=None, reply_to=None, headers=None, pgp_mode=None, pgp_key=None, pgp_privkey=None, use_wkd: bool = False, **kwargs) -> None:
         """
         Initialize Email Object
 
@@ -86,7 +97,7 @@ class NotifyEmail(NotifyBase):
         like SUBJ_EXCESS_QP flag on Rspamd
         """
     @staticmethod
-    def prepare_emails(subject, body, from_addr, to, cc: set | None = None, bcc: set | None = None, reply_to: set | None = None, smtp_host=None, notify_format=..., attach=None, headers: dict | None = None, names=None, pgp=None, tzinfo=None):
+    def prepare_emails(subject, body, from_addr, to, cc: set | None = None, bcc: set | None = None, reply_to: set | None = None, smtp_host=None, notify_format=..., attach=None, headers: dict | None = None, names=None, pgp=None, pgp_mode=..., tzinfo=None):
         """
         Generator for emails
             from_addr: must be in format: (from_name, from_addr)
@@ -104,13 +115,16 @@ class NotifyEmail(NotifyBase):
             names: This is a dictionary of email addresses as keys and the
                    Names to associate with them when sending the email.
                    This is cross referenced for the cc and bcc lists
-            pgp:   Encrypting the message using Pretty Good Privacy support
-                   This requires that the pgp_path provided exists and
-                   keys can be referenced here to perform the encryption
-                   with. If a key isn't found, one will be generated.
-
-                   pgp support requires the 'PGPy' Python library to be
-                   available.
-
-                   Pass in an ApprisePGPController() if you wish to use this
+            pgp:      ApprisePGPController for signing and/or encrypting
+                      email via Pretty Good Privacy.  Pass None to skip.
+            pgp_mode: PGPMode string controlling what PGP operation to
+                      perform.  PGPMode.ENCRYPT encrypts (existing
+                      behaviour).  PGPMode.SIGN signs with the sender's
+                      private key and opportunistically encrypts when a
+                      recipient public key is available.
+        """
+    @staticmethod
+    def runtime_deps():
+        """Return a tuple of top-level Python package names that this plugin
+        imported as optional runtime dependencies.
         """

@@ -32,7 +32,7 @@
 
     #set $nfo, $nfo_img = (('No', '-no'), ('Yes', ''))[int($ep['hasnfo'])]
     #set $tbn, $tbn_img = (('No', '-no'), ('Yes', ''))[int($ep['hastbn'])]
-			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11"><br />
+			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11"><br>
 			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" width="23" height="11"></td>
 
     #if $epLoc and $show_obj._location and $epLoc.lower().startswith($show_obj._location.lower())
@@ -42,7 +42,7 @@
     #end if
 
     #set $episode = str($ep['episode']) + ('', ' (%s)' % $ep['absolute_number'])[$show_obj.is_anime]
-    #set $downloaded = ('', '<strong>file</strong> %s<br /><strong>size</strong> %s' % ($epLoc, $sickgear.helpers.human($ep['file_size'])))['' != $epLoc and None != $epLoc]
+    #set $downloaded = ('', '<strong>file</strong> %s<br><strong>size</strong> %s' % ($epLoc, $sickgear.helpers.human($ep['file_size'])))['' != $epLoc and None != $epLoc]
     #set $attr=(('', 'Ep # %s' % $attr_title_ep)[bool($attr_title_ep)], $downloaded)[any($downloaded)]
 			<td align="center">
 				<span style="white-space:nowrap"#if $attr# class="addQTip" title="$attr"#end if#>$episode</span>

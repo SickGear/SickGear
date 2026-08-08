@@ -24,7 +24,6 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 
 from _23 import b64decodestring
-from six import iteritems
 
 
 class ThePirateBayProvider(generic.TorrentProvider):
@@ -33,7 +32,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
         self.url_home = ['https://thepiratebay.org/'] + \
-                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
+                        [f'https://{b64decodestring(x)}/' for x in [''.join(x) for x in [
                             [re.sub(r'[h\sI]+', '', x[::-1]) for x in [
                                 'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
                             [re.sub(r'[N\sQ]+', '', x[::-1]) for x in [
@@ -59,12 +58,12 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         if ep_obj.show_obj.air_by_date or ep_obj.show_obj.sports:
             airdate = str(ep_obj.airdate).split('-')[0]
-            ep_detail = [airdate, 'Season ' + airdate]
+            ep_detail = [airdate, f'Season {airdate}']
         elif ep_obj.show_obj.anime:
             ep_detail = '%02i' % ep_obj.scene_absolute_number
         else:
             season = (ep_obj.season, ep_obj.scene_season)[bool(ep_obj.show_obj.is_scene)]
-            ep_detail = ['S%02d' % int(season), 'Season %s -Ep*' % season]
+            ep_detail = [f'S{int(season):02}', f'Season {season} -Ep*']
 
         return [{'Season': self._build_search_strings(ep_detail)}]
 
@@ -82,9 +81,9 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
             'info': 'detail|descript', 'get': 'magnet',
-            'verify': '(?:helper|moderator|trusted|vip)', 'size': r'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'})])
+            'verify': '(?:helper|moderator|trusted|vip)', 'size': r'size[^\d]+(\d+(?:[.,]\d+)?\W*[bkmgt]\w+)'}.items()])
 
         for mode in search_params:
             for search_string in search_params[mode]:
@@ -111,7 +110,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             if not self._reject_item(seeders, leechers):
                                 status, info_hash = [cur_item.get(k) for k in ('status', 'info_hash')]
                                 if self.confirmed and not rc['verify'].search(status):
-                                    logger.debug('Skipping untrusted non-verified result: ' + title)
+                                    logger.debug(f'Skipping untrusted non-verified result: {title}')
                                     continue
                                 download_magnet = info_hash if '&tr=' in info_hash \
                                     else self._dhtless_magnet(info_hash, title)
@@ -148,7 +147,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             if html:
                                 js = re.findall(r'check\sthat\s+(\w+.js)\s', html)
                                 if js:
-                                    js_file = re.findall('<script[^"]+?"([^"]*?%s[^"]*?).*?</script>' % js[0], html)
+                                    js_file = re.findall(f'<script[^"]+?"([^"]*?{js[0]}[^"]*?).*?</script>', html)
                                     if js_file:
                                         html = self.get_url(self._link(js_file[0]))
                             if html:  # could be none from previous get_url for js
@@ -174,14 +173,14 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             with BS4Parser(cur_html, parse_only=dict(table={'id': 'searchResult'})) as tbl:
                                 rows += ''.join([_r.prettify() for _r in tbl.select('tr')[1:]])
                                 if not head:
-                                    header = [re.sub(r'(?i).*?(?:order\sy\s)?(%s)(?:ers)?.*?' % headers, r'\1',
+                                    header = [re.sub(rf'(?i).*?(?:order\sy\s)?({headers})(?:ers)?.*?', r'\1',
                                                      '' if not x else x.get('title', '').lower()) for x in
                                               [t.select_one('[title]') for t in
                                                tbl.find('tr', class_='header').find_all('th')]]
                                     head = dict((k, header.index(k) - len(header)) for k in headers.split('|'))
                         except(BaseException, Exception):
                             pass
-                    html = ('', '<table><tr data="header-placeholder"></tr>%s</table>' % rows)[all([head, rows])]
+                    html = ('', f'<table><tr data="header-placeholder"></tr>{rows}</table>')[all([head, rows])]
                 elif len(pages) and '<ol' in pages[0]:
                     list_type = 1
                     headers = 'seed|leech|size'
@@ -191,14 +190,14 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                 rows += ''.join([_r.prettify() for _r in tbl.find_all('li', class_='list-entry')])
                                 if not head:
                                     header = [re.sub(
-                                        '(?i).*(?:item-(%s)).*' % headers, r'\1', ''.join(t.get('class', '')))
+                                        f'(?i).*(?:item-({headers})).*', r'\1', ''.join(t.get('class', '')))
                                               for t in tbl.find('li', class_='list-header').find_all('span')]
                                     head = dict((k, header.index(k) - len(header)) for k in headers.split('|'))
                         except(BaseException, Exception):
                             pass
-                    html = ('', '<ol><li data="header-placeholder"></li>%s</ol>' % rows)[all([head, rows])]
+                    html = ('', f'<ol><li data="header-placeholder"></li>{rows}</ol>')[all([head, rows])]
 
-                html = '<!DOCTYPE html><html><head></head><body id="tpb_results">%s</body></html>' % html
+                html = f'<!DOCTYPE html><html><head></head><body id="tpb_results">{html}</body></html>'
 
                 cnt = len(items[mode])
                 try:
@@ -234,7 +233,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                             if self.confirmed and not (
                                     tr.find('img', title=rc['verify']) or tr.find('img', alt=rc['verify'])
                                     or tr.find('img', src=rc['verify'])):
-                                logger.debug('Skipping untrusted non-verified result: ' + title)
+                                logger.debug(f'Skipping untrusted non-verified result: {title}')
                                 continue
 
                             if title and download_magnet:

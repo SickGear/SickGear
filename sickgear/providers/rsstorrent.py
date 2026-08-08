@@ -59,7 +59,7 @@ class TorrentRssProvider(generic.TorrentProvider):
         title, url = None, None
 
         if item.title:
-            title = re.sub(r'\s+', '.', '' + item.title)
+            title = re.sub(r'\s+', '.', f'{item.title}')
 
         attempt_list = [lambda: item.torrent_magneturi,
                         lambda: item.enclosures[0].href,
@@ -116,7 +116,7 @@ class TorrentRssProvider(generic.TorrentProvider):
             return True, None
 
         except (BaseException, Exception) as e:
-            return False, 'Error when trying to load RSS: ' + ex(e)
+            return False, f'Error when trying to load RSS: {ex(e)}'
 
     def _search_provider(self, search_params, **kwargs):
 

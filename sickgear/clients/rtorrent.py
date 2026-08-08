@@ -43,15 +43,15 @@ class RtorrentAPI(GenericClient):
         if self.auth:
             try:
                 if self.auth.has_local_id(data.hash):
-                    logger.warning('%s: Item already exists %s' % (self.name, data.name))
+                    logger.warning(f'{self.name}: Item already exists {data.name}')
                     raise
 
                 custom_var = (1, sickgear.TORRENT_LABEL_VAR or '')[0 <= sickgear.TORRENT_LABEL_VAR <= 5]
                 params = {
                     'start': not sickgear.TORRENT_PAUSED,
-                    'extra': ([], ['d.set_custom%s=%s' % (custom_var, sickgear.TORRENT_LABEL)])[
+                    'extra': ([], [f'd.set_custom{custom_var}={sickgear.TORRENT_LABEL}'])[
                                  any([sickgear.TORRENT_LABEL])] +
-                             ([], ['d.set_directory=%s' % sickgear.TORRENT_PATH])[
+                             ([], [f'd.set_directory={sickgear.TORRENT_PATH}'])[
                                  any([sickgear.TORRENT_PATH])] or None}
                 # Send magnet to rTorrent
                 if 'file' == cmd:
@@ -62,8 +62,8 @@ class RtorrentAPI(GenericClient):
                 if torrent and sickgear.TORRENT_LABEL:
                     label = torrent.get_custom(custom_var)
                     if sickgear.TORRENT_LABEL != label:
-                        logger.warning('%s: could not change custom%s label value \'%s\' to \'%s\' for %s' % (
-                            self.name, custom_var, label, sickgear.TORRENT_LABEL, torrent.name))
+                        logger.warning(f'{self.name}: could not change custom{custom_var}'
+                                       f' label value \'{label}\' to \'{sickgear.TORRENT_LABEL}\' for {torrent.name}')
 
             except (BaseException, Exception):
                 pass

@@ -60,7 +60,7 @@ def test_nzbget(host, use_https, username, password, timeout=300):
             msg = 'NZBGet username or password is incorrect'
             logger.error(msg)
         else:
-            msg = 'Protocol Error: %s' % e.errmsg
+            msg = f'Protocol Error: {e.errmsg}'
             logger.error(msg)
 
     return result, msg, rpc_client
@@ -90,7 +90,7 @@ def send_nzb(search_result):
         if '' == dupekey:
             dupekey = 'SickGear-%s%s' % (
                 sickgear.TVInfoAPI(cur_ep_obj.show_obj.tvid).config.get('dupekey', ''), cur_ep_obj.show_obj.prodid)
-        dupekey += '-%s.%s' % (cur_ep_obj.season, cur_ep_obj.episode)
+        dupekey += f'-{cur_ep_obj.season}.{cur_ep_obj.episode}'
 
     if 1 == search_result.priority:
         add_to_top = True
@@ -126,21 +126,21 @@ def send_nzb(search_result):
         # (Positive number representing NZBID of the queue item. 0 and negative numbers represent error codes.)
         if 13 <= nzbget_version:
             nzbget_result = 0 < rpc_client.append(
-                '%s.nzb' % search_result.name, (nzbcontent64, search_result.url)[None is nzbcontent64],
+                f'{search_result.name}.nzb', (nzbcontent64, search_result.url)[None is nzbcontent64],
                 sickgear.NZBGET_CATEGORY, nzbget_prio, False, False, dupekey, dupescore, 'score')
 
         elif 12 == nzbget_version:
             if None is not nzbcontent64:
                 nzbget_result = rpc_client.append(
-                    '%s.nzb' % search_result.name, sickgear.NZBGET_CATEGORY,
+                    f'{search_result.name}.nzb', sickgear.NZBGET_CATEGORY,
                     nzbget_prio, False, nzbcontent64, False, dupekey, dupescore, 'score')
             else:
                 nzbget_result = rpc_client.appendurl(
-                    '%s.nzb' % search_result.name, sickgear.NZBGET_CATEGORY,
+                    f'{search_result.name}.nzb', sickgear.NZBGET_CATEGORY,
                     nzbget_prio, False, search_result.url, False, dupekey, dupescore, 'score')
         elif 0 == nzbget_version:
             if None is not nzbcontent64:
-                nzbget_result = rpc_client.append('%s.nzb' % search_result.name, sickgear.NZBGET_CATEGORY,
+                nzbget_result = rpc_client.append(f'{search_result.name}.nzb', sickgear.NZBGET_CATEGORY,
                                                   add_to_top, nzbcontent64)
             else:
                 if 'nzb' == search_result.resultType:
@@ -150,14 +150,14 @@ def send_nzb(search_result):
                         return result
 
                     nzbcontent64 = b64encodestring(data, keep_eol=True)
-                nzbget_result = rpc_client.append('%s.nzb' % search_result.name, sickgear.NZBGET_CATEGORY,
+                nzbget_result = rpc_client.append(f'{search_result.name}.nzb', sickgear.NZBGET_CATEGORY,
                                                   add_to_top, nzbcontent64)
         else:
             if None is not nzbcontent64:
-                nzbget_result = rpc_client.append('%s.nzb' % search_result.name, sickgear.NZBGET_CATEGORY,
+                nzbget_result = rpc_client.append(f'{search_result.name}.nzb', sickgear.NZBGET_CATEGORY,
                                                   nzbget_prio, False, nzbcontent64)
             else:
-                nzbget_result = rpc_client.appendurl('%s.nzb' % search_result.name, sickgear.NZBGET_CATEGORY,
+                nzbget_result = rpc_client.appendurl(f'{search_result.name}.nzb', sickgear.NZBGET_CATEGORY,
                                                      nzbget_prio, False, search_result.url)
 
         if nzbget_result:

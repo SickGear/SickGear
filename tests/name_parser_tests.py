@@ -482,7 +482,7 @@ class MultiSceneNumbering(test.SickbeardTestDBCase):
             sickgear.showList = []
             sickgear.showDict = {}
             name_cache.nameCache = {}
-            c_l = []
+            sql_l = []
             for s in [TVShowTest(name=e_t['show_obj']['name'], prodid=e_t['show_obj']['prodid'],
                                  tvid=e_t['show_obj']['tvid'], scene=1)]:
                 sickgear.showList.append(s)
@@ -495,13 +495,13 @@ class MultiSceneNumbering(test.SickbeardTestDBCase):
                     e_obj.scene_season = e_o.get('scene_episode') or e_o.get('xem_episode')
                     s.sxe_ep_obj.setdefault(e_obj.season, {})[e_obj.episode] = e_obj
                     if 'xem_episode' not in e_o:
-                        c_l.append(['REPLACE INTO scene_numbering'
+                        sql_l.append(['REPLACE INTO scene_numbering'
                                     ' (indexer, indexer_id, season, episode, scene_season, scene_episode)'
                                     ' VALUES (?,?,?,?,?,?)',
                                     [e_t['show_obj']['tvid'], e_t['show_obj']['prodid'], e_o['season'], e_o['number'],
                                      e_o['scene_season'], e_o['scene_episode']]])
                     else:
-                        c_l.append(
+                        sql_l.append(
                             ['REPLACE INTO tv_episodes'
                              ' (episode_id, showid, indexerid, indexer, name, season, episode, scene_season,'
                              ' scene_episode)'
@@ -509,8 +509,8 @@ class MultiSceneNumbering(test.SickbeardTestDBCase):
                              [_i, e_t['show_obj']['prodid'], _i, e_t['show_obj']['tvid'], 'Ep Name',
                               e_o['season'], e_o['number'], e_o['xem_season'], e_o['xem_episode']]]
                         )
-            my_db = db.DBConnection()
-            my_db.mass_action(c_l)
+            with db.DBConnection() as sg_db:
+                sg_db.mass_action(sql_l)
             name_cache.add_name_to_cache(e_t['show_obj']['name'], tvid=e_t['show_obj']['tvid'],
                                          prodid=e_t['show_obj']['prodid'])
             for _t in e_t['tests']:
@@ -639,7 +639,7 @@ class BasicTests(unittest.TestCase):
         for cur_test_base in simple_test_cases[section]:
             cur_test_dir, cur_test_file = cur_test_base.split('/')
             if VERBOSE or verbose:
-                print('Testing dir: %s file: %s' % (cur_test_dir, cur_test_file))
+                print(f'Testing dir: {cur_test_dir} file: {cur_test_file}')
 
             result = simple_test_cases[section][cur_test_base]
             show_obj = TVShowTest(name=result.series_name)
@@ -750,47 +750,47 @@ class BasicTests(unittest.TestCase):
 
     def test_standard_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'standard', lambda x: x + '.avi')
+        self._test_names(np, 'standard', lambda x: f'{x}.avi')
 
     def test_standard_repeat_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'standard_repeat', lambda x: x + '.avi')
+        self._test_names(np, 'standard_repeat', lambda x: f'{x}.avi')
 
     def test_fov_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'fov', lambda x: x + '.avi')
+        self._test_names(np, 'fov', lambda x: f'{x}.avi')
 
     def test_fov_repeat_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'fov_repeat', lambda x: x + '.avi')
+        self._test_names(np, 'fov_repeat', lambda x: f'{x}.avi')
 
     def test_bare_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'bare', lambda x: x + '.avi')
+        self._test_names(np, 'bare', lambda x: f'{x}.avi')
 
     def test_stupid_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'stupid', lambda x: x + '.avi')
+        self._test_names(np, 'stupid', lambda x: f'{x}.avi')
 
     def test_no_season_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'no_season', lambda x: x + '.avi')
+        self._test_names(np, 'no_season', lambda x: f'{x}.avi')
 
     def test_no_season_general_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'no_season_general', lambda x: x + '.avi')
+        self._test_names(np, 'no_season_general', lambda x: f'{x}.avi')
 
     def test_no_season_multi_ep_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'no_season_multi_ep', lambda x: x + '.avi')
+        self._test_names(np, 'no_season_multi_ep', lambda x: f'{x}.avi')
 
     def test_season_only_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'season_only', lambda x: x + '.avi')
+        self._test_names(np, 'season_only', lambda x: f'{x}.avi')
 
     def test_scene_date_format_file_names(self):
         np = parser.NameParser(testing=True)
-        self._test_names(np, 'scene_date_format', lambda x: x + '.avi')
+        self._test_names(np, 'scene_date_format', lambda x: f'{x}.avi')
 
     def test_folder_filename(self):
         self._test_folder_file('folder_filename')
@@ -861,7 +861,7 @@ class TVShowTest(tv.TVShow):
         self.sxe_ep_obj = {}
 
     def __str__(self):
-        return '%s (%s)' % (self._name, self.startyear)
+        return f'{self._name} ({self.startyear})'
 
 
 class TVEpisodeTest(tv.TVEpisode):
@@ -972,7 +972,7 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     if 1 < len(sys.argv):
-        suite = unittest.TestLoader().loadTestsFromName('name_parser_tests.BasicTests.test_' + sys.argv[1])
+        suite = unittest.TestLoader().loadTestsFromName(f'name_parser_tests.BasicTests.test_{sys.argv[1]}')
     else:
         suite = unittest.TestLoader().loadTestsFromTestCase(BasicTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

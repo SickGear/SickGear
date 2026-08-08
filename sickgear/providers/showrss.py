@@ -26,7 +26,6 @@ from ..helpers import sanitize_scene_name
 from bs4_parser import BS4Parser
 
 from _23 import decode_str, html_unescape
-from six import iteritems, iterkeys
 
 
 class ShowRSSProvider(generic.TorrentProvider):
@@ -37,9 +36,9 @@ class ShowRSSProvider(generic.TorrentProvider):
 
         self.url_base = 'https://showrss.info/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login',
-                     'browse': self.url_base + 'browse/all',
-                     'search': self.url_base + 'browse/%s'}
+                     'login_action': f'{self.url_base}login',
+                     'browse': f'{self.url_base}browse/all',
+                     'search': f'{self.url_base}browse/%s'}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -51,10 +50,10 @@ class ShowRSSProvider(generic.TorrentProvider):
 
     def logged_in(self, y):
         if all([None is y or 'logout' in y,
-                bool(list(filter(lambda c: 'remember_web_' in c, iterkeys(self.session.cookies))))]):
+                bool(list(filter(lambda c: 'remember_web_' in c, self.session.cookies.keys())))]):
             if None is not y:
                 self.shows = dict(re.findall(r'<option value="(\d+)">(.*?)</option>', y))
-                for k, v in iteritems(self.shows):
+                for k, v in self.shows.items():
                     self.shows[k] = sanitize_scene_name(html_unescape(decode_str(v)))
             return True
         return False
@@ -67,7 +66,7 @@ class ShowRSSProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'get': 'magnet'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'get': 'magnet'}.items()])
         urls = []
         for mode in search_params:
             for search_string in search_params[mode]:

@@ -16,7 +16,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .tvdb_exceptions import TvdbError, TvdbTokenFailure
+from .tvdb_exceptions import TvdbError, TvdbTokenFailure, TvdbPersonNotFound
 from exceptions_helper import ex
 from lib.dateutil.parser import parser
 # noinspection PyProtectedMember
@@ -266,6 +266,8 @@ class TvdbAPIv4(TVInfoBase):
             if 401 == e.response.status_code:
                 raise TvdbTokenFailure('Failed to get new Token')
             elif 404 == e.response.status_code:
+                if endpoint.startswith('/people/'):
+                    raise TvdbPersonNotFound(f'Person id not found')
                 if is_series_info:
                     self.show_not_found = True
                 self.not_found = True
@@ -407,6 +409,8 @@ class TvdbAPIv4(TVInfoBase):
             try:
                 resp = self._fetch_data(url, **kwargs)
                 self._set_cache_entry(cache_key, resp, expire=expire)
+            except TvdbPersonNotFound as e:
+                raise e
             except (BaseException, Exception):
                 resp = None
         return resp
@@ -900,8 +904,9 @@ class TvdbAPIv4(TVInfoBase):
                         page_size = (links and resp.get('links', {}).get('page_size')) or 500
                         eps_count += (len(resp['data']['episodes'])) or 0
                         full_page = page_size <= len(resp['data']['episodes'])
-                        more = (links and None is not (page := self._next_page(resp, page))) or (
+                        more = (links and None is not self._next_page(resp, page)) or (
                                 links and isinstance(total_items, integer_types) and eps_count < total_items)
+                        page += 1
                         alt_page = (full_page and not links)
                         if not alt_page:
                             self._set_episodes(ti_show, resp, abs_ep_nums, alt_ep_nums, alt_ep_types)

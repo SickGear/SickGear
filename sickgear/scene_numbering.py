@@ -109,13 +109,13 @@ def find_scene_numbering(tvid, prodid, season, episode, scene_result=None):
                     sql_result = [cur_row]
                 break
     else:
-        my_db = db.DBConnection()
-        sql_result = my_db.select(
-            """
-            SELECT scene_season, scene_episode
-            FROM scene_numbering
-            WHERE indexer = ? AND indexer_id = ? AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0
-            """, [tvid, prodid, season, episode])
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(
+                """
+                SELECT scene_season, scene_episode
+                FROM scene_numbering
+                WHERE indexer = ? AND indexer_id = ? AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0
+                """, [tvid, prodid, season, episode])
 
     if sql_result:
         s_s, s_e = try_int(sql_result[0]['scene_season'], None), try_int(sql_result[0]['scene_episode'], None)
@@ -209,15 +209,15 @@ def find_scene_absolute_numbering(tvid, prodid, absolute_number, season=None, ep
                     sql_result = [cur_row]
                 break
     else:
-        my_db = db.DBConnection()
-        sql_vars, cond = (([absolute_number], 'absolute_number = ?'),
-                          ([season, episode], 'season = ? AND episode = ?'))[has_sxe]
-        sql_result = my_db.select(
-            """
-            SELECT scene_absolute_number
-            FROM scene_numbering
-            WHERE indexer = ? AND indexer_id = ? AND %s AND scene_absolute_number != 0
-            """ % cond, [tvid, prodid] + sql_vars)
+        with db.DBConnection() as sg_db:
+            sql_vars, cond = (([absolute_number], 'absolute_number = ?'),
+                              ([season, episode], 'season = ? AND episode = ?'))[has_sxe]
+            sql_result = sg_db.select(
+                """
+                SELECT scene_absolute_number
+                FROM scene_numbering
+                WHERE indexer = ? AND indexer_id = ? AND %s AND scene_absolute_number != 0
+                """ % cond, [tvid, prodid] + sql_vars)
 
     if sql_result:
         return try_int(sql_result[0]['scene_absolute_number'], None)
@@ -247,20 +247,20 @@ def get_indexer_numbering(tvid, prodid, scene_season, scene_episode, fallback_to
 
     tvid, prodid = int(tvid), int(prodid)
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select(
-        """
-        SELECT season, episode
-        FROM scene_numbering
-        WHERE indexer = ? AND indexer_id = ? AND scene_season = ? AND scene_episode = ?
-        """, [tvid, prodid, scene_season, scene_episode])
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select(
+            """
+            SELECT season, episode
+            FROM scene_numbering
+            WHERE indexer = ? AND indexer_id = ? AND scene_season = ? AND scene_episode = ?
+            """, [tvid, prodid, scene_season, scene_episode])
 
-    if sql_result:
-        if return_multiple and 1 < len(sql_result):
-            return [(try_int(_s['season'], None), try_int(_s['episode'], None)) for _s in sql_result]
-        ss, se = try_int(sql_result[0]['season'], None), try_int(sql_result[0]['episode'], None)
-        if None is not ss and None is not se:
-            return ss, se
+        if sql_result:
+            if return_multiple and 1 < len(sql_result):
+                return [(try_int(_s['season'], None), try_int(_s['episode'], None)) for _s in sql_result]
+            ss, se = try_int(sql_result[0]['season'], None), try_int(sql_result[0]['episode'], None)
+            if None is not ss and None is not se:
+                return ss, se
     if fallback_to_xem:
         return get_indexer_numbering_for_xem(tvid, prodid, scene_season, scene_episode, return_multiple=return_multiple)
     return scene_season, scene_episode
@@ -288,22 +288,22 @@ def get_indexer_absolute_numbering(tvid, prodid, scene_absolute_number, fallback
 
     tvid, prodid = int(tvid), int(prodid)
 
-    my_db = db.DBConnection()
+    with db.DBConnection() as sg_db:
 
-    sql = """
-    SELECT absolute_number
-    FROM scene_numbering
-    WHERE indexer = ? AND indexer_id = ? AND scene_absolute_number = ?
-    """
-    params = [tvid, prodid, scene_absolute_number]
-    if None is not scene_season:
-        sql += ' AND scene_season = ?'
-        params += [scene_season]
+        sql = """
+        SELECT absolute_number
+        FROM scene_numbering
+        WHERE indexer = ? AND indexer_id = ? AND scene_absolute_number = ?
+        """
+        params = [tvid, prodid, scene_absolute_number]
+        if None is not scene_season:
+            sql += ' AND scene_season = ?'
+            params += [scene_season]
 
-    for cur_row in (my_db.select(sql, params) or []):
-        an = try_int(cur_row['absolute_number'], None)
-        if None is not an:
-            return an
+        for cur_row in (sg_db.select(sql, params) or []):
+            an = try_int(cur_row['absolute_number'], None)
+            if None is not an:
+                return an
     if fallback_to_xem:
         return get_indexer_absolute_numbering_for_xem(tvid, prodid, scene_absolute_number, scene_season)
     return scene_absolute_number
@@ -337,64 +337,64 @@ def set_scene_numbering(tvid=None, prodid=None, season=None, episode=None, absol
     if None is tvid or None is prodid:
         return
 
-    my_db = db.DBConnection()
-    if None is not season and None is not episode:
-        my_db.action(
-            """
-            INSERT OR IGNORE INTO scene_numbering
-            (indexer, indexer_id, season, episode) VALUES (?,?,?,?)
-            """, [tvid, prodid, season, episode])
+    with db.DBConnection() as sg_db:
+        if None is not season and None is not episode:
+            sg_db.action(
+                """
+                INSERT OR IGNORE INTO scene_numbering
+                (indexer, indexer_id, season, episode) VALUES (?,?,?,?)
+                """, [tvid, prodid, season, episode])
 
-        # sxe replaced abs_num as key, migrate data with only abs
-        _, _, ep_absolute_number = _get_sea(tvid, prodid, season, episode)
-        sql_result = my_db.select(
-            """
-            SELECT scene_season, scene_episode, scene_absolute_number
-            FROM scene_numbering
-            WHERE indexer = ? AND indexer_id = ? AND season IS NULL AND episode IS NULL AND absolute_number = ?
-            """, [tvid, prodid, ep_absolute_number])
+            # sxe replaced abs_num as key, migrate data with only abs
+            _, _, ep_absolute_number = _get_sea(tvid, prodid, season, episode)
+            sql_result = sg_db.select(
+                """
+                SELECT scene_season, scene_episode, scene_absolute_number
+                FROM scene_numbering
+                WHERE indexer = ? AND indexer_id = ? AND season IS NULL AND episode IS NULL AND absolute_number = ?
+                """, [tvid, prodid, ep_absolute_number])
 
-        if not len(sql_result):
-            update, values = (('scene_absolute_number = ?', [scene_absolute]),
-                              ('scene_season = ?, scene_episode = ?', [scene_season, scene_episode]))[not anime]
-        else:
-            for cur_row in sql_result:
-                scene_season = scene_season or cur_row['scene_season']
-                scene_episode = scene_episode or cur_row['scene_episode']
-                scene_absolute = scene_absolute or cur_row['scene_absolute_number']
+            if not len(sql_result):
+                update, values = (('scene_absolute_number = ?', [scene_absolute]),
+                                  ('scene_season = ?, scene_episode = ?', [scene_season, scene_episode]))[not anime]
+            else:
+                for cur_row in sql_result:
+                    scene_season = scene_season or cur_row['scene_season']
+                    scene_episode = scene_episode or cur_row['scene_episode']
+                    scene_absolute = scene_absolute or cur_row['scene_absolute_number']
 
-            update, values = ('scene_season = ?, scene_episode = ?, scene_absolute_number = ?',
-                              [scene_season, scene_episode, scene_absolute])
-        my_db.action(
-            """
-            UPDATE scene_numbering
-            SET %s
-            WHERE indexer = ? AND indexer_id = ?
-            AND season = ? AND episode = ?
-            """ % update, values + [tvid, prodid, season, episode])
+                update, values = ('scene_season = ?, scene_episode = ?, scene_absolute_number = ?',
+                                  [scene_season, scene_episode, scene_absolute])
+            sg_db.action(
+                f"""
+                UPDATE scene_numbering
+                SET {update}
+                WHERE indexer = ? AND indexer_id = ?
+                AND season = ? AND episode = ?
+                """, values + [tvid, prodid, season, episode])
 
-        my_db.action(
-            """
-            DELETE
-            FROM scene_numbering
-            WHERE indexer = ? AND indexer_id = ? 
-            AND ((absolute_number = ? OR (season = ? AND episode = ?))
-                AND scene_season IS NULL AND scene_episode IS NULL AND scene_absolute_number IS NULL)
-            """, [tvid, prodid, ep_absolute_number, season, episode])
+            sg_db.action(
+                """
+                DELETE
+                FROM scene_numbering
+                WHERE indexer = ? AND indexer_id = ? 
+                AND ((absolute_number = ? OR (season = ? AND episode = ?))
+                    AND scene_season IS NULL AND scene_episode IS NULL AND scene_absolute_number IS NULL)
+                """, [tvid, prodid, ep_absolute_number, season, episode])
 
-    elif absolute_number:
-        my_db.action(
-            """
-            INSERT OR IGNORE INTO scene_numbering
-            (indexer, indexer_id, absolute_number) VALUES (?,?,?)
-            """, [tvid, prodid, absolute_number])
+        elif absolute_number:
+            sg_db.action(
+                """
+                INSERT OR IGNORE INTO scene_numbering
+                (indexer, indexer_id, absolute_number) VALUES (?,?,?)
+                """, [tvid, prodid, absolute_number])
 
-        my_db.action(
-            """
-            UPDATE scene_numbering
-            SET scene_absolute_number = ?
-            WHERE indexer = ? AND indexer_id = ? AND absolute_number = ?
-            """, [scene_absolute, tvid, prodid, absolute_number])
+            sg_db.action(
+                """
+                UPDATE scene_numbering
+                SET scene_absolute_number = ?
+                WHERE indexer = ? AND indexer_id = ? AND absolute_number = ?
+                """, [scene_absolute, tvid, prodid, absolute_number])
 
 
 def find_xem_numbering(tvid, prodid, season, episode, show_result=None):
@@ -428,13 +428,13 @@ def find_xem_numbering(tvid, prodid, season, episode, show_result=None):
                 and (show_result['scene_season'] or show_result['scene_episode']):
             sql_result = [show_result]
     else:
-        my_db = db.DBConnection()
-        sql_result = my_db.select(
-            """
-            SELECT scene_season, scene_episode
-            FROM tv_episodes
-            WHERE indexer = ? AND showid = ? AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0
-            """, [tvid, prodid, season, episode])
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(
+                """
+                SELECT scene_season, scene_episode
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND season = ? AND episode = ? AND (scene_season OR scene_episode) != 0
+                """, [tvid, prodid, season, episode])
 
     if sql_result:
         s_s, s_e = try_int(sql_result[0]['scene_season'], None), try_int(sql_result[0]['scene_episode'], None)
@@ -475,13 +475,13 @@ def find_xem_absolute_numbering(tvid, prodid, absolute_number, season, episode, 
                 and show_result['scene_absolute_number']:
             sql_result = [show_result]
     else:
-        my_db = db.DBConnection()
-        sql_result = my_db.select(
-            """
-            SELECT scene_absolute_number
-            FROM tv_episodes
-            WHERE indexer = ? AND showid = ? AND season = ? AND episode = ? AND scene_absolute_number != 0
-            """, [tvid, prodid, season, episode])
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(
+                """
+                SELECT scene_absolute_number
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND season = ? AND episode = ? AND scene_absolute_number != 0
+                """, [tvid, prodid, season, episode])
 
     if sql_result:
         return try_int(sql_result[0]['scene_absolute_number'], None)
@@ -511,22 +511,22 @@ def get_indexer_numbering_for_xem(tvid, prodid, scene_season, scene_episode, ret
 
     xem_refresh(tvid, prodid)
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select(
-        """
-        SELECT season, episode
-        FROM tv_episodes
-        WHERE indexer = ? AND showid = ? AND scene_season = ? AND scene_episode = ?
-        """, [tvid, prodid, scene_season, scene_episode])
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select(
+            """
+            SELECT season, episode
+            FROM tv_episodes
+            WHERE indexer = ? AND showid = ? AND scene_season = ? AND scene_episode = ?
+            """, [tvid, prodid, scene_season, scene_episode])
 
-    if return_multiple and 1 < len(sql_result or []):
-        return [(try_int(_s['season'], None), try_int(_s['episode'], None)) for _s in sql_result]
+        if return_multiple and 1 < len(sql_result or []):
+            return [(try_int(_s['season'], None), try_int(_s['episode'], None)) for _s in sql_result]
 
-    for cur_row in (sql_result or []):
-        ss, se = try_int(cur_row['season'], None), try_int(cur_row['episode'], None)
-        if None is not ss and None is not se:
-            return ss, se
-        break
+        for cur_row in (sql_result or []):
+            ss, se = try_int(cur_row['season'], None), try_int(cur_row['episode'], None)
+            if None is not ss and None is not se:
+                return ss, se
+            break
 
     return scene_season, scene_episode
 
@@ -553,22 +553,22 @@ def get_indexer_absolute_numbering_for_xem(tvid, prodid, scene_absolute_number, 
 
     xem_refresh(tvid, prodid)
 
-    my_db = db.DBConnection()
-    sql = """
-    SELECT absolute_number
-    FROM tv_episodes
-    WHERE indexer = ? AND showid = ? AND scene_absolute_number = ?
-    """
-    params = [tvid, prodid, scene_absolute_number]
-    if None is not scene_season:
-        sql += ' AND scene_season = ?'
-        params += [scene_season]
+    with db.DBConnection() as sg_db:
+        sql = """
+        SELECT absolute_number
+        FROM tv_episodes
+        WHERE indexer = ? AND showid = ? AND scene_absolute_number = ?
+        """
+        params = [tvid, prodid, scene_absolute_number]
+        if None is not scene_season:
+            sql += ' AND scene_season = ?'
+            params += [scene_season]
 
-    for cur_row in (my_db.select(sql, params) or []):
-        an = try_int(cur_row['absolute_number'], None)
-        if None is not an:
-            return an
-        break
+        for cur_row in (sg_db.select(sql, params) or []):
+            an = try_int(cur_row['absolute_number'], None)
+            if None is not an:
+                return an
+            break
 
     return scene_absolute_number
 
@@ -635,23 +635,23 @@ def _get_numbering_for_show(tbl, tvid, prodid):
         if 'tv_episodes' == tbl:
             xem_refresh(tvid, prodid)
 
-        my_db = db.DBConnection()
-        # noinspection SqlResolve
-        sql_result = my_db.select(
-            """
-            SELECT season, episode, scene_season, scene_episode
-            FROM %s
-            WHERE indexer = ? AND %s = ? AND (scene_season OR scene_episode) != 0
-            ORDER BY season, episode
-            """ % (tbl, ('indexer_id', 'showid')['tv_episodes' == tbl]), [int(tvid), int(prodid)])
+        with db.DBConnection() as sg_db:
+            # noinspection SqlResolve
+            sql_result = sg_db.select(
+                """
+                SELECT season, episode, scene_season, scene_episode
+                FROM %s
+                WHERE indexer = ? AND %s = ? AND (scene_season OR scene_episode) != 0
+                ORDER BY season, episode
+                """ % (tbl, ('indexer_id', 'showid')['tv_episodes' == tbl]), [int(tvid), int(prodid)])
 
-        for cur_row in sql_result:
-            season, episode = try_int(cur_row['season'], None), try_int(cur_row['episode'], None)
-            if None is not season and None is not episode:
-                scene_season, scene_episode = try_int(cur_row['scene_season'], None), \
-                                              try_int(cur_row['scene_episode'], None)
-                if None is not scene_season and None is not scene_episode:
-                    result[(season, episode)] = (scene_season, scene_episode)
+            for cur_row in sql_result:
+                season, episode = try_int(cur_row['season'], None), try_int(cur_row['episode'], None)
+                if None is not season and None is not episode:
+                    scene_season, scene_episode = try_int(cur_row['scene_season'], None), \
+                                                  try_int(cur_row['scene_episode'], None)
+                    if None is not scene_season and None is not scene_episode:
+                        result[(season, episode)] = (scene_season, scene_episode)
 
     return result
 
@@ -702,26 +702,26 @@ def _get_absolute_numbering_for_show(tbl, tvid, prodid):
         if 'tv_episodes' == tbl:
             xem_refresh(tvid, prodid)
 
-        my_db = db.DBConnection()
-        # noinspection SqlResolve
-        sql_result = my_db.select(
-            """
-            SELECT season, episode, absolute_number, scene_absolute_number
-            FROM %s
-            WHERE indexer = ? AND %s = ? AND scene_absolute_number != 0
-            ORDER BY season, episode
-            """ % (tbl, ('indexer_id', 'showid')['tv_episodes' == tbl]), [int(tvid), int(prodid)])
+        with db.DBConnection() as sg_db:
+            # noinspection SqlResolve
+            sql_result = sg_db.select(
+                """
+                SELECT season, episode, absolute_number, scene_absolute_number
+                FROM %s
+                WHERE indexer = ? AND %s = ? AND scene_absolute_number != 0
+                ORDER BY season, episode
+                """ % (tbl, ('indexer_id', 'showid')['tv_episodes' == tbl]), [int(tvid), int(prodid)])
 
-        for cur_row in sql_result:
-            season, episode, abs_num = list(map(lambda x: try_int(cur_row[x], None),
-                                                ('season', 'episode', 'absolute_number')))
-            if None is season and None is episode and None is not abs_num:
-                season, episode, _ = _get_sea(tvid, prodid, absolute_number=abs_num)
+            for cur_row in sql_result:
+                season, episode, abs_num = list(map(lambda x: try_int(cur_row[x], None),
+                                                    ('season', 'episode', 'absolute_number')))
+                if None is season and None is episode and None is not abs_num:
+                    season, episode, _ = _get_sea(tvid, prodid, absolute_number=abs_num)
 
-            if None is not season and None is not episode:
-                scene_absolute_number = try_int(cur_row['scene_absolute_number'], None)
-                if None is not scene_absolute_number:
-                    result[(season, episode)] = scene_absolute_number
+                if None is not season and None is not episode:
+                    scene_absolute_number = try_int(cur_row['scene_absolute_number'], None)
+                    if None is not scene_absolute_number:
+                        result[(season, episode)] = scene_absolute_number
 
     return result
 
@@ -779,57 +779,56 @@ def xem_refresh(tvid, prodid, force=False):
 
     # XEM API URL
     # noinspection HttpUrlsUsage
-    url = 'http://thexem.info/map/all?id=%s&origin=%s&destination=scene' % (prodid, xem_origin)
+    url = f'http://thexem.info/map/all?id={prodid}&origin={xem_origin}&destination=scene'
 
     max_refresh_age_secs = 86400  # 1 day
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select(
-        """
-        SELECT last_refreshed
-        FROM xem_refresh
-        WHERE indexer = ? AND indexer_id = ?
-        """, [tvid, prodid])
-    if sql_result:
-        last_refresh = int(sql_result[0]['last_refreshed'])
-        refresh = SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
-    else:
-        refresh = True
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select(
+            """
+            SELECT last_refreshed
+            FROM xem_refresh
+            WHERE indexer = ? AND indexer_id = ?
+            """, [tvid, prodid])
+        if sql_result:
+            last_refresh = int(sql_result[0]['last_refreshed'])
+            refresh = SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
+        else:
+            refresh = True
 
-    if refresh or force:
-        logger.debug(f'Looking up XEM scene mapping for show {prodid} on {tvinfo.name}')
+        if refresh or force:
+            logger.debug(f'Looking up XEM scene mapping for show {prodid} on {tvinfo.name}')
 
-        # mark refreshed
-        my_db.upsert('xem_refresh',
-                     dict(last_refreshed=SGDatetime.timestamp_near()),
-                     dict(indexer=tvid, indexer_id=prodid))
+            # mark refreshed
+            sg_db.upsert('xem_refresh',
+                         dict(last_refreshed=SGDatetime.timestamp_near()),
+                         dict(indexer=tvid, indexer_id=prodid))
 
-        try:
-            parsed_json = sickgear.helpers.get_url(url, parse_json=True, timeout=90)
-            if not parsed_json or '' == parsed_json:
-                logger.log(f'No XEM data for show {prodid} on {tvinfo.name}', logger.MESSAGE)
-                return
+            try:
+                parsed_json = sickgear.helpers.get_url(url, parse_json=True, timeout=90)
+                if not parsed_json or '' == parsed_json:
+                    logger.log(f'No XEM data for show {prodid} on {tvinfo.name}', logger.MESSAGE)
+                    return
 
-            if 'success' in parsed_json['result']:
-                cl = list(map(lambda entry: [
-                        """
-                        UPDATE tv_episodes
-                        SET scene_season = ?, scene_episode = ?, scene_absolute_number = ?
-                        WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?
-                        """, [entry.get('scene%s' % ('', '_2')['scene_2' in entry]).get(v)
-                              for v in ('season', 'episode', 'absolute')]
-                        + [tvid, prodid]
-                        + [entry.get(xem_origin).get(v) for v in ('season', 'episode')]
-                ], filter(lambda x: 'scene' in x, parsed_json['data'])))
+                if 'success' in parsed_json['result']:
+                    sql_l = list(map(lambda entry: [
+                            """
+                            UPDATE tv_episodes
+                            SET scene_season = ?, scene_episode = ?, scene_absolute_number = ?
+                            WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?
+                            """, [entry.get(f'scene{("", "_2")["scene_2" in entry]}').get(v)
+                                  for v in ('season', 'episode', 'absolute')]
+                            + [tvid, prodid]
+                            + [entry.get(xem_origin).get(v) for v in ('season', 'episode')]
+                    ], filter(lambda x: 'scene' in x, parsed_json['data'])))
 
-                if 0 < len(cl):
-                    my_db = db.DBConnection()
-                    my_db.mass_action(cl)
-            else:
-                logger.debug(f'Empty lookup result - no XEM data for show {prodid} on {tvinfo.name}')
-        except (BaseException, Exception) as e:
-            logger.warning(f'Exception refreshing XEM data for show {str(prodid)} on {tvinfo.name}: {ex(e)}')
-            logger.error(traceback.format_exc())
+                    if sql_l:
+                        sg_db.mass_action(sql_l)
+                else:
+                    logger.debug(f'Empty lookup result - no XEM data for show {prodid} on {tvinfo.name}')
+            except (BaseException, Exception) as e:
+                logger.warning(f'Exception refreshing XEM data for show {str(prodid)} on {tvinfo.name}: {ex(e)}')
+                logger.error(traceback.format_exc())
 
 
 def fix_xem_numbering(tvid, prodid):
@@ -845,13 +844,13 @@ def fix_xem_numbering(tvid, prodid):
 
     tvid, prodid = int(tvid), int(prodid)
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select(
-        """
-        SELECT season, episode, absolute_number, scene_season, scene_episode, scene_absolute_number
-        FROM tv_episodes
-        WHERE indexer = ? AND showid = ?
-        """, [tvid, prodid])
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select(
+            """
+            SELECT season, episode, absolute_number, scene_season, scene_episode, scene_absolute_number
+            FROM tv_episodes
+            WHERE indexer = ? AND showid = ?
+            """, [tvid, prodid])
 
     last_absolute_number = None
     last_scene_season = None
@@ -865,7 +864,7 @@ def fix_xem_numbering(tvid, prodid):
 
     logger.debug(f'Fixing any XEM scene mapping issues for show {prodid} on {sickgear.TVInfoAPI(tvid).name}')
 
-    cl = []
+    sql_l = []
     for cur_row in sql_result:
         season = int(cur_row['season'])
         episode = int(cur_row['episode'])
@@ -914,7 +913,7 @@ def fix_xem_numbering(tvid, prodid):
         last_scene_absolute_number = scene_absolute_number
 
         if update_absolute_number:
-            cl.append([
+            sql_l.append([
                 """
                 UPDATE tv_episodes
                 SET absolute_number = ?
@@ -924,7 +923,7 @@ def fix_xem_numbering(tvid, prodid):
             update_absolute_number = False
 
         if update_scene_season:
-            cl.append([
+            sql_l.append([
                 """
                 UPDATE tv_episodes
                 SET scene_season = ?
@@ -934,7 +933,7 @@ def fix_xem_numbering(tvid, prodid):
             update_scene_season = False
 
         if update_scene_episode:
-            cl.append([
+            sql_l.append([
                 """
                 UPDATE tv_episodes
                 SET scene_episode = ?
@@ -944,7 +943,7 @@ def fix_xem_numbering(tvid, prodid):
             update_scene_episode = False
 
         if update_scene_absolute_number:
-            cl.append([
+            sql_l.append([
                 """
                 UPDATE tv_episodes
                 SET scene_absolute_number = ?
@@ -953,9 +952,9 @@ def fix_xem_numbering(tvid, prodid):
             ])
             update_scene_absolute_number = False
 
-    if 0 < len(cl):
-        my_db = db.DBConnection()
-        my_db.mass_action(cl)
+    if sql_l:
+        with db.DBConnection() as sg_db:
+            sg_db.mass_action(sql_l)
 
 
 def set_scene_numbering_helper(tvid, prodid, for_season=None, for_episode=None, for_absolute=None,

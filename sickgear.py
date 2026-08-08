@@ -95,7 +95,7 @@ from sickgear.event_queue import Events
 from sickgear.tv import TVShow
 from sickgear.webserveInit import WebServer
 
-from six import integer_types, iteritems
+from six import integer_types
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
@@ -135,7 +135,7 @@ class SickGear(object):
         """
         global is_win
         help_msg = ['']
-        help_msg += ['Usage: %s <option> <another option>\n' % sickgear.MY_FULLNAME]
+        help_msg += [f'Usage: {sickgear.MY_FULLNAME} <option> <another option>\n']
         help_msg += ['Options:\n']
 
         help_tmpl = '    %-10s%-17s%s'
@@ -165,10 +165,10 @@ class SickGear(object):
             ('-p <port>', '--port=<port>', 'Override default/configured port to listen on'),
             ('', '--datadir=<path>', 'Override folder (full path) as location for'),
             ('', '', 'storing database, configfile, cache, logfiles'),
-            ('', '', 'Default: %s' % sickgear.PROG_DIR),
+            ('', '', f'Default: {sickgear.PROG_DIR}'),
             ('', '--config=<path>', 'Override config filename (full path including filename)'),
             ('', '', 'to load configuration from'),
-            ('', '', 'Default: config.ini in %s or --datadir location' % sickgear.PROG_DIR),
+            ('', '', f'Default: config.ini in {sickgear.PROG_DIR} or --datadir location'),
             ('', '--noresize', 'Prevent resizing of the banner/posters even if PIL is installed')
         ]:
             help_msg += [help_tmpl % ln]
@@ -241,7 +241,7 @@ class SickGear(object):
                 try:
                     self.forced_port = int(a)
                 except ValueError:
-                    sys.exit('Port: %s is not a number. Exiting.' % a)
+                    sys.exit(f'Port: {a} is not a number. Exiting.')
 
             # Run as a double forked daemon
             if o in ('-d', '--daemon'):
@@ -267,7 +267,7 @@ class SickGear(object):
 
                 # If the pidfile already exists, sickgear may still be running, so exit
                 if os.path.exists(self.pid_file):
-                    sys.exit('PID file: %s already exists. Exiting.' % self.pid_file)
+                    sys.exit(f'PID file: {self.pid_file} already exists. Exiting.')
 
             # Specify folder to load the config file from
             if o in ('--config',):
@@ -286,7 +286,7 @@ class SickGear(object):
             if self.run_as_daemon:
                 pid_dir = os.path.dirname(self.pid_file)
                 if not os.access(pid_dir, os.F_OK):
-                    sys.exit(f"PID dir: {pid_dir} doesn't exist. Exiting.")
+                    sys.exit(f'PID dir: {pid_dir} doesn\'t exist. Exiting.')
                 if not os.access(pid_dir, os.W_OK):
                     sys.exit(f'PID dir: {pid_dir} must be writable (write permissions). Exiting.')
 
@@ -337,7 +337,7 @@ class SickGear(object):
             try:
                 threading.stack_size(stack_size)
             except (BaseException, Exception) as er:
-                print('Stack Size %s not set: %s' % (stack_size, ex(er)))
+                print(f'Stack Size {stack_size} not set: {ex(er)}')
 
         if self.run_as_daemon:
             self.daemonize()
@@ -423,56 +423,57 @@ class SickGear(object):
             ('sickbeard.db', sickgear.mainDB.MIN_DB_VERSION, sickgear.mainDB.MAX_DB_VERSION,
              sickgear.mainDB.TEST_BASE_VERSION, 'MainDb')
         ]:
-            cur_db_version = db.DBConnection(d).check_db_version()
+            with db.DBConnection(d) as sg_db:
+                cur_db_version = sg_db.check_db_version()
 
-            # handling of standalone TEST db versions
-            load_msg = 'Downgrading %s to production version' % d
-            if 100000 <= cur_db_version != max_v:
-                sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
-                print('Your [%s] database version (%s) is a test db version and doesn\'t match SickGear required '
-                      'version (%s), downgrading to production db' % (d, cur_db_version, max_v))
-                self.execute_rollback(mo, max_v, load_msg)
-                cur_db_version = db.DBConnection(d).check_db_version()
-                if 100000 <= cur_db_version:
-                    print('Rollback to production failed.')
-                    sys.exit('If you have used other forks, your database may be unusable due to their changes')
-                if 100000 <= max_v and None is not base_v:
-                    max_v = base_v  # set max_v to the needed base production db for test_db
-                print(f'Rollback to production of [{d}] successful.')
-                sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
-
-            # handling of production version higher than current base of test db
-            if isinstance(base_v, integer_types) and max_v >= 100000 > cur_db_version > base_v:
-                sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
-                print('Your [%s] database version (%s) is a db version and doesn\'t match SickGear required '
-                      'version (%s), downgrading to production base db' % (d, cur_db_version, max_v))
-                self.execute_rollback(mo, base_v, load_msg)
-                cur_db_version = db.DBConnection(d).check_db_version()
-                if 100000 <= cur_db_version:
-                    print('Rollback to production base failed.')
-                    sys.exit('If you have used other forks, your database may be unusable due to their changes')
-                if 100000 <= max_v and None is not base_v:
-                    max_v = base_v  # set max_v to the needed base production db for test_db
-                print(f'Rollback to production base of [{d}] successful.')
-                sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
-
-            # handling of production db versions
-            if 0 < cur_db_version < 100000:
-                if cur_db_version < min_v:
-                    print(f'Your [{d}] database version ({cur_db_version})'
-                          f' is too old to migrate from with this version of SickGear')
-                    sys.exit('Upgrade using a previous version of SG first,'
-                             ' or start with no database file to begin fresh')
-                if cur_db_version > max_v:
+                # handling of standalone TEST db versions
+                load_msg = f'Downgrading {d} to production version'
+                if 100000 <= cur_db_version != max_v:
                     sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
-                    print(f'Your [{d}] database version ({cur_db_version}) has been incremented past what this'
-                          f' version of SickGear supports. Trying to rollback now. Please wait...')
+                    print(f'Your [{d}] database version ({cur_db_version}) is a test db version and doesn\'t match'
+                          f' SickGear required version ({max_v}), downgrading to production db')
                     self.execute_rollback(mo, max_v, load_msg)
-                    if db.DBConnection(d).check_db_version() > max_v:
-                        print('Rollback failed.')
+                    cur_db_version = sg_db.check_db_version()
+                    if 100000 <= cur_db_version:
+                        print('Rollback to production failed.')
                         sys.exit('If you have used other forks, your database may be unusable due to their changes')
-                    print(f'Rollback of [{d}] successful.')
+                    if 100000 <= max_v and None is not base_v:
+                        max_v = base_v  # set max_v to the needed base production db for test_db
+                    print(f'Rollback to production of [{d}] successful.')
                     sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
+
+                # handling of production version higher than current base of test db
+                if isinstance(base_v, integer_types) and max_v >= 100000 > cur_db_version > base_v:
+                    sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
+                    print(f'Your [{d}] database version ({cur_db_version}) is a db version and doesn\'t match'
+                          f' SickGear required version ({max_v}), downgrading to production base db')
+                    self.execute_rollback(mo, base_v, load_msg)
+                    cur_db_version = sg_db.check_db_version()
+                    if 100000 <= cur_db_version:
+                        print('Rollback to production base failed.')
+                        sys.exit('If you have used other forks, your database may be unusable due to their changes')
+                    if 100000 <= max_v and None is not base_v:
+                        max_v = base_v  # set max_v to the needed base production db for test_db
+                    print(f'Rollback to production base of [{d}] successful.')
+                    sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
+
+                # handling of production db versions
+                if 0 < cur_db_version < 100000:
+                    if cur_db_version < min_v:
+                        print(f'Your [{d}] database version ({cur_db_version})'
+                              f' is too old to migrate from with this version of SickGear')
+                        sys.exit('Upgrade using a previous version of SG first,'
+                                 ' or start with no database file to begin fresh')
+                    if cur_db_version > max_v:
+                        sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Rollback')
+                        print(f'Your [{d}] database version ({cur_db_version}) has been incremented past what this'
+                              f' version of SickGear supports. Trying to rollback now. Please wait...')
+                        self.execute_rollback(mo, max_v, load_msg)
+                        if sg_db.check_db_version() > max_v:
+                            print('Rollback failed.')
+                            sys.exit('If you have used other forks, your database may be unusable due to their changes')
+                        print(f'Rollback of [{d}] successful.')
+                        sickgear.classes.loading_msg.set_msg_progress(load_msg, 'Finished')
 
         # migrate the config if it needs it
         from sickgear.config import ConfigMigrator
@@ -524,11 +525,13 @@ class SickGear(object):
             self.load_shows_from_db()
             sickgear.MEMCACHE['history_tab'] = sickgear.webserve.History.menu_tab(
                 sickgear.MEMCACHE['history_tab_limit'])
-            if not db.DBConnection().has_flag('ignore_require_cleaned'):
-                from sickgear.show_updater import clean_ignore_require_words
-                sickgear.classes.loading_msg.message = 'Cleaning ignore/require words lists'
-                clean_ignore_require_words()
-                db.DBConnection().set_flag('ignore_require_cleaned')
+
+            with db.DBConnection() as sg_db:
+                if not sg_db.has_flag('ignore_require_cleaned'):
+                    from sickgear.show_updater import clean_ignore_require_words
+                    sickgear.classes.loading_msg.message = 'Cleaning ignore/require words lists'
+                    clean_ignore_require_words()
+                    sg_db.set_flag('ignore_require_cleaned')
 
         # Fire up threads
         sickgear.classes.loading_msg.message = 'Starting threads'
@@ -552,69 +555,70 @@ class SickGear(object):
 
         # load all ids from xem
 #        sickgear.classes.loading_msg.message = 'Loading xem data'
-#        startup_background_tasks = threading.Thread(name='XEMUPDATER', target=sickgear.scene_exceptions.ReleaseMap().fetch_xem_ids)
+#        startup_background_tasks = threading.Thread(
+#            name='XEMUPDATER', target=sickgear.scene_exceptions.ReleaseMap().fetch_xem_ids)
 #        startup_background_tasks.start()
 
         sickgear.classes.loading_msg.message = 'Checking history'
         # check history snatched_proper update
-        if not db.DBConnection().has_flag('history_snatch_proper'):
-            # noinspection PyUnresolvedReferences
-            history_snatched_proper_task = threading.Thread(name='UPGRADE-HISTORY-ACTION',
-                                                            target=sickgear.history.history_snatched_proper_fix)
-            history_snatched_proper_task.start()
+        with db.DBConnection() as sg_db:
+            if not sg_db.has_flag('history_snatch_proper'):
+                # noinspection PyUnresolvedReferences
+                history_snatched_proper_task = threading.Thread(name='UPGRADE-HISTORY-ACTION',
+                                                                target=sickgear.history.history_snatched_proper_fix)
+                history_snatched_proper_task.start()
 
-        if not db.DBConnection().has_flag('kodi_nfo_default_removed'):
-            sickgear.metadata.kodi.remove_default_attr()
-        if not db.DBConnection().has_flag('kodi_nfo_rebuild_uniqueid'):
-            sickgear.metadata.kodi.rebuild_nfo()
+            if not sg_db.has_flag('kodi_nfo_default_removed'):
+                sickgear.metadata.kodi.remove_default_attr()
+            if not sg_db.has_flag('kodi_nfo_rebuild_uniqueid'):
+                sickgear.metadata.kodi.rebuild_nfo()
 
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
-        if sql_result:
-            switching = True
-            l_msg = 'Adding shows that are switching tv source to queue'
-            total_result = len(sql_result)
+            sql_result = sg_db.select('SELECT * FROM tv_src_switch WHERE status = 0')
+            if sql_result:
+                switching = True
+                l_msg = 'Adding shows that are switching tv source to queue'
+                total_result = len(sql_result)
 
-            def q_switch(switch):
-                try:
-                    _show_obj = sickgear.helpers.find_show_by_id({switch['new_indexer']: switch['new_indexer_id']})
-                    if _show_obj:
-                        sickgear.show_queue_scheduler.action.switch_show(
-                            show_obj=_show_obj,
-                            new_tvid=switch['new_indexer'], new_prodid=switch['new_indexer_id'],
-                            force_id=bool(switch['force_id']), uid=switch['uid'],
-                            set_pause=bool(switch['set_pause']), mark_wanted=bool(switch['mark_wanted']), resume=True,
-                            old_tvid=switch['old_indexer'], old_prodid=switch['old_indexer_id']
-                        )
-                except (BaseException, Exception):
-                    pass
-
-            sickgear.classes.loading_msg.set_msg_progress(l_msg, '0/%s' % total_result)
-            for i, cur_switch in enumerate(sql_result, 1):
-                sickgear.classes.loading_msg.set_msg_progress(l_msg, '%s/%s' % (i, total_result))
-                try:
-                    show_obj = sickgear.helpers.find_show_by_id(
-                        {cur_switch['old_indexer']: cur_switch['old_indexer_id']})
-                except (BaseException, Exception):
-                    if cur_switch['new_indexer_id']:
-                        # show id was already switched, but not finished updated, so queue as update
-                        q_switch(cur_switch)
-                    continue
-                if show_obj:
+                def q_switch(switch):
                     try:
-                        sickgear.show_queue_scheduler.action.switch_show(
-                            show_obj=show_obj,
-                            new_tvid=cur_switch['new_indexer'], new_prodid=cur_switch['new_indexer_id'],
-                            force_id=bool(cur_switch['force_id']), uid=cur_switch['uid'],
-                            set_pause=bool(cur_switch['set_pause']), mark_wanted=bool(cur_switch['mark_wanted'])
-                        )
+                        _show_obj = sickgear.helpers.find_show_by_id({switch['new_indexer']: switch['new_indexer_id']})
+                        if _show_obj:
+                            sickgear.show_queue_scheduler.action.switch_show(
+                                show_obj=_show_obj,
+                                new_tvid=switch['new_indexer'], new_prodid=switch['new_indexer_id'],
+                                force_id=bool(switch['force_id']), uid=switch['uid'],
+                                set_pause=bool(switch['set_pause']), mark_wanted=bool(switch['mark_wanted']),
+                                resume=True, old_tvid=switch['old_indexer'], old_prodid=switch['old_indexer_id']
+                            )
                     except (BaseException, Exception):
+                        pass
+
+                sickgear.classes.loading_msg.set_msg_progress(l_msg, f'0/{total_result}')
+                for i, cur_switch in enumerate(sql_result, 1):
+                    sickgear.classes.loading_msg.set_msg_progress(l_msg, f'{i}/{total_result}')
+                    try:
+                        show_obj = sickgear.helpers.find_show_by_id(
+                            {cur_switch['old_indexer']: cur_switch['old_indexer_id']})
+                    except (BaseException, Exception):
+                        if cur_switch['new_indexer_id']:
+                            # show id was already switched, but not finished updated, so queue as update
+                            q_switch(cur_switch)
                         continue
-                elif cur_switch['new_indexer_id']:
-                    # show id was already switched, but not finished updated, so resume
-                    q_switch(cur_switch)
-        else:
-            switching = False
+                    if show_obj:
+                        try:
+                            sickgear.show_queue_scheduler.action.switch_show(
+                                show_obj=show_obj,
+                                new_tvid=cur_switch['new_indexer'], new_prodid=cur_switch['new_indexer_id'],
+                                force_id=bool(cur_switch['force_id']), uid=cur_switch['uid'],
+                                set_pause=bool(cur_switch['set_pause']), mark_wanted=bool(cur_switch['mark_wanted'])
+                            )
+                        except (BaseException, Exception):
+                            continue
+                    elif cur_switch['new_indexer_id']:
+                        # show id was already switched, but not finished updated, so resume
+                        q_switch(cur_switch)
+            else:
+                switching = False
 
         # Start an update if we're supposed to
         if not switching and (self.force_update or sickgear.UPDATE_SHOWS_ON_START):
@@ -665,7 +669,7 @@ class SickGear(object):
             pid = str(os.getpid())
             logger.log(f'Writing PID: {pid} to {self.pid_file}')
             try:
-                os.fdopen(os.open(self.pid_file, os.O_CREAT | os.O_WRONLY, 0o644), 'w').write('%s\n' % pid)
+                os.fdopen(os.open(self.pid_file, os.O_CREAT | os.O_WRONLY, 0o644), 'w').write(f'{pid}\n')
             except (BaseException, Exception) as er:
                 logger.log_error_and_exit('Unable to write PID file: %s Error: %s [%s]' % (
                     self.pid_file, er.strerror, er.errno))
@@ -701,49 +705,49 @@ class SickGear(object):
 
         logger.log('Loading initial show list')
 
-        my_db = db.DBConnection(row_type='dict')
-        sql_result = my_db.select(
-            """
-            SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, tv_shows.*,
-             ii.akas AS ii_akas, 
-             ii.certificates AS ii_certificates,
-             ii.countries AS ii_countries, ii.country_codes AS ii_country_codes,
-             ii.genres AS ii_genres, ii.imdb_id AS ii_imdb_id,
-             ii.indexer AS ii_indexer, ii.indexer_id AS ii_indexer_id,
-             ii.last_update AS ii_ii_last_update,
-             ii.rating AS ii_rating, ii.runtimes AS ii_runtimes,
-             ii.is_mini_series AS ii_is_mini_series, ii.episode_count AS ii_episode_count,
-             ii.title AS ii_title, ii.votes AS ii_votes, ii.year AS ii_year,
-             tsnf.fail_count AS tsnf_fail_count, tsnf.indexer AS tsnf_indexer,
-             tsnf.indexer_id AS tsnf_indexer_id, tsnf.last_check AS tsnf_last_check,
-             tsnf.last_success AS tsnf_last_success
-            FROM tv_shows
-            LEFT JOIN imdb_info ii
-             ON tv_shows.indexer = ii.indexer AND tv_shows.indexer_id = ii.indexer_id
-            LEFT JOIN tv_shows_not_found tsnf
-             ON tv_shows.indexer = tsnf.indexer AND tv_shows.indexer_id = tsnf.indexer_id
-            """)
-        sickgear.showList = []
-        sickgear.showDict = {}
-        for cur_result in sql_result:
-            try:
-                tv_id = int(cur_result['tv_id'])
-                prod_id = int(cur_result['prod_id'])
-                if cur_result['ii_indexer_id']:
-                    imdb_info_sql = {_fk.replace('ii_', ''): _fv for _fk, _fv in iteritems(cur_result)
-                                     if _fk.startswith('ii_')}
-                else:
-                    imdb_info_sql = None
-                show_obj = TVShow(tv_id, prod_id, show_result=cur_result, imdb_info_result=imdb_info_sql)
-                if cur_result['tsnf_indexer_id']:
-                    failed_result = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in iteritems(cur_result)
-                                     if _fk.startswith('tsnf_')}
-                    show_obj.helper_load_failed_db(sql_result=failed_result)
-                sickgear.showList.append(show_obj)
-                sickgear.showDict[show_obj.sid_int] = show_obj
-                _ = show_obj.ids
-            except (BaseException, Exception) as err:
-                logger.error('There was an error creating the show in %s: %s' % (cur_result['location'], ex(err)))
+        with db.DBConnection(row_type='dict') as sg_db:
+            sql_result = sg_db.select(
+                """
+                SELECT tv_shows.indexer AS tv_id, tv_shows.indexer_id AS prod_id, tv_shows.*,
+                 ii.akas AS ii_akas, 
+                 ii.certificates AS ii_certificates,
+                 ii.countries AS ii_countries, ii.country_codes AS ii_country_codes,
+                 ii.genres AS ii_genres, ii.imdb_id AS ii_imdb_id,
+                 ii.indexer AS ii_indexer, ii.indexer_id AS ii_indexer_id,
+                 ii.last_update AS ii_ii_last_update,
+                 ii.rating AS ii_rating, ii.runtimes AS ii_runtimes,
+                 ii.is_mini_series AS ii_is_mini_series, ii.episode_count AS ii_episode_count,
+                 ii.title AS ii_title, ii.votes AS ii_votes, ii.year AS ii_year,
+                 tsnf.fail_count AS tsnf_fail_count, tsnf.indexer AS tsnf_indexer,
+                 tsnf.indexer_id AS tsnf_indexer_id, tsnf.last_check AS tsnf_last_check,
+                 tsnf.last_success AS tsnf_last_success
+                FROM tv_shows
+                LEFT JOIN imdb_info ii
+                 ON tv_shows.indexer = ii.indexer AND tv_shows.indexer_id = ii.indexer_id
+                LEFT JOIN tv_shows_not_found tsnf
+                 ON tv_shows.indexer = tsnf.indexer AND tv_shows.indexer_id = tsnf.indexer_id
+                """)
+            sickgear.showList = []
+            sickgear.showDict = {}
+            for cur_result in sql_result:
+                try:
+                    tv_id = int(cur_result['tv_id'])
+                    prod_id = int(cur_result['prod_id'])
+                    if cur_result['ii_indexer_id']:
+                        imdb_info_sql = {_fk.replace('ii_', ''): _fv for _fk, _fv in cur_result.items()
+                                         if _fk.startswith('ii_')}
+                    else:
+                        imdb_info_sql = None
+                    show_obj = TVShow(tv_id, prod_id, show_result=cur_result, imdb_info_result=imdb_info_sql)
+                    if cur_result['tsnf_indexer_id']:
+                        failed_result = {_fk.replace('tsnf_', ''): _fv for _fk, _fv in cur_result.items()
+                                         if _fk.startswith('tsnf_')}
+                        show_obj.helper_load_failed_db(sql_result=failed_result)
+                    sickgear.showList.append(show_obj)
+                    sickgear.showDict[show_obj.sid_int] = show_obj
+                    _ = show_obj.ids
+                except (BaseException, Exception) as err:
+                    logger.error(f'There was an error creating the show in {cur_result["location"]}: {ex(err)}')
         sickgear.webserve.Home.make_showlist_unique_names()
 
     @staticmethod
@@ -752,7 +756,7 @@ class SickGear(object):
             for filename in os.listdir(src_dir):
                 src_file = os.path.join(src_dir, filename)
                 dst_file = os.path.join(dst_dir, filename)
-                bak_file = os.path.join(dst_dir, '%s.bak' % filename)
+                bak_file = os.path.join(dst_dir, f'{filename}.bak')
                 shutil.move(dst_file, bak_file)
                 shutil.move(src_file, dst_file)
 
@@ -825,8 +829,8 @@ if '__main__' == __name__:
             if e.errno != errno.EINTR:
                 raise
     except SystemExit as e:
-        print('%s' % ex(e))
+        print(f'{ex(e)}')
     except (BaseException, Exception) as e:
         import traceback
         print(traceback.format_exc())
-        logger.log('SickGear.Start() exception caught %s: %s' % (ex(e), traceback.format_exc()))
+        logger.log(f'SickGear.Start() exception caught {ex(e)}: {traceback.format_exc()}')

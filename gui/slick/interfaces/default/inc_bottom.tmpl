@@ -13,7 +13,6 @@
 
 	<footer>
 		<div class="footer clearfix">
-#set $my_db = $db.DBConnection()
 #set $today = str($datetime.date.today().toordinal())
 #set status_quality = '(%s)' % ','.join([str(quality) for quality in $Quality.SNATCHED_ANY])
 #set status_download = '(%s)' % ','.join([str(quality) for quality in $Quality.DOWNLOADED + $Quality.ARCHIVED])
@@ -28,7 +27,7 @@
     + ' OR (status IN %s) OR (status IN %s))) AS ep_total FROM tv_episodes tv_eps LIMIT 1'\
     % ($status_quality, $status_download)
 ##
-#set $sql_result = $my_db.select($sql_statement)
+#set $sql_result = $db.sg_db_select_helper($sql_statement)
 ##
 #set $shows_total = len($sg_str('showList'))
 #set $shows_active = len([show for show in $sg_str('showList') if 0 == show.paused and 'Ended' != show.status])

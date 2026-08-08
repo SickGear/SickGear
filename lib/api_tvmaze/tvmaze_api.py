@@ -21,7 +21,7 @@ from lib.dateutil.parser import parser
 from lib.dateutil.tz.tz import _datetime_to_timestamp
 from lib.exceptions_helper import ConnectionSkipException, ex
 from lib.pytvmaze import tvmaze
-# from .tvmaze_exceptions import *
+from .tvmaze_exceptions import *
 from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
     crew_type_names, TVInfoPerson, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoNetwork, TVInfoSeason, \
     PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB, TVINFO_CAST_LIMIT
@@ -738,6 +738,8 @@ class TvMaze(TVInfoBase):
             kw['embed'] = ','.join(to_embed)
         try:
             p = tvmaze.person_main_info(p_id, **kw)
+        except tvmaze.PersonNotFound as e:
+            raise TvMazePersonNotFound(f'Person id: {p_id} not found')
         except ConnectionSkipException as e:
             raise e
         except (BaseException, Exception):

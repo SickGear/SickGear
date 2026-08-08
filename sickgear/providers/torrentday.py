@@ -23,7 +23,6 @@ from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
 from _23 import b64decodestring
-from six import iteritems
 
 
 class TorrentDayProvider(generic.TorrentProvider):
@@ -32,7 +31,7 @@ class TorrentDayProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'TorrentDay')
 
         self.url_home = ['https://www.torrentday.com/'] + \
-                        ['http://td.%s/' % b64decodestring(x) for x in [''.join(x) for x in [
+                        [f'http://td.{b64decodestring(x)}/' for x in [''.join(x) for x in [
                             [re.sub(r'(?i)[I\s1]+', '', x[::-1]) for x in [
                                 'y92d', 'zl12a', 'y9mY', 'n5 Wa', 'vNmIL', '=i1=Qb']],
                             [re.sub(r'(?i)[T\sq]+', '', x[::-1]) for x in [
@@ -90,7 +89,7 @@ class TorrentDayProvider(generic.TorrentProvider):
         results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(get='download', id=r'download.*?/([\d]+)')))
+        rc = dict((k, re.compile(f'(?i){v}')) for (k, v) in dict(get='download', id=r'download.*?/([\d]+)').items())
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -137,7 +136,7 @@ class TorrentDayProvider(generic.TorrentProvider):
                                 if self._reject_item(seeders, leechers):
                                     continue
 
-                                title = tr.find('a', href=re.compile('/t/%s' % dl_id)).get_text().strip()
+                                title = tr.find('a', href=re.compile(f'/t/{dl_id}')).get_text().strip()
                                 download_url = self._link(dl)
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue

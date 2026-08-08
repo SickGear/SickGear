@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="240">
+<rect width="360" height="240" fill="#fff"/>
+<g stroke-width="6">
+<path d="M0,96H360" stroke="#f00"/>
+<path d="M0,104H360" stroke="#f90"/>
+<path d="M0,112H360" stroke="#fc0"/>
+<path d="M0,120H360" stroke="#6c3"/>
+<path d="M0,128H360" stroke="#39f"/>
+<path d="M0,136H360" stroke="#00c"/>
+<path d="M0,144H360" stroke="#609"/>
+</g>
+</svg>

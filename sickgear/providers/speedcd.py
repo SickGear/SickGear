@@ -26,8 +26,7 @@ from bs4_parser import BS4Parser
 from requests.cookies import cookiejar_from_dict
 
 from _23 import quote, unquote
-from six import string_types, iteritems
-
+from six import string_types
 
 class SpeedCDProvider(generic.TorrentProvider):
 
@@ -91,12 +90,12 @@ class SpeedCDProvider(generic.TorrentProvider):
                 if html and 'RSS' in html:
                     self.digest = None
                     if self.session.cookies.get('inSpeed_speedian'):
-                        self.digest = 'inSpeed_speedian=%s' % self.session.cookies.get('inSpeed_speedian')
+                        self.digest = f'inSpeed_speedian={self.session.cookies.get("inSpeed_speedian")}'
                     self.save_main_config()
                     result = True
-                    logger.debug('Cookie details for %s updated.' % self.name)
+                    logger.debug(f'Cookie details for {self.name} updated.')
             elif not self.failure_count:
-                logger.error('Invalid cookie details for %s and login failed. Check settings' % self.name)
+                logger.error(f'Invalid cookie details for {self.name} and login failed. Check settings')
         return result
 
     @staticmethod
@@ -111,8 +110,8 @@ class SpeedCDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
-            'info': '/t/', 'get': 'download', 'fl': r'\[freeleech\]'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
+            'info': '/t/', 'get': 'download', 'fl': r'\[freeleech\]'}.items()])
 
         for mode in search_params:
             rc['cats'] = re.compile(r'(?i)browse/(?:%s)'
@@ -174,7 +173,7 @@ class SpeedCDProvider(generic.TorrentProvider):
                     time.sleep(1.1)
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string, self.name)['Cache' == mode])
+                                 (f'search string: {search_string}', self.name)['Cache' == mode])
 
             results = self._sort_seeding(mode, results + items[mode])
 

@@ -7,6 +7,7 @@ from _typeshed import Incomplete
 
 DOT_DITHER_TYPES: Incomplete
 DOT_DITHER_KERNELS: Incomplete
+DOT_MODES: Incomplete
 
 class NotifyDot(NotifyBase):
     """A wrapper for Dot. Notifications."""
@@ -16,8 +17,6 @@ class NotifyDot(NotifyBase):
     setup_url: str
     image_size: Incomplete
     attachment_support: bool
-    SUPPORTED_MODES: Incomplete
-    DEFAULT_MODE: str
     templates: Incomplete
     template_tokens: Incomplete
     template_args: Incomplete
@@ -32,10 +31,19 @@ class NotifyDot(NotifyBase):
     border: Incomplete
     dither_type: Incomplete
     dither_kernel: Incomplete
-    text_api_url: str
-    image_api_url: str
-    def __init__(self, apikey=None, device_id=None, mode=..., refresh_now: bool = True, signature=None, icon=None, link=None, border=None, dither_type=None, dither_kernel=None, image_data=None, **kwargs) -> None:
+    task_key: Incomplete
+    text_api_url: Incomplete
+    image_api_url: Incomplete
+    def __init__(self, apikey=None, device_id=None, mode=..., refresh_now=None, signature=None, icon=None, link=None, border=None, dither_type=None, dither_kernel=None, image_data=None, task_key=None, **kwargs) -> None:
         """Initialize Notify Dot Object."""
+    def _post(self, api_url, payload, headers):
+        """POST payload to api_url; return True on success, False otherwise."""
+    def _send_text(self, body, title, icon_data, headers):
+        """Send body/title via the Text API."""
+    def _send_image(self, image_data, headers):
+        """Send image_data via the Image API."""
+    def _resolve_attachment(self, attach, warn_label):
+        """Return base64 string from the first usable attachment, or None."""
     def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
         """Perform Dot Notification."""
     @property
@@ -49,5 +57,5 @@ class NotifyDot(NotifyBase):
         """Returns the number of targets associated with this notification."""
     @staticmethod
     def parse_url(url):
-        """Parses the URL and returns enough arguments that can allow us to re-
-        instantiate this object."""
+        """Parses the URL and returns enough arguments that can allow us to
+        re-instantiate this object."""

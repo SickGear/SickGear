@@ -230,7 +230,7 @@ class SGDatetime(datetime.datetime):
         except ValueError:
             result = obj.replace(tzinfo=None).strftime(str_format)
         return result if isinstance(result, string_types) else \
-            isinstance(result, tuple) and 1 == len(result) and '%s' % result[0] or ''
+            isinstance(result, tuple) and 1 == len(result) and f'{result[0]}' or ''
 
     @static_or_instance
     def to_file_timestamp(self, dt=None):

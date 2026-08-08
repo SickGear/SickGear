@@ -17,6 +17,7 @@
 import datetime
 import os.path
 import re
+import gzip
 
 import sickgear
 import sickgear.providers
@@ -25,6 +26,7 @@ from lib.api_trakt import TraktAPI
 
 from _23 import urlsplit, urlunsplit
 from sg_helpers import compress_file, copy_file, remove_file_perm, scantree, try_int
+from json_helper import json_load
 from six import string_types
 
 
@@ -41,8 +43,8 @@ sports_ep_type = ('%(seasonnumber)dx%(episodenumber)02d',
 naming_ep_type_text = ('1x02', 's01e02', 'S01E02', '01x02')
 
 naming_multi_ep_type = {0: ['-%(episodenumber)02d'] * len(naming_ep_type),
-                        1: [' - %s' % x for x in naming_ep_type],
-                        2: [x + '%(episodenumber)02d' for x in ('x', 'e', 'E', 'x')]}
+                        1: [f' - {x}' for x in naming_ep_type],
+                        2: [f'{x}%(episodenumber)02d' for x in ('x', 'e', 'E', 'x')]}
 naming_multi_ep_type_text = ('extend', 'duplicate', 'repeat')
 
 naming_sep_type = (' - ', ' ')
@@ -224,13 +226,6 @@ def schedule_download_propers(download_propers):
         sickgear.search_propers_scheduler.set_paused_state()
 
 
-def schedule_trakt(use_trakt):
-    if sickgear.USE_TRAKT == use_trakt:
-        return
-
-    sickgear.USE_TRAKT = use_trakt
-
-
 def schedule_subtitles(use_subtitles):
     if sickgear.USE_SUBTITLES != use_subtitles:
         sickgear.USE_SUBTITLES = use_subtitles
@@ -304,13 +299,13 @@ def clean_host(host, default_port=None, allow_base=False):
         if cleaned_host:
 
             if cleaned_port:
-                host = '%s:%s%s' % (cleaned_host, cleaned_port, cleaned_base)
+                host = f'{cleaned_host}:{cleaned_port}{cleaned_base}'
 
             elif default_port:
-                host = '%s:%s%s' % (cleaned_host, default_port, cleaned_base)
+                host = f'{cleaned_host}:{default_port}{cleaned_base}'
 
             else:
-                host = '%s%s' % (cleaned_host, cleaned_base)
+                host = f'{cleaned_host}{cleaned_base}'
 
         else:
             host = ''
@@ -344,7 +339,7 @@ def clean_url(url, add_slash=True):
         url = url.strip()
 
         if '://' not in url:
-            url = '//' + url
+            url = f'//{url}'
 
         scheme, netloc, path, query, fragment = urlsplit(url, 'http')
 
@@ -408,7 +403,7 @@ def check_setting_int(config, cfg_name, item_name, def_val):
         except (BaseException, Exception):
             config[cfg_name] = {}
             config[cfg_name][item_name] = my_val
-    logger.debug('%s -> %s' % (item_name, my_val))
+    logger.debug(f'{item_name} -> {my_val}')
     return my_val
 
 
@@ -423,7 +418,7 @@ def check_setting_float(config, cfg_name, item_name, def_val):
             config[cfg_name] = {}
             config[cfg_name][item_name] = my_val
 
-    logger.debug('%s -> %s' % (item_name, my_val))
+    logger.debug(f'{item_name} -> {my_val}')
     return my_val
 
 
@@ -450,9 +445,9 @@ def check_setting_str(config, cfg_name, item_name, def_val, log=True):
             config[cfg_name][item_name] = helpers.encrypt(my_val, encryption_version)
 
     if log:
-        logger.debug('%s -> %s' % (item_name, my_val))
+        logger.debug(f'{item_name} -> {my_val}')
     else:
-        logger.debug('%s -> ******' % item_name)
+        logger.debug(f'{item_name} -> ******')
 
     return (my_val, def_val)['None' == my_val]
 
@@ -509,6 +504,53 @@ def backup_config():
         logger.error('backup config.ini error')
 
 
+def validate_btn_status_file(filename):
+    try:
+        if not os.path.isfile(filename):
+            return False
+        # with open(filename, 'r') as f:
+        with gzip.GzipFile(filename, 'r') as f:
+            if isinstance(json_load(f), dict):
+               return True
+    except (BaseException, Exception):
+        pass
+    return False
+
+
+def backup_btn_status():
+    """
+    backup btn-status.json
+    """
+    try:
+        if not os.path.isfile(sickgear.BTN_SETTINGS_FILE):
+            return
+        logger.log('backing up btn-status.json')
+        if not validate_btn_status_file(sickgear.BTN_SETTINGS_FILE):
+            logger.error('btn-status.json file seems to be invalid, not backing up.')
+            return
+        now = datetime.datetime.now()
+        d = datetime.datetime.strftime(now, '%Y-%m-%d')
+        t = datetime.datetime.strftime(now, '%H-%M')
+        target_base = os.path.join(sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup'))
+        target = os.path.join(target_base, 'btn-status.json')
+        copy_file(sickgear.BTN_SETTINGS_FILE, target)
+        if not validate_btn_status_file(target):
+            logger.error('btn-status.json file seems to be invalid, not backing up.')
+            remove_file_perm(target)
+            return
+        compress_file(target, 'btn-status.json')
+        os.rename(re.sub(r'\.json$', '.zip', target), os.path.join(target_base, f'btn-status_{d}_{t}.zip'))
+        # remove old files
+        use_count = (1, sickgear.BACKUP_DB_MAX_COUNT)[not sickgear.BACKUP_DB_ONEDAY]
+        file_list = [f for f in scantree(target_base, include='btn-status', filter_kind=False)]
+        if use_count < len(file_list):
+            file_list.sort(key=lambda _f: _f.stat(follow_symlinks=False).st_mtime, reverse=True)
+            for direntry in file_list[use_count:]:
+                remove_file_perm(direntry.path)
+    except (BaseException, Exception):
+        logger.error('backup btn-status.json error')
+
+
 class ConfigMigrator(object):
     def __init__(self, config_obj):
         """
@@ -563,7 +605,7 @@ class ConfigMigrator(object):
             next_version = self.config_version + 1
 
             if next_version in self.migration_names:
-                migration_name = ': %s' % self.migration_names[next_version]
+                migration_name = f': {self.migration_names[next_version]}'
             else:
                 migration_name = ''
 
@@ -575,7 +617,7 @@ class ConfigMigrator(object):
 
             # do the migration, expect a method named _migrate_v<num>
             logger.log(f'Migrating config up to version {next_version} {migration_name}')
-            getattr(self, '_migrate_v%s' % next_version)()
+            getattr(self, f'_migrate_v{next_version}')()
             self.config_version = next_version
 
             # save new config after migration
@@ -599,47 +641,47 @@ class ConfigMigrator(object):
         """
 
         sickgear.NAMING_PATTERN = self._name_to_pattern()
-        logger.log('Based on your old settings I am setting your new naming pattern to: %s' % sickgear.NAMING_PATTERN)
+        logger.log(f'Based on your old settings I am setting your new naming pattern to: {sickgear.NAMING_PATTERN}')
 
         sickgear.NAMING_CUSTOM_ABD = bool(check_setting_int(self.config_obj, 'General', 'naming_dates', 0))
 
         if sickgear.NAMING_CUSTOM_ABD:
             sickgear.NAMING_ABD_PATTERN = self._name_to_pattern(True)
-            logger.log('Adding a custom air-by-date naming pattern to your config: %s' % sickgear.NAMING_ABD_PATTERN)
+            logger.log(f'Adding a custom air-by-date naming pattern to your config: {sickgear.NAMING_ABD_PATTERN}')
         else:
             sickgear.NAMING_ABD_PATTERN = naming.name_abd_presets[0]
 
         sickgear.NAMING_MULTI_EP = int(check_setting_int(self.config_obj, 'General', 'naming_multi_ep_type', 1))
 
         # see if any of their shows used season folders
-        my_db = db.DBConnection()
-        season_folder_shows = my_db.select('SELECT * FROM tv_shows WHERE flatten_folders = 0')
+        with db.DBConnection() as sg_db:
+            season_folder_shows = sg_db.select('SELECT * FROM tv_shows WHERE flatten_folders = 0')
 
-        # if any shows had season folders on then prepend season folder to the pattern
-        if season_folder_shows:
+            # if any shows had season folders on then prepend season folder to the pattern
+            if season_folder_shows:
 
-            old_season_format = check_setting_str(self.config_obj, 'General', 'season_folders_format', 'Season %02d')
+                old_season_format = check_setting_str(self.config_obj, 'General', 'season_folders_format', 'Season %02d')
 
-            if old_season_format:
-                try:
-                    new_season_format = old_season_format % 9
-                    new_season_format = str(new_season_format).replace('09', '%0S')
-                    new_season_format = new_season_format.replace('9', '%S')
+                if old_season_format:
+                    try:
+                        new_season_format = old_season_format % 9
+                        new_season_format = str(new_season_format).replace('09', '%0S')
+                        new_season_format = new_season_format.replace('9', '%S')
 
-                    logger.log(f'Changed season folder format from {old_season_format} to {new_season_format},'
-                               f' prepending it to your naming config')
-                    sickgear.NAMING_PATTERN = new_season_format + os.sep + sickgear.NAMING_PATTERN
+                        logger.log(f'Changed season folder format from {old_season_format} to {new_season_format},'
+                                   f' prepending it to your naming config')
+                        sickgear.NAMING_PATTERN = new_season_format + os.sep + sickgear.NAMING_PATTERN
 
-                except (TypeError, ValueError):
-                    logger.error(f'Can not change {old_season_format} to new season format')
+                    except (TypeError, ValueError):
+                        logger.error(f'Can not change {old_season_format} to new season format')
 
-        # if no shows had it on then don't flatten any shows and don't put season folders in the config
-        else:
+            # if no shows had it on then don't flatten any shows and don't put season folders in the config
+            else:
 
-            logger.log('No shows were using season folders before so I am disabling flattening on all shows')
+                logger.log('No shows were using season folders before so I am disabling flattening on all shows')
 
-            # don't flatten any shows at all
-            my_db.action('UPDATE tv_shows SET flatten_folders = 0 WHERE 1=1')
+                # don't flatten any shows at all
+                sg_db.action('UPDATE tv_shows SET flatten_folders = 0 WHERE 1=1')
 
         sickgear.NAMING_FORCE_FOLDERS = naming.check_force_season_folders()
 
@@ -783,7 +825,7 @@ class ConfigMigrator(object):
             cur_metadata = metadata.split('|')
             # if target has the old number of values, do upgrade
             if 6 == len(cur_metadata):
-                logger.log('Upgrading ' + metadata_name + ' metadata, old value: ' + metadata)
+                logger.log(f'Upgrading {metadata_name} metadata, old value: {metadata}')
                 cur_metadata.insert(4, '0')
                 cur_metadata.append('0')
                 cur_metadata.append('0')
@@ -829,7 +871,7 @@ class ConfigMigrator(object):
         for curProvider in sickgear.providers.sorted_sources():
             if hasattr(curProvider, 'enable_recentsearch'):
                 curProvider.enable_recentsearch = bool(check_setting_int(
-                    self.config_obj, curProvider.get_id().upper(), curProvider.get_id() + '_enable_dailysearch', 1))
+                    self.config_obj, curProvider.get_id().upper(), f'{curProvider.get_id()}_enable_dailysearch', 1))
 
     def _migrate_v7(self):
         sickgear.EPISODE_VIEW_LAYOUT = check_setting_str(self.config_obj, 'GUI', 'coming_eps_layout', 'banner')
@@ -870,10 +912,8 @@ class ConfigMigrator(object):
         self.deprecate_anon_service()
 
     def _migrate_v14(self):
-        old_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_token', '')
-        old_refresh_token = check_setting_str(self.config_obj, 'Trakt', 'trakt_refresh_token', '')
-        if old_token and old_refresh_token:
-            TraktAPI.add_account(old_token, old_refresh_token, None)
+        # deprecated Trakt service
+        pass
 
     # Migration v15: Transmithe.net variables
     def _migrate_v15(self):
@@ -885,18 +925,18 @@ class ConfigMigrator(object):
         old_id = 'transmithe_net'
         old_id_uc = old_id.upper()
         neb.enabled = bool(check_setting_int(self.config_obj, old_id_uc, old_id, 0))
-        setattr(neb, 'username', check_setting_str(self.config_obj, old_id_uc, old_id + '_username', ''))
-        neb.password = check_setting_str(self.config_obj, old_id_uc, old_id + '_password', '')
-        neb.minseed = check_setting_int(self.config_obj, old_id_uc, old_id + '_minseed', 0)
-        neb.minleech = check_setting_int(self.config_obj, old_id_uc, old_id + '_minleech', 0)
-        neb.freeleech = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_freeleech', 0))
+        setattr(neb, 'username', check_setting_str(self.config_obj, old_id_uc, f'{old_id}_username', ''))
+        neb.password = check_setting_str(self.config_obj, old_id_uc, f'{old_id}_password', '')
+        neb.minseed = check_setting_int(self.config_obj, old_id_uc, f'{old_id}_minseed', 0)
+        neb.minleech = check_setting_int(self.config_obj, old_id_uc, f'{old_id}_minleech', 0)
+        neb.freeleech = bool(check_setting_int(self.config_obj, old_id_uc, f'{old_id}_freeleech', 0))
         neb.enable_recentsearch = bool(check_setting_int(
-            self.config_obj, old_id_uc, old_id + '_enable_recentsearch', 1)) or not getattr(neb, 'supports_backlog')
-        neb.enable_backlog = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_enable_backlog', 1))
-        neb.search_mode = check_setting_str(self.config_obj, old_id_uc, old_id + '_search_mode', 'eponly')
-        neb.search_fallback = bool(check_setting_int(self.config_obj, old_id_uc, old_id + '_search_fallback', 0))
-        neb.seed_time = check_setting_int(self.config_obj, old_id_uc, old_id + '_seed_time', '')
-        neb._seed_ratio = check_setting_str(self.config_obj, old_id_uc, old_id + '_seed_ratio', '')
+            self.config_obj, old_id_uc, f'{old_id}_enable_recentsearch', 1)) or not getattr(neb, 'supports_backlog')
+        neb.enable_backlog = bool(check_setting_int(self.config_obj, old_id_uc, f'{old_id}_enable_backlog', 1))
+        neb.search_mode = check_setting_str(self.config_obj, old_id_uc, f'{old_id}_search_mode', 'eponly')
+        neb.search_fallback = bool(check_setting_int(self.config_obj, old_id_uc, f'{old_id}_search_fallback', 0))
+        neb.seed_time = check_setting_int(self.config_obj, old_id_uc, f'{old_id}_seed_time', '')
+        neb._seed_ratio = check_setting_str(self.config_obj, old_id_uc, f'{old_id}_seed_ratio', '')
 
     # Migration v16: Purge old cache image folder name
     @staticmethod
@@ -905,7 +945,7 @@ class ConfigMigrator(object):
             cache_default = sickgear.CACHE_DIR
             dead_paths = ['anidb', 'imdb', 'trakt']
             for path in dead_paths:
-                sickgear.CACHE_DIR = '%s/images/%s' % (cache_default, path)
+                sickgear.CACHE_DIR = f'{cache_default}/images/{path}'
                 helpers.clear_cache(True)
                 try:
                     os.rmdir(sickgear.CACHE_DIR)
@@ -955,7 +995,7 @@ class ConfigMigrator(object):
         growl_host = check_setting_str(self.config_obj, 'Growl', 'growl_host', '')
         growl_password = check_setting_str(self.config_obj, 'Growl', 'growl_password', '')
         if growl_password:
-            sickgear.GROWL_HOST = '%s@%s' % (growl_password, growl_host)
+            sickgear.GROWL_HOST = f'{growl_password}@{growl_host}'
 
     def _migrate_v21(self):
         sickgear.MEDIAPROCESS_INTERVAL = check_setting_int(

@@ -38,7 +38,7 @@ class SynoIndexNotifier(BaseNotifier):
             output, err, exit_status = cmdline_runner(synoindex_cmd)
             self._log_debug(f'Script result: {output}')
         except (BaseException, Exception) as e:
-            self._log_error('Unable to run synoindex: %s' % ex(e))
+            self._log_error(f'Unable to run synoindex: {ex(e)}')
 
     def _move_object(self, old_path, new_path):
         if self.is_enabled():

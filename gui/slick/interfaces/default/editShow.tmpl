@@ -19,15 +19,14 @@
 ##
 #import os.path
 #from _23 import quote_plus
-#from six import iteritems
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
 
 <script>
 	var config = {showLang: '$show_obj.lang', showIsAnime: #echo ('!1','!0')[$show_obj.is_anime]#, expandIds: #echo ('!1','!0')[$expand_ids]#}
 </script>
-<script type="text/javascript" src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/editShow.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
+<script src="$sbRoot/js/qualityChooser.js?v=$sbPID"></script>
+<script src="$sbRoot/js/editShow.js?v=$sbPID"></script>
+<script src="$sbRoot/js/livepanel.js?v=$sbPID"></script>
 <script src="$sbRoot/js/lib/select2.full.min.js"></script>
 <link href="$sbRoot/css/lib/select2.css" rel="stylesheet">
 
@@ -295,7 +294,7 @@
 #if $show_obj.is_anime
     #import sickgear.anime
     #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_anigrouplists.tmpl')
-					<script type="text/javascript" src="$sbRoot/js/anigrouplists.js?v=$sbPID"></script>
+					<script src="$sbRoot/js/anigrouplists.js?v=$sbPID"></script>
 #end if
 				</div><!-- /component-group2 //-->
 
@@ -351,8 +350,8 @@
 								<p>no fanart ratings to delete for "<span class="grey-text">$show_obj.name</span>"</p>
 #end if
 								<p>
-								<span class="grey-text">fanart usage:&nbsp;</span>maximum $sg_var('FANART_LIMIT', 3) fanart images downloaded per show, <a href="$sbRoot/config/general/#core-component-group2">change limit</a><br />
-								<span class="grey-text">fanart keys:&nbsp;</span>hold down Ctrl+Alt (mac: Command+Option) and then press any of... left or right to change image, and<br />
+								<span class="grey-text">fanart usage:&nbsp;</span>maximum $sg_var('FANART_LIMIT', 3) fanart images downloaded per show, <a href="$sbRoot/config/general/#core-component-group2">change limit</a><br>
+								<span class="grey-text">fanart keys:&nbsp;</span>hold down Ctrl+Alt (mac: Command+Option) and then press any of... left or right to change image, and<br>
 								's' to change and save ratings where 'a'/down = avoid, 'f' = fave, 'g'/up = group (repeat keypress to toggle rating)
 								with the livepanel not in 's'ave mode; up = change view mode, down = toggle translucency
 							</span>
@@ -375,7 +374,7 @@
 #set $dev = None
 					<div id="idmapping-options" style="display:#if $dev#--#end if#none">
 #set $is_main_settable = False | $unlock_main_id
-#for $tvid, $src_name in iteritems($sickgear.TVInfoAPI().all_sources)
+#for $tvid, $src_name in $sickgear.TVInfoAPI().all_sources.items()
     #set $is_main_settable |= ($dev or
         ($tvid != $show_obj.tvid and $show_obj.ids[$tvid].get('id', 0) > 0 and
          $tvid in $sickgear.TVInfoAPI().sources and not $sickgear.TVInfoAPI($tvid).config.get('defunct') and
@@ -385,13 +384,13 @@
     #end if
 #end for
 #set $search_name = quote_plus($sickgear.indexermapper.clean_show_name($show_obj.name))
-#for $tvid, $src_name in iteritems($sickgear.TVInfoAPI().all_sources)
+#for $tvid, $src_name in $sickgear.TVInfoAPI().all_sources.items()
     #set $ok_tvid = $show_obj.ids[$tvid].get('id', 0) > 0
     #set $maybe_main = ($tvid != $show_obj.tvid and
          $tvid in $sickgear.TVInfoAPI().sources and not $sickgear.TVInfoAPI($tvid).config.get('defunct') and
          $sickgear.TVInfoAPI($tvid).config.get('active'))
     #set $settable_main = ($dev or ($ok_tvid and $maybe_main))
-						<div class="field-pair" style="padding:0">
+						<div class="field-pair">
 								<span class="component-title">
     #if $tvid in $show_obj.ids
         #set $src_search_url = sickgear.TVInfoAPI($tvid).config.get('finder')
@@ -401,7 +400,7 @@
             #set $data_link = ''
             #set $use_search_url = False
         #end if
-									<a id="src-mid-$tvid" class="service" style="margin-right:6px" data-search="#if $use_search_url#y#else#n#end if#" #if $src_search_url#data-search-href="$anon_url($src_search_url % $search_name)" data-search-onclick="window.open(this.href, '_blank'); return !1;" data-search-title="Search for show at $src_name" #end if##if $use_search_url#href="$anon_url($src_search_url % $search_name)" onclick="window.open(this.href, '_blank'); return !1;" title="Search for show at $src_name" #end if#$(data_link)href="$anon_url(sickgear.TVInfoAPI($tvid).config['show_url'] % ($show_obj.ids[$tvid]['id'], $srcid)[$expand_ids and ($tvid == $tvsrc)])" $(data_link)onclick="window.open(this.href, '_blank'); return !1;" $(data_link)title="View $src_name info in new tab"><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI($tvid).config['icon']" /></a>
+									<a id="src-mid-$tvid" class="service" style="margin-right:6px" data-search="#if $use_search_url#y#else#n#end if#" #if $src_search_url#data-search-href="$anon_url($src_search_url % $search_name)" data-search-onclick="window.open(this.href, '_blank'); return !1;" data-search-title="Search for show at $src_name" #end if##if $use_search_url#href="$anon_url($src_search_url % $search_name)" onclick="window.open(this.href, '_blank'); return !1;" title="Search for show at $src_name" #end if#$(data_link)href="$anon_url(sickgear.TVInfoAPI($tvid).config['show_url'] % ($show_obj.ids[$tvid]['id'], $srcid)[$expand_ids and ($tvid == $tvsrc)])" $(data_link)onclick="window.open(this.href, '_blank'); return !1;" $(data_link)title="View $src_name info in new tab"><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI($tvid).config['icon']"></a>
     #end if
 									$src_name
 								</span>
@@ -420,7 +419,7 @@
     #else
 									<label for="lockid-$tvid">
 										<input type="checkbox" name="lockid-$tvid" id="lockid-$tvid"#echo ('', $html_checked)[$show_obj.ids.get($tvid, {'status': $sickgear.indexermapper.MapStatus.NONE}).get('status') == $sickgear.indexermapper.MapStatus.NO_AUTOMATIC_CHANGE]#>
-										<p style="padding-left:19px;margin-right:24px">lock this ID</p>
+										<p>lock this ID</p>
 									</label>
         #if $settable_main
 									<label for="set-main-$tvid">
@@ -431,7 +430,7 @@
 								</span>
 						</div>
 #end for
-						<div class="field-pair" style="padding-top:0">
+						<div class="field-pair">
 							<span id="panel-save-get" class="component-desc show">
 								<p>invalid values can break finding episode and TV info</p>
 								<input type="button" value="Save Changes" id="save-mapping" class="btn btn-inline">
@@ -450,7 +449,7 @@
 			</div>
 
 			<div style="margin-top:15px">
-				<input type="submit" id="submit" value="Update Show" class="btn btn-primary" />
+				<input type="submit" id="submit" value="Update Show" class="btn btn-primary">
 				<a href="$sbRoot/home/view-show?tvid_prodid=$show_obj.tvid_prodid" class="btn btn-primary" style="margin-left:10px">Cancel Edit</a>
 			</div>
 		</form>

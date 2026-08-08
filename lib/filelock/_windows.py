@@ -29,8 +29,11 @@ if sys.platform == "win32":  # pragma: win32 cover
         Check if a path is a reparse point (symlink, junction, etc.) on Windows.
 
         :param path: Path to check
-        :return: True if path is a reparse point, False otherwise
+
+        :returns: True if path is a reparse point, False otherwise
+
         :raises OSError: If GetFileAttributesW fails for reasons other than file-not-found
+
         """
         attrs = _kernel32.GetFileAttributesW(path)
         if attrs == INVALID_FILE_ATTRIBUTES:
@@ -45,7 +48,13 @@ if sys.platform == "win32":  # pragma: win32 cover
         return bool(attrs & FILE_ATTRIBUTE_REPARSE_POINT)
 
     class WindowsFileLock(BaseFileLock):
-        """Uses the :func:`msvcrt.locking` function to hard lock the lock file on Windows systems."""
+        """
+        Uses the :func:`msvcrt.locking` function to hard lock the lock file on Windows systems.
+
+        Lock file cleanup: Windows attempts to delete the lock file after release, but deletion is
+        not guaranteed in multi-threaded scenarios where another thread holds an open handle. The lock
+        file may persist on disk, which does not affect lock correctness.
+        """
 
         def _acquire(self) -> None:
             raise_on_not_writable_file(self.lock_file)
@@ -60,10 +69,9 @@ if sys.platform == "win32":  # pragma: win32 cover
             flags = (
                 os.O_RDWR  # open for read and write
                 | os.O_CREAT  # create file if not exists
-                | os.O_TRUNC  # truncate file if not empty
             )
             try:
-                fd = os.open(self.lock_file, flags, self._context.mode)
+                fd = os.open(self.lock_file, flags, self._open_mode())
             except OSError as exception:
                 if exception.errno != EACCES:  # has no access to this lock
                     raise
@@ -83,7 +91,7 @@ if sys.platform == "win32":  # pragma: win32 cover
             msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
             os.close(fd)
 
-            with suppress(OSError):  # Probably another instance of the application hat acquired the file lock.
+            with suppress(OSError):
                 Path(self.lock_file).unlink()
 
 else:  # pragma: win32 no cover

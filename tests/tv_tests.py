@@ -166,26 +166,26 @@ class TVidProdidTests(test.SickbeardTestDBCase):
             prodid = randint(1, max_prodid)
             tvid_prodid_obj = TVidProdid({tvid: prodid})
 
-            msg_vars = ': tvid = %s ; prodid = %s' % (tvid, prodid)
+            msg_vars = f': tvid = {tvid} ; prodid = {prodid}'
 
-            self.assertEqual(tvid, tvid_prodid_obj.tvid, msg='dict tvid test%s' % msg_vars)
-            self.assertEqual(prodid, tvid_prodid_obj.prodid, msg='dict prodid test%s' % msg_vars)
+            self.assertEqual(tvid, tvid_prodid_obj.tvid, msg=f'dict tvid test{msg_vars}')
+            self.assertEqual(prodid, tvid_prodid_obj.prodid, msg=f'dict prodid test{msg_vars}')
 
-            self.assertEqual((tvid, prodid), tvid_prodid_obj.tuple, msg='tuple test%s' % msg_vars)
-            self.assertEqual({tvid: prodid}, tvid_prodid_obj.dict, msg='dict test%s' % msg_vars)
-            self.assertEqual([tvid, prodid], tvid_prodid_obj.list, msg='list test%s' % msg_vars)
+            self.assertEqual((tvid, prodid), tvid_prodid_obj.tuple, msg=f'tuple test{msg_vars}')
+            self.assertEqual({tvid: prodid}, tvid_prodid_obj.dict, msg=f'dict test{msg_vars}')
+            self.assertEqual([tvid, prodid], tvid_prodid_obj.list, msg=f'list test{msg_vars}')
 
             new_sid = prodid << prodid_bitshift | tvid
-            self.assertEqual(new_sid, tvid_prodid_obj.int, msg='int test%s' % msg_vars)
+            self.assertEqual(new_sid, tvid_prodid_obj.int, msg=f'int test{msg_vars}')
 
             sid = tvid_prodid_obj.int
             reverse_obj = TVidProdid(sid)
-            self.assertEqual(tvid, reverse_obj.tvid, msg='reverse int tvid test%s' % msg_vars)
-            self.assertEqual(prodid, reverse_obj.prodid, msg='reverse int prodid test%s' % msg_vars)
+            self.assertEqual(tvid, reverse_obj.tvid, msg=f'reverse int tvid test{msg_vars}')
+            self.assertEqual(prodid, reverse_obj.prodid, msg=f'reverse int prodid test{msg_vars}')
 
-            str_reverse_obj = TVidProdid('%s%s%s' % (tvid, TVidProdid.glue, prodid))
-            self.assertEqual(tvid, str_reverse_obj.tvid, msg='reverse str tvid test%s' % msg_vars)
-            self.assertEqual(prodid, str_reverse_obj.prodid, msg='reverse str prodid test%s' % msg_vars)
+            str_reverse_obj = TVidProdid(f'{tvid}{TVidProdid.glue}{prodid}')
+            self.assertEqual(tvid, str_reverse_obj.tvid, msg=f'reverse str tvid test{msg_vars}')
+            self.assertEqual(prodid, str_reverse_obj.prodid, msg=f'reverse str prodid test{msg_vars}')
 
 
 ids_base = {source: {'id': 0, 'status': indexermapper.MapStatus.NO_AUTOMATIC_CHANGE, 'date': datetime.date.today()}
@@ -226,9 +226,9 @@ find_tests = [
      'description': 'search for 2 non-existing ids without mapping'},
     {'para': {'show_id': {TVINFO_IMDB: 123}},
      'result': None, 'description': 'invalid sid search (tvid above tvid_bitmask)'},
-    {'para': {'show_id': '%s:123' % TVINFO_TVDB}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
+    {'para': {'show_id': f'{TVINFO_TVDB}:123'}, 'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
      'description': 'simple search via tvid_prodid string'},
-    {'para': {'show_id': '%s:123' % TVINFO_TVDB, 'check_multishow': True},
+    {'para': {'show_id': f'{TVINFO_TVDB}:123', 'check_multishow': True},
      'result': {'tvid': TVINFO_TVDB, 'prodid': 123},
      'description': 'simple search via tvid_prodid string and check multishow'},
 ]

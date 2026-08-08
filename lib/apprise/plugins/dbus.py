@@ -54,6 +54,7 @@ try:
     # glib/dbus
     try:
         from dbus.mainloop.glib import DBusGMainLoop
+
         LOOP_GLIB = DBusGMainLoop()
 
     except ImportError:  # pragma: no cover
@@ -63,6 +64,7 @@ try:
     # qt
     try:
         from dbus.mainloop.qt import DBusQtMainLoop
+
         LOOP_QT = DBusQtMainLoop(set_as_default=True)
 
     except ImportError:
@@ -82,9 +84,11 @@ try:
     try:
         # The following is required for Image/Icon loading only
         import gi
+
         gi.require_version("GdkPixbuf", "2.0")
         # noinspection PyUnresolvedReferences
         from gi.repository import GdkPixbuf
+
         NOTIFY_DBUS_IMAGE_SUPPORT = True
 
     except (ImportError, ValueError, AttributeError):
@@ -135,7 +139,6 @@ DBUS_URGENCY_MAP = {
     "h": DBusUrgency.HIGH,
     # Maps against string 'emergency'
     "e": DBusUrgency.HIGH,
-
     # Entries to additionally support (so more like DBus's API)
     "0": DBusUrgency.LOW,
     "1": DBusUrgency.NORMAL,

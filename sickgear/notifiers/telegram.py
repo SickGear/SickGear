@@ -40,7 +40,7 @@ class TelegramNotifier(Notifier):
         cid = self._choose(chatid, sickgear.TELEGRAM_CHATID)
         try:
             msg = self._body_only(('' if not title else f'<b>{title}</b>'), body)
-            msg = msg.replace(f'<b>{title}</b>: ', f'<b>{("SickGear " + title, title)[use_icon]}:</b>\r\n')
+            msg = msg.replace(f'<b>{title}</b>: ', f'<b>{(f"SickGear {title}", title)[use_icon]}:</b>\r\n')
             # HTML spaces (&nbsp;) and tabs (&emsp;) aren't supported
             # See https://core.telegram.org/bots/api#html-style
             msg = re.sub('(?i)&nbsp;?', ' ', msg)
@@ -69,17 +69,17 @@ class TelegramNotifier(Notifier):
                 result = 'a chat id is not set, and a msg has not been sent to the bot to auto detect one.'
 
         if True is not result:
-            self._log_error('Failed to send message, %s' % result)
+            self._log_error(f'Failed to send message, {result}')
 
         return dict(chatid=cid,
                     result=self._choose(('Successful test notice sent.',
-                                         'Error sending notification, %s' % result)[True is not result], result))
+                                         f'Error sending notification, {result}')[True is not result], result))
 
     @staticmethod
     def post(action, access_token, cid, quiet, params):
         params.update(dict(headers={'User-Agent': USER_AGENT}, verify=True, json=True))
         params['post_data'].update(dict(chat_id=cid, parse_mode='HTML', disable_notification=quiet))
-        return get_url('https://api.telegram.org/bot%s/%s' % (access_token, action), **params)
+        return get_url(f'https://api.telegram.org/bot{access_token}/{action}', **params)
 
 
 notifier = TelegramNotifier

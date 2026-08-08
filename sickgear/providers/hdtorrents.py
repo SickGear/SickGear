@@ -25,15 +25,13 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class HDTorrentsProvider(generic.TorrentProvider):
 
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'HDTorrents')
 
-        self.url_home = ['https://hd-torrents.%s/' % x for x in ('org', 'net', 'me')] + ['https://hdts.ru/']
+        self.url_home = [f'https://hd-torrents.{x}/' for x in ('org', 'net', 'me')] + ['https://hdts.ru/']
 
         self.url_vars = {'login_action': 'index.php',
                          'search': 'torrents.php?search=%s&active=0&options=0&%s'}
@@ -65,7 +63,7 @@ class HDTorrentsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'details', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'details', 'get': 'download'}.items()])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -74,10 +72,10 @@ class HDTorrentsProvider(generic.TorrentProvider):
                        [f for f in self.may_filter if f not in self.filter])[non_marked]
             rc['filter'] = re.compile('(?i)(%s).png' % '|'.join(
                 [f.replace('f', '') for f in filters if self.may_filter[f][1]]))
-            log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
+            log = f'{("keep", "skipp")[non_marked]}ing ({", ".join([self.may_filter[f][0] for f in filters])}) '
 
         for mode in search_params:
-            rc['cats'] = re.compile('(?i)category=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile(f'(?i)category=(?:{self._categories_string(mode, template="", delimiter="|")})')
             for search_string in search_params[mode]:
                 search_url = self.urls['search'] % (
                     search_string,

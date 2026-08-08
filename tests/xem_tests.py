@@ -36,8 +36,8 @@ class XEMBasicTests(test.SickbeardTestDBCase):
         Populates the showList with shows from the database
         """
 
-        my_db = test.db.DBConnection()
-        sql_result = my_db.select('SELECT indexer AS tvid, indexer_id AS prodid FROM tv_shows')
+        with test.db.DBConnection() as sg_db:
+            sql_result = sg_db.select('SELECT indexer AS tvid, indexer_id AS prodid FROM tv_shows')
 
         for cur_result in sql_result:
             try:

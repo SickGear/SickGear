@@ -63,6 +63,15 @@ except ImportError:
     FuturesTimeoutError = Exception  # type: ignore[misc]
 
 
+class XMPPChannelBindingError(Exception):
+    """SASL SCRAM-PLUS channel-binding authentication failure.
+
+    Raised when the server rejects authentication because TLS
+    channel-binding data (tls-unique or tls-exporter) was unavailable
+    or mismatched.  Callers may retry with SCRAM-PLUS disabled.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class XMPPConfig:
     """Connection configuration."""
@@ -73,6 +82,11 @@ class XMPPConfig:
     password: str
     secure: str = SecureXMPPMode.STARTTLS
     verify_certificate: bool = True
+    # When False, SCRAM-PLUS channel-binding mechanisms are excluded
+    # from SASL negotiation.  Useful when the server or Python ssl
+    # layer cannot provide valid channel-binding data, which causes
+    # "Invalid channel binding" authentication failures.
+    use_channel_binding: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +215,7 @@ def _get_client_subclass(base_cls: type[Any]) -> type[Any]:
 
             # State
             self._auth_failed = False
+            self._channel_binding_failed = False
 
             self.add_event_handler("session_start", self._on_session_start)
             self.add_event_handler("failed_auth", self._failed_auth)
@@ -229,19 +244,21 @@ def _get_client_subclass(base_cls: type[Any]) -> type[Any]:
                 # One-shot mode sends messages immediately on session_start and
                 # then disconnects. Keepalive mode just signals readiness.
                 if self._oneshot:
-                    for (mtype, target) in self._targets:
+                    for mtype, target in self._targets:
                         if self._before_message:
                             self._before_message()
 
                         if mtype == "groupchat":
-                            nick = self._nick \
-                                or getattr(self.boundjid, "user", "") \
+                            nick = (
+                                self._nick
+                                or getattr(self.boundjid, "user", "")
                                 or "apprise"
+                            )
                             muc_coro = self.plugin["xep_0045"].join_muc(
-                                target, nick)
+                                target, nick
+                            )
                             try:
-                                await asyncio.wait_for(
-                                    muc_coro, timeout=5.0)
+                                await asyncio.wait_for(muc_coro, timeout=5.0)
                             except Exception:
                                 _close_awaitable(muc_coro)
 
@@ -262,6 +279,13 @@ def _get_client_subclass(base_cls: type[Any]) -> type[Any]:
         def _failed_auth(self, *args: object, **kwargs: object) -> None:
             # Authentication failure is always a hard failure.
             self._auth_failed = True
+            # Detect channel-binding rejections so the caller can surface
+            # a targeted hint without embedding Apprise-specific messages
+            # deep in the adapter layer.
+            with contextlib.suppress(Exception):
+                stanza_text = str(args[0]).lower() if args else ""
+                if "channel" in stanza_text and "binding" in stanza_text:
+                    self._channel_binding_failed = True
             if self._session_started_evt is not None:
                 self._session_started_evt.clear()
             self.disconnect()
@@ -316,6 +340,38 @@ def _get_client_subclass(base_cls: type[Any]) -> type[Any]:
 def _build_client(*args: Any, **kwargs: Any) -> Any:
     return _get_client_subclass(slixmpp.ClientXMPP)(*args, **kwargs)
 
+
+def _disable_channel_binding(client: Any) -> None:
+    """Patch the slixmpp feature_mechanisms plugin on *client* so that
+    SASL mechanism selection never considers -PLUS (channel-binding)
+    variants.
+
+    Works by wrapping _send_auth() -- which is called after the server's
+    mechanism list is stored in plugin.mech_list -- to strip every entry
+    whose name ends with '-PLUS' before the SASL choose() call picks
+    a mechanism.
+
+    The whole operation is wrapped in contextlib.suppress so it degrades
+    gracefully when the plugin is unavailable (e.g., in tests that use a
+    fake ClientXMPP without plugin support).
+    """
+    with contextlib.suppress(Exception):
+        # Access the feature_mechanisms plugin on the slixmpp client
+        plugin = client["feature_mechanisms"]
+        orig = plugin._send_auth
+
+        def _no_plus(_orig=orig) -> None:
+            # Remove -PLUS mechs from the candidate list so choose()
+            # never attempts SCRAM channel binding
+            plugin.mech_list = {
+                m for m in plugin.mech_list if not m.endswith("-PLUS")
+            }
+            return _orig()
+
+        # Replace _send_auth before SASL negotiation starts
+        plugin._send_auth = _no_plus
+
+
 # ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
@@ -354,12 +410,19 @@ class SlixmppAdapter:
         want_muc: bool = False,
         default_nickname: Optional[str] = None,
     ) -> None:
-        self.config, self.targets, self.subject, self.body = \
-            config, targets, subject, body
+        self.config, self.targets, self.subject, self.body = (
+            config,
+            targets,
+            subject,
+            body,
+        )
 
         self.timeout = max(5.0, float(timeout))
-        self.roster, self.before_message, self.keepalive = \
-            roster, before_message, keepalive
+        self.roster, self.before_message, self.keepalive = (
+            roster,
+            before_message,
+            keepalive,
+        )
         self._want_muc = want_muc
 
         global LOGGING_ID
@@ -502,6 +565,8 @@ class SlixmppAdapter:
             return False
 
         shared: dict[str, Any] = {"loop": None, "client": None}
+        # Shared flag: True when a channel-binding failure was detected.
+        cb_failed: list[bool] = [False]
 
         def runner() -> None:
             loop: Optional[asyncio.AbstractEventLoop] = None
@@ -514,12 +579,15 @@ class SlixmppAdapter:
                 shared["loop"] = loop
 
                 targets = (
-                    list(self.targets) if self.targets
-                    else [("chat", self.config.jid)])
+                    list(self.targets)
+                    if self.targets
+                    else [("chat", self.config.jid)]
+                )
 
                 roster_timeout = (
                     max(2.0, min(10.0, self.timeout / 3.0))
-                    if self.roster else 0.0
+                    if self.roster
+                    else 0.0
                 )
 
                 client = _build_client(
@@ -539,6 +607,10 @@ class SlixmppAdapter:
                 )
 
                 shared["client"] = client
+
+                # Disable channel binding if requested
+                if not self.config.use_channel_binding:
+                    _disable_channel_binding(client)
 
                 # Prevent Slixmpp from owning loop lifecycle
                 with contextlib.suppress(Exception):
@@ -617,6 +689,9 @@ class SlixmppAdapter:
 
                 # Disconnect happened, success depends on auth state
                 result[0] = not bool(getattr(client, "_auth_failed", False))
+                # Flag channel-binding failures for upstream handling.
+                if getattr(client, "_channel_binding_failed", False):
+                    cb_failed[0] = True
 
             except Exception as e:  # pragma: no cover
                 self.logger.warning("XMPP send failed.")
@@ -634,7 +709,8 @@ class SlixmppAdapter:
 
         if not done.wait(timeout=self.timeout):
             self.logger.warning(
-                "XMPP send timed out after %.2fs.", self.timeout)
+                "XMPP send timed out after %.2fs.", self.timeout
+            )
             result[0] = False
 
             loop_obj = shared.get("loop")
@@ -653,6 +729,10 @@ class SlixmppAdapter:
                     loop.call_soon_threadsafe(loop.stop)
 
             t.join(timeout=0.25)
+
+        # Re-raise channel-binding failures so the caller can log a hint.
+        if cb_failed[0]:
+            raise XMPPChannelBindingError()
 
         return bool(result[0])
 
@@ -706,8 +786,7 @@ class SlixmppAdapter:
             connect_lock = asyncio.Lock()  # type: ignore[union-attr]
 
             roster_timeout = (
-                max(2.0, min(10.0, self.timeout / 3.0))
-                if self.roster else 0.0
+                max(2.0, min(10.0, self.timeout / 3.0)) if self.roster else 0.0
             )
 
             client = _build_client(
@@ -720,6 +799,10 @@ class SlixmppAdapter:
                 roster_timeout=roster_timeout,
                 session_started_evt=session_started,
             )
+
+            # Disable channel binding if requested
+            if not self.config.use_channel_binding:
+                _disable_channel_binding(client)
 
             with contextlib.suppress(Exception):
                 client.loop = loop  # type: ignore[assignment]
@@ -787,6 +870,9 @@ class SlixmppAdapter:
         if self._connect_lock is None or self._session_started is None:
             return False
 
+        # If channel binding failed, surface a targeted exception.
+        if bool(getattr(self._client, "_channel_binding_failed", False)):
+            raise XMPPChannelBindingError()
         # If auth already failed, do not pretend a connection is ready.
         if bool(getattr(self._client, "_auth_failed", False)):
             return False
@@ -842,6 +928,9 @@ class SlixmppAdapter:
 
                 return False
 
+            # If channel binding failed, surface a targeted exception.
+            if getattr(self._client, "_channel_binding_failed", False):
+                raise XMPPChannelBindingError()
             # If auth failed during startup, treat as failure.
             return not bool(getattr(self._client, "_auth_failed", False))
 
@@ -865,18 +954,17 @@ class SlixmppAdapter:
         send_targets = targets if targets else [("chat", self.config.jid)]
 
         try:
-            for (mtype, target) in send_targets:
+            for mtype, target in send_targets:
                 if mtype == "groupchat":
                     nick = (
-                        getattr(
-                            self._client.boundjid, "user", "")
+                        getattr(self._client.boundjid, "user", "")
                         or self.nickname
                     )
                     muc_coro = self._client.plugin["xep_0045"].join_muc(
-                        target, nick)
+                        target, nick
+                    )
                     try:
-                        await asyncio.wait_for(
-                            muc_coro, timeout=5.0)
+                        await asyncio.wait_for(muc_coro, timeout=5.0)
                     except Exception:
                         _close_awaitable(muc_coro)
 
@@ -935,6 +1023,10 @@ class SlixmppAdapter:
                 loop,
             )
             return bool(fut.result(timeout=self.timeout))
+
+        except XMPPChannelBindingError:
+            # Re-raise so base.py can log a user-facing hint.
+            raise
 
         except FuturesTimeoutError:
             self.logger.warning(

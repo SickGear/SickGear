@@ -97,7 +97,7 @@ class LibnotifyNotifier(Notifier):
             # Can't make this a global constant because PROG_DIR isn't available
             # when the module is imported.
             icon_path = os.path.join(sickgear.PROG_DIR, 'data/images/sickgear_touch_icon.png')
-            icon_uri = 'file://' + os.path.abspath(icon_path)
+            icon_uri = f'file://{os.path.abspath(icon_path)}'
 
             # If the session bus can't be acquired here a bunch of warning messages
             # will be printed but the call to show() will still return True.

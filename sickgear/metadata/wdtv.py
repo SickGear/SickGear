@@ -238,15 +238,15 @@ class WDTVMetadata(generic.GenericMetadata):
             episodeID.text = str(cur_ep_obj.epid)
 
             title = etree.SubElement(episode, "title")
-            title.text = '%s' % ep_obj.pretty_name()
+            title.text = f'{ep_obj.pretty_name()}'
 
             seriesName = etree.SubElement(episode, "series_name")
             if None is not getattr(show_info, 'seriesname', None):
-                seriesName.text = '%s' % show_info["seriesname"]
+                seriesName.text = f'{show_info["seriesname"]}'
 
             episodeName = etree.SubElement(episode, "episode_name")
             if None is not cur_ep_obj.name:
-                episodeName.text = '%s' % cur_ep_obj.name
+                episodeName.text = f'{cur_ep_obj.name}'
 
             seasonNumber = etree.SubElement(episode, "season_number")
             seasonNumber.text = str(cur_ep_obj.season)
@@ -262,12 +262,12 @@ class WDTVMetadata(generic.GenericMetadata):
             year = etree.SubElement(episode, "year")
             year_text = self.get_show_year(ep_obj.show_obj, show_info)
             if year_text:
-                year.text = '%s' % year_text
+                year.text = f'{year_text}'
 
             runtime = etree.SubElement(episode, "runtime")
             if 0 != cur_ep_obj.season:
                 if None is not getattr(show_info, 'runtime', None):
-                    runtime.text = '%s' % show_info["runtime"]
+                    runtime.text = f'{show_info["runtime"]}'
 
             genre = etree.SubElement(episode, "genre")
             if None is not getattr(show_info, 'genre', None):
@@ -276,22 +276,22 @@ class WDTVMetadata(generic.GenericMetadata):
             director = etree.SubElement(episode, "director")
             director_text = getattr(ep_info, 'director', None)
             if None is not director_text:
-                director.text = '%s' % director_text
+                director.text = f'{director_text}'
 
             for actor in getattr(show_info, 'actors', []):
                 cur_actor = etree.SubElement(episode, 'actor')
 
                 cur_actor_name = etree.SubElement(cur_actor, 'name')
-                cur_actor_name.text = '%s' % actor['person']['name']
+                cur_actor_name.text = f'{actor["person"]["name"]}'
 
                 cur_actor_role = etree.SubElement(cur_actor, 'role')
-                cur_actor_role_text = '%s' % actor['character']['name']
+                cur_actor_role_text = f'{actor["character"]["name"]}'
                 if cur_actor_role_text:
-                    cur_actor_role.text = '%s' % cur_actor_role_text
+                    cur_actor_role.text = f'{cur_actor_role_text}'
 
             overview = etree.SubElement(episode, "overview")
             if None is not cur_ep_obj.description:
-                overview.text = '%s' % cur_ep_obj.description
+                overview.text = f'{cur_ep_obj.description}'
 
             # Make it purdy
             sg_helpers.indent_xml(rootNode)

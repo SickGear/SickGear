@@ -69,3 +69,9 @@ class TvdbTokenFailure(BaseTVinfoAuthenticationerror, TvdbError):
     """getting token failed
     """
     pass
+
+
+class TvdbPersonNotFound(BaseTVinfoPersonNotFound, TvdbError):
+    """person id not found
+    """
+    pass

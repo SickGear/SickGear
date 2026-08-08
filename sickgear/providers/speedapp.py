@@ -31,12 +31,12 @@ class SpeedAppProvider(generic.TorrentProvider):
 
         self.url_base = 'https://speedapp.io/'
 
-        self.api = self.url_base + 'api/'
+        self.api = f'{self.url_base}api/'
         self.urls = dict(
             config_provider_home_uri=self.url_base,
-            login=self.api + 'test',
-            search=self.api + 'torrent?itemsPerPage=50&search=%s&%s', cats=self.api + 'category',
-            get=self.api + 'torrent/%s/download'
+            login=f'{self.api}test',
+            search=f'{self.api}torrent?itemsPerPage=50&search=%s&%s', cats=f'{self.api}category',
+            get=f'{self.api}torrent/%s/download'
         )
 
         self.perms_needed = self.perms = ('torrent.read', 'torrent.download', 'snatch.read')
@@ -68,7 +68,7 @@ class SpeedAppProvider(generic.TorrentProvider):
         return not any(self.perms_needed)
 
     def auth_header(self):
-        return {'X-Client-Id': '328b70a3f869e26de994', 'Authorization': 'Bearer %s' % self.api_key}
+        return {'X-Client-Id': '328b70a3f869e26de994', 'Authorization': f'Bearer {self.api_key}'}
 
     def _search_provider(self, search_params, **kwargs):
 
@@ -107,8 +107,8 @@ class SpeedAppProvider(generic.TorrentProvider):
         except (BaseException, Exception):
             not_authd = True
 
-        return ('%s_api_key' % self.get_id()) == key and 'API Token' or \
-               ('%s_api_key_tip' % self.get_id()) == key and \
+        return (f'{self.get_id()}_api_key') == key and 'API Token' or \
+               f'{self.get_id()}_api_key_tip' == key and \
                ((not_authd or self.perms_needed)
                 and ('create token at <a href="%sprofile/api-tokens">%s site</a><br>'
                      'with perms %s' % (self.url_base, self.name, list(map(

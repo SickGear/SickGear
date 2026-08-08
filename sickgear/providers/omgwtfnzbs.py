@@ -32,7 +32,6 @@ from bs4_parser import BS4Parser
 from exceptions_helper import AuthException
 import feedparser
 
-from six import iteritems
 from _23 import urlencode
 
 # noinspection PyUnreachableCode
@@ -49,10 +48,10 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
         self.url_base = 'https://omgwtfnzbs.org/'  # type: AnyStr
         self.url_api = 'https://api.omgwtfnzbs.org/'  # type: AnyStr
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'cache': self.url_api + 'xml/?%s',
-                     'search': self.url_api + 'json/?%s',
-                     'cache_html': self.url_base + 'browse.php?cat=tv%s',
-                     'search_html': self.url_base + 'browse.php?cat=tv&search=%s'}  # type: Dict[AnyStr, AnyStr]
+                     'cache': f'{self.url_api}xml/?%s',
+                     'search': f'{self.url_api}json/?%s',
+                     'cache_html': f'{self.url_base}browse.php?cat=tv%s',
+                     'search_html': f'{self.url_base}browse.php?cat=tv&search=%s'}  # type: Dict[AnyStr, AnyStr]
 
         self.needs_auth = True  # type: bool
         self.nn = True  # type: bool
@@ -89,7 +88,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                              data_json.get('notice')):
                     logger.debug(f'Incorrect authentication credentials for {self.name} : {description_text}')
                     raise AuthException(
-                        'Your authentication credentials for ' + self.name + ' are incorrect, check your config.')
+                        f'Your authentication credentials for {self.name} are incorrect, check your config.')
 
                 elif '0 results matched your terms' in data_json.get('notice'):
                     return True
@@ -148,7 +147,7 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
                     self.tmr_limit_update('1', 'h', 'Your 24 hour limit of 10 NZBs has been reached')
                     self.log_failure_url(url)
                 elif '</nzb>' not in data or 'seem to be logged in' in data:
-                    logger.debug('Failed nzb data response: %s' % data)
+                    logger.debug(f'Failed nzb data response: {data}')
                 else:
                     result = data
         return result
@@ -306,10 +305,10 @@ class OmgwtfnzbsProvider(generic.NZBProvider):
 
         cats = self._get_cats(needed=needed)
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(
-            dict(info='detail', get=r'send\?', nuked=r'\bnuked', cat='cat=(?:%s)' % '|'.join(cats))))
+        rc = dict((k, re.compile(f'(?i){v}')) for (k, v) in
+            dict(info='detail', get=r'send\?', nuked=r'\bnuked', cat=f'cat=(?:{"|".join(cats)})').items())
         mode = ('search', 'cache')['' == search]
-        search_url = self.urls[mode + '_html'] % search
+        search_url = self.urls[f'{mode}_html'] % search
         html = self.get_url(search_url)
         if self.should_skip():
             return results

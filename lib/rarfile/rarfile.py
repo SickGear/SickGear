@@ -1,6 +1,6 @@
 # rarfile.py
 #
-# Copyright (c) 2005-2024  Marko Kreen <markokr@gmail.com>
+# Copyright (c) 2005-2026  Marko Kreen <markokr@gmail.com>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -92,7 +92,7 @@ class AES_CBC_Decrypt:
             self.decrypt = ciph.decryptor().update
 
 
-__version__ = "4.2"
+__version__ = "4.5"
 
 # export only interesting items
 __all__ = ["get_rar_version", "is_rarfile", "is_rarfile_sfx", "RarInfo", "RarFile", "RarExtFile"]
@@ -194,6 +194,14 @@ RAR_ENDARC_VOLNR = 0x0008
 RAR_SKIP_IF_UNKNOWN = 0x4000
 RAR_LONG_BLOCK = 0x8000
 
+# Subtypes for RAR_BLOCK_OLD_SUB
+RAR_OLD_SUB_OS2 = 0x100
+RAR_OLD_SUB_UNIX = 0x101
+RAR_OLD_SUB_MAC = 0x102
+RAR_OLD_SUB_BEOS = 0x103
+RAR_OLD_SUB_NT = 0x104
+RAR_OLD_SUB_STREAM = 0x105
+
 # Host OS types
 RAR_OS_MSDOS = 0    #: MSDOS (only in RAR3)
 RAR_OS_OS2 = 1      #: OS2 (only in RAR3)
@@ -212,6 +220,7 @@ RAR_M5 = 0x35   #: Compression level `-m5` - Maximum compression.
 
 RAR_MAX_PASSWORD = 127  #: Max number of utf-16 chars in passwords.
 RAR_MAX_KDF_SHIFT = 24  #: Max power-of-2 for KDF count
+RAR_MAX_COMMENT = 256 * 1024  #: Max supported comment size
 
 #
 # RAR5 constants
@@ -337,6 +346,7 @@ def _find_sfx_header(xfile):
                 if curdata[pos:pos + len(RAR5_ID)] == RAR5_ID:
                     return RAR_V5, pos
                 findpos = pos + len(sig)
+        fd.restore_pos()
     return 0, 0
 
 
@@ -350,6 +360,7 @@ def get_rar_version(xfile):
     """
     with XFile(xfile) as fd:
         buf = fd.read(len(RAR5_ID))
+        fd.restore_pos()
     if buf.startswith(RAR_ID):
         return RAR_V3
     elif buf.startswith(RAR5_ID):
@@ -397,6 +408,10 @@ class NoRarEntry(Error):
 
 class PasswordRequired(Error):
     """File requires password"""
+
+
+class BadSymLinkError(Error):
+    """Invalid symbolic link"""
 
 
 class NeedFirstVolume(Error):
@@ -946,6 +961,17 @@ class RarFile:
             path = os.fspath(path)
         dstfn = os.path.join(path, fname)
 
+        # Reject members whose destination escapes `path` once symlinks
+        # already created on disk are resolved.  Without this, a symlink
+        # member can point outside `path` and a later file/dir member
+        # named through it will be written outside the extraction root.
+        real_path = os.path.realpath(path)
+        real_dst = os.path.realpath(dstfn)
+        if real_dst != real_path and not real_dst.startswith(real_path + os.sep):
+            raise BadRarFile(
+                "Refusing to extract entry that escapes destination: %r" % info.filename
+            )
+
         dirname = os.path.dirname(dstfn)
         if dirname and dirname != ".":
             os.makedirs(dirname, exist_ok=True)
@@ -955,7 +981,7 @@ class RarFile:
         if info.is_dir():
             return self._make_dir(info, dstfn, pwd, set_attrs)
         if info.is_symlink():
-            return self._make_symlink(info, dstfn, pwd, set_attrs)
+            return self._make_symlink(info, dstfn, pwd, set_attrs, path)
         return None
 
     def _create_helper(self, name, flags, info):
@@ -977,10 +1003,10 @@ class RarFile:
             self._set_attrs(info, dstfn)
         return dstfn
 
-    def _make_symlink(self, info, dstfn, pwd, set_attrs):
+    def _make_symlink(self, info, dstfn, pwd, set_attrs, top):
         target_is_directory = False
         if info.host_os == RAR_OS_UNIX:
-            link_name = self.read(info, pwd)
+            link_name = self.read(info, pwd).decode("utf8", "replace")
             target_is_directory = (info.flags & RAR_FILE_DIRECTORY) == RAR_FILE_DIRECTORY
         elif info.file_redir:
             redir_type, redir_flags, link_name = info.file_redir
@@ -991,6 +1017,18 @@ class RarFile:
         else:
             warnings.warn(f"Unsupported link type - {info.filename}", UnsupportedWarning)
             return None
+
+        # disallow abs paths
+        target = os.path.normpath(link_name)
+        if os.path.isabs(target) or os.path.splitdrive(target)[0]:
+            raise BadSymLinkError('Absolute links not allowed')
+
+        # disallow ../ traversal
+        dest_abs = os.path.realpath(top)
+        target_base = os.path.dirname(dstfn)
+        target_abs = os.path.realpath(os.path.join(target_base, target))
+        if os.path.commonpath([target_abs, dest_abs]) != dest_abs:
+            raise BadSymLinkError('Link to outside not allowed')
 
         os.symlink(link_name, dstfn, target_is_directory=target_is_directory)
         return dstfn
@@ -1386,6 +1424,8 @@ class Rar3Info(RarInfo):
     endarc_datacrc = None
     endarc_volnr = None
 
+    old_sub_type = None
+
     def _must_disable_hack(self):
         if self.type == RAR_BLOCK_FILE:
             if self.flags & RAR_FILE_PASSWORD:
@@ -1496,6 +1536,16 @@ class RAR3Parser(CommonParser):
         elif h.type == RAR_BLOCK_OLD_EXTRA:
             pos += 7
             crc_pos = pos
+        elif h.type == RAR_BLOCK_OLD_SUB:
+            pos = self._parse_old_subblock(h, hdata, pos)
+
+            # these types do not have their own data CRC,
+            # so data was included in header CRC.
+            if h.old_sub_type in (RAR_OLD_SUB_UNIX, RAR_OLD_SUB_MAC):
+                # skip CRC check, it requires to read data part
+                return h
+
+            crc_pos = h.header_size
         elif h.type == RAR_BLOCK_ENDARC:
             if h.flags & RAR_ENDARC_DATACRC:
                 h.endarc_datacrc, pos = load_le32(hdata, pos)
@@ -1506,12 +1556,8 @@ class RAR3Parser(CommonParser):
         else:
             crc_pos = h.header_size
 
-        # check crc
-        if h.type == RAR_BLOCK_OLD_SUB:
-            crcdat = hdata[2:] + fd.read(h.add_size)
-        else:
-            crcdat = hdata[2:crc_pos]
-
+        # calculate crc
+        crcdat = hdata[2:crc_pos]
         calc_crc = crc32(crcdat) & 0xFFFF
 
         # return good header
@@ -1568,6 +1614,9 @@ class RAR3Parser(CommonParser):
             h.orig_filename = name
             h.filename = name.decode("utf8", "replace")
         else:
+            nul = name.find(b"\0")
+            if nul >= 0:
+                name = name[:nul]
             # stored in random encoding
             h.orig_filename = name
             h.filename = self._decode(name)
@@ -1590,6 +1639,12 @@ class RAR3Parser(CommonParser):
 
         return pos
 
+    def _parse_old_subblock(self, h, hdata, pos):
+        """Parse RAR2 subblock
+        """
+        h.old_sub_type, _reserved = S_OLD_SUBBLOCK_HDR.unpack_from(hdata, pos)
+        return pos
+
     def _parse_subblocks(self, h, hdata, pos):
         """Find old-style comment subblock
         """
@@ -1607,6 +1662,9 @@ class RAR3Parser(CommonParser):
             # followed by block-specific header
             if stype == RAR_BLOCK_OLD_COMMENT and pos + S_COMMENT_HDR.size <= pos_next:
                 declen, ver, meth, crc = S_COMMENT_HDR.unpack_from(hdata, pos)
+                if declen > RAR_MAX_COMMENT:
+                    pos = pos_next
+                    continue
                 pos += S_COMMENT_HDR.size
                 data = hdata[pos: pos_next]
                 cmt = rar3_decompress(ver, meth, data, declen, sflags,
@@ -1618,6 +1676,11 @@ class RAR3Parser(CommonParser):
         return pos
 
     def _read_comment_v3(self, inf, pwd=None):
+
+        if inf.compress_size > RAR_MAX_COMMENT:
+            return None
+        if inf.file_size > RAR_MAX_COMMENT:
+            return None
 
         # read data
         with XFile(inf.volume_file) as rf:
@@ -1959,7 +2022,12 @@ class RAR5Parser(CommonParser):
 
         h.file_compress_flags, pos = load_vint(hdata, pos)
         h.file_host_os, pos = load_vint(hdata, pos)
-        h.orig_filename, pos = load_vstr(hdata, pos)
+
+        name, pos = load_vstr(hdata, pos)
+        nul = name.find(b"\0")
+        if nul >= 0:
+            name = name[:nul]
+        h.orig_filename = name
         h.filename = h.orig_filename.decode("utf8", "replace").rstrip("/")
 
         # use compatible values
@@ -2020,6 +2088,8 @@ class RAR5Parser(CommonParser):
             raise RarWrongPassword()
 
     def _parse_encryption_block(self, h, hdata, pos):
+        self._hdrenc_main = h
+        self._needs_password = True
         h.encryption_algo, pos = load_vint(hdata, pos)
         h.encryption_flags, pos = load_vint(hdata, pos)
         h.encryption_kdf_count, pos = load_byte(hdata, pos)
@@ -2030,7 +2100,6 @@ class RAR5Parser(CommonParser):
             raise BadRarFile("Unsupported header encryption cipher")
         if h.encryption_check_value and self._password:
             self._check_password(h.encryption_check_value, h.encryption_kdf_count, h.encryption_salt)
-        self._hdrenc_main = h
         return h
 
     def _process_file_extra(self, h, xdata):
@@ -2154,6 +2223,10 @@ class RAR5Parser(CommonParser):
         if item.block_flags & (RAR5_BLOCK_FLAG_SPLIT_BEFORE | RAR5_BLOCK_FLAG_SPLIT_AFTER):
             return None
         if item.compress_type != RAR_M0:
+            return None
+        if item.compress_size > RAR_MAX_COMMENT:
+            return None
+        if item.file_size > RAR_MAX_COMMENT:
             return None
 
         if item.flags & RAR_FILE_PASSWORD:
@@ -2307,6 +2380,8 @@ class RarExtFile(io.RawIOBase):
             n -= len(data)
         data = b"".join(buf)
         if n > 0:
+            if self._returncode:
+                check_returncode(self._returncode, "", tool_setup().get_errmap())
             raise BadRarFile("Failed the read enough data: req=%d got=%d" % (orig, len(data)))
 
         # done?
@@ -2687,16 +2762,26 @@ class HeaderDecrypt:
 class XFile:
     """Input may be filename or file object.
     """
-    __slots__ = ("_fd", "_need_close")
+    __slots__ = ("_fd", "_need_close", "_initial_pos")
 
     def __init__(self, xfile, bufsize=1024):
         if is_filelike(xfile):
+            self._initial_pos = xfile.tell()
             self._need_close = False
             self._fd = xfile
             self._fd.seek(0)
         else:
+            self._initial_pos = None
             self._need_close = True
             self._fd = open(xfile, "rb", bufsize)
+
+    def restore_pos(self):
+        if self._initial_pos is None:
+            return
+        try:
+            self._fd.seek(self._initial_pos)
+        except:
+            pass
 
     def read(self, n=None):
         """Read from file."""
@@ -2881,7 +2966,7 @@ S_BYTE = Struct("<B")
 S_BLK_HDR = Struct("<HBHH")
 S_FILE_HDR = Struct("<LLBLLBBHL")
 S_COMMENT_HDR = Struct("<HBBH")
-
+S_OLD_SUBBLOCK_HDR = Struct("<HB")
 
 def load_vint(buf, pos):
     """Load RAR5 variable-size int."""

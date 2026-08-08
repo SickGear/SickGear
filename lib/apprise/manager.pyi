@@ -19,6 +19,8 @@ class PluginManager(metaclass=Singleton):
     _schema_map: Incomplete
     _custom_module_map: Incomplete
     _disabled: Incomplete
+    _dep_counter: Incomplete
+    evict_on_disable: bool
     _paths_previously_scanned: Incomplete
     _loaded: Incomplete
     def __init__(self, *args, **kwargs) -> None:
@@ -41,6 +43,29 @@ class PluginManager(metaclass=Singleton):
 
         if include_disabled == True, then even disabled notifications are
         returned
+        """
+    def _build_dep_counter(self) -> None:
+        """Build the runtime library reference counter from loaded plugins.
+
+        Iterates `_module_map` directly (rather than calling
+        `self.plugins()`) so it is safe to call while `_lock` is held
+        inside `load_modules`.
+
+        Only enabled plugins contribute to the counter - plugins already
+        disabled because their optional library is not installed are not
+        counted, as there is nothing in memory to evict for them.
+        """
+    def _evict_library(self, lib_name) -> None:
+        """Remove a library and all its submodules from `sys.modules`.
+
+        Called when `evict_on_disable` is `True` and the reference counter
+        for *lib_name* reaches zero - meaning no enabled plugin requires it.
+        """
+    def _update_dep_counter(self, plugin, delta) -> None:
+        """Increment or decrement dep counters for *plugin* by *delta* (+1/-1).
+
+        Evicts libraries from memory when `evict_on_disable` is `True` and the
+        counter reaches zero.
         """
     def disable(self, *schemas) -> None:
         """Disables the modules associated with the specified schemas."""

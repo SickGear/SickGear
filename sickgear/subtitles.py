@@ -39,12 +39,12 @@ def sorted_service_list():
         if cur_service in services_mapping:
             cur_service_dict = dict(
                 id=cur_service,
-                image=cur_service + '.png',
+                image=f'{cur_service}.png',
                 name=services_mapping[cur_service],
                 enabled=1 == sickgear.SUBTITLES_SERVICES_ENABLED[cur_index],
-                api_based=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
+                api_based=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
                                      locals=locals(), fromlist=['Service']).Service.api_based,
-                url=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
+                url=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
                                locals=locals(), fromlist=['Service']).Service.site_url)
             new_list.append(cur_service_dict)
         cur_index += 1
@@ -54,12 +54,12 @@ def sorted_service_list():
         if cur_service not in [x['id'] for x in new_list]:
             cur_service_dict = dict(
                 id=cur_service,
-                image=cur_service + '.png',
+                image=f'{cur_service}.png',
                 name=services_mapping[cur_service],
                 enabled=False,
-                api_based=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
+                api_based=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
                                      locals=locals(), fromlist=['Service']).Service.api_based,
-                url=__import__('lib.subliminal.services.' + cur_service, globals=globals(),
+                url=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
                                locals=locals(), fromlist=['Service']).Service.site_url)
             new_list.append(cur_service_dict)
 
@@ -81,7 +81,7 @@ def get_language_name(select_lang):
 def wanted_languages(sql_like=False):
     wanted_langs = sorted(sickgear.SUBTITLES_LANGUAGES)
     if sql_like:
-        return '%' + ','.join(wanted_langs) + '%'
+        return f'%{",".join(wanted_langs)}%'
     return wanted_langs
 
 
@@ -139,24 +139,24 @@ class SubtitlesFinder(Job):
         today = datetime.date.today().toordinal()
 
         # you have 5 minutes to understand that one. Good luck
-        my_db = db.DBConnection()
-        sql_result = my_db.select(
-            'SELECT s.show_name, e.indexer AS tv_id, e.showid AS prod_id,'
-            ' e.season, e.episode, e.status, e.subtitles,'
-            ' e.subtitles_searchcount AS searchcount, e.subtitles_lastsearch AS lastsearch,'
-            ' e.location, (? - e.airdate) AS airdate_daydiff'
-            ' FROM tv_episodes AS e'
-            ' INNER JOIN tv_shows AS s'
-            ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
-            ' WHERE s.subtitles = 1 AND e.subtitles NOT LIKE (?)'
-            ' AND ((e.subtitles_searchcount <= 2 AND (? - e.airdate) > 7)'
-            ' OR (e.subtitles_searchcount <= 7 AND (? - e.airdate) <= 7))'
-            ' AND (e.status IN (%s)' % ','.join([str(x) for x in Quality.DOWNLOADED])
-            + ' OR (e.status IN (%s)' % ','.join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])
-            + ' AND e.location != \'\'))', [today, wanted_languages(True), today, today])
-        if 0 == len(sql_result):
-            logger.log('No subtitles to download', logger.MESSAGE)
-            return
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(
+                'SELECT s.show_name, e.indexer AS tv_id, e.showid AS prod_id,'
+                ' e.season, e.episode, e.status, e.subtitles,'
+                ' e.subtitles_searchcount AS searchcount, e.subtitles_lastsearch AS lastsearch,'
+                ' e.location, (? - e.airdate) AS airdate_daydiff'
+                ' FROM tv_episodes AS e'
+                ' INNER JOIN tv_shows AS s'
+                ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
+                ' WHERE s.subtitles = 1 AND e.subtitles NOT LIKE (?)'
+                ' AND ((e.subtitles_searchcount <= 2 AND (? - e.airdate) > 7)'
+                ' OR (e.subtitles_searchcount <= 7 AND (? - e.airdate) <= 7))'
+                ' AND (e.status IN (%s)' % ','.join([str(x) for x in Quality.DOWNLOADED])
+                + f' OR (e.status IN ({",".join([str(x) for x in Quality.SNATCHED + Quality.SNATCHED_PROPER])})'
+                + ' AND e.location != \'\'))', [today, wanted_languages(True), today, today])
+            if 0 == len(sql_result):
+                logger.log('No subtitles to download', logger.MESSAGE)
+                return
 
         rules = self._get_rules()
         now = datetime.datetime.now()

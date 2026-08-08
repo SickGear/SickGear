@@ -23,8 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class PreToMeProvider(generic.TorrentProvider):
 
@@ -34,8 +32,8 @@ class PreToMeProvider(generic.TorrentProvider):
         self.url_base = 'https://pretome.info/'
 
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'takelogin.php',
-                     'search': self.url_base + 'browse.php?search=%s&tags=&st=1&tf=all&cat[]=7'}
+                     'login': f'{self.url_base}takelogin.php',
+                     'search': f'{self.url_base}browse.php?search=%s&tags=&st=1&tf=all&cat[]=7'}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -54,7 +52,7 @@ class PreToMeProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'details', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'details', 'get': 'download'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_url = self.urls['search'] % search_string
@@ -110,8 +108,8 @@ class PreToMeProvider(generic.TorrentProvider):
 
     def ui_string(self, key):
 
-        return ('%s_api_key' % self.get_id()) == key and 'Pin' or \
-               ('%s_api_key_tip' % self.get_id()) == key and \
+        return (f'{self.get_id()}_api_key') == key and 'Pin' or \
+               f'{self.get_id()}_api_key_tip' == key and \
                '\'Pin=\' used in the <a href="%s">search input</a> at %s' % \
                (self.url_base, self.name) or ''
 

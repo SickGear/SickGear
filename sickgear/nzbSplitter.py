@@ -84,7 +84,7 @@ def _get_season_nzbs(name, url_data, season):
     if scene_name_match:
         show_name, quality_section = scene_name_match.groups()
     else:
-        logger.error('%s - Not a valid season pack scene name. If it\'s a valid one, log a bug.' % name)
+        logger.error(f'{name} - Not a valid season pack scene name. If it\'s a valid one, log a bug.')
         return {}, ''
 
     regex = r'(%s[\._]S%02d(?:[E0-9]+)\.[\w\._]+)' % (re.escape(show_name), season)
@@ -114,7 +114,7 @@ def _get_season_nzbs(name, url_data, season):
         if isinstance(ext, string_types) \
                 and re.search(r'^\.(nzb|r\d{2}|rar|7z|zip|par2|vol\d+|nfo|srt|txt|bat|sh|mkv|mp4|avi|wmv)$', ext,
                               flags=re.I):
-            logger.warning('Unable to split %s into episode nzb\'s' % name)
+            logger.warning(f'Unable to split {name} into episode nzb\'s')
             return {}, ''
         if cur_ep not in ep_files:
             ep_files[cur_ep] = [cur_file]
@@ -151,7 +151,7 @@ def _save_nzb(nzb_name, nzb_string):
     :type nzb_string: AnyStr
     """
     try:
-        with open(nzb_name + '.nzb', 'w') as nzb_fh:
+        with open(f'{nzb_name}.nzb', 'w') as nzb_fh:
             nzb_fh.write(nzb_string)
 
     except EnvironmentError as e:
@@ -159,7 +159,7 @@ def _save_nzb(nzb_name, nzb_string):
 
 
 def _strip_ns(element, ns):
-    element.tag = element.tag.replace("{" + ns + "}", "")
+    element.tag = element.tag.replace(f'{{{ns}}}', '')
     for curChild in list(element):
         _strip_ns(curChild, ns)
 

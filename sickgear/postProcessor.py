@@ -31,7 +31,7 @@ from .indexers.indexer_config import TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 
 from _23 import decode_str
-from six import iteritems, string_types
+from six import string_types
 from sg_helpers import long_path, cmdline_runner
 
 # noinspection PyUnreachableCode
@@ -110,7 +110,7 @@ class PostProcessor(object):
         logger_msg = re.sub(r'(?i)<br[\s/]+>\.*', '', message)
         logger_msg = re.sub('(?i)<a[^>]+>([^<]+)</a>', r'\1', logger_msg)
         logger.log(f'{logger_msg}', level)
-        self.log += message + '\n'
+        self.log += f'{message}\n'
 
     def _check_for_existing_file(self, existing_file):
         """
@@ -132,7 +132,7 @@ class PostProcessor(object):
 
         # if the new file exists, return the appropriate code depending on the size
         if os.path.isfile(existing_file):
-            new_file = f'New file {self.file_path}<br />.. is '
+            new_file = f'New file {self.file_path}<br>.. is '
             if os.path.getsize(self.file_path) == os.path.getsize(existing_file):
                 self._log(f'{new_file}the same size as {existing_file}', logger.DEBUG)
                 return PostProcessor.EXISTS_SAME
@@ -182,7 +182,7 @@ class PostProcessor(object):
         base_name = re.sub(r'[\[\]*?]', r'[\g<0>]', base_name)
 
         for meta_ext in ['', '-thumb', '.ext', '.ext.cover', '.metathumb']:
-            for associated_file_path in glob.glob('%s%s.*' % (base_name, meta_ext)):
+            for associated_file_path in glob.glob(f'{base_name}{meta_ext}.*'):
                 # only add associated to list
                 if associated_file_path == file_path:
                     continue
@@ -303,7 +303,7 @@ class PostProcessor(object):
 
             # If new base name then convert name
             if new_base_name:
-                new_file_name = new_base_name + '.' + cur_extension
+                new_file_name = f'{new_base_name}.{cur_extension}'
             # if we're not renaming we still want to change extensions sometimes
             else:
                 new_file_name = helpers.replace_extension(cur_file_name, cur_extension)
@@ -473,50 +473,50 @@ class PostProcessor(object):
         if self.folder_name:
             names.append(self.folder_name)
 
-        my_db = db.DBConnection()
+        with db.DBConnection() as sg_db:
 
-        # search the database for a possible match and return immediately if we find one
-        for curName in names:
-            # The underscore character ( _ ) represents a single character to match a pattern from a word or string
-            search_name = re.sub(r'[ .\-]', '_', curName)
-            # noinspection SqlResolve
-            sql_result = my_db.select('SELECT * FROM history WHERE (%s) AND resource LIKE ? ORDER BY date DESC'
-                                      ' LIMIT 1' % ' OR '.join(['action LIKE "%%%02d"' % x for x in
-                                                                common.Quality.SNATCHED_ANY]),
-                                      [search_name])
+            # search the database for a possible match and return immediately if we find one
+            for curName in names:
+                # The underscore character ( _ ) represents a single character to match a pattern from a word or string
+                search_name = re.sub(r'[ .\-]', '_', curName)
+                # noinspection SqlResolve
+                sql_result = sg_db.select('SELECT * FROM history WHERE (%s) AND resource LIKE ? ORDER BY date DESC'
+                                          ' LIMIT 1' % ' OR '.join(["action LIKE '%%%02d'" % x for x in
+                                                                    common.Quality.SNATCHED_ANY]),
+                                          [search_name])
 
-            if 0 == len(sql_result):
-                continue
-
-            tvid = int(sql_result[0]['indexer'])
-            prodid = int(sql_result[0]['showid'])
-            season_number = int(sql_result[0]['season'])
-            episode_numbers = []
-            quality = int(sql_result[0]['quality'])
-            self.anime_version = int(sql_result[0]['version'])
-            show_obj = helpers.find_show_by_id({tvid: prodid})
-
-            if show_obj:
-                try:
-                    parsed_show, season, episodes, quality = \
-                        self._analyze_name(sql_result[0]['resource'], show_obj=show_obj)
-                    # validate that the history ep number is in parsed result
-                    if parsed_show and season and season_number == season and \
-                            episodes and int(sql_result[0]['episode']) in episodes:
-                        episode_numbers = episodes
-                except (BaseException, Exception):
+                if 0 == len(sql_result):
                     continue
 
-            if common.Quality.UNKNOWN == quality:
-                quality = None
+                tvid = int(sql_result[0]['indexer'])
+                prodid = int(sql_result[0]['showid'])
+                season_number = int(sql_result[0]['season'])
+                episode_numbers = []
+                quality = int(sql_result[0]['quality'])
+                self.anime_version = int(sql_result[0]['version'])
+                show_obj = helpers.find_show_by_id({tvid: prodid})
 
-            self.in_history = True
-            to_return = (show_obj, season_number, episode_numbers, quality)
-            if not show_obj:
-                self._log('Unknown show, check availability on ShowList page', logger.DEBUG)
+                if show_obj:
+                    try:
+                        parsed_show, season, episodes, quality = \
+                            self._analyze_name(sql_result[0]['resource'], show_obj=show_obj)
+                        # validate that the history ep number is in parsed result
+                        if parsed_show and season and season_number == season and \
+                                episodes and int(sql_result[0]['episode']) in episodes:
+                            episode_numbers = episodes
+                    except (BaseException, Exception):
+                        continue
+
+                if common.Quality.UNKNOWN == quality:
+                    quality = None
+
+                self.in_history = True
+                to_return = (show_obj, season_number, episode_numbers, quality)
+                if not show_obj:
+                    self._log('Unknown show, check availability on ShowList page', logger.DEBUG)
+                    break
+                self._log(f'Found a match in history for {show_obj.name}', logger.DEBUG)
                 break
-            self._log(f'Found a match in history for {show_obj.name}', logger.DEBUG)
-            break
 
         return to_return
 
@@ -552,7 +552,7 @@ class PostProcessor(object):
             return to_return
 
         # parse the name to break it into show name, season, and episode
-        np = NameParser(resource, convert=True, show_obj=self.show_obj or show_obj)
+        np = NameParser(resource, convert=True, show_obj=self.show_obj or show_obj, force_show_obj=bool(self.show_obj))
         parse_result = np.parse(name)
         self._log(f'Parsed {decode_str(str(parse_result), errors="xmlcharrefreplace")}<br>'
                   f'.. from {name}', logger.DEBUG)
@@ -671,36 +671,36 @@ class PostProcessor(object):
                 self._log('Looks like this is an air-by-date or sports show,'
                           ' attempting to convert the date to season/episode', logger.DEBUG)
                 airdate = episode_numbers[0].toordinal()
-                my_db = db.DBConnection()
-                sql_result = my_db.select(
-                    'SELECT season, episode'
-                    ' FROM tv_episodes'
-                    ' WHERE indexer = ? AND showid = ? AND airdate = ?',
-                    [show_obj.tvid, show_obj.prodid, airdate])
+                with db.DBConnection() as sg_db:
+                    sql_result = sg_db.select(
+                        'SELECT season, episode'
+                        ' FROM tv_episodes'
+                        ' WHERE indexer = ? AND showid = ? AND airdate = ?',
+                        [show_obj.tvid, show_obj.prodid, airdate])
 
-                if sql_result:
-                    season_number = int(sql_result[0][0])
-                    episode_numbers = [int(sql_result[0][1])]
-                else:
-                    self._log(f'Unable to find episode with date {episode_numbers[0]} for show {show_obj.tvid_prodid},'
-                              f' skipping', logger.DEBUG)
-                    # don't leave dates in the episode list if we can't convert them to real episode numbers
-                    episode_numbers = []
-                    continue
+                    if sql_result:
+                        season_number = int(sql_result[0][0])
+                        episode_numbers = [int(sql_result[0][1])]
+                    else:
+                        self._log(f'Unable to find episode with date {episode_numbers[0]} for show {show_obj.tvid_prodid},'
+                                  f' skipping', logger.DEBUG)
+                        # don't leave dates in the episode list if we can't convert them to real episode numbers
+                        episode_numbers = []
+                        continue
 
             # if there's no season then we can hopefully just use 1 automatically
             elif None is season_number and show_obj:
-                my_db = db.DBConnection()
-                num_seasons_sql_result = my_db.select(
-                    'SELECT COUNT(DISTINCT season) AS numseasons'
-                    ' FROM tv_episodes'
-                    ' WHERE indexer = ? AND showid = ? AND season != 0',
-                    [show_obj.tvid, show_obj.prodid])
-                if 1 == int(num_seasons_sql_result[0][0]) and None is season_number:
-                    self._log(
-                        'No season number found, but this show appears to only have 1 season,'
-                        ' setting season number to 1...', logger.DEBUG)
-                    season_number = 1
+                with db.DBConnection() as sg_db:
+                    num_seasons_sql_result = sg_db.select(
+                        'SELECT COUNT(DISTINCT season) AS numseasons'
+                        ' FROM tv_episodes'
+                        ' WHERE indexer = ? AND showid = ? AND season != 0',
+                        [show_obj.tvid, show_obj.prodid])
+                    if 1 == int(num_seasons_sql_result[0][0]) and None is season_number:
+                        self._log(
+                            'No season number found, but this show appears to only have 1 season,'
+                            ' setting season number to 1...', logger.DEBUG)
+                        season_number = 1
 
             if show_obj and season_number and episode_numbers:
                 break
@@ -771,9 +771,9 @@ class PostProcessor(object):
 
         # search all possible names for our new quality, in case the file or dir doesn't have it
         # nzb name is the most reliable if it exists, followed by folder name and lastly file name
-        for thing, cur_name in iteritems({'nzb name': self.nzb_name,
-                                          'folder name': self.folder_name,
-                                          'file name': self.file_name}):
+        for thing, cur_name in {'nzb name': self.nzb_name,
+                                'folder name': self.folder_name,
+                                'file name': self.file_name}.items():
 
             # some stuff might be None at this point still
             if not cur_name:
@@ -833,13 +833,13 @@ class PostProcessor(object):
 
             self._log(f'Executing command {script_cmd}')
         except (BaseException, Exception) as e:
-            self._log('Error creating extra script command: %s' % ex(e), logger.ERROR)
+            self._log(f'Error creating extra script command: {ex(e)}', logger.ERROR)
             return
 
         try:
             # run the command and capture output
             output, err, exit_status = cmdline_runner(script_cmd)
-            self._log('Script result: %s' % output, logger.DEBUG)
+            self._log(f'Script result: {output}', logger.DEBUG)
 
         except OSError as e:
             self._log(f'Unable to run extra_script: {ex(e)}', logger.ERROR)
@@ -874,7 +874,7 @@ class PostProcessor(object):
         """
 
         try:
-            existing_show_path = os.path.isdir(ep_obj.show.location)
+            existing_show_path = os.path.isdir(ep_obj.show_obj.location)
         except exceptions_helper.ShowDirNotFoundException:
             existing_show_path = False
 
@@ -926,7 +926,7 @@ class PostProcessor(object):
 
         # if there's an existing downloaded file with same quality, check filesize to decide
         if new_ep_quality == old_ep_quality:
-            np = NameParser(show_obj=self.show_obj)
+            np = NameParser(show_obj=self.show_obj, force_show_obj=bool(self.show_obj))
             cur_proper_level = 0
             try:
                 pr = np.parse(ep_obj.release_name)
@@ -1030,9 +1030,9 @@ class PostProcessor(object):
                 if None is not sql:
                     sql_l.append(sql)
 
-        if 0 < len(sql_l):
-            my_db = db.DBConnection()
-            my_db.mass_action(sql_l)
+        if sql_l:
+            with db.DBConnection() as sg_db:
+                sg_db.mass_action(sql_l)
 
     def process_minimal(self):
         self._log('Processing without any files...')
@@ -1053,15 +1053,15 @@ class PostProcessor(object):
         """
 
         self._log(f'Processing... {os.path.relpath(self.file_path, self.folder_path)}'
-                  f'{(f"<br />.. from nzb {self.nzb_name}", "")[None is self.nzb_name]}')
+                  f'{(f"<br>.. from nzb {self.nzb_name}", "")[None is self.nzb_name]}')
 
         if os.path.isdir(self.file_path):
-            self._log(f'Expecting file {self.file_path}<br />.. is actually a directory, skipping')
+            self._log(f'Expecting file {self.file_path}<br>.. is actually a directory, skipping')
             return False
 
         for ignore_file in self.IGNORED_FILESTRINGS:
             if ignore_file in self.file_path:
-                self._log(f'File {self.file_path}<br />.. is ignored type, skipping')
+                self._log(f'File {self.file_path}<br>.. is ignored type, skipping')
                 return False
 
         # reset per-file stuff
@@ -1153,7 +1153,7 @@ class PostProcessor(object):
         # figure out the base name of the resulting episode file
         if sickgear.RENAME_EPISODES:
             new_base_name = os.path.basename(proper_path)
-            new_file_name = new_base_name + '.' + self.file_name.rpartition('.')[-1]
+            new_file_name = f'{new_base_name}.{self.file_name.rpartition(".")[-1]}'
 
         else:
             # if we're not renaming then there's no new base name, we'll just use the existing name
@@ -1183,10 +1183,10 @@ class PostProcessor(object):
                          'new_base_name': new_base_name,
                          'associated_files': sickgear.MOVE_ASSOCIATED_FILES}
             args_cpmv = {'subtitles': sickgear.USE_SUBTITLES and ep_obj.show_obj.subtitles,
-                         'action_tmpl': ' %s<br />.. to %s'}
+                         'action_tmpl': ' %s<br>.. to %s'}
             args_cpmv.update(args_link)
             if self.webhandler:
-                self.webhandler('Processing method is "%s"' % self.process_method)
+                self.webhandler(f'Processing method is "{self.process_method}"')
                 keepalive.start()
             if 'copy' == self.process_method:
                 self._copy(**args_cpmv)
@@ -1223,9 +1223,9 @@ class PostProcessor(object):
                 if None is not sql:
                     sql_l.append(sql)
 
-        if 0 < len(sql_l):
-            my_db = db.DBConnection()
-            my_db.mass_action(sql_l)
+        if sql_l:
+            with db.DBConnection() as sg_db:
+                sg_db.mass_action(sql_l)
 
         # generate nfo/tbn
         ep_obj.create_meta_files()

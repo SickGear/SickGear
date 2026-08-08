@@ -7,7 +7,7 @@ This module implements the Genres functionality of tmdbsimple.
 
 Created by Celia Oakley on 2013-10-31.
 
-:copyright: (c) 2013-2025 by Celia Oakley
+:copyright: (c) 2013-2026 by Celia Oakley
 :license: GPLv3, see LICENSE for more details
 """
 
@@ -24,7 +24,7 @@ class Genres(TMDB):
     URLS = {
         'movie_list': '/movie/list',
         'tv_list': '/tv/list',
-        'movies': '/{id}/movies',    # backward compatability
+        'movies': '/{id}/movies',    # undocumented but still functional; use Discover for more control
     }
 
     def __init__(self, id=0):
@@ -63,7 +63,7 @@ class Genres(TMDB):
         self._set_attrs_to_values(response)
         return response
 
-    # backward compatability
+    # undocumented but still functional; use Discover for more control
     def movies(self, **kwargs):
         """
         Get the list of movies for a particular genre by id. By default, only

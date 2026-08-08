@@ -40,7 +40,7 @@ def get_show_image(url, img_num=None, show_name=None, supress_log=False):
         return None
 
     # if they provided a fanart number try to use it instead
-    temp_url = url if None is img_num else url.split('-')[0] + '-' + str(img_num) + '.jpg'
+    temp_url = url if None is img_num else f'{url.split("-")[0]}-{img_num!s}.jpg'
 
     logger.debug(f'Fetching image from {temp_url}')
 
@@ -52,7 +52,7 @@ def get_show_image(url, img_num=None, show_name=None, supress_log=False):
         if supress_log:
             return
         logger.warning(f'There was an error trying to retrieve the image'
-                       f'{("", " for show: %s" % show_name)[None is not show_name]}, aborting')
+                       f'{("", f" for show: {show_name}")[None is not show_name]}, aborting')
         return
 
     return image_data

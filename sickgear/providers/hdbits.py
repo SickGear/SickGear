@@ -36,8 +36,8 @@ class HDBitsProvider(generic.TorrentProvider):
         # api_spec: https://hdbits.org/wiki/API
         self.url_base = 'https://hdbits.org/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'search': self.url_base + 'api/torrents',
-                     'get': self.url_base + 'download.php?%s'}
+                     'search': f'{self.url_base}api/torrents',
+                     'get': f'{self.url_base}download.php?%s'}
 
         self.categories = [3, 5, 2]
 
@@ -50,7 +50,7 @@ class HDBitsProvider(generic.TorrentProvider):
 
         if 'status' in parsed_json and 5 == parsed_json.get('status') and 'message' in parsed_json:
             logger.debug(f'Incorrect username or password for {self.name}: {parsed_json["message"]}')
-            raise AuthException('Your username or password for %s is incorrect, check your config.' % self.name)
+            raise AuthException(f'Your username or password for {self.name} is incorrect, check your config.')
 
         return True
 
@@ -78,7 +78,7 @@ class HDBitsProvider(generic.TorrentProvider):
                 id=show_obj.prodid,
                 episode=show_obj.air_by_date and str(ep_obj.airdate).replace('-', ' ') or
                 (show_obj.is_sports and ep_obj.airdate.strftime('%b') or
-                 (show_obj.is_anime and ('%i' % int(ep_obj.scene_absolute_number)) or
+                 (show_obj.is_anime and (f'{int(ep_obj.scene_absolute_number)}') or
                   (ep_obj.episode, ep_obj.scene_episode)[bool(show_obj.is_scene)])))
             if not(show_obj.air_by_date and show_obj.is_sports and show_obj.is_anime):
                 id_param['season'] = (ep_obj.season, ep_obj.scene_season)[bool(show_obj.is_scene)]
@@ -139,7 +139,7 @@ class HDBitsProvider(generic.TorrentProvider):
                         items[mode].append((title, download_url, item.get('seeders', 0), self._bytesizer(size)))
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search_param: ' + str(search_param), self.name)['Cache' == mode])
+                                 (f'search_param: {search_param!s}', self.name)['Cache' == mode])
 
                 results = self._sort_seeding(mode, results + items[mode])
 

@@ -1,12 +1,14 @@
 from ..attachment.base import AttachBase as AttachBase
 from ..common import NotifyFormat as NotifyFormat, NotifyType as NotifyType
 from ..conversion import convert_between as convert_between
-from ..utils.parse import parse_list as parse_list, validate_regex as validate_regex
+from ..utils.parse import parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 
+PUSHOVER_E2EE_SUPPORT: bool
 PUSHOVER_SEND_TO_ALL: str
 VALIDATE_DEVICE: Incomplete
+VALIDATE_GROUP: Incomplete
 
 class PushoverPriority:
     LOW: int
@@ -43,10 +45,12 @@ PUSHOVER_SOUNDS: Incomplete
 PUSHOVER_PRIORITIES: Incomplete
 PUSHOVER_PRIORITY_MAP: Incomplete
 PUSHOVER_HTTP_ERROR_MAP: Incomplete
+VALIDATE_ENCRYPTION_KEY: Incomplete
 
 class NotifyPushover(NotifyBase):
     """A wrapper for Pushover Notifications."""
     service_name: str
+    requirements: Incomplete
     service_url: str
     secure_protocol: str
     setup_url: str
@@ -62,15 +66,33 @@ class NotifyPushover(NotifyBase):
     token: Incomplete
     user_key: Incomplete
     invalid_targets: Incomplete
-    targets: Incomplete
+    devices: Incomplete
+    groups: Incomplete
     supplemental_url: Incomplete
     supplemental_url_title: Incomplete
     sound: Incomplete
     priority: Incomplete
-    retry: Incomplete
+    interval: Incomplete
     expire: Incomplete
-    def __init__(self, user_key, token, targets=None, priority=None, sound=None, retry=None, expire=None, supplemental_url=None, supplemental_url_title=None, **kwargs) -> None:
+    encryption_key: Incomplete
+    e2ee: Incomplete
+    def __init__(self, user_key, token, targets=None, priority=None, sound=None, interval=None, expire=None, supplemental_url=None, supplemental_url_title=None, encryption_key=None, e2ee=None, **kwargs) -> None:
         """Initialize Pushover Object."""
+    def _encrypt_field(self, plaintext, key_bytes):
+        """Encrypt a single Pushover message field for E2EE.
+
+        Implements the field-level encryption scheme from
+        https://pushover.net/api#e2ee -- per field:
+
+        1. gzip-compress the plaintext string (UTF-8)
+        2. AES-256-CBC-encrypt the compressed data (random 16-byte IV,
+           PKCS7 padding) using the caller-supplied 256-bit key
+        3. Compute HMAC-SHA256 over (IV || ciphertext) with the same key
+        4. Return base64(IV || ciphertext || HMAC)
+
+        Raises on any crypto error; the caller must not silently fall
+        back to sending plaintext when encryption fails.
+        """
     def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
         """Perform Pushover Notification."""
     def _send(self, payload, attach=None):
@@ -82,9 +104,20 @@ class NotifyPushover(NotifyBase):
 
         Targets or end points should never be identified here.
         """
+    def __len__(self) -> int:
+        """Returns the number of HTTP requests this instance will make.
+
+        Devices are batched into a single call; each group requires its own.
+        """
     def url(self, privacy: bool = False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
     @staticmethod
     def parse_url(url):
         """Parses the URL and returns enough arguments that can allow us to re-
         instantiate this object."""
+    @staticmethod
+    def runtime_deps():
+        """Return optional runtime dependency package names.
+
+        E2EE support requires the ``cryptography`` package.
+        """

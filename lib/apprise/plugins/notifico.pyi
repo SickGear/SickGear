@@ -1,7 +1,14 @@
 from ..common import NotifyType as NotifyType
+from ..url import PrivacyMode as PrivacyMode
 from ..utils.parse import parse_bool as parse_bool, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
+
+class NotificoMode:
+    OFFICIAL: str
+    SELFHOSTED: str
+
+NOTIFICO_MODES: Incomplete
 
 class NotificoFormat:
     Reset: str
@@ -44,9 +51,9 @@ class NotifyNotifico(NotifyBase):
     template_args: Incomplete
     project_id: Incomplete
     msghook: Incomplete
+    mode: Incomplete
     prefix: Incomplete
     color: Incomplete
-    api_url: Incomplete
     def __init__(self, project_id, msghook, color: bool = True, prefix: bool = True, **kwargs) -> None:
         """Initialize Notifico Object."""
     @property
@@ -59,11 +66,11 @@ class NotifyNotifico(NotifyBase):
     def url(self, privacy: bool = False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
     def send(self, body, title: str = '', notify_type=..., **kwargs):
-        """Wrapper to _send since we can alert more then one channel."""
+        """Perform Notifico Notification."""
     @staticmethod
     def parse_url(url):
-        """Parses the URL and returns enough arguments that can allow us to re-
-        instantiate this object."""
+        """Parses the URL and returns enough arguments that can allow us to
+        re-instantiate this object."""
     @staticmethod
     def parse_native_url(url):
         """

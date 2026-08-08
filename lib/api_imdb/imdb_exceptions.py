@@ -5,7 +5,8 @@ __author__ = 'Prinz23'
 __version__ = '1.0'
 
 __all__ = ['IMDbException', 'IMDbError', 'IMDbUserabort', 'IMDbShownotfound',
-           'IMDbSeasonnotfound', 'IMDbEpisodenotfound', 'IMDbAttributenotfound', 'IMDbTokenexpired']
+           'IMDbSeasonnotfound', 'IMDbEpisodenotfound', 'IMDbAttributenotfound', 'IMDbTokenexpired',
+           'IMDbPersonNotFound']
 
 from lib.tvinfo_base.exceptions import *
 
@@ -56,5 +57,11 @@ class IMDbAttributenotfound(BaseTVinfoAttributenotfound, IMDbError):
 
 class IMDbTokenexpired(BaseTVinfoAuthenticationerror, IMDbError):
     """token expired or missing imdb.com
+    """
+    pass
+
+
+class IMDbPersonNotFound(BaseTVinfoPersonNotFound, IMDbError):
+    """person id notfound at imdb.com
     """
     pass

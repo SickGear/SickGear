@@ -1,5 +1,5 @@
 from ..apprise_attachment import AppriseAttachment as AppriseAttachment
-from ..common import NOTIFY_FORMATS as NOTIFY_FORMATS, NotifyFormat as NotifyFormat, NotifyImageSize as NotifyImageSize, NotifyType as NotifyType, OVERFLOW_MODES as OVERFLOW_MODES, OverflowMode as OverflowMode, PersistentStoreMode as PersistentStoreMode
+from ..common import APPRISE_MAX_SERVICE_RETRY as APPRISE_MAX_SERVICE_RETRY, APPRISE_MAX_SERVICE_WAIT as APPRISE_MAX_SERVICE_WAIT, NOTIFY_FORMATS as NOTIFY_FORMATS, NotifyFormat as NotifyFormat, NotifyImageSize as NotifyImageSize, NotifyType as NotifyType, OVERFLOW_MODES as OVERFLOW_MODES, OverflowMode as OverflowMode, PersistentStoreMode as PersistentStoreMode
 from ..locale import Translatable as Translatable
 from ..persistent_store import PersistentStore as PersistentStore
 from ..url import URLBase as URLBase
@@ -20,6 +20,50 @@ class RequirementsSpec(TypedDict, total=False):
 class NotifyBase(URLBase):
     """This is the base class for all notification services."""
     enabled: bool
+    @staticmethod
+    def runtime_deps():
+        """Return a tuple of top-level Python package names that this plugin
+        imported as optional runtime dependencies.
+
+        The plugin manager uses this to maintain a reference counter per
+        library.  When every plugin that declared a given library is disabled,
+        its counter reaches zero and the manager evicts the library from
+        `sys.modules`, releasing the associated Python objects from memory.
+
+        Names must be the importable top-level namespace - the same string you
+        would pass to `import` - not the pip install name:
+
+            ('paho',)        # paho-mqtt installs as 'paho'
+            ('slixmpp',)
+            ('cryptography',)
+
+        Submodules are handled automatically; declaring the top-level name is
+        sufficient.
+
+        Override this in any plugin that conditionally imports a heavy optional
+        library.  Return an empty tuple (the default) when the plugin has no
+        optional dependencies that are worth evicting.
+        """
+    @classmethod
+    def enable(self) -> None:
+        """Mark this plugin as enabled.
+
+        This is the counterpart to :meth:`disable`.  Calling this restores the
+        plugin to an active state so it will be used for notifications again.
+        Note that if the plugin's runtime dependencies were evicted from memory
+        by the plugin manager, re-enabling will restore the flag but the
+        plugin may not function until the process is restarted.
+        """
+    @classmethod
+    def disable(self) -> None:
+        """Mark this plugin as disabled.
+
+        The plugin will not be used for notifications.  The plugin manager
+        calls this when honouring `APPRISE_DENY_SERVICES` /
+        `APPRISE_ALLOW_SERVICES` and uses the result of
+        :method:`runtime_deps` to decrement its per-library reference counters,
+        potentially evicting unused libraries from `sys.modules`.
+        """
     category: str
     requirements: ClassVar[RequirementsSpec]
     service_url: Incomplete
@@ -35,6 +79,9 @@ class NotifyBase(URLBase):
     overflow_mode: Incomplete
     storage_mode: Incomplete
     interpret_emojis: bool
+    service_retry: int
+    service_wait: float
+    optional: bool
     attachment_support: bool
     default_html_tag_id: str
     template_args: Incomplete
@@ -44,6 +91,17 @@ class NotifyBase(URLBase):
     overflow_display_title_once: Incomplete
     overflow_amalgamate_title: bool
     __tzinfo: Incomplete
+    @classmethod
+    def __init_subclass__(cls, **kwargs):
+        """Automatically wrap any __len__ defined on a subclass so that it
+        multiplies its base target count by (retry + 1).
+
+        This ensures every plugin's __len__ reflects the total number of
+        transmission attempts (targets * retry-factor) without requiring
+        each plugin to be updated individually.
+        """
+    retry: Incomplete
+    wait: Incomplete
     __store: Incomplete
     url_identifier: bool
     __cached_url_identifier: Incomplete
@@ -92,6 +150,14 @@ class NotifyBase(URLBase):
         """
     def send(self, body: str, title: str = '', notify_type: NotifyType = ..., **kwargs: Any) -> bool:
         """Should preform the actual notification itself."""
+    def __len__(self) -> int:
+        """Returns the number of HTTP requests this instance will make,
+        factoring in the configured retry count.
+
+        Subclasses that override this are automatically wrapped by
+        __init_subclass__ to apply the same retry multiplier, so they
+        should return their raw target count without worrying about retry.
+        """
     def url_parameters(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Provides a default set of parameters to work with.
 
@@ -104,6 +170,14 @@ class NotifyBase(URLBase):
 
         This is very specific and customized for Apprise.
 
+        In addition to the fields extracted by URLBase.parse_url(), this
+        method extracts the NotifyBase-level query-string parameters:
+        ``format``, ``overflow``, ``emojis``, ``tz``, ``store``, ``retry``,
+        ``wait``, and ``optional``.  The extracted values are placed
+        directly in the returned results dict under their respective keys,
+        ready to be consumed by NotifyBase.__init__() (or a subclass).
+        Child classes should call this method via ``super()`` and then
+        layer their own parameter extraction on top of the returned dict.
 
         Args:
             url (str): The URL you want to fully parse.

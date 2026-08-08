@@ -31,12 +31,13 @@ from .common import DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_
 from .providers.generic import GenericProvider
 from .tv import TVEpisode, TVShow
 
-from six import iteritems, itervalues, string_types
+from six import string_types
 
 # noinspection PyUnreachableCode, PyStatementEffect
 if False:
     from typing import AnyStr, Dict, List, Optional, Tuple, Union
     from .classes import NZBDataSearchResult, NZBSearchResult, SearchResult, TorrentSearchResult
+    from sqlite3 import SQLITE_ROW
     search_result_type = Union[NZBDataSearchResult, NZBSearchResult, SearchResult, TorrentSearchResult]
 
 
@@ -177,9 +178,9 @@ def snatch_episode(result, end_status=SNATCHED):
 
             update_imdb_data = update_imdb_data and cur_ep_obj.show_obj.load_imdb_info()
 
-    if 0 < len(sql_l):
-        my_db = db.DBConnection()
-        my_db.mass_action(sql_l)
+    if sql_l:
+        with db.DBConnection() as sg_db:
+            sg_db.mass_action(sql_l)
 
     return True
 
@@ -471,28 +472,28 @@ def get_aired_in_season(show_obj, return_sql=False):
     ep_count = {}
     ep_count_scene = {}
     tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
-    my_db = db.DBConnection()
 
     if show_obj.air_by_date:
-        sql_string = 'SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate ' + \
-                     'FROM [tv_episodes] AS ep, [tv_shows] AS show ' + \
-                     'WHERE ep.showid = show.indexer_id AND show.paused = 0 AND season != 0 AND' \
-                     ' ep.indexer = ? AND ep.showid = ?' \
-                     ' AND show.air_by_date = 1'
+        sql_string = ('SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate'
+                      ' FROM [tv_episodes] AS ep, [tv_shows] AS show'
+                      ' WHERE ep.showid = show.indexer_id AND show.paused = 0 AND season != 0'
+                      ' AND ep.indexer = ? AND ep.showid = ?'
+                      ' AND show.air_by_date = 1')
     else:
-        sql_string = 'SELECT status, season, scene_season, episode, airdate ' + \
-                     'FROM [tv_episodes] ' + \
-                     'WHERE indexer = ? AND showid = ?' \
-                     ' AND season > 0'
+        sql_string = ('SELECT status, season, scene_season, episode, airdate'
+                      ' FROM [tv_episodes]'
+                      ' WHERE indexer = ? AND showid = ?'
+                      ' AND season > 0')
 
-    sql_result = my_db.select(sql_string, [show_obj.tvid, show_obj.prodid])
-    for cur_result in sql_result:
-        if 1 < helpers.try_int(cur_result['airdate']) <= tomorrow:
-            cur_season = helpers.try_int(cur_result['season'])
-            ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
-            cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
-            if -1 != cur_scene_season:
-                ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select(sql_string, [show_obj.tvid, show_obj.prodid])
+        for cur_result in sql_result:
+            if 1 < helpers.try_int(cur_result['airdate']) <= tomorrow:
+                cur_season = helpers.try_int(cur_result['season'])
+                ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
+                cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
+                if -1 != cur_scene_season:
+                    ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
 
     if return_sql:
         return ep_count, ep_count_scene, sql_result
@@ -529,11 +530,11 @@ def wanted_episodes(show_obj,  # type: TVShow
     total_wanted = total_replacing = total_unaired = 0
 
     if 0 < len(sql_result) and 2 < len(sql_result) - len(show_obj.sxe_ep_obj):
-        my_db = db.DBConnection()
-        ep_sql_result = my_db.select(
-            'SELECT * FROM tv_episodes'
-            ' WHERE indexer = ? AND showid = ?',
-            [show_obj.tvid, show_obj.prodid])
+        with db.DBConnection() as sg_db:
+            ep_sql_result = sg_db.select(
+                'SELECT * FROM tv_episodes'
+                ' WHERE indexer = ? AND showid = ?',
+                [show_obj.tvid, show_obj.prodid])
     else:
         ep_sql_result = None
 
@@ -588,7 +589,7 @@ def search_for_needed_episodes(ep_obj_list):
     providers = list(filter(lambda x: x.is_active() and x.enable_recentsearch, sickgear.providers.sorted_sources()))
 
     for cur_provider in providers:
-        threading.current_thread().name = '%s :: [%s]' % (orig_thread_name, cur_provider.name)
+        threading.current_thread().name = f'{orig_thread_name} :: [{cur_provider.name}]'
 
         ep_obj_search_result_list = cur_provider.search_rss(ep_obj_list)
 
@@ -655,23 +656,23 @@ def can_reject(release_name):
     :return: None, None if release has no issue otherwise True/Nuke reason, URLs that rejected
     """
     rej_urls = []
-    srrdb_url = 'https://www.srrdb.com/api/search/r:%s/order:date-desc' % re.sub(r'[][]', '', release_name)
+    srrdb_url = f'https://www.srrdb.com/api/search/r:{re.sub("[][]", "", release_name)}/order:date-desc'
     resp = helpers.get_url(srrdb_url, parse_json=True)
     if not resp:
         srrdb_rej = True
-        rej_urls += ['Failed contact \'%s\'' % srrdb_url]
+        rej_urls += [f'Failed contact \'{srrdb_url}\'']
     else:
         srrdb_rej = (not len(resp.get('results', []))
                      or release_name.lower() != resp.get('results', [{}])[0].get('release', '').lower())
-        rej_urls += ([], ['\'%s\'' % srrdb_url])[srrdb_rej]
+        rej_urls += ([], [f'\'{srrdb_url}\''])[srrdb_rej]
 
     sane_name = helpers.full_sanitize_scene_name(release_name)
     # predb_url = 'https://predb.ovh/api/v1/?q=@name "%s"' % sane_name
-    predb_url = 'https://predb.de/api/?q=%s' % release_name
+    predb_url = f'https://predb.de/api/?q={release_name}'
     resp = helpers.get_url(predb_url, parse_json=True)
     predb_rej = True
     if not resp:
-        rej_urls += ['Failed contact \'%s\'' % predb_url]
+        rej_urls += [f'Failed contact \'{predb_url}\'']
     elif 'success' == resp.get('status', '').lower():
         rows = resp and resp.get('data') or []
         for data in rows:
@@ -682,7 +683,7 @@ def can_reject(release_name):
                 else:
                     predb_rej = nuke_type not in (2, 4) and (data.get('reason') or 'Reason not set')
                 break
-        rej_urls += ([], ['\'%s\'' % predb_url])[bool(predb_rej)]
+        rej_urls += ([], [f'\'{predb_url}\''])[bool(predb_rej)]
 
     pred = any([not srrdb_rej, not predb_rej])
 
@@ -719,7 +720,7 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
             if any(search_result_list):
                 logger.log(', '.join(['%s %s candidate%s' % (
                     len(v), (('multiep', 'season')[SEASON_RESULT == k], 'episode')['ep' in search_mode],
-                    helpers.maybe_plural(v)) for (k, v) in iteritems(search_result_list)]))
+                    helpers.maybe_plural(v)) for (k, v) in search_result_list.items()]))
         except exceptions_helper.AuthException as e:
             logger.error(f'Authentication error: {ex(e)}')
             break
@@ -746,11 +747,11 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
         elif not getattr(provider, 'search_fallback', False) or 2 == search_count:
             break
 
-        search_mode = '%sonly' % ('ep', 'sp')['ep' in search_mode]
+        search_mode = f'{("ep", "sp")["ep" in search_mode]}only'
         logger.log(f'Falling back to {("season pack", "episode")["ep" in search_mode]} search ...')
 
     if not provider_results:
-        logger.log('No suitable result at [%s]' % provider.name)
+        logger.log(f'No suitable result at [{provider.name}]')
 
 
 def cache_torrent_file(
@@ -761,7 +762,7 @@ def cache_torrent_file(
     # type: (...) -> Optional[TorrentSearchResult]
 
     cache_file = os.path.join(sickgear.CACHE_DIR or helpers.get_system_temp_dir(),
-                              '%s.torrent' % (helpers.sanitize_filename(search_result.name)))
+                              f'{helpers.sanitize_filename(search_result.name)}.torrent')
 
     if not helpers.download_file(
             search_result.url, cache_file, session=search_result.provider.session, failure_monitor=False):
@@ -775,7 +776,7 @@ def cache_torrent_file(
 
     try:
         # verify header
-        re.findall(r'\w+\d+:', ('%s' % torrent_content)[0:6])[0]
+        re.findall(r'\w+\d+:', (f'{torrent_content}')[0:6])[0]
     except (BaseException, Exception):
         return
 
@@ -889,7 +890,7 @@ def search_providers(
                                                            show_obj=show_obj, ep_obj_list=ep_obj_list,
                                                            manual_search=manual_search,
                                                            try_other_searches=try_other_searches),
-                                               name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
+                                               name=f'{orig_thread_name} :: [{cur_provider.name}]'))
 
         # start the provider search thread
         search_threads[-1].start()
@@ -932,12 +933,12 @@ def search_providers(
             logger.debug(f'{Quality.qualityStrings[season_qual]} is the quality of the season'
                          f' {best_season_result.provider.providerType}')
 
-            my_db = db.DBConnection()
-            sql = 'SELECT season, episode' \
-                  ' FROM tv_episodes' \
-                  ' WHERE indexer = %s AND showid = %s AND (season IN (%s))' % \
-                  (show_obj.tvid, show_obj.prodid, ','.join([str(x.season) for x in ep_obj_list]))
-            ep_nums = [(int(x['season']), int(x['episode'])) for x in my_db.select(sql)]
+            with db.DBConnection() as sg_db:
+                sql = 'SELECT season, episode' \
+                      ' FROM tv_episodes' \
+                      ' WHERE indexer = %s AND showid = %s AND (season IN (%s))' % \
+                      (show_obj.tvid, show_obj.prodid, ','.join([str(x.season) for x in ep_obj_list]))
+                ep_nums = [(int(x['season']), int(x['episode'])) for x in sg_db.select(sql)]
 
             logger.log(f'Executed query: [{sql}]')
             logger.debug(f'Episode list: {ep_nums}')

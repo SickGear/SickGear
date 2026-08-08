@@ -64,8 +64,8 @@ def search_propers(provider_proper_obj=None):
         if propers:
             _download_propers(propers)
     else:
-        logger.log('No downloads or snatches found for the last %s%s days to use for a Propers search' %
-                   (age_shows, ('', ' (%s for anime)' % age_anime)[helpers.has_anime()]))
+        logger.log(f'No downloads or snatches found for the last {age_shows}'
+                   f'{("", f" ({age_anime} for anime)")[helpers.has_anime()]} days to use for a Propers search')
 
     run_at = ''
     if None is provider_proper_obj:
@@ -80,9 +80,9 @@ def search_propers(provider_proper_obj=None):
             else:
                 hours, remainder = divmod(run_in.seconds, 3600)
                 minutes, seconds = divmod(remainder, 60)
-                run_at += 'in approx. ' + ('%dm, %ds' % (minutes, seconds), '%dh, %dm' % (hours, minutes))[0 < hours]
+                run_at += f'in approx. {(f"{minutes:d}m, {seconds:d}s", f"{hours:d}h, {minutes:d}m")[0 < hours]}'
 
-        logger.log('Completed search for new Propers%s' % run_at)
+        logger.log(f'Completed search for new Propers{run_at}')
     else:
         logger.log('Completed checking Propers from recent search')
 
@@ -119,29 +119,29 @@ def get_old_proper_level(show_obj, tvid, prodid, season, episode_numbers, old_st
     if old_status not in SNATCHED_ANY:
         level = Quality.get_proper_level(extra_no_name, version, is_anime)
     elif show_obj:
-        my_db = db.DBConnection()
-        np = NameParser(False, show_obj=show_obj)
-        for episode in episode_numbers:
-            # noinspection SqlResolve
-            result = my_db.select(
-                'SELECT resource FROM history'
-                ' WHERE indexer = ? AND showid = ?'
-                ' AND season = ? AND episode = ? AND '
-                '(%s) ORDER BY date DESC LIMIT 1' % (' OR '.join(['action LIKE "%%%02d"' % x for x in SNATCHED_ANY])),
-                [tvid, prodid, season, episode])
-            if not result or not isinstance(result[0]['resource'], string_types) or not result[0]['resource']:
-                continue
-            nq = Quality.scene_quality(result[0]['resource'], show_obj.is_anime)
-            if nq != new_quality:
-                continue
-            try:
-                p = np.parse(result[0]['resource'])
-            except (BaseException, Exception):
-                continue
-            level = Quality.get_proper_level(p.extra_info_no_name(), p.version, show_obj.is_anime)
-            extra_no_name = p.extra_info_no_name()
-            rel_name = result[0]['resource']
-            break
+        with db.DBConnection() as sg_db:
+            np = NameParser(False, show_obj=show_obj)
+            for episode in episode_numbers:
+                # noinspection SqlResolve
+                result = sg_db.select(
+                    'SELECT resource FROM history'
+                    ' WHERE indexer = ? AND showid = ?'
+                    ' AND season = ? AND episode = ? AND '
+                    '(%s) ORDER BY date DESC LIMIT 1' % (' OR '.join(["action LIKE '%%%02d'" % x for x in SNATCHED_ANY])),
+                    [tvid, prodid, season, episode])
+                if not result or not isinstance(result[0]['resource'], string_types) or not result[0]['resource']:
+                    continue
+                nq = Quality.scene_quality(result[0]['resource'], show_obj.is_anime)
+                if nq != new_quality:
+                    continue
+                try:
+                    p = np.parse(result[0]['resource'])
+                except (BaseException, Exception):
+                    continue
+                level = Quality.get_proper_level(p.extra_info_no_name(), p.version, show_obj.is_anime)
+                extra_no_name = p.extra_info_no_name()
+                rel_name = result[0]['resource']
+                break
     return level, extra_no_name, rel_name
 
 
@@ -160,7 +160,7 @@ def get_webdl_type(extra_info_no_name, rel_name):
 
     for t in sickgear.WEBDL_TYPES:
         try:
-            if re.search(r'\b%s\b' % t[1], extra_info_no_name, flags=re.I):
+            if re.search(rf'\b{t[1]}\b', extra_info_no_name, flags=re.I):
                 return t[0]
         except (BaseException, Exception):
             continue
@@ -177,9 +177,9 @@ def load_webdl_types():
     url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/main/SickGear/webdl_types.txt'
     url_data = helpers.get_url(url)
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select('SELECT * FROM webdl_types')
-    old_types = [(r['dname'], r['regex']) for r in sql_result]
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select('SELECT * FROM webdl_types')
+        old_types = [(r['dname'], r['regex']) for r in sql_result]
 
     if isinstance(url_data, string_types) and url_data.strip():
         try:
@@ -194,17 +194,18 @@ def load_webdl_types():
         except (IOError, OSError):
             pass
 
-        cl = []
+        sql_l = []
         for nt in new_types:
             if nt not in old_types:
-                cl.append(['REPLACE INTO webdl_types (dname, regex) VALUES (?,?)', [nt[0], nt[1]]])
+                sql_l.append(['REPLACE INTO webdl_types (dname, regex) VALUES (?,?)', [nt[0], nt[1]]])
 
         for ot in old_types:
             if ot not in new_types:
-                cl.append(['DELETE FROM webdl_types WHERE dname = ? AND regex = ?', [ot[0], ot[1]]])
+                sql_l.append(['DELETE FROM webdl_types WHERE dname = ? AND regex = ?', [ot[0], ot[1]]])
 
-        if cl:
-            my_db.mass_action(cl)
+        if sql_l:
+            with db.DBConnection() as sg_db:
+                sg_db.mass_action(sql_l)
     else:
         new_types = old_types
 
@@ -218,13 +219,13 @@ def _search_provider(cur_provider, provider_propers, aired_since_shows, recent_s
         provider_propers.extend(cur_provider.find_propers(search_date=aired_since_shows, shows=recent_shows,
                                                           anime=recent_anime))
     except AuthException as e:
-        logger.error('Authentication error: %s' % ex(e))
+        logger.error(f'Authentication error: {ex(e)}')
     except (BaseException, Exception) as e:
-        logger.error('Error while searching %s, skipping: %s' % (cur_provider.name, ex(e)))
+        logger.error(f'Error while searching {cur_provider.name}, skipping: {ex(e)}')
         logger.error(traceback.format_exc())
 
     if not provider_propers:
-        logger.log('No Proper releases found at [%s]' % cur_provider.name)
+        logger.log(f'No Proper releases found at [{cur_provider.name}]')
 
 
 def _get_proper_list(aired_since_shows,  # type: datetime.datetime
@@ -245,7 +246,6 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
     # make sure the episode has been downloaded before
     history_limit = datetime.datetime.now() - datetime.timedelta(days=30)
 
-    my_db = db.DBConnection()
     # for each provider get a list of arbitrary Propers
     orig_thread_name = threading.current_thread().name
     # filter provider list for:
@@ -265,7 +265,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
             provider_id = cur_provider.get_id()
 
-            logger.log('Searching for new Proper releases at [%s]' % cur_provider.name)
+            logger.log(f'Searching for new Proper releases at [{cur_provider.name}]')
             proper_dict[provider_id] = []
 
             search_threads.append(threading.Thread(target=_search_provider,
@@ -274,7 +274,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
                                                            'aired_since_shows': aired_since_shows,
                                                            'recent_shows': recent_shows,
                                                            'recent_anime': recent_anime},
-                                                   name='%s :: [%s]' % (orig_thread_name, cur_provider.name)))
+                                                   name=f'{orig_thread_name} :: [{cur_provider.name}]'))
 
             search_threads[-1].start()
 
@@ -319,44 +319,47 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
             # only get anime Proper if it has release group and version
             if parse_result.is_anime and not parse_result.release_group and -1 == parse_result.version:
-                logger.debug('Ignored Proper with no release group and version in name [%s]' % cur_proper.name)
+                logger.debug(f'Ignored Proper with no release group and version in name [{cur_proper.name}]')
                 continue
 
             if not show_name_helpers.pass_wordlist_checks(cur_proper.name, parse=False, indexer_lookup=False,
                                                           show_obj=cur_proper.parsed_show_obj):
-                logger.debug('Ignored unwanted Proper [%s]' % cur_proper.name)
+                logger.debug(f'Ignored unwanted Proper [{cur_proper.name}]')
                 continue
 
             re_x = dict(re_prefix='.*', re_suffix='.*')
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_ignore_words,
                                                     rx=cur_proper.parsed_show_obj.rls_ignore_words_regex, **re_x)
             if None is not result and result:
-                logger.debug('Ignored Proper containing ignore word [%s]' % cur_proper.name)
+                logger.debug(f'Ignored Proper containing ignore word [{cur_proper.name}]')
                 continue
 
             result = show_name_helpers.contains_any(cur_proper.name, cur_proper.parsed_show_obj.rls_require_words,
                                                     rx=cur_proper.parsed_show_obj.rls_require_words_regex, **re_x)
             if None is not result and not result:
-                logger.debug('Ignored Proper for not containing any required word [%s]' % cur_proper.name)
+                logger.debug(f'Ignored Proper for not containing any required word [{cur_proper.name}]')
                 continue
 
             cur_size = getattr(cur_proper, 'size', None)
             if failed_history.has_failed(cur_proper.name, cur_size, cur_provider.name):
                 continue
 
+            cur_proper.episode_numbers = parse_result.episode_numbers
             cur_proper.season = parse_result.season_number if None is not parse_result.season_number else 1
             cur_proper.episode = parse_result.episode_numbers[0]
+
             # check if we actually want this Proper (if it's the right quality)
-            sql_result = my_db.select(
-                'SELECT release_group, status, version, release_name'
-                ' FROM tv_episodes'
-                ' WHERE indexer = ? AND showid = ?'
-                ' AND season = ? AND episode = ?'
-                ' LIMIT 1',
-                [cur_proper.tvid, cur_proper.prodid,
-                 cur_proper.season, cur_proper.episode])
-            if not sql_result:
-                continue
+            with db.DBConnection() as sg_db:
+                sql_result = sg_db.select(
+                    'SELECT release_group, status, version, release_name'
+                    ' FROM tv_episodes'
+                    ' WHERE indexer = ? AND showid = ?'
+                    ' AND season = ? AND episode = ?'
+                    ' LIMIT 1',
+                    [cur_proper.tvid, cur_proper.prodid,
+                     cur_proper.season, cur_proper.episode])
+                if not sql_result:
+                    continue
 
             # only keep the Proper if we already retrieved the same quality ep (don't get better/worse ones)
             # check if we want this release: same quality as current, current has correct status
@@ -368,21 +371,22 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
             cur_proper.proper_level = cur_proper.properlevel    # local non global value
             if old_status in SNATCHED_ANY:
                 old_release_group = ''
-                # noinspection SqlResolve
-                history_results = my_db.select(
-                    'SELECT resource FROM history'
-                    ' WHERE indexer = ? AND showid = ?'
-                    ' AND season = ? AND episode = ? AND quality = ? AND date >= ?'
-                    ' AND (%s) ORDER BY date DESC LIMIT 1' % ' OR '.join(
-                        ['action = "%d%02d"' % (old_quality, x) for x in SNATCHED_ANY]),
-                    [cur_proper.tvid, cur_proper.prodid,
-                     cur_proper.season, cur_proper.episode, cur_proper.quality,
-                     history_limit.strftime(history.dateFormat)])
-                if len(history_results):
-                    try:
-                        old_release_group = np.parse(history_results[0]['resource']).release_group
-                    except (BaseException, Exception):
-                        pass
+                with db.DBConnection() as sg_db:
+                    # noinspection SqlResolve
+                    history_results = sg_db.select(
+                        'SELECT resource FROM history'
+                        ' WHERE indexer = ? AND showid = ?'
+                        ' AND season = ? AND episode = ? AND quality = ? AND date >= ?'
+                        ' AND (%s) ORDER BY date DESC LIMIT 1' % ' OR '.join(
+                            ["action = '%d%02d'" % (old_quality, x) for x in SNATCHED_ANY]),
+                        [cur_proper.tvid, cur_proper.prodid,
+                         cur_proper.season, cur_proper.episode, cur_proper.quality,
+                         history_limit.strftime(history.dateFormat)])
+                    if len(history_results):
+                        try:
+                            old_release_group = np.parse(history_results[0]['resource']).release_group
+                        except (BaseException, Exception):
+                            pass
             else:
                 old_release_group = sql_result[0]['release_group']
             try:
@@ -437,23 +441,25 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
                 if not same_release_group:
                     logger.debug(log_same_grp)
                     continue
-                found_msg = 'Found anime Proper v%s to replace v%s' % (parse_result.version, old_version)
+                found_msg = f'Found anime Proper v{parse_result.version} to replace v{old_version}'
             else:
-                found_msg = 'Found Proper [%s]' % cur_proper.name
+                found_msg = f'Found Proper [{cur_proper.name}]'
 
-            # noinspection SqlResolve
-            history_results = my_db.select(
-                'SELECT resource FROM history'
-                ' WHERE indexer = ? AND showid = ?'
-                ' AND season = ? AND episode = ? AND quality = ? AND date >= ?'
-                ' AND (%s)' % ' OR '.join(['action LIKE "%%%02d"' % x for x in SNATCHED_ANY + [DOWNLOADED, ARCHIVED]]),
-                [cur_proper.tvid, cur_proper.prodid,
-                 cur_proper.season, cur_proper.episode, cur_proper.quality,
-                 history_limit.strftime(history.dateFormat)])
+            with db.DBConnection() as sg_db:
+                # noinspection SqlResolve
+                history_results = sg_db.select(
+                    'SELECT resource FROM history'
+                    ' WHERE indexer = ? AND showid = ?'
+                    ' AND season = ? AND episode = ? AND quality = ? AND date >= ?'
+                    ' AND (%s)' % ' OR '.join([f"action LIKE '%{x:02d}'"
+                                               for x in SNATCHED_ANY + [DOWNLOADED, ARCHIVED]]),
+                    [cur_proper.tvid, cur_proper.prodid,
+                     cur_proper.season, cur_proper.episode, cur_proper.quality,
+                     history_limit.strftime(history.dateFormat)])
 
             # skip if the episode has never downloaded, because a previous quality is required to match the Proper
             if not len(history_results):
-                logger.debug('Ignored Proper cannot find a recent history item for [%s]' % cur_proper.name)
+                logger.debug(f'Ignored Proper cannot find a recent history item for [{cur_proper.name}]')
                 continue
 
             # make sure that none of the existing history downloads are the same Proper as the download candidate
@@ -467,7 +473,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
                     is_same = True
                     break
             if is_same:
-                logger.log('Ignored Proper already in history [%s]' % cur_proper.name)
+                logger.log(f'Ignored Proper already in history [{cur_proper.name}]')
                 continue
 
             logger.debug(found_msg)
@@ -484,7 +490,7 @@ def _get_proper_list(aired_since_shows,  # type: datetime.datetime
 
             propers[name] = cur_proper
 
-        cur_provider.log_result('Propers', len(propers), '%s' % cur_provider.name)
+        cur_provider.log_result('Propers', len(propers), f'{cur_provider.name}')
 
     return list(propers.values())
 
@@ -516,7 +522,7 @@ def _download_propers(proper_list):
             # if the show is in our list and there hasn't been a Proper already added for that particular episode
             # then add it to our list of Propers
             if epid not in list(map(_epid, verified_propers)):
-                logger.log('Proper may be useful [%s]' % cur_proper.name)
+                logger.log(f'Proper may be useful [{cur_proper.name}]')
                 verified_propers.add(cur_proper)
             else:
                 # use Proper with the highest level
@@ -527,7 +533,7 @@ def _download_propers(proper_list):
 
                 if remove_propers:
                     verified_propers -= remove_propers
-                    logger.log('A more useful Proper [%s]' % cur_proper.name)
+                    logger.log(f'A more useful Proper [{cur_proper.name}]')
                     verified_propers.add(cur_proper)
 
         for cur_proper in list(verified_propers):
@@ -556,14 +562,14 @@ def _download_propers(proper_list):
                     if reject:
                         if isinstance(reject, string_types):
                             if scene_rej_nuked and not scene_nuked_active:
-                                logger.debug('Rejecting nuked release. Nuke reason [%s] source [%s]' % (reject, url))
+                                logger.debug(f'Rejecting nuked release. Nuke reason [{reject}] source [{url}]')
                             else:
-                                logger.debug('Considering nuked release. Nuke reason [%s] source [%s]' % (reject, url))
+                                logger.debug(f'Considering nuked release. Nuke reason [{reject}] source [{url}]')
                                 reject = False
                         elif scene_contains or non_scene_fallback:
                             reject = False
                         else:
-                            logger.debug('Rejecting as not scene release listed at any [%s]' % url)
+                            logger.debug(f'Rejecting as not scene release listed at any [{url}]')
 
                 if reject:
                     continue
@@ -601,18 +607,19 @@ def get_needed_qualites(needed=None):
     aired_since_shows = datetime.datetime.now() - datetime.timedelta(days=age_shows)
     aired_since_anime = datetime.datetime.now() - datetime.timedelta(days=age_anime)
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select(
-        'SELECT DISTINCT s.indexer AS tv_id, s.indexer_id AS prod_id, e.season, e.episode'
-        ' FROM history AS h'
-        ' INNER JOIN tv_episodes AS e'
-        ' ON (h.indexer = e.indexer AND h.showid = e.showid'
-        ' AND h.season = e.season AND h.episode = e.episode)'
-        ' INNER JOIN tv_shows AS s'
-        ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
-        ' WHERE h.date >= %s' % min(aired_since_shows, aired_since_anime).strftime(dateFormat) +
-        ' AND (%s)' % ' OR '.join(['h.action LIKE "%%%02d"' % x for x in SNATCHED_ANY + [DOWNLOADED, FAILED]])
-    )
+    sql_result = []
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select(
+            'SELECT DISTINCT s.indexer AS tv_id, s.indexer_id AS prod_id, e.season, e.episode'
+            ' FROM history AS h'
+            ' INNER JOIN tv_episodes AS e'
+            ' ON (h.indexer = e.indexer AND h.showid = e.showid'
+            ' AND h.season = e.season AND h.episode = e.episode)'
+            ' INNER JOIN tv_shows AS s'
+            ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
+            ' WHERE h.date >= %s' % min(aired_since_shows, aired_since_anime).strftime(dateFormat) +
+            ' AND (%s)' % ' OR '.join(["h.action LIKE '%%%02d'" % x for x in SNATCHED_ANY + [DOWNLOADED, FAILED]])
+        )
 
     for cur_result in sql_result:
         if needed.all_needed:
@@ -644,19 +651,20 @@ def _recent_history(aired_since_shows, aired_since_anime):
     """
     recent_shows, recent_anime = [], []
 
-    my_db = db.DBConnection()
+    sql_result = []
+    with db.DBConnection() as sg_db:
 
-    sql_result = my_db.select(
-        'SELECT DISTINCT s.indexer AS tv_id, s.indexer_id AS prod_id'
-        ' FROM history AS h'
-        ' INNER JOIN tv_episodes AS e'
-        ' ON (h.indexer = e.indexer AND h.showid = e.showid'
-        ' AND h.season = e.season AND h.episode = e.episode)'
-        ' INNER JOIN tv_shows AS s'
-        ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
-        ' WHERE h.date >= %s' % min(aired_since_shows, aired_since_anime).strftime(dateFormat) +
-        ' AND (%s)' % ' OR '.join(['h.action LIKE "%%%02d"' % x for x in SNATCHED_ANY + [DOWNLOADED, FAILED]])
-    )
+        sql_result = sg_db.select(
+            'SELECT DISTINCT s.indexer AS tv_id, s.indexer_id AS prod_id'
+            ' FROM history AS h'
+            ' INNER JOIN tv_episodes AS e'
+            ' ON (h.indexer = e.indexer AND h.showid = e.showid'
+            ' AND h.season = e.season AND h.episode = e.episode)'
+            ' INNER JOIN tv_shows AS s'
+            ' ON (e.indexer = s.indexer AND e.showid = s.indexer_id)'
+            ' WHERE h.date >= %s' % min(aired_since_shows, aired_since_anime).strftime(dateFormat) +
+            ' AND (%s)' % ' OR '.join(["h.action LIKE '%%%02d'" % x for x in SNATCHED_ANY + [DOWNLOADED, FAILED]])
+        )
 
     for cur_result in sql_result:
 
@@ -684,15 +692,15 @@ def _set_last_proper_search(when):
 
     logger.debug(f'Setting the last Proper search in the DB to {when}')
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select('SELECT * FROM info')
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select('SELECT * FROM info')
 
-    if 0 == len(sql_result):
-        my_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
-                     [0, 0, SGDatetime.timestamp_near(when)])
-    else:
-        # noinspection SqlConstantCondition
-        my_db.action('UPDATE info SET last_proper_search=%s WHERE 1=1' % SGDatetime.timestamp_near(when))
+        if 0 == len(sql_result):
+            sg_db.action('INSERT INTO info (last_backlog, last_indexer, last_proper_search) VALUES (?,?,?)',
+                         [0, 0, SGDatetime.timestamp_near(when)])
+        else:
+            # noinspection SqlConstantCondition
+            sg_db.action(f'UPDATE info SET last_proper_search={SGDatetime.timestamp_near(when)} WHERE 1=1')
 
 
 def next_proper_timeleft():
@@ -701,8 +709,8 @@ def next_proper_timeleft():
 
 def get_last_proper_search():
 
-    my_db = db.DBConnection()
-    sql_result = my_db.select('SELECT * FROM info')
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select('SELECT * FROM info')
 
     try:
         last_proper_search = int(sql_result[0]['last_proper_search'])

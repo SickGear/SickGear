@@ -19,7 +19,6 @@ from lib.dateutil import parser
 from sickgear.indexers.indexer_config import *
 from sickgear.network_timezones import SG_TIMEZONE
 from sickgear.providers import newznab
-from six import iteritems, iterkeys
 
 import sickgear
 
@@ -228,18 +227,18 @@ class BasicTests(test.SickbeardTestDBCase):
         if -1 != size:
             size_item = etree.Element('{%s}attr' % BasicTests.ns['newznab'], nsmap=BasicTests.ns)
             size_item.set('name', 'size')
-            size_item.set('value', '%s' % size)
+            size_item.set('value', f'{size}')
             item.append(size_item)
         if uuid:
             uuid_item = etree.Element('{%s}attr' % BasicTests.ns['newznab'], nsmap=BasicTests.ns)
             uuid_item.set('name', 'guid')
-            uuid_item.set('value', '%s' % uuid)
+            uuid_item.set('value', f'{uuid}')
             item.append(uuid_item)
         if ids:
-            for a, b in iteritems(ids):
+            for a, b in ids.items():
                 ids_item = etree.Element('{%s}attr' % BasicTests.ns['newznab'], nsmap=BasicTests.ns)
                 ids_item.set('name', a)
-                ids_item.set('value', '%s' % b)
+                ids_item.set('value', f'{b}')
                 item.append(ids_item)
         if pubdate:
             pubdate_item = etree.Element('pubDate')
@@ -270,13 +269,13 @@ class BasicTests(test.SickbeardTestDBCase):
 
     def test_parse_ids(self):
         ids_test_cases = []
-        for k in iterkeys(newznab.NewznabConstants.providerToIndexerMapping):
+        for k in newznab.NewznabConstants.providerToIndexerMapping.keys():
             rand_id = random.randrange(1, 99999999)
             ids_test_cases.append(({k: rand_id}, {newznab.NewznabConstants.providerToIndexerMapping[k]: rand_id}))
 
         all_case = {}
         all_case_ex = {}
-        for k in iterkeys(newznab.NewznabConstants.providerToIndexerMapping):
+        for k in newznab.NewznabConstants.providerToIndexerMapping.keys():
             rand_id = random.randrange(1, 99999999)
             all_case.update({k: rand_id})
             all_case_ex.update({newznab.NewznabConstants.providerToIndexerMapping[k]: rand_id})
@@ -326,7 +325,7 @@ class FakeProviderTests(test.SickbeardTestDBCase):
             newznab_provider.enabled = True
             # TODO: This test is now failing, this next line returns data that does not match the test data
             newznab_provider.get_caps()
-            msg = 'Test case: %s' % cur_test['name']
+            msg = f'Test case: {cur_test["name"]}'
             self.assertEqual(cur_test['server_type'], newznab_provider.server_type, msg=msg)
             self.assertEqual(cur_test['limits'], newznab_provider.limits, msg=msg)
             self.assertEqual(cur_test['caps'], newznab_provider.caps, msg=msg)
@@ -336,7 +335,7 @@ class FakeProviderTests(test.SickbeardTestDBCase):
 
 if '__main__' == __name__:
     if 1 < len(sys.argv):
-        suite = unittest.TestLoader().loadTestsFromName('newznab_tests.BasicTests.test_' + sys.argv[1])
+        suite = unittest.TestLoader().loadTestsFromName(f'newznab_tests.BasicTests.test_{sys.argv[1]}')
     else:
         suite = unittest.TestLoader().loadTestsFromTestCase(BasicTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

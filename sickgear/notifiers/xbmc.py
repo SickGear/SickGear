@@ -152,9 +152,9 @@ class XBMCNotifier(Notifier):
             command[key] = command[key].encode('utf-8')
 
         enc_command = urlencode(command)
-        self._log_debug('Encoded API command: ' + enc_command)
+        self._log_debug(f'Encoded API command: {enc_command}')
 
-        url = 'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
+        url = f'http://{host}/xbmcCmds/xbmcHttp/?{enc_command}'
         try:
             req = urllib.request.Request(url)
             # if we have a password, use authentication
@@ -168,7 +168,8 @@ class XBMCNotifier(Notifier):
             result = decode_str(http_response_obj.read(), sickgear.SYS_ENCODING)
             http_response_obj.close()
 
-            self._log_debug('HTTP response: ' + result.replace('\n', ''))
+            newline = '\n'
+            self._log_debug(f'HTTP response: {result.replace(f"{newline}", "")}')
             return result
 
         except (urllib.error.URLError, IOError) as e:
@@ -194,11 +195,11 @@ class XBMCNotifier(Notifier):
             self._log_debug('No host passed, aborting update')
             return False
 
-        self._log_debug('Updating XMBC library via HTTP method for host: ' + host)
+        self._log_debug(f'Updating XMBC library via HTTP method for host: {host}')
 
         # if we're doing per-show
         if show_name:
-            self._log_debug('Updating library via HTTP method for show ' + show_name)
+            self._log_debug(f'Updating library via HTTP method for show {show_name}')
 
             # noinspection SqlResolve
             path_sql = 'select path.strPath' \
@@ -211,7 +212,7 @@ class XBMCNotifier(Notifier):
             xml_command = dict(command='SetResponseFormat(webheader;false;webfooter;false;header;<xml>;footer;</xml>;'
                                        'opentag;<tag>;closetag;</tag>;closefinaltag;false)')
             # sql used to grab path(s)
-            sql_command = dict(command='QueryVideoDatabase(%s)' % path_sql)
+            sql_command = dict(command=f'QueryVideoDatabase({path_sql})')
             # set output back to default
             reset_command = dict(command='SetResponseFormat()')
 
@@ -224,7 +225,7 @@ class XBMCNotifier(Notifier):
             self._send_to_xbmc(reset_command, host)
 
             if not sql_xml:
-                self._log_debug('Invalid response for ' + show_name + ' on ' + host)
+                self._log_debug(f'Invalid response for {show_name} on {host}')
                 return False
 
             enc_sql_xml = quote(sql_xml, ':\\/<>')
@@ -237,14 +238,14 @@ class XBMCNotifier(Notifier):
             paths = et.findall('.//field')
 
             if not paths:
-                self._log_debug('No valid paths found for ' + show_name + ' on ' + host)
+                self._log_debug(f'No valid paths found for {show_name} on {host}')
                 return False
 
             for path in paths:
                 # we do not need it double-encoded, gawd this is dumb
                 un_enc_path = decode_str(unquote(path.text), sickgear.SYS_ENCODING)
-                self._log_debug('Updating ' + show_name + ' on ' + host + ' at ' + un_enc_path)
-                update_command = dict(command='ExecBuiltIn', parameter='XBMC.updatelibrary(video, %s)' % un_enc_path)
+                self._log_debug(f'Updating {show_name} on {host} at {un_enc_path}')
+                update_command = dict(command='ExecBuiltIn', parameter=f'XBMC.updatelibrary(video, {un_enc_path})')
                 request = self._send_to_xbmc(update_command, host)
                 if not request:
                     self._log_error('Update of show directory failed on ' + show_name
@@ -255,12 +256,12 @@ class XBMCNotifier(Notifier):
                     time.sleep(5)
         # do a full update if requested
         else:
-            self._log('Doing full library update on host: ' + host)
+            self._log(f'Doing full library update on host: {host}')
             update_command = {'command': 'ExecBuiltIn', 'parameter': 'XBMC.updatelibrary(video)'}
             request = self._send_to_xbmc(update_command, host)
 
             if not request:
-                self._log_error('Full Library update failed on: ' + host)
+                self._log_error(f'Full Library update failed on: {host}')
                 return False
 
         return True
@@ -291,9 +292,9 @@ class XBMCNotifier(Notifier):
         password = self._choose(password, sickgear.XBMC_PASSWORD)
 
         command = command.encode('utf-8')
-        self._log_debug('JSON command: ' + command)
+        self._log_debug(f'JSON command: {command}')
 
-        url = 'http://%s/jsonrpc' % host
+        url = f'http://{host}/jsonrpc'
         try:
             req = urllib.request.Request(url, command)
             req.add_header('Content-type', 'application/json')
@@ -317,7 +318,7 @@ class XBMCNotifier(Notifier):
                 self._log_debug(f'JSON response: {result}')
                 return result  # need to return response for parsing
             except ValueError:
-                self._log_warning('Unable to decode JSON: ' + http_response_obj)
+                self._log_warning(f'Unable to decode JSON: {http_response_obj}')
                 return False
 
         except IOError as e:
@@ -343,12 +344,12 @@ class XBMCNotifier(Notifier):
             self._log_debug('No host passed, aborting update')
             return False
 
-        self._log('Updating XMBC library via JSON method for host: ' + host)
+        self._log(f'Updating XMBC library via JSON method for host: {host}')
 
         # if we're doing per-show
         if show_name:
             tvshowid = -1
-            self._log_debug('Updating library via JSON method for show ' + show_name)
+            self._log_debug(f'Updating library via JSON method for show {show_name}')
 
             # get tvshowid by showName
             shows_command = '{"jsonrpc":"2.0","method":"VideoLibrary.GetTVShows","id":1}'
@@ -379,19 +380,19 @@ class XBMCNotifier(Notifier):
             path_response = self._send_to_xbmc_json(path_command, host)
 
             path = path_response['result']['tvshowdetails']['file']
-            self._log_debug('Received Show: ' + show_name + ' with ID: ' + str(tvshowid) + ' Path: ' + path)
+            self._log_debug(f'Received Show: {show_name} with ID: {tvshowid!s} Path: {path}')
 
             if 1 > len(path):
                 self._log_warning('No valid path found for ' + show_name + ' with ID: '
                                   + str(tvshowid) + ' on ' + host)
                 return False
 
-            self._log_debug('Updating ' + show_name + ' on ' + host + ' at ' + path)
+            self._log_debug(f'Updating {show_name} on {host} at {path}')
             update_command = '{"jsonrpc":"2.0","method":"VideoLibrary.Scan","params":{"directory":%s},"id":1}' % (
                 json_dumps(path))
             request = self._send_to_xbmc_json(update_command, host)
             if not request:
-                self._log_error('Update of show directory failed on ' + show_name + ' on ' + host + ' at ' + path)
+                self._log_error(f'Update of show directory failed on {show_name} on {host} at {path}')
                 return False
 
             # catch if there was an error in the returned request
@@ -405,12 +406,12 @@ class XBMCNotifier(Notifier):
 
         # do a full update if requested
         else:
-            self._log('Doing Full Library update on host: ' + host)
+            self._log(f'Doing Full Library update on host: {host}')
             update_command = '{"jsonrpc":"2.0","method":"VideoLibrary.Scan","id":1}'
             request = self._send_to_xbmc_json(update_command, host, sickgear.XBMC_USERNAME, sickgear.XBMC_PASSWORD)
 
             if not request:
-                self._log_error('Full Library update failed on: ' + host)
+                self._log_error(f'Full Library update failed on: {host}')
                 return False
 
         return True
@@ -448,10 +449,10 @@ class XBMCNotifier(Notifier):
                 if 4 >= xbmcapi:
                     self._log_debug('Detected version <= 11, using HTTP API')
                     command = dict(command='ExecBuiltIn',
-                                   parameter='Notification(' + title.encode('utf-8') + ',' + body.encode('utf-8') + ')')
+                                   parameter=f'Notification({title.encode("utf-8")},{body.encode("utf-8")})')
                     notify_result = self._send_to_xbmc(command, cur_host, username, password)
                     if notify_result:
-                        result += [cur_host + ':' + str(notify_result)]
+                        result += [f'{cur_host}:{notify_result!s}']
                         success |= 'OK' in notify_result or success
                 else:
                     self._log_debug('Detected version >= 12, using JSON API')
@@ -460,15 +461,15 @@ class XBMCNotifier(Notifier):
                               (title.encode('utf-8'), body.encode('utf-8'), self._sg_logo_url)
                     notify_result = self._send_to_xbmc_json(command, cur_host, username, password)
                     if notify_result.get('result'):
-                        result += [cur_host + ':' + decode_str(notify_result['result'], sickgear.SYS_ENCODING)]
+                        result += [f'{cur_host}:{decode_str(notify_result["result"], sickgear.SYS_ENCODING)}']
                         success |= 'OK' in notify_result or success
             else:
                 if sickgear.XBMC_ALWAYS_ON or self._testing:
                     self._log_error(f'Failed to detect version for "{cur_host}", check configuration and try again')
-                result += [cur_host + ':No response']
+                result += [f'{cur_host}:No response']
                 success = False
 
-        return self._choose(('Success, all hosts tested', '<br />\n'.join(result))[not bool(success)], bool(success))
+        return self._choose(('Success, all hosts tested', '<br>\n'.join(result))[not bool(success)], bool(success))
 
     def update_library(self, show_name=None, **kwargs):
         """Public wrapper for the update library functions to branch the logic for JSON-RPC or legacy HTTP API

@@ -7,7 +7,7 @@ This module implements the base class of tmdbsimple.
 
 Created by Celia Oakley on 2013-10-31.
 
-:copyright: (c) 2013-2025 by Celia Oakley
+:copyright: (c) 2013-2026 by Celia Oakley
 :license: GPLv3, see LICENSE for more details
 """
 
@@ -20,16 +20,23 @@ class APIKeyError(Exception):
 
 
 class TMDB(object):
-    headers = {'Content-Type': 'application/json',
-               'Accept': 'application/json',
-               'Connection': 'close'}
     BASE_PATH = ''
     URLS = {}
 
     def __init__(self):
-        from . import API_VERSION, REQUESTS_SESSION, REQUESTS_TIMEOUT
+        from . import API_VERSION, REQUESTS_SESSION, REQUESTS_TIMEOUT, \
+            USE_BEARER_AUTH, API_KEY
         self.base_uri = 'https://api.themoviedb.org'
         self.base_uri += '/{version}'.format(version=API_VERSION)
+        self.headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Connection': 'close',
+        }
+        if USE_BEARER_AUTH:
+            if not API_KEY:
+                raise APIKeyError
+            self.headers['Authorization'] = 'Bearer {0}'.format(API_KEY)
         self.session = REQUESTS_SESSION
         self.timeout = REQUESTS_TIMEOUT
 
@@ -63,19 +70,22 @@ class TMDB(object):
         return '{base_uri}/{path}'.format(base_uri=self.base_uri, path=path)
 
     def _get_params(self, params):
-        from . import API_KEY
+        from . import API_KEY, USE_BEARER_AUTH
         if not API_KEY:
             raise APIKeyError
 
-        api_dict = {'api_key': API_KEY}
+        if not USE_BEARER_AUTH:
+            api_dict = {'api_key': API_KEY}
+            if params:
+                params.update(api_dict)
+            else:
+                params = api_dict
+
         if params:
-            params.update(api_dict)
             for key, value in params.items():
                 if isinstance(params[key], bool):
                     params[key] = 'true' if value is True else 'false'
 
-        else:
-            params = api_dict
         return params
 
     def _request(self, method, path, params=None, payload=None):
@@ -88,8 +98,9 @@ class TMDB(object):
                 method,
                 url,
                 params=params,
+                verify=False,
                 data=json.dumps(payload) if payload else payload,
-                headers=self.headers, timeout=self.timeout, verify=False
+                headers=self.headers, timeout=self.timeout
             )
 
         # Use the global requests session the user provided
@@ -98,6 +109,7 @@ class TMDB(object):
                 method,
                 url,
                 params=params,
+                verify=False,
                 data=json.dumps(payload) if payload else payload,
                 headers=self.headers, timeout=self.timeout
             )

@@ -37,8 +37,8 @@ tests = {'Dexter': {'a': 1, 'q': c.HD, 's': 5, 'e': [7], 'b': 'Dexter.S05E07.720
 def _create_fake_xml(items):
     xml = '<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:newznab="http://www.newznab.com/DTD/2010/feeds/attributes/" encoding="utf-8"><channel>'
     for item in items:
-        xml += '<item><title>' + item + '</title>\n'
-        xml += '<link>http://fantasy.com/' + item + '</link></item>'
+        xml += f'<item><title>{item}</title>\n'
+        xml += f'<link>http://fantasy.com/{item}</link></item>'
     xml += '</channel></rss>'
     return xml
 
@@ -101,9 +101,9 @@ if '__main__' == __name__:
                 continue
             fname = name.replace(' ', '_')
             if forceSearch:
-                test_name = 'test_manual_%s_%s' % (fname, tvdbdid)
+                test_name = f'test_manual_{fname}_{tvdbdid}'
             else:
-                test_name = 'test_%s_%s' % (fname, tvdbdid)
+                test_name = f'test_{fname}_{tvdbdid}'
 
             test = test_generator(tvdbdid, name, curData, forceSearch)
             setattr(SearchTest, test_name, test)

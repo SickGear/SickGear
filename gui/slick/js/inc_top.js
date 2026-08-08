@@ -6,50 +6,86 @@
 /** @namespace content.hSmallest */
 /** @namespace content.hAverageSize */
 
-function initActions() {
-	var menu$ = $('#SubMenu');
-	menu$.find('a[href*="/home/restart/"]').addClass('btn restart').html('<i class="sgicon-restart"></i>Restart');
-	menu$.find('a[href*="/home/shutdown/"]').addClass('btn shutdown').html('<i class="sgicon-shutdown"></i>Shutdown');
-	menu$.find('a[href*="/home/logout/"]').addClass('btn').html('<i class="sgicon-logout"></i>Logout');
-	menu$.find('a:contains("Edit")').addClass('btn').html('<i class="sgicon-edit"></i>Edit');
-	menu$.find('a:contains("Remove")').addClass('btn remove').html('<i class="sgicon-delete"></i>Remove');
-	menu$.find('a:contains("Clear History")').addClass('btn clearhistory').html('<i class="sgicon-delete"></i>Clear History');
-	menu$.find('a:contains("Trim History")').addClass('btn trimhistory').html('<i class="sgicon-trim"></i>Trim History');
-	menu$.find('a[href$="/events/download-log/"]').addClass('btn').html('<i class="sgicon-download"></i>Download Log');
-	menu$.find('a[href$="/errors/clear-log/"]').addClass('btn').html('<i class="sgicon-delete"></i>Clear Errors');
-	menu$.find('a:contains("Re-scan")').addClass('btn').html('<i class="sgicon-refresh"></i>Re-scan');
-	menu$.find('a:contains("Backlog Overview")').addClass('btn').html('<i class="sgicon-backlog"></i>Backlog Overview');
-	menu$.find('a[href$="/home/update-plex/"]').addClass('btn').html('<i class="sgicon-plex"></i>Update PLEX');
-	menu$.find('a:contains("Force")').addClass('btn').html('<i class="sgicon-fullupdate"></i>Full Update');
-	menu$.find('a:contains("Cast")').addClass('btn').html('<i class="sgicon-people" style="vertical-align:middle; font-size:13px"></i>Cast Update');
-	menu$.find('a:contains("Rename")').addClass('btn').html('<i class="sgicon-rename"></i>Media Rename');
-	menu$.find('a[href$="/config/subtitles/"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Subtitles');
-	menu$.find('a[href*="/home/subtitle-show"]').addClass('btn').html('<i class="sgicon-subtitles"></i>Download Subtitles');
-	menu$.find('a:contains("Anime")').addClass('btn').html('<i class="sgicon-anime"></i>Anime');
-	menu$.find('a:contains("Search")').addClass('btn').html('<i class="sgicon-search"></i>Search');
-	menu$.find('a:contains("Provider")').addClass('btn').html('<i class="sgicon-book"></i>Media Providers');
-	menu$.find('a:contains("General")').addClass('btn').html('<i class="sgicon-config"></i>General');
-	menu$.find('a:contains("Episode Overview")').addClass('btn').html('<i class="sgicon-episodestatus"></i>Episode Overview');
-	menu$.find('a:contains("Subtitles Missed")').addClass('btn').html('<i class="sgicon-subtitles"></i>Subtitles Missed');
-	menu$.find('a[href$="/config/media-process/"]').addClass('btn').html('<i class="sgicon-postprocess"></i>Media Process');
-	menu$.find('a[href$="/process-media/"]').addClass('btn').html('<i class="sgicon-postprocess"></i>Process Media');
-	menu$.find('a:contains("Search")').addClass('btn').html('<i class="sgicon-search"></i>Search Tasks');
-	menu$.find('a:contains("Manage Torrents")').addClass('btn').html('<i class="sgicon-bittorrent"></i>Manage Torrents');
-	menu$.find('a:contains("Show Tasks")').addClass('btn').html('<i class="sgicon-showqueue"></i>Show Tasks');
-	menu$.find('a[href$="/manage/failed-downloads/"]').addClass('btn').html('<i class="sgicon-failed"></i>Failed Downloads');
-	menu$.find('a:contains("Notification")').addClass('btn').html('<i class="sgicon-notification"></i>Notifications');
-	menu$.find('a[href$="/home/update-mb/"]').addClass('btn').html('<i class="sgicon-emby"></i>Update Emby');
-	menu$.find('a[href$="/home/update-kodi/"]').addClass('btn').html('<i class="sgicon-kodi"></i>Update Kodi');
-	// menu$.find('a[href$="/home/update-xbmc/"]').addClass('btn').html('<i class="sgicon-xbmc"></i>Update XBMC');
-	menu$.find('a:contains("Update show in Emby")').addClass('btn').html('<i class="sgicon-emby"></i>Emby Update Show');
-	menu$.find('a:contains("Update show in Kodi")').addClass('btn').html('<i class="sgicon-kodi"></i>Kodi Update Show ');
-	// menu$.find('a:contains("Update show in XBMC")').addClass('btn').html('<i class="sgicon-xbmc"></i>Update show in XBMC');
+function updateMenus(){
+	const items = ['home', 'manage', 'config', 'tools'];
+	for (let i = 0; i < items.length; i++) {
+		updateMenu(items[i]);
+	}
+}
+
+function updateMenu(menuHeader) {
+	const dev = !1,
+		window$ = $(window),
+		menu$ = $(`#NAV${menuHeader}`).find('.dropdown-menu'),
+		menu = menu$[0],
+		ms = menu.style,
+		visibleHeight = window$.height() - 50,
+		scrollbarWidth = window.innerWidth - window$.width();
+		
+	const originalStyles = {position: ms.position, opacity: ms.opacity, visibility: ms.visibility, display: ms.display};
+	// make menu element non visible but allow it into the page flow
+	menu$.css({'position': 'absolute', 'opacity': '0', 'visibility': 'hidden'});
+	menu$.css({'display': 'block'}); 	
+	const menuRect = menu.getBoundingClientRect();  // position and dimensions
+	menu$.css(originalStyles);
+
+	dev && console.log('menu=', menu, 'winh=', visibleHeight, 'barw=', scrollbarWidth, 'menuw', parseInt(ms.minWidth, 10));
+	dev && console.log('menuRect', menuRect);
+
+	// store menu width once* on DOM load
+	if (/undefined/.test(menu$.data('initial-width'))) {
+		menu$.attr('data-initial-width', menuRect.width);
+		menu$.attr('data-initial-height', menuRect.height);
+	}
+
+	let width = parseInt(menu$.data('initial-width'), 10),
+		height = parseInt(menu$.data('initial-height'), 10);
+	dev && console.log("menuRect.height > visibleHeight = ", menuRect.height > visibleHeight, "height > visibleHeight", height > visibleHeight);
+	if (visibleHeight > 0 && (menuRect.height > visibleHeight || height > visibleHeight)) {
+		width = width + scrollbarWidth;
+	}
+	menu$.css({
+		'min-width': `${width}px`,
+		'max-height': `${visibleHeight}px`,
+		'overflow-y': 'auto'
+	});
+}
+
+function setStyle(){
+	let style$, fromTheme='light', toTheme = 'dark';
+
+	if (!(style$ = $('link[rel*="stylesheet"][href*="light"]')).length){
+		style$ = $('link[rel*="stylesheet"][href*="dark"]');
+		fromTheme='dark';
+		toTheme = 'light';
+	}
+	style$.disabled = !0;
+	style$.attr('href', style$.attr('href').replace(fromTheme, toTheme));
+	$.get($.SickGear.Root + '/add-shows/toggle-theme',
+		{'theme': toTheme});
+	style$.disabled = !1;
+	return !0;
 }
 
 $(function(){
-	initActions();
-	$('#NAV' + topmenu).addClass('active');
+	// handle menus heights on init and when window is resized
+	$(window).on('resize', updateMenus).resize(); // also executes func immediately on load
+
+	// handle menus heights on init and when window is resized
+	let activemenu$ = $('.dropdown.active .dropdown-menu li');
+	let tailloc = location.href.replace(/.*\/([^\/]+)\/?$/, '/$1');
+	if (-1 !== tailloc.indexOf('view-show')){
+		tailloc = location.href.replace(/.*\/([^\/]+)\/?$/, '$1');
+	}
+	if (!activemenu$.find('a[href$="' + tailloc + '/"]').addClass('active').length)
+		activemenu$.find('a[href*="' + tailloc + '"]').addClass('active');
+
+	// use library to enable dropdown menus on the jquery selected elements
 	$('.dropdown-toggle').dropdownHover();
+
+	// add event to change theme on click of the selected element
+	$('#theme').click(function(){setStyle();});
+
 	(/undefined/i.test(document.createElement('input').placeholder)) && $('body').addClass('no-placeholders');
 
 	$('.bubblelist').on('click', '.list .item a', function(){

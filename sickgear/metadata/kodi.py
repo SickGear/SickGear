@@ -145,13 +145,13 @@ class KODIMetadata(generic.GenericMetadata):
 
         title = etree.SubElement(tv_node, 'title')
         if None is not getattr(show_info, 'seriesname', None):
-            title.text = '%s' % show_info['seriesname']
+            title.text = f'{show_info["seriesname"]}'
 
         # year = etree.SubElement(tv_node, 'year')
         premiered = etree.SubElement(tv_node, 'premiered')
         premiered_text = self.get_show_year(show_obj, show_info, year_only=False)
         if premiered_text:
-            premiered.text = '%s' % premiered_text
+            premiered.text = f'{premiered_text}'
 
         has_id = False
         tvdb_id = None
@@ -167,7 +167,7 @@ class KODIMetadata(generic.GenericMetadata):
                 if TVINFO_TVDB == tvid == show_obj.tvid:
                     tvdb_id = str(mid)
                 uniqueid = etree.SubElement(tv_node, 'uniqueid', **kwargs)
-                uniqueid.text = '%s%s' % (('', 'tt')[TVINFO_IMDB == tvid], mid)
+                uniqueid.text = f'{("", "tt")[TVINFO_IMDB == tvid]}{mid}'
         if not has_id:
             logger.error(f'Incomplete info for show with id {show_id} on {sickgear.TVInfoAPI(show_obj.tvid).name},'
                          f' skipping it')
@@ -178,14 +178,14 @@ class KODIMetadata(generic.GenericMetadata):
             # todo: name dynamic depending on source
             rating = etree.SubElement(ratings, 'rating', name='thetvdb', max='10')
             rating_value = etree.SubElement(rating, 'value')
-            rating_value.text = '%s' % show_info['rating']
+            rating_value.text = f'{show_info["rating"]}'
             if None is not getattr(show_info, 'siteratingcount', None):
                 ratings_votes = etree.SubElement(rating, 'votes')
-                ratings_votes.text = '%s' % show_info['siteratingcount']
+                ratings_votes.text = f'{show_info["siteratingcount"]}'
 
         plot = etree.SubElement(tv_node, 'plot')
         if None is not getattr(show_info, 'overview', None):
-            plot.text = '%s' % show_info['overview']
+            plot.text = f'{show_info["overview"]}'
 
         if tvdb_id:
             episodeguide = etree.SubElement(tv_node, 'episodeguide')
@@ -194,7 +194,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         mpaa = etree.SubElement(tv_node, 'mpaa')
         if None is not getattr(show_info, 'contentrating', None):
-            mpaa.text = '%s' % show_info['contentrating']
+            mpaa.text = f'{show_info["contentrating"]}'
 
         genre = etree.SubElement(tv_node, 'genre')
         if None is not getattr(show_info, 'genre', None):
@@ -203,7 +203,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         studio = etree.SubElement(tv_node, 'studio')
         if None is not getattr(show_info, 'network', None):
-            studio.text = '%s' % show_info['network']
+            studio.text = f'{show_info["network"]}'
 
         self.add_actor_element(show_info, etree, tv_node)
 
@@ -216,7 +216,7 @@ class KODIMetadata(generic.GenericMetadata):
         data = decode_str(etree.tostring(tv_node))
         parts = data.split('episodeguide')
         if 3 == len(parts):
-            data = 'episodeguide'.join([parts[0], parts[1].replace('&amp;quot;', '&quot;'), parts[2]])
+            data = f'{parts[0]}episodeguide{parts[1].replace("&amp;quot;", "&quot;")}episodeguide{parts[2]}'
 
         return data
 
@@ -235,7 +235,7 @@ class KODIMetadata(generic.GenericMetadata):
 
         logger.debug(f'Writing Kodi metadata file: {nfo_file_path}')
 
-        data = '<?xml version="1.0" encoding="UTF-8"?>\n%s' % data
+        data = f'<?xml version="1.0" encoding="UTF-8"?>\n{data}'
         return sg_helpers.write_file(nfo_file_path, data, utf8=True)
 
     def write_ep_file(self, ep_obj):
@@ -308,8 +308,9 @@ class KODIMetadata(generic.GenericMetadata):
             try:
                 ep_info = show_info[cur_ep_obj.season][cur_ep_obj.episode]
             except (BaseException, Exception):
-                logger.log('Unable to find episode %sx%s on %s.. has it been removed? Should I delete from db?' %
-                           (cur_ep_obj.season, cur_ep_obj.episode, sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name))
+                logger.log(f'Unable to find episode {cur_ep_obj.season}x{cur_ep_obj.episode}'
+                           f' on {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}..'
+                           f' has it been removed? Should I delete from db?')
                 return None
 
             if None is getattr(ep_info, 'firstaired', None):
@@ -319,7 +320,7 @@ class KODIMetadata(generic.GenericMetadata):
                 logger.debug('Not generating nfo because the episode has no title')
                 return None
 
-            logger.debug('Creating metadata for episode %sx%s' % (ep_obj.season, ep_obj.episode))
+            logger.debug(f'Creating metadata for episode {ep_obj.season}x{ep_obj.episode}')
 
             if 1 < len(ep_obj_list_to_write):
                 ep_node = etree.SubElement(root_node, 'episodedetails')
@@ -328,11 +329,11 @@ class KODIMetadata(generic.GenericMetadata):
 
             title = etree.SubElement(ep_node, 'title')
             if None is not cur_ep_obj.name:
-                title.text = '%s' % cur_ep_obj.name
+                title.text = f'{cur_ep_obj.name}'
 
             showtitle = etree.SubElement(ep_node, 'showtitle')
             if None is not cur_ep_obj.show_obj.name:
-                showtitle.text = '%s' % cur_ep_obj.show_obj.name
+                showtitle.text = f'{cur_ep_obj.show_obj.name}'
 
             season = etree.SubElement(ep_node, 'season')
             season.text = str(cur_ep_obj.season)
@@ -353,29 +354,29 @@ class KODIMetadata(generic.GenericMetadata):
 
             plot = etree.SubElement(ep_node, 'plot')
             if None is not cur_ep_obj.description:
-                plot.text = '%s' % cur_ep_obj.description
+                plot.text = f'{cur_ep_obj.description}'
 
             runtime = etree.SubElement(ep_node, 'runtime')
             if 0 != cur_ep_obj.season:
                 if None is not getattr(show_info, 'runtime', None):
-                    runtime.text = '%s' % show_info['runtime']
+                    runtime.text = f'{show_info["runtime"]}'
 
             displayseason = etree.SubElement(ep_node, 'displayseason')
             if None is not getattr(ep_info, 'airsbefore_season', None):
                 displayseason_text = ep_info['airsbefore_season']
                 if None is not displayseason_text:
-                    displayseason.text = '%s' % displayseason_text
+                    displayseason.text = f'{displayseason_text}'
 
             displayepisode = etree.SubElement(ep_node, 'displayepisode')
             if None is not getattr(ep_info, 'airsbefore_episode', None):
                 displayepisode_text = ep_info['airsbefore_episode']
                 if None is not displayepisode_text:
-                    displayepisode.text = '%s' % displayepisode_text
+                    displayepisode.text = f'{displayepisode_text}'
 
             thumb = etree.SubElement(ep_node, 'thumb')
             thumb_text = getattr(ep_info, 'filename', None)
             if None is not thumb_text:
-                thumb.text = '%s' % thumb_text
+                thumb.text = f'{thumb_text}'
 
             watched = etree.SubElement(ep_node, 'watched')
             watched.text = 'false'
@@ -386,7 +387,7 @@ class KODIMetadata(generic.GenericMetadata):
                     for credit in (crew[role_type] or []):  # type: PersonBase
                         if credit.name:
                             sub_el = etree.SubElement(ep_node, sub_el_name)
-                            sub_el.text = '%s' % credit.name
+                            sub_el.text = f'{credit.name}'
 
             # credits_text = getattr(ep_info, 'writer', None)
             # if None is not credits_text and (
@@ -405,17 +406,17 @@ class KODIMetadata(generic.GenericMetadata):
                 # todo: name dynamic depending on source
                 rating = etree.SubElement(ratings, 'rating', name='thetvdb', max='10')
                 rating_value = etree.SubElement(rating, 'value')
-                rating_value.text = '%s' % ep_info['rating']
+                rating_value.text = f'{ep_info["rating"]}'
                 if None is not getattr(show_info, 'siteratingcount', None):
                     ratings_votes = etree.SubElement(rating, 'votes')
-                    ratings_votes.text = '%s' % show_info['siteratingcount']
+                    ratings_votes.text = f'{show_info["siteratingcount"]}'
 
             gueststar_text = getattr(ep_info, 'gueststars', None)
             if isinstance(gueststar_text, string_types):
                 for actor in [x.strip() for x in gueststar_text.split('|') if x.strip()]:
                     cur_actor = etree.SubElement(ep_node, 'actor')
                     cur_actor_name = etree.SubElement(cur_actor, 'name')
-                    cur_actor_name.text = '%s' % actor
+                    cur_actor_name.text = f'{actor}'
 
             self.add_actor_element(show_info, etree, ep_node)
 
@@ -435,23 +436,24 @@ class KODIMetadata(generic.GenericMetadata):
             cur_actor_name = et.SubElement(cur_actor, 'name')
             cur_actor_name_text = actor['person']['name']
             if cur_actor_name_text:
-                cur_actor_name.text = '%s' % cur_actor_name_text
+                cur_actor_name.text = f'{cur_actor_name_text}'
 
             cur_actor_role = et.SubElement(cur_actor, 'role')
             cur_actor_role_text = actor['character']['name']
             if cur_actor_role_text:
-                cur_actor_role.text = '%s' % cur_actor_role_text
+                cur_actor_role.text = f'{cur_actor_role_text}'
 
             cur_actor_thumb = et.SubElement(cur_actor, 'thumb')
             cur_actor_thumb_text = actor['character']['image']
             if None is not cur_actor_thumb_text:
-                cur_actor_thumb.text = '%s' % cur_actor_thumb_text
+                cur_actor_thumb.text = f'{cur_actor_thumb_text}'
 
 
 def set_nfo_uid_updated(*args, **kwargs):
     from .. import db
-    if not db.DBConnection().has_flag('kodi_nfo_uid'):
-        db.DBConnection().set_flag('kodi_nfo_uid')
+    with db.DBConnection() as sg_db:
+        if not sg_db.has_flag('kodi_nfo_uid'):
+            sg_db.set_flag('kodi_nfo_uid')
     sickgear.show_queue_scheduler.action.remove_event(sickgear.show_queue.DAILY_SHOW_UPDATE_FINISHED_EVENT,
                                                        set_nfo_uid_updated)
 
@@ -469,7 +471,7 @@ def remove_default_attr(*args, **kwargs):
                 changed = False
                 with cur_show_obj.lock:
                     # call for progress with value
-                    sickgear.classes.loading_msg.set_msg_progress(msg, '{:6.2f}%'.format(float(n)/num_shows * 100))
+                    sickgear.classes.loading_msg.set_msg_progress(msg, f'{float(n) / num_shows * 100:6.2f}%')
 
                     try:
                         nfo_path = kodi.get_show_file_path(cur_show_obj)
@@ -551,7 +553,8 @@ def remove_default_attr(*args, **kwargs):
             except(BaseException, Exception):
                 pass
 
-        db.DBConnection().set_flag('kodi_nfo_default_removed')
+        with db.DBConnection() as sg_db:
+            sg_db.set_flag('kodi_nfo_default_removed')
         sickgear.classes.loading_msg.set_msg_progress(msg, '100%')
 
     except(BaseException, Exception):
@@ -575,7 +578,7 @@ def rebuild_nfo(*args, **kwargs):
             try:
                 with cur_show_obj.lock:
                     # call for progress with value
-                    sickgear.classes.loading_msg.set_msg_progress(msg, '{:6.2f}%'.format(float(n)/num_shows * 100))
+                    sickgear.classes.loading_msg.set_msg_progress(msg, f'{float(n) / num_shows * 100:6.2f}%')
 
                     try:
                         nfo_path = kodi.get_show_file_path(cur_show_obj)
@@ -595,7 +598,8 @@ def rebuild_nfo(*args, **kwargs):
             except(BaseException, Exception):
                 pass
 
-        db.DBConnection().set_flag('kodi_nfo_rebuild_uniqueid')
+        with db.DBConnection() as sg_db:
+            sg_db.set_flag('kodi_nfo_rebuild_uniqueid')
         sickgear.classes.loading_msg.set_msg_progress(msg, '100%')
 
     except(BaseException, Exception):

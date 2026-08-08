@@ -27,7 +27,6 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 
 from _23 import unquote_plus
-from six import iteritems, text_type
 
 
 class ShazbatProvider(generic.TorrentProvider):
@@ -38,11 +37,11 @@ class ShazbatProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.shazbat.tv/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login',
-                     'feeds': self.url_base + 'rss_feeds',
-                     'browse': self.url_base + 'torrents?portlet=true',
-                     'search': self.url_base + 'search?portlet=true&search=%s',
-                     'show': self.url_base + 'show?id=%s&show_mode=torrents'}
+                     'login_action': f'{self.url_base}login',
+                     'feeds': f'{self.url_base}rss_feeds',
+                     'browse': f'{self.url_base}torrents?portlet=true',
+                     'search': f'{self.url_base}search?portlet=true&search=%s',
+                     'show': f'{self.url_base}show?id=%s&show_mode=torrents'}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -62,9 +61,9 @@ class ShazbatProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'show_id': r'"show\?id=(\d+)[^>]+>([^<]+)<\/a>',
-                                                                        'get': 'load_torrent'})])
-        search_types = sorted([x for x in iteritems(search_params)], key=lambda tup: tup[0], reverse=True)
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'show_id': r'"show\?id=(\d+)[^>]+>([^<]+)<\/a>',
+                                                              'get': 'load_torrent'}.items()])
+        search_types = sorted([x for x in search_params.items()], key=lambda tup: tup[0], reverse=True)
         maybe_only = search_types[0][0]
         show_detail = '_only' in maybe_only and search_params.pop(maybe_only)[0] or ''
         for mode in search_params:

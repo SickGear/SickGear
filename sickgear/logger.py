@@ -173,7 +173,7 @@ class SBRotatingLogHandler(object):
                       .upper() + ' :: ', '')['sickgear' == logger_name]
             fmt.setdefault(logger_name, logging.Formatter(
                 '%(asctime)s %(levelname)' + ('-8', '')[log_simple] + 's ' + source
-                + '%(message)s', ('%Y-%m-%d ', '')[log_simple] + '%H:%M:%S'))
+                + '%(message)s', f'{("%Y-%m-%d ", "")[log_simple]}%H:%M:%S'))
 
         return fmt
 
@@ -203,10 +203,10 @@ class SBRotatingLogHandler(object):
             if not expired:
                 continue
 
-            out_line = '%s :: %s' % (threading.current_thread().name, to_log)
+            out_line = f'{threading.current_thread().name} :: {to_log}'
 
             sb_logger = logging.getLogger('sickgear')
-            setattr(sb_logger, 'db', lambda *args: sb_logger.log(DB, *args))
+            setattr(sb_logger, 'dbase', lambda *args: sb_logger.log(DB, *args))
 
             # sub_logger = logging.getLogger('subliminal')
             # tornado_logger = logging.getLogger('tornado')
@@ -223,7 +223,7 @@ class SBRotatingLogHandler(object):
                     # add errors to the UI logger
                     classes.ErrorViewer.add(classes.UIError(out_line))
                 elif DB == log_level:
-                    sb_logger.db(out_line)
+                    sb_logger.dbase(out_line)
                 else:
                     sb_logger.log(log_level, out_line)
             except ValueError:
@@ -271,12 +271,12 @@ class SBRotatingLogHandler(object):
                     if buf[-1] != '\n':
                         lines[-1] += segment
                     else:
-                        yield segment + '\n'
+                        yield f'{segment}\n'
                 segment = lines[0]
                 for index in range(len(lines) - 1, 0, -1):
                     if len(lines[index]):
-                        yield lines[index] + '\n'
-            yield None is not segment and segment + '\n' or ''
+                        yield f'{lines[index]}\n'
+            yield None is not segment and f'{segment}\n' or ''
 
 
 class DispatchingFormatter(object):
@@ -324,7 +324,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         t = self.rolloverAt - self.interval
         start_time = time.localtime(t)
         file_name = self.baseFilename.rpartition('.')[0]
-        dfn = '%s_%s.log' % (file_name, time.strftime(self.suffix, start_time))
+        dfn = f'{file_name}_{time.strftime(self.suffix, start_time)}.log'
         self.delete_logfile(dfn)
 
         self.logger_instance.close_log()
@@ -347,7 +347,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         else:
             self.stream = open(self.baseFilename, 'w')
 
-        zip_name = '%s.zip' % dfn.rpartition('.')[0]
+        zip_name = f'{dfn.rpartition(".")[0]}.zip'
         self.delete_logfile(zip_name)
         with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zip_fh:
             zip_fh.write(dfn, os.path.basename(dfn))
@@ -357,7 +357,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         if 0 < self.backupCount:
             # find the oldest log file and delete it
             # phase out files named sickgear.log in favour of sickgear.logs over backup_count days
-            all_names = glob.glob(file_name + '_*') \
+            all_names = glob.glob(f'{file_name}_*') \
                         + glob.glob(os.path.join(os.path.dirname(file_name), 'sickbeard_*'))
             if len(all_names) > self.backupCount:
                 all_names.sort()
@@ -383,6 +383,14 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
 
 
 sb_log_instance = SBRotatingLogHandler('sickgear.log')
+
+
+def dbase(to_log):
+    # type: (AnyStr) -> None
+    """ log message flagged as db
+    :param to_log: log message
+    """
+    sb_log_instance.log(to_log, DB)
 
 
 def debug(to_log):

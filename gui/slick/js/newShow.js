@@ -6,11 +6,11 @@
 $(document).ready(function () {
 
 	function htmlFlag(lang) {
-		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/' + lang + '.png)"'
+		return ' class="flag" style="background-image:url(' + $.SickGear.Root + '/images/flags/svg/lang/' + lang + '.png)"'
 	}
 
 	function uriFlag(lang) {
-		return $.SickGear.Root + '/images/flags/' + lang + '.png'
+		return $.SickGear.Root + '/images/flags/svg/lang/' + lang + '.png'
 	}
 
 	function populateLangSelect() {
@@ -109,7 +109,7 @@ $(document).ready(function () {
 		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32">'
 			+ ' searching '
 			+ tvSearchSrc
-			+ ' in <em>lang:' + elInfosrcLang.val() + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);display:inline-block;width:16px;height:11px;margin:-2px 3px 0 0;vertical-align:middle"') + '></span>'
+			+ ' in <em>lang:' + elInfosrcLang.val() + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);"') + '></span>'
 			+ ' for <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
 			+ '...');
 
@@ -161,6 +161,7 @@ $(document).ready(function () {
 							null === item[result.SrcName] ? '' : item[result.SrcName],
 							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
+
 						resultItem = '<div class="results-item' + ' ' + item[result.SrcSlug] + rowType + '" data-indb="' + (!1 === item[result.isInDB] ? '' : '1')
 							+ '" data-sort-rel="' + item[result.RelSort] + '" data-sort-rel-combined="' + item[result.RelCombined]
 							+ '" data-sort-newest="' + item[result.NewestAired] + '" data-sort-newest-combined="' + item[result.NewestCombined]
@@ -171,7 +172,7 @@ $(document).ready(function () {
 							+ '<input type="radio"'
 							+ ' class="stepone-result-radio"'
 							+ (!1 === item[result.isInDB]
-								? ' title="Add show <span style=\'color: rgb(66, 139, 202)\'>' + displayShowName + '</span>"'
+								? ' title="<div class=\'add-shows-popup\'>Add show <span class=\'add-shows-title\'>' + displayShowName + '</span></div>"'
 								: ' title="Show exists in DB,<br><span style=\'font-weight:700\'>selection not possible</span>"')
 							+ ' name="which_series"'
 							+ ' value="' + cleanseText([item[result.SrcDBId], item[result.SrcName], item[result.ShowID], item[result.Title]].join('|'), !0) + '"'
@@ -179,15 +180,15 @@ $(document).ready(function () {
 							+ '></label>'
 							+ '<a'
 							+ ' class="stepone-result-title"'
-							+ ' title="<div style=\'color: rgb(66, 139, 202)\'>' + cleanseText(item[result.TitleHtml], !0) + '</div>'
+							+ ' title="<div class=\'add-shows-popup\'><div class=\'add-shows-title\'>' + cleanseText(item[result.TitleHtml], !0) + '</div>'
 							+ (0 < item[result.LanguageCC].length && 'gb' !== item[result.LanguageCC]
-								? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>Language: <span' + htmlFlag(item[result.LanguageCC]).replace('.png)"', '.png);display:inline-block;width:16px;height:11px;margin:-2px 3px 0 0;vertical-align:middle"').replace(/"/g, "'") + '></span>'
+								? '<div class=\'add-shows-lang\'><em>Language: <span' + htmlFlag(item[result.LanguageCC]).replace('.png)"', '.png);"').replace(/"/g, "'") + '></span>'
 								+ item[result.Language] + '</em></div>' : '')
-							+ (0 < item[result.Genre].length ? '<div style=\'font-weight:bold\'>(<em>' + item[result.Genre] + '</em>)</div>' : '')
-							+ (0 < item[result.Network].length ? '<div style=\'font-weight:bold;font-size:0.9em;color:#888\'><em>' + item[result.Network] + '</em></div>' : '')
-							+ (item[result.ImgUrl] && '<img style=\'max-height:150px;float:right;margin-left:3px\' src=\'/' + item[result.ImgUrl] + '\'>' || '')
-							+ (0 < item[result.Overview].length ? '<p style=\'margin:0 0 2px\'>' + item[result.Overview] + '</p>' : '')
-							+ '<span style=\'float:right;clear:both\'>Click for more</span>'
+							+ (0 < item[result.Genre].length ? '<div class=\'add-shows-genre\'>(<em>' + item[result.Genre] + '</em>)</div>' : '')
+							+ (0 < item[result.Network].length ? '<div class=\'add-shows-network\'><em>' + item[result.Network] + '</em></div>' : '')
+							+ (item[result.ImgUrl] && '<img class=\'add-shows-image\' src=\'/' + item[result.ImgUrl] + '\'>' || '')
+							+ (0 < item[result.Overview].length ? '<p class=\'add-shows-overview\'>' + item[result.Overview] + '</p>' : '')
+							+ '<span class=\'add-shows-cta\'>Click for more</span></div>'
 							+ '"'
 							+ ' href="' + anonURL + item[result.SrcUrl] + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'

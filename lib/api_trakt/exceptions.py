@@ -1,36 +1,43 @@
-class TraktException(Exception):
+from lib.tvinfo_base.exceptions import *
+
+
+class TraktException(BaseTVinfoException):
     pass
 
 
-class TraktAuthException(TraktException):
+class TraktError(TraktException, BaseTVinfoError):
     pass
 
 
-class TraktServerBusy(TraktException):
+class TraktAuthException(TraktError):
     pass
 
 
-class TraktShowNotFound(TraktException):
+class TraktServerBusy(TraktError):
     pass
 
 
-class TraktCloudFlareException(TraktException):
+class TraktShowNotFound(BaseTVinfoShownotfound, TraktError):
     pass
 
 
-class TraktMethodNotExisting(TraktException):
+class TraktCloudFlareException(TraktError):
     pass
 
 
-class TraktTimeout(TraktException):
+class TraktMethodNotExisting(TraktError):
     pass
 
 
-class TraktValueError(TraktException):
+class TraktTimeout(TraktError):
     pass
 
 
-class TraktServerError(TraktException):
+class TraktValueError(TraktError):
+    pass
+
+
+class TraktServerError(TraktError):
     def __init__(self, *args, **kwargs):
         self.error_code = kwargs.get('error_code')
         kwargs = {}
@@ -41,13 +48,17 @@ class TraktServerError(TraktException):
         super(TraktServerError, self).__init__(*args, **kwargs)
 
 
-class TraktLockedUserAccount(TraktException):
+class TraktLockedUserAccount(TraktError):
     pass
 
 
-class TraktInvalidGrant(TraktException):
+class TraktInvalidGrant(TraktError):
     pass
 
 
-class TraktFreemiumLimit(TraktException):
+class TraktFreemiumLimit(TraktError):
+    pass
+
+
+class TraktPersonNotFound(BaseTVinfoPersonNotFound, TraktError):
     pass

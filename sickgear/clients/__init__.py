@@ -30,5 +30,5 @@ default_host = {
 
 def get_client_instance(name):
 
-    module = __import__('sickgear.clients.%s' % name.lower(), fromlist=__all__)
+    module = __import__(f'sickgear.clients.{name.lower()}', fromlist=__all__)
     return getattr(module, module.api.__class__.__name__)

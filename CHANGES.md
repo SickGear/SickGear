@@ -1,4 +1,99 @@
-﻿### 3.35.11 (2026-08-08 03:20:00 UTC)
+﻿### 3.36.0 (2026-08-08 23:40:00 UTC)
+
+* Change update actions and optimise unittest
+* Update actions/checkout@v6.0.2 to actions/checkout@v7
+* Update apprise 1.9.9 (4639799) to 1.11.0 (158c4e1)
+* Update Beautiful Soup 4.14.3 (55f655f) → 4.15.0 (9cb49d6)
+* Update certifi 2026.02.25 to 2026.07.22
+* Update chardet packages 7.3.0 (00667a4) to 7.4.1 (9079efc)
+* Update filelock 3.20.1 (377f622) to 3.29.0 (469b47f)
+* Update idna library 3.11 (ad949ee) to 3.18 (f39ea90)
+* Update imdbpie 5.6.5 (f8ed7a0) to 5.7.0 (2eff17c)
+* Update packaging 26.0 (3b77a26) to 26.2 (84a87ee)
+* Update Rarfile 4.2 (db1df33) to 4.4 (d626470)
+* Update Requests library 2.33.0 (bc04dfd) to 2.34.2 (6e83187)
+* Update browser_ua from user-agents 2.1.38 (a78437e)
+* Update SimpleJSON 3.20.2 (10e5aaf) to 4.0.0 (1608c05)
+* Update soupsieve 2.8.3 (5aedc41) to 2.9.2 (78661a6)
+* Update Tornado Web Server 6.5.5 (7d64650) to 6.5.8 (a55abe3)
+* Update typing-extensions 4.15.0 (2638b86) to 4.16.0 (f29cd28)
+* Update tmdbsimple 2.9.2 (0b3359f) to 2.9.6 (e17ec76)
+* Update urllib3 2.6.3 (0248277) to 2.7.0 (9a950b9)
+* Update zoneinfo 2025c to 2026b (fallback)
+* Change add some missing network logos
+* Fix parsing same named show with different appended years
+* Fix tvdb_api_v4 pagination
+* Fix browsing IMDb cards where there is no year fetched
+* Change close DBConnection connection when object is destroyed
+* Change add "NA" as potential non-named episode name
+* Fix potential race condition between SHOWMAPSUPDATE and STARTUP-FORCE-SHOW-UPDATE tasks
+* Fix issue with alt.json cache file handling
+* Change EZTV provider to support for their beta API
+* Change add top rated, new shows, new season, coming soon to menu Shows -> IMDb
+* Change Add IMDb to "Other shows" inside view-show/person
+* Change persons view move "Other shows" to near the top of the person view for improved usability
+* Change add cast link to IMDb Person Browse Shows
+* Change add renamable persistent filter profiles to most Browse Shows views
+* Change add "Country" filter to menu Shows -> TVDb
+* Change add "Genre", "Country", "Language", "Networks" filters to Shows -> TVmaze
+* Change add "Genre", "Country", filters to Shows -> TMDB
+* Change add "Genre", "Country", "Language", "Content Rating", "Networks" , filters to Shows -> Trakt
+* Change add "Genre", "Country", "Language", "Content Rating" filters to Shows -> IMDb
+* Change add "Genre" filter to Shows -> Metacritic
+* Change add "Genre" and "Networks" filters to Shows -> Next Episode
+* Change add "Networks" filter to Shows -> TV Calendar
+* Change add include, exclude, deselect under a [filters] button to show and person card views
+* Change add favorite actors to Shows -> IMDb
+* Change append death symbol to IMDb age where applicable
+* Change flags to improved svg format
+* Change improve legibility of all inputs on dark theme
+* Change use browser dark mode for checkbox and radio inputs
+* Change make main menus height dynamic to window height
+* Fix data parsing in tv show search
+* Change remove redundant HEAD markup throughout all templates
+* Change view-show, reorder submenu items and migrate Javascript to Python to remove button display lag
+* Change view-show, add "Pause/Unpause" to submenu
+* Change view-show, move "Hide/Unhide specials" to submenu
+* Change view-show, add hover color to 'Edit' and 'Remove' submenu buttons
+* Change view-show, cleanup JavaScript
+* Change view-show, shorten label "Change show:" to "View:"
+* Change view-show, explicitly display counts of episodes and specials in overview
+* Change view-show, colorise the Qualities to be consistent with the quality colors used throughout the app
+* Change view-show, rename key item "Low Quality" to "Upgradable" and hide it when upgrades are not used
+* Change highlight menu item of current viewed page
+* Change move menu item "About" from "Config" to "Tools" menu
+* Change add lamp under "Config" menu to toggle light or dark theme
+* Change hover color of 'Logout', 'Restart' and 'Shutdown' menu items
+* Change ensure alert banners don't overlap submenus on view-show
+* Change remove trailing slash in void elements (img, br, hr, input, etc.) as not needed in HTML5
+* Change remaining submenus from partial JS to full Python to remove button display lag
+* Change move "About" page from /config/about to root /about
+* Fix hide the media process config button on the submenu of the media process config page
+* Change begin PageTemplate variable migration (let new variables populate for a while)
+* Change the deprecated browser reload with a modern equivalent
+* Update jquery confirm 1.x to 2.7.0
+* Change the confirmations logic to the new library
+* Change reword text of remove show dialog
+* Change color headings of 'Logout', 'Restart', 'Shutdown' and show 'Remove' confirmation dialogs
+* Change add confirmation dialog to 'Clear errors' button on 'View Errors' page
+* Change refactor some CSS to improve browser processing time
+* Change migrate Bulk Change, Edit Show, Manage Show Tasks, and Config pages to the new confirmation dialog
+* Add "More Gear" button to some config pages to simplify view of settings
+* Change tweak About page
+* Change py2 strings to py3 f-strings and make use of quoted string types consistent
+* Change add db connection context manager to ensure connections are closed properly
+* Fix gaps in package version collection on some Python installations that cause some package updates to be missed
+* Fix db issue during Plex notification updates
+* Change ignore scanning of Plex extras
+* Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
+* Fix display of browse TVC filter "returning"
+* Add alternative newznab category naming (nzbnest)
+* Change remove Trakt recommended/watchlist
+* Change remove deprecated Gitter notifier
+* Remove Blutopia, MoreThan, and nCore torrent provider
+
+
+### 3.35.11 (2026-08-08 03:20:00 UTC)
 
 * Change add support for Python 3.14.7 and 3.13.15
 

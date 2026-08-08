@@ -21,7 +21,6 @@ from .generic import GenericClient
 import sickgear
 
 from _23 import urlencode
-from six import iteritems
 
 
 class UtorrentAPI(GenericClient):
@@ -29,7 +28,7 @@ class UtorrentAPI(GenericClient):
 
         super(UtorrentAPI, self).__init__('uTorrent', host, username, password)
 
-        self.url = self.host + 'gui/'
+        self.url = f'{self.host}gui/'
 
     def _request(self, method='get', params=None, files=None, **kwargs):
         params = {} if None is params else params
@@ -37,14 +36,14 @@ class UtorrentAPI(GenericClient):
         return super(UtorrentAPI, self)._request(
             method=method,
             params='token={0:s}&{1:s}'.format(self.auth, '&'.join(
-                ['%s' % urlencode(dict([[key, str(value)]]))
-                 for key, value in iteritems(params)])) if any(params) else params,
+                [f'{urlencode(dict([[key, str(value)]]))}'
+                 for key, value in params.items()])) if any(params) else params,
             files=files)
 
     def _get_auth(self):
 
         try:
-            response = self.session.get(self.url + 'token.html', verify=False)
+            response = self.session.get(f'{self.url}token.html', verify=False)
             self.auth = re.findall('<div.*?>(.*?)</', response.text)[0]
             return self.auth if not 404 == response.status_code else None
         except (BaseException, Exception):
@@ -58,7 +57,7 @@ class UtorrentAPI(GenericClient):
     def _add_torrent_file(self, result):
 
         params = {'action': 'add-file'}
-        files = {'torrent_file': (result.name + '.torrent', result.content)}
+        files = {'torrent_file': (f'{result.name}.torrent', result.content)}
         return self._request(method='post', params=params, files=files)
 
     def _set_torrent_label(self, result):

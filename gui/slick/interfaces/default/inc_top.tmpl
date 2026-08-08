@@ -43,61 +43,61 @@
 	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
 	<meta name="theme-color" content="#echo '#%s' % ('333', '15528F')['dark' == $sg_str('THEME_NAME', 'dark')]#">
 
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap.min.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/bootstrap-theme.min.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/browser.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery-ui.min.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/jquery.qtip.min.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/pnotify.custom.min.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/token-input.min.css?v=$sbPID" />
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/style.css?v=$sbPID"/>
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/${sg_str('THEME_NAME', 'dark')}.css?v=$sbPID" />
+	<link rel="stylesheet" href="$sbRoot/css/lib/bootstrap.min.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/lib/bootstrap-theme.min.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/browser.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/lib/jquery-ui.min.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/lib/jquery.qtip.min.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/lib/pnotify.custom.min.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/lib/token-input.min.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/style.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/${sg_str('THEME_NAME', 'dark')}.css?v=$sbPID">
 #if $getVar('inc_top_glide', None)
 ##	Required Core Stylesheet
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/glide.core.min.css">
+	<link rel="stylesheet" href="$sbRoot/css/lib/glide.core.min.css">
 ##  Optional Theme Stylesheet
-	<link rel="stylesheet" type="text/css" href="$sbRoot/css/lib/glide.theme.min.css">
+	<link rel="stylesheet" href="$sbRoot/css/lib/glide.theme.min.css">
 #end if
 
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/bootstrap-hover-dropdown.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery-ui.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.json.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/js.cookie.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.cookiejar.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.selectboxes.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.tablesorter.combined.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.qtip.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/pnotify.custom.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.form.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.ui.touch-punch.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/isotope.pkgd.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.confirm.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/script.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/inc_top.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery-2.2.4.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/bootstrap.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/bootstrap-hover-dropdown.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery-ui.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.json.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/js.cookie.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.cookiejar.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.selectboxes.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.tablesorter.combined.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.qtip.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/pnotify.custom.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.form.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.ui.touch-punch.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/isotope.pkgd.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/imagesloaded.pkgd.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.confirm.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/script.js?v=$sbPID"></script>
 #if $sg_var('FUZZY_DATING')
-	<script type="text/javascript" src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
-	<script type="text/javascript" src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/moment/moment.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/fuzzyMoment.js?v=$sbPID"></script>
 #end if
 #if $getVar('inc_top_glide', None)
-	<script type="text/javascript" src="$sbRoot/js/glide/glide.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/glide/glide.min.js?v=$sbPID"></script>
 #end if
 #if $getVar('inc_ofi', None)
-	<script type="text/javascript" src="$sbRoot/js/ofi/ofi.min.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/ofi/ofi.min.js?v=$sbPID"></script>
 #end if
-	<script type="text/javascript" charset="utf-8">
+	<script charset="utf-8">
 	<!--
 		var sbRoot = '$sbRoot', anonURL = '$sg_str('ANON_REDIRECT')', themeSpinner = '#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#',
-			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top" />', topmenu = '$topmenu';
+			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top">';
 		\$.SickGear = {Root: '${sbRoot}', PID: '${sbPID}', anonURL: '$sg_str('ANON_REDIRECT')'};
 	//-->
 	</script>
-	<script type="text/javascript" src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
-	<script type="text/javascript" src="$sbRoot/js/browser.js"></script>
-	<script type="text/javascript" src="$sbRoot/js/ajaxNotifications.js"></script>
-	<script type="text/javascript" src="$sbRoot/js/confirmations.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/inc_top.js?v=$sbPID"></script>
+	<script src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
+	<script src="$sbRoot/js/browser.js"></script>
+	<script src="$sbRoot/js/ajaxNotifications.js"></script>
+	<script src="$sbRoot/js/confirmations.js?v=$sbPID"></script>
 </head>
 #set $tab = 4
 #set global $body_attr = ''
@@ -130,12 +130,16 @@
 				</button>
 #set date = $datetime.datetime.today().timetuple()
 #set logo = ('', '-xmas')[(12 <= $date.tm_mon) or (3 > $date.tm_yday) or (3 == $date.tm_yday and 5 > $date.tm_hour)]
-				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear${logo}.png" style="height: 50px;" class="img-responsive pull-left" /></a>
+				<a href="$sbRoot/home/" class="navbar-brand" tabindex="-1" title="SickGear"><img alt="SickGear" src="$sbRoot/images/sickgear${logo}.png" style="height: 50px;" class="img-responsive pull-left"></a>
 			</div>
+#set $current_menu_home = ' active' if 'home' == $topmenu else ''
+#set $current_menu_manage = ' active' if 'manage' == $topmenu else ''
+#set $current_menu_config = ' active' if 'config' == $topmenu else ''
+#set $current_menu_tools = ' active' if 'tools' == $topmenu else ''
 #set $hover_dropdown='data-hover="dropdown" data-hover-delay="400" data-delay="500"'
 			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 				<ul class="nav navbar-nav navbar-right">
-					<li id="NAVhome" class="dropdown">
+					<li id="NAVhome" class="dropdown$current_menu_home">
 						<a href="$sbRoot/home/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Shows <b class="caret"></b></a>
 #set $showlist_home, $episode_home, $history_home = 3 * ['(<i class="sgicon-home tight"></i>)']
 #if 'shows' == $sickgear.DEFAULT_HOME
@@ -192,8 +196,8 @@
 #set $trakt_modes = dict(trakt_anticipated='anticipated', trakt_returning='returning', trakt_newshows='premieres', trakt_popular='popular', trakt_trending='trending',
                          trakt_watched='most watched this month', trakt_watched_period_year='most watched this year',
                          trakt_played='most played this month', trakt_played_period_year='most played this year',
-                         trakt_collected='most collected this month', trakt_collected_period_year='most collected this year',
-                         trakt_recommended='recommended', trakt_watchlist='watchlist')
+                         trakt_collected='most collected this month', trakt_collected_period_year='most collected this year')
+##                         , trakt_recommended='recommended', trakt_watchlist='watchlist')
 #set $trakt_mode = $trakt_modes.get(re.sub(r'[\?=]', '_', $sg_var('TRAKT_MRU')), 'trends, tailored suggestions')
 								<li><a href="$sbRoot/add-shows/trakt-default/" tabindex="$tab#set $tab += 1#"><i class="sgicon-trakt"></i>Trakt Cards
 									<div class="menu-item-desc opacity60">$trakt_mode...</div></a></li>
@@ -264,12 +268,12 @@
 						</ul>
 					</li>
 
-					<li id="NAVmanage" class="dropdown">
+					<li id="NAVmanage" class="dropdown$current_menu_manage">
 						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#">Manage <b class="caret"></b><span class="snf bar"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
 						<ul class="dropdown-menu">
 							<li><a href="$sbRoot/home/process-media/" tabindex="$tab#set $tab += 1#"><i class="sgicon-postprocess"></i>Process Media</a></li>
 							<li class="divider"></li>
-							<li><a href="$sbRoot/manage/" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
+							<li><a href="$sbRoot/manage/bulk" tabindex="$tab#set $tab += 1#"><i class="sgicon-bulk-change"></i>Bulk Change</a></li>
 							<li><a href="$sbRoot/manage/backlog-overview/" tabindex="$tab#set $tab += 1#"><i class="sgicon-backlog"></i>Backlog Overview</a></li>
 							<li><a href="$sbRoot/manage/search-tasks/" tabindex="$tab#set $tab += 1#"><i class="sgicon-search"></i>Search Tasks</a></li>
 							<li><a href="$sbRoot/manage/show-tasks/" tabindex="$tab#set $tab += 1#"><span class="snf item"><i class="sgicon-warning"><em class="pulse"></em></i><i class="sgicon-showqueue"></i></span>Show Tasks</a></li>
@@ -295,10 +299,10 @@
 						</ul>
 					</li>
 
-					<li id="NAVconfig" class="dropdown">
-						<a href="$sbRoot/config/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
+					<li id="NAVconfig" class="dropdown$current_menu_config">
+						<a href="$sbRoot/config/general/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs"><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
-							<li><a href="$sbRoot/config/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>About</a></li>
+        					<li><a href="#" id="theme" tabindex="$tab#set $tab += 1#"><i class="glyphicon glyphicon-lamp"></i>Light or Dark</a></li>
 							<li class="divider"></li>
 							<li class="menu-item-noicon opacity60">Settings...</li>
 							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>
@@ -311,11 +315,14 @@
 						</ul>
 					</li>
 
-					<li id="NAVtools" class="dropdown">
 #set num_errors = $getVar('$log_num_errors', None)
 #set $err_class = ('', ' errors ' + (len('%s' % $num_errors ) * 'n')[0:4])[any([$num_errors])]
-						<a href="$sbRoot/manage/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs" /><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
+					<li id="NAVtools" class="dropdown$current_menu_tools$err_class">
+						<a href="$sbRoot/about/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs"><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar$err_class"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
+## new without $err_class					<a href="$sbRoot/about/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18-2.png" class="navbaricon hidden-xs"><b class="caret hidden-xs"></b><span class="visible-xs">System <b class="caret"></b></span><span class="logger bar"><i class="sgicon-warning"><em class="pulse"></em></i></span></a>
 						<ul class="dropdown-menu">
+							<li><a href="$sbRoot/about/" tabindex="$tab#set $tab += 1#"><i class="sgicon-info"></i>About</a></li>
+							<li class="divider"></li>
 #if not $sg_var('EXT_UPDATES')
 							<li><a href="$sbRoot/home/check-update" tabindex="$tab#set $tab += 1#"><i class="sgicon-updatecheck"></i>Check for Updates</a></li>
 #end if
@@ -330,10 +337,10 @@
 								<div class="menu-item-desc opacity60">existing shows</div></a></li>
 							<li class="divider"></li>
 #if $sg_str('WEB_USERNAME') or $sg_str('WEB_PASSWORD')
-							<li><a href="$sbRoot/logout" class="confirm logout" tabindex="$tab#set $tab += 1#"><i class="sgicon-logout"></i>Logout</a></li>
+							<li><a href="$sbRoot/logout" class="confirm logout hover-gold" tabindex="$tab#set $tab += 1#"><i class="sgicon-logout"></i>Logout</a></li>
 #end if
-							<li><a href="$sbRoot/home/restart/?pid=$sbPID" class="confirm restart" tabindex="$tab#set $tab += 1#"><i class="sgicon-restart"></i>Restart</a></li>
-							<li><a href="$sbRoot/home/shutdown/?pid=$sbPID" class="confirm shutdown" tabindex="$tab#set $tab += 1#"><i class="sgicon-shutdown"></i>Shutdown</a></li>
+							<li><a href="$sbRoot/home/restart/?pid=$sbPID" class="confirm restart hover-green" tabindex="$tab#set $tab += 1#"><i class="sgicon-restart"></i>Restart</a></li>
+							<li><a href="$sbRoot/home/shutdown/?pid=$sbPID" class="confirm shutdown hover-red" tabindex="$tab#set $tab += 1#"><i class="sgicon-shutdown"></i>Shutdown</a></li>
 						</ul>
 					</li>
 				</ul>
@@ -346,27 +353,38 @@
 	<div id="SubMenu">
 		<span>
     #set $first = True
-    #for $menuItem in $submenu
-        #if 'requires' not in $menuItem or $menuItem.requires()
-            #if type($menuItem.path) == dict
-                #if $first then '' else '</span><span>'#<b>$menuItem.title</b>
+    #set $row = 1
+    #for $subitem in $submenu
+        #if 'newrow' in $subitem
+            #set $first = True
+            #set $row += 1
+		</span>
+	</div><!-- /SubMenu -->
+	<div id="SubMenu$row">
+		<span>
+        #end if
+        #if 'requires' not in $subitem or $subitem.requires()
+            #if type($subitem.path) == dict
+                #if $first then '' else '</span><span>'#<b>$subitem.title</b>
                 #set $first = False
                 #set $inner_first = True
-                #for $cur_link in $menuItem.path
+                #for $cur_link in $subitem.path
                     #if $inner_first then '' else '&middot; '
-                    ##
-			<a class="inner" href="$sbRoot/$menuItem.path[$cur_link]">$cur_link</a>
                     #set $inner_first = False
+			<a class="btn inner" href="$sbRoot/$subitem.path[$cur_link]">$cur_link</a>
                 #end for
             #else
-                ##
-			<a href="$sbRoot/$menuItem.path"#if 'confirm' in $menuItem then ' class="confirm"' else ''# tabindex="$tab#set $tab += 1#">$menuItem.title</a>
                 #set $first = False
+                #set $btn_class = f'{("", "confirm")["confirm" in subitem]} {subitem.get("addclass", "")}'.strip()
+                #set $btn_class = (f' {btn_class}', '')[not $btn_class]
+                #set $icon = '' if 'icon' not in $subitem else f'<i class="sgicon-{subitem["icon"]}"></i>'
+                ##
+			<a href="$sbRoot/$subitem.path" class="btn$btn_class" tabindex="$tab#set $tab += 1#">$icon$subitem.title</a>
             #end if
         #end if
     #end for
 		</span>
-	</div><!-- /SubMenu -->
+	</div><!-- /SubMenu$row -->
 
 #end if
 ##
@@ -403,7 +421,7 @@
 #end if
 ##
 #if $sickgear.MEMCACHE.get('DEPRECATE_SB_RUNNER')
-	<div style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
+	<div class="alert" style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
 		<p>Since Jan 2019, installations like this one have displayed a
 		message on every startup to run `<em><span style="color:#fff">sickgear.py</em></span>` instead of `SickBeard.py`.<br>
 		But some runners (e.g. Linux service files) hide the message.</p>
@@ -414,7 +432,7 @@
 #end if
 ##
 #if $sickgear.MEMCACHE.get('DEPRECATE_PP_LEGACY')
-	<div style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
+	<div class="alert" style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
 		<p>Mar 2020: The `<em><span style="color:#fff">nzbToMedia</em></span>`  script began using the <em><span style="color:#fff">secure</em></span> API to process media</p>
 		<p>Mar 2023: To remove this red box, please follow this <a target="_blank" href="https://github.com/SickGear/SickGear/wiki/FAQ-nzbToMedia"><span style="color:#fff">guidance</span></a></p>
 	</div>

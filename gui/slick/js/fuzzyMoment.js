@@ -6,7 +6,7 @@
  * dateFormat string The python token date formatting
  * timeFormat string The python token time formatting
  * trimZero Whether to trim leading "0"s (default : false)
- * dtGlue string To insert between the output of date and time (default: '<br />')
+ * dtGlue string To insert between the output of date and time (default: '<br>')
  * dtInline Bool Whether to output date inline or use more than one line
  */
  function fuzzyMoment(fmConfig) {
@@ -16,7 +16,7 @@
 		dateFormat = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.dateFormat)) ? '' : fmConfig.dateFormat),
 		timeFormat = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.timeFormat)) ? '' : fmConfig.timeFormat),
 		trimZero = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.trimZero)) ? false : !!fmConfig.trimZero),
-		dtGlue = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.dtGlue)) ? '<br />' : fmConfig.dtGlue),
+		dtGlue = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.dtGlue)) ? '<br>' : fmConfig.dtGlue),
 		dtInline = (/undefined/i.test(typeof(fmConfig)) || /undefined/i.test(typeof(fmConfig.dtInline)) ? false : fmConfig.dtInline),
 
 		jd = (function (str) {
@@ -146,7 +146,7 @@
 				qTipTime = true;
 				var month = airdate.diff(today, 'month');
 				if (1 == parseInt(airdate.year() - today.year()))
-					result += (dtInline ? ' ' : '<br />') + '(Next Year)';
+					result += (dtInline ? ' ' : '<br>') + '(Next Year)';
 			}
 			titleThis = true;
 		}

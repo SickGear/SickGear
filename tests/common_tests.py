@@ -9,7 +9,6 @@ sys.path.insert(1, os.path.abspath('..'))
 from sickgear import common
 from sickgear.common import Quality, WantedQualities
 from sickgear.name_parser.parser import NameParser
-from six import iteritems
 
 
 quality_tests = {
@@ -154,17 +153,17 @@ class QualityTests(unittest.TestCase):
         for case, level in cases:
             p = np.parse(case)
             second = common.Quality.get_proper_level(p.extra_info_no_name(), p.version, is_anime)
-            self.assertEqual(level, second, 'fail %s != %s for case: %s' % (level, second, case))
+            self.assertEqual(level, second, f'fail {level} != {second} for case: {case}')
 
     def check_wantedquality_list(self, cases):
         for show_quality, result in cases:
             sq = common.Quality.combine_qualities(*show_quality)
             wd = common.WantedQualities()
             _ = wd.get_wantedlist(sq, False, common.Quality.NONE, common.UNAIRED, manual=True)
-            for w, v in iteritems(wd):
+            for w, v in wd.items():
                 if w == sq:
-                    for u, o in sorted(iteritems(v)):
-                        self.assertEqual(o, result.get(u), msg='%s' % show_quality)
+                    for u, o in sorted(v.items()):
+                        self.assertEqual(o, result.get(u), msg=f'{show_quality}')
 
     def check_wantedquality_get_wantedlist(self, cases):
         for show_quality, result in cases:
@@ -192,7 +191,7 @@ class QualityTests(unittest.TestCase):
 
     def test_qualites(self):
         self.longMessage = True
-        for q, l in iteritems(quality_tests):
+        for q, l in quality_tests.items():
             self.check_quality_names(q, l)
 
     def test_reverse_parsing(self):
@@ -3113,7 +3112,7 @@ class QualityTests(unittest.TestCase):
             (('Show.S01E07.2160p.4K.UHD.10bit.NF.WEBRip.5.1.x265.HEVC-Group', False), common.Quality.UHD4KWEB),
             (('Test.Show.S02E01.The.Name.2160p.DV.HDR.Opus.AV1', False), common.Quality.UHD4KWEB),
         ])
-        for q, l in iteritems(quality_tests):
+        for q, l in quality_tests.items():
             self.check_sceneQuality([((v, False), q) for v in l])
 
     # TODO: fix these anime test cases at travis

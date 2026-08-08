@@ -1,5 +1,6 @@
 from .asset import AppriseAsset as AppriseAsset
 from .logger import logger as logger
+from .tag import AppriseTag as AppriseTag
 from .utils.parse import parse_bool as parse_bool, parse_list as parse_list, parse_phone_no as parse_phone_no, parse_url as parse_url, urlencode as urlencode
 from _typeshed import Incomplete
 
@@ -24,6 +25,7 @@ class URLBase:
     __cached_url_identifier: bool
     tags: Incomplete
     verify_certificate: bool
+    redirects: bool
     logger = logger
     templates: Incomplete
     template_tokens: Incomplete

@@ -4,7 +4,6 @@
 #from sickgear.providers import thepiratebay
 #from sickgear.providers.newznab import NewznabConstants
 #from sickgear.helpers import anon_url, maybe_plural, starify
-#from six import iteritems
 ##
 #set global $title = 'Config - Providers'
 #set global $header = 'Media Providers'
@@ -20,8 +19,8 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<script type="text/javascript" src="$sbRoot/js/configProviders.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/configProviders.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #set $methods_notused = []
 #if not $sickgear.USE_NZBS
@@ -32,7 +31,7 @@
 #end if
 #slurp
 #if $sickgear.USE_NZBS or $sickgear.USE_TORRENTS
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 \$(document).ready(function(){
     #if $sickgear.USE_NZBS
@@ -95,7 +94,7 @@
 #if $methods_notused
 							<blockquote style="margin:20px 0"><%= '/'.join(x for x in methods_notused) %> providers can be enabled in <a href="$sbRoot/config/search/">Search Settings</a></blockquote>
 #else
-							<br/>
+							<br>
 #end if
 						</div>
 
@@ -115,7 +114,7 @@
     #set $state = ('', ' <span class="red-text">(Site Down?)</span>')[$bad_url]
 							<li class="ui-state-default row-#echo ('odd', 'even')[$show_type or not $sickgear.USE_TORRENTS]##echo ('', ' provider-enabled')[$cur_provider.is_enabled()]#" id="$cur_name">
 								<input type="checkbox" id="enable_$cur_name" class="provider_enabler" <%= html_checked if cur_provider.is_enabled() else '' %>/>
-								<a class="imgLink" #if $cur_url#href="<%= anon_url(cur_url) %>" onclick="window.open(this.href,'_blank');return false;"#else#name=""#end if# rel="noreferrer"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle" /></a>
+								<a class="imgLink" #if $cur_url#href="<%= anon_url(cur_url) %>" onclick="window.open(this.href,'_blank');return false;"#else#name=""#end if# rel="noreferrer"><img src="$sbRoot/images/providers/$cur_provider.image_name()" alt="$tip" title="$tip" width="16" height="16" style="vertical-align:middle"></a>
 								<span style="vertical-align:middle">$cur_provider.name$state</span>
     #if $cur_provider.is_public_access() and type($cur_provider).__name__ not in ['TorrentRssProvider']#
 								<span style="font-size:10px;vertical-align:top;font-weight:normal">(PA)</span>
@@ -144,7 +143,7 @@
 
 						<div style="width: 300px; float: right">
 							<div style="margin: 0px auto; width: 101px">
-								<input type="submit" class="btn config_submitter" value="Save Changes" />
+								<input type="submit" class="btn config_submitter" value="Save Changes">
 							</div>
 						</div>
 #end if
@@ -261,7 +260,7 @@
 							<label for="${cur_newznab_provider.get_id()}_url">
 								<span class="component-title">URL</span>
 								<span class="component-desc">
-									<input type="text" id="${cur_newznab_provider.get_id()}_url" value="$cur_newznab_provider.url" class="form-control input-sm input350" disabled/>
+									<input type="text" id="${cur_newznab_provider.get_id()}_url" value="$cur_newznab_provider.url" class="form-control input-sm input350" disabled>
 								</span>
 							</label>
 						</div>
@@ -312,11 +311,11 @@
 								</div>
     #if $hasattr($cur_newznab_provider, 'may_filter'):
 								<div>
-        #for $cur_fval, $filter in iteritems($cur_newznab_provider.may_filter)
+        #for $cur_fval, $filter in $cur_newznab_provider.may_filter.items()
             #set $cur_fname, $cur_is_default = $filter[0], $filter[1]
             #set $filter_id = '%s_filter_%s' % ($cur_newznab_provider.get_id(), $cur_fval)
 									<label class="space-right">
-										<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_newznab_provider.filter]#/>
+										<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_newznab_provider.filter]#>
 										<span>$cur_fname</span>
 									</label>
         #end for
@@ -394,7 +393,7 @@
 							<label for="${cur_nzb_provider.get_id()}_username">
 								<span class="component-title">Username</span>
 								<span class="component-desc">
-									<input type="text" name="${cur_nzb_provider.get_id()}_username" value="$cur_nzb_provider.username" class="form-control input-sm input350" />
+									<input type="text" name="${cur_nzb_provider.get_id()}_username" value="$cur_nzb_provider.username" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>
@@ -593,7 +592,7 @@
 							<label for="${cur_torrent_provider.get_id()}_hash">
 								<span class="component-title">Hash:</span>
 								<span class="component-desc">
-									<input type="text" name="${cur_torrent_provider.get_id()}_hash" id="${cur_torrent_provider.get_id()}_hash" value="$cur_torrent_provider.hash" class="form-control input-sm input350" />
+									<input type="text" name="${cur_torrent_provider.get_id()}_hash" id="${cur_torrent_provider.get_id()}_hash" value="$cur_torrent_provider.hash" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>
@@ -606,7 +605,7 @@
 							<label for="$prov_type">
 								<span class="component-title">#if $hasattr($cur_torrent_provider, 'email')#User email#else#$user_type.capitalize():#end if#</span>
 								<span class="component-desc">
-									<input type="text" name="$prov_type" id="$prov_type" value="$user_value" class="form-control input-sm input350" />
+									<input type="text" name="$prov_type" id="$prov_type" value="$user_value" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>
@@ -642,7 +641,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="${cur_torrent_provider.get_id()}_ratio">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_ratio_desc">Seed until ratio (the goal)</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_ratio" id="${cur_torrent_provider.get_id()}_ratio" value="$cur_torrent_provider._seed_ratio" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_ratio" id="${cur_torrent_provider.get_id()}_ratio" value="$cur_torrent_provider._seed_ratio" class="form-control input-sm input75">
 									<p>this ratio is requested of each item sent to $name</p>
 									<div class="clear-left"><p>(#if 'transmission' == $sickgear.TORRENT_METHOD#set -1 to seed forever, or #end if#leave blank for the $name setting)</p></div>
 								</span>
@@ -655,7 +654,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="${cur_torrent_provider.get_id()}_seed_time">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_seed_time_desc">Seed time (provider default)</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_seed_time" id="${cur_torrent_provider.get_id()}_seed_time" value="$cur_torrent_provider.seed_time" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_seed_time" id="${cur_torrent_provider.get_id()}_seed_time" value="$cur_torrent_provider.seed_time" class="form-control input-sm input75">
 									<p>set 1 or more minimum minutes for each item sent to $name</p>
 									<div class="clear-left"><p>(leave blank $use_default)</p></div>
 								</span>
@@ -667,7 +666,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="${cur_torrent_provider.get_id()}_minseed">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_minseed_desc">Minimum seeders</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_minseed" id="${cur_torrent_provider.get_id()}_minseed" value="$cur_torrent_provider.minseed" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_minseed" id="${cur_torrent_provider.get_id()}_minseed" value="$cur_torrent_provider.minseed" class="form-control input-sm input75">
 									<p>a release must have to be snatch worthy</p>
 								</span>
 							</label>
@@ -678,7 +677,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="${cur_torrent_provider.get_id()}_minleech">
 								<span class="component-title" id="${cur_torrent_provider.get_id()}_minleech_desc">Minimum leechers</span>
 								<span class="component-desc">
-									<input type="number" name="${cur_torrent_provider.get_id()}_minleech" id="${cur_torrent_provider.get_id()}_minleech" value="$cur_torrent_provider.minleech" class="form-control input-sm input75" />
+									<input type="number" name="${cur_torrent_provider.get_id()}_minleech" id="${cur_torrent_provider.get_id()}_minleech" value="$cur_torrent_provider.minleech" class="form-control input-sm input75">
 									<p>a release must have to be snatch worthy</p>
 								</span>
 							</label>
@@ -758,11 +757,11 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
     #end if
     #if $hasattr($cur_torrent_provider, 'may_filter'):
 								<div>
-        #for $cur_fval, $filter in iteritems($cur_torrent_provider.may_filter)
+        #for $cur_fval, $filter in $cur_torrent_provider.may_filter.items()
             #set $cur_fname, $cur_is_default = $filter[0], $filter[1]
             #set $filter_id = '%s_filter_%s' % ($cur_torrent_provider.get_id(), $cur_fval)
 									<label class="space-right">
-										<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_torrent_provider.filter]#/>
+										<input type="checkbox" name="$filter_id" id="$filter_id" #echo ('', $html_checked)[$cur_fval in $cur_torrent_provider.filter]#>
 										<span>$cur_fname</span>
 									</label>
         #end for
@@ -817,7 +816,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 #end for
 					<!-- end div for editing providers -->
 #if $provider_config_list
-					<input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+					<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 #end  if
 					</fieldset>
 				</div><!-- /component-group2 //-->
@@ -838,7 +837,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="newznab_string">
 								<span class="component-title">Select provider:</span>
 								<span class="component-desc">
-									<input type="hidden" name="newznab_string" id="newznab_string" />
+									<input type="hidden" name="newznab_string" id="newznab_string">
 									<select id="editANewznabProvider" class="form-control input-sm">
 										<option value="addNewznab">-- add new provider --</option>
 									</select>
@@ -851,7 +850,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="newznab_name">
 								<span class="component-title">Provider name</span>
 								<span class="component-desc">
-									<input type="text" id="newznab_name" class="form-control input-sm input200" />
+									<input type="text" id="newznab_name" class="form-control input-sm input200">
 								</span>
 							</label>
 						</div>
@@ -860,7 +859,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="newznab_url">
 								<span class="component-title">Site URL</span>
 								<span class="component-desc">
-									<input type="text" id="newznab_url" class="form-control input-sm input350" />
+									<input type="text" id="newznab_url" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>
@@ -869,7 +868,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="newznab_key">
 								<span class="component-title">API key</span>
 								<span class="component-desc">
-									<input type="text" id="newznab_key" class="form-control input-sm input350" />
+									<input type="text" id="newznab_key" class="form-control input-sm input350">
 								</span>
 								<span class="component-desc">
 									<div class="clear-left">
@@ -893,7 +892,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 										</div>
 										<select id="newznab_cat" multiple="multiple" style="min-width:7em;min-height:72px"></select>
 										<div class="clear-left">
-											<p>multi-select newznab categories on the left<br />
+											<p>multi-select newznab categories on the left<br>
 											"+/-" will add/remove all, finally "Save Changes"</p>
 										</div>
 									</div>
@@ -911,10 +910,10 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 						</div>
 
 						<div id="newznab_add_div">
-							<input class="btn" type="button" class="newznab_save" id="newznab_add" value="Add" />
+							<input class="btn" type="button" class="newznab_save" id="newznab_add" value="Add">
 						</div>
 						<div id="newznab_update_div" style="display: none;">
-							<input class="btn btn-danger newznab_delete" type="button" class="newznab_delete" id="newznab_delete" value="Delete" />
+							<input class="btn btn-danger newznab_delete" type="button" class="newznab_delete" id="newznab_delete" value="Delete">
 						</div>
 					</div>
 
@@ -938,7 +937,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 						<label for="torrentrss_string">
 							<span class="component-title">Select provider</span>
 							<span class="component-desc">
-								<input type="hidden" name="torrentrss_string" id="torrentrss_string" />
+								<input type="hidden" name="torrentrss_string" id="torrentrss_string">
 								<select id="editATorrentRssProvider" class="form-control input-sm">
 									<option value="addTorrentRss">-- add new provider --</option>
 								</select>
@@ -951,7 +950,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="torrentrss_name">
 								<span class="component-title">Provider name</span>
 								<span class="component-desc">
-									<input type="text" id="torrentrss_name" class="form-control input-sm input200" />
+									<input type="text" id="torrentrss_name" class="form-control input-sm input200">
 								</span>
 							</label>
 						</div>
@@ -960,7 +959,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="torrentrss_url">
 								<span class="component-title">RSS URL</span>
 								<span class="component-desc">
-									<input type="text" id="torrentrss_url" class="form-control input-sm input350" />
+									<input type="text" id="torrentrss_url" class="form-control input-sm input350">
 								</span>
 							</label>
 						</div>
@@ -969,7 +968,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 							<label for="torrentrss_cookies">
 								<span class="component-title">Cookies:</span>
 								<span class="component-desc">
-									<input type="text" id="torrentrss_cookies" class="form-control input-sm input350" />
+									<input type="text" id="torrentrss_cookies" class="form-control input-sm input350">
 									<p>eg. uid=xx;pass=yy</p>
 									<div class="clear-left"><p>enter [ <span class="grey-text">sg=0</span> ] if not required (a URL containing a key may not need cookies)</p></div>
 								</span>
@@ -977,10 +976,10 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 						</div>
 
 						<div id="torrentrss_add_div">
-							<input type="button" class="btn torrentrss_save" id="torrentrss_add" value="Add" />
+							<input type="button" class="btn torrentrss_save" id="torrentrss_add" value="Add">
 						</div>
 						<div id="torrentrss_update_div" style="display: none;">
-							<input type="button" class="btn btn-danger torrentrss_delete" id="torrentrss_delete" value="Delete" />
+							<input type="button" class="btn btn-danger torrentrss_delete" id="torrentrss_delete" value="Delete">
 						</div>
 					</div>
 				</fieldset>
@@ -988,7 +987,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 #end if
 
 
-			<br/><input type="submit" class="btn config_submitter" value="Save Changes" /><br/>
+			<br><input type="submit" class="btn config_submitter" value="Save Changes"><br>
 
 			</div><!-- /config-components //-->
 
@@ -996,7 +995,7 @@ name = '' if not client else get_client_instance(sickgear.TORRENT_METHOD)().name
 	</div>
 </div>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
     jQuery('#config-components').tabs();
 //-->

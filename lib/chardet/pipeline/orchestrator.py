@@ -38,7 +38,7 @@ from chardet.pipeline.structural import (
 from chardet.pipeline.utf8 import detect_utf8
 from chardet.pipeline.utf1632 import detect_utf1632_patterns
 from chardet.pipeline.validity import filter_by_validity
-from chardet.registry import EncodingInfo, get_candidates
+from chardet.registry import REGISTRY, EncodingInfo, get_candidates
 
 _BINARY_RESULT = DetectionResult(
     encoding=None,
@@ -179,10 +179,45 @@ _WINDOWS_1254_DISTINGUISHING: frozenset[int] = frozenset(
 # are absent.  Keyed by encoding name -> frozenset of byte values where
 # that encoding differs from iso-8859-1 (or windows-1252 in the case of
 # windows-1254).
+# Bytes where HP-Roman8 maps to lowercase accented letters but ISO-8859-1
+# maps to uppercase letters.  Real HP-Roman8 text (from HP-UX terminals)
+# contains these bytes; data misdetected as HP-Roman8 typically does not.
+#   {b for b in range(0x80, 0x100)
+#    if (unicodedata.category(bytes([b]).decode('hp-roman8')) == 'Ll'
+#        and unicodedata.category(bytes([b]).decode('iso-8859-1')) == 'Lu')}
+_HP_ROMAN8_DISTINGUISHING: frozenset[int] = frozenset(
+    {
+        0xC0,
+        0xC1,
+        0xC2,
+        0xC3,
+        0xC4,
+        0xC5,
+        0xC6,
+        0xC7,
+        0xC8,
+        0xC9,
+        0xCA,
+        0xCB,
+        0xCC,
+        0xCD,
+        0xCE,
+        0xCF,
+        0xD1,
+        0xD4,
+        0xD5,
+        0xD6,
+        0xD9,
+        0xDD,
+        0xDE,
+    }
+)
+
 _DEMOTION_CANDIDATES: dict[str, frozenset[int]] = {
     "iso8859-10": _ISO_8859_10_DISTINGUISHING,
     "iso8859-14": _ISO_8859_14_DISTINGUISHING,
     "cp1254": _WINDOWS_1254_DISTINGUISHING,
+    "hp-roman8": _HP_ROMAN8_DISTINGUISHING,
 }
 
 # Bytes where KOI8-T maps to Tajik-specific Cyrillic letters but KOI8-R
@@ -191,6 +226,54 @@ _DEMOTION_CANDIDATES: dict[str, frozenset[int]] = {
 _KOI8_T_DISTINGUISHING: frozenset[int] = frozenset(
     {0x80, 0x81, 0x83, 0x8A, 0x8C, 0x8D, 0x8E, 0x90, 0xA1, 0xA2, 0xA5, 0xB5}
 )
+
+
+# Markup charset declarations that commonly refer to a Windows superset
+# encoding rather than the strict standard encoding.  Japanese web content
+# almost universally declares "Shift_JIS" but actually uses CP932 extensions;
+# similarly, Korean web content declares "EUC-KR" but uses CP949/UHC.
+# When the declared encoding resolves to the base (left), we check whether
+# the superset (right) is a better structural match.
+_MARKUP_SUPERSET_PROMOTIONS: dict[str, str] = {
+    "shift_jis_2004": "cp932",
+    "euc_kr": "cp949",
+}
+
+
+def _try_promote_markup_superset(
+    data: bytes,
+    markup_result: DetectionResult,
+    allowed: frozenset[str],
+) -> DetectionResult:
+    """Promote a markup-declared encoding to its superset when structural evidence supports it.
+
+    If the declared encoding has a known superset, the superset validates the
+    data, and the superset's structural score is materially better, return a
+    new result using the superset encoding.  Otherwise return the original.
+    """
+    if markup_result.encoding is None:
+        return markup_result
+    superset_name = _MARKUP_SUPERSET_PROMOTIONS.get(markup_result.encoding)
+    if superset_name is None or superset_name not in allowed:
+        return markup_result
+    superset_info = REGISTRY[superset_name]
+    # Validate: superset must be able to decode the data
+    try:
+        data.decode(superset_name, errors="strict")
+    except (UnicodeDecodeError, LookupError):
+        return markup_result
+    # Compare structural scores
+    ctx = PipelineContext()
+    base_score = compute_structural_score(data, REGISTRY[markup_result.encoding], ctx)
+    superset_score = compute_structural_score(data, superset_info, ctx)
+    if superset_score > base_score:
+        return DetectionResult(
+            superset_name,
+            markup_result.confidence,
+            markup_result.language,
+            markup_result.mime_type,
+        )
+    return markup_result
 
 
 def _make_fallback_or_none(
@@ -380,13 +463,17 @@ def _demote_niche_latin(
         and _should_demote(results[0].encoding, data)
     ):
         demoted_encoding = results[0].encoding
+        top_conf = results[0].confidence
         for r in results[1:]:
             if r.encoding in _COMMON_LATIN_ENCODINGS:
+                promoted = DetectionResult(
+                    r.encoding, top_conf, r.language, r.mime_type
+                )
                 others = [
                     x for x in results if x.encoding != demoted_encoding and x is not r
                 ]
                 demoted_entries = [x for x in results if x.encoding == demoted_encoding]
-                return [r, *others, *demoted_entries]
+                return [promoted, *others, *demoted_entries]
     return results
 
 
@@ -411,8 +498,15 @@ def _promote_koi8t(
     # Check for Tajik-specific bytes
     if any(b in _KOI8_T_DISTINGUISHING for b in data if b > 0x7F):
         koi8t_result = results[koi8t_idx]
+        top_conf = results[0].confidence
+        promoted = DetectionResult(
+            koi8t_result.encoding,
+            top_conf,
+            koi8t_result.language,
+            koi8t_result.mime_type,
+        )
         others = [r for i, r in enumerate(results) if i != koi8t_idx]
-        return [koi8t_result, *others]
+        return [promoted, *others]
     return results
 
 
@@ -587,6 +681,7 @@ def _run_pipeline_core(  # noqa: PLR0913
     # when the bytes happen to be pure ASCII or valid UTF-8).
     markup_result = detect_markup_charset(data)
     if markup_result is not None and markup_result.encoding in allowed:
+        markup_result = _try_promote_markup_superset(data, markup_result, allowed)
         return [markup_result]
 
     # Stage 1c: ASCII (use pre-computed result)
@@ -630,7 +725,8 @@ def _run_pipeline_core(  # noqa: PLR0913
             results = _score_structural_candidates(
                 data, structural_scores, valid_candidates, ctx
             )
-            return _postprocess_results(data, results)
+            if results:
+                return _postprocess_results(data, results)
 
     # Stage 3: Statistical scoring for all remaining candidates.
     # Bigram models converge quickly and don't benefit from scanning

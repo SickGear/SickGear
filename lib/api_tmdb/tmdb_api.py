@@ -20,6 +20,7 @@ from lib.tvinfo_base import CastList, PersonGenders, RoleTypes, \
     TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X, TVINFO_CAST_LIMIT
 from json_helper import json_dumps
 from sg_helpers import clean_data, enforce_type, get_url, iterate_chunk, try_int
+from .tmdb_exceptions import *
 
 from six import iteritems
 
@@ -443,6 +444,10 @@ class TmdbIndexer(TVInfoBase):
                 people_obj = tmdbsimple.People(id=p_id).info(**kw)
             except ConnectionSkipException as e:
                 raise e
+            except requests.exceptions.HTTPError as e:
+                if 404 == e.response.status_code:
+                    raise TmdbPersonNotFound(f'Person id: {p_id} not found')
+                raise TmdbError(ex(e))
             except (BaseException, Exception):
                 people_obj = None
             self._set_cache_entry(cache_key_name, people_obj)

@@ -23,7 +23,6 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 
 from _23 import urlencode
-from six import iteritems
 
 
 class TokyoToshokanProvider(generic.TorrentProvider):
@@ -43,15 +42,15 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
         items = {'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
             'nodots': r'[\.\s]+', 'stats': r'S:\s*?(\d)+\s*L:\s*(\d+)',
-            'size': r'size:\s*(\d+[.,]\d+\w+)'})])
+            'size': r'size:\s*(\d+[.,]\d+\w+)'}.items()])
 
         for mode in search_params:
             for search_string in search_params[mode]:
                 params = urlencode({'terms': rc['nodots'].sub(' ', search_string).encode('utf-8'), 'type': 1})
 
-                search_url = '%ssearch.php?%s' % (self.url, params)
+                search_url = f'{self.url}search.php?{params}'
 
                 html = self.get_url(search_url)
                 if self.should_skip():
@@ -112,13 +111,13 @@ class TokyoToshokanCache(tvcache.TVCache):
     def _cache_data(self, **kwargs):
 
         mode = 'Cache'
-        search_url = '%srss.php?%s' % (self.provider.url, urlencode({'filter': '1'}))
+        search_url = f'{self.provider.url}rss.php?{urlencode({"filter": "1"})}'
         data = self.get_rss(search_url)
 
         results = []
         if data and 'entries' in data:
 
-            rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'size': r'size:\s*(\d+[.,]\d+\w+)'})])
+            rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'size': r'size:\s*(\d+[.,]\d+\w+)'}.items()])
 
             for cur_item in data.get('entries', []):
                 try:

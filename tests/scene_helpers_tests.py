@@ -35,13 +35,13 @@ class SceneTests(test.SickbeardTestDBCase):
 
     def test_allPossibleShowNames(self):
         # common.sceneExceptions[-1] = ['Exception Test']
-        my_db = db.DBConnection()
-        my_db.mass_action([
-            ['INSERT INTO scene_exceptions (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
-             [TVINFO_TVDB, -1, 'Exception Test', -1]],
-            ['INSERT INTO scene_exceptions (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
-             [TVINFO_TVDB, -1, 'Season Test', 19]]
-                           ])
+        with db.DBConnection() as sg_db:
+            sg_db.mass_action([
+                ['INSERT INTO scene_exceptions (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+                 [TVINFO_TVDB, -1, 'Exception Test', -1]],
+                ['INSERT INTO scene_exceptions (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+                 [TVINFO_TVDB, -1, 'Season Test', 19]]
+                               ])
         common.countryList['Full Country Name'] = 'FCN'
 
         self._test_allPossibleShowNames('Show Name', expected=['Show Name'])
@@ -114,9 +114,9 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
 
     def test_sceneExceptionsResetNameCache(self):
         # clear the exceptions
-        my_db = db.DBConnection()
-        # noinspection SqlConstantCondition
-        my_db.action('DELETE FROM scene_exceptions WHERE 1=1')
+        with db.DBConnection() as sg_db:
+            # noinspection SqlConstantCondition
+            sg_db.action('DELETE FROM scene_exceptions WHERE 1=1')
 
         # put something in the cache
         name_cache.add_name_to_cache('Cached Name', prodid=0)
@@ -129,7 +129,7 @@ class SceneExceptionTestCase(test.SickbeardTestDBCase):
 if '__main__' == __name__:
     if 1 < len(sys.argv):
         suite = unittest.TestLoader().loadTestsFromName(
-            'scene_helpers_tests.SceneExceptionTestCase.test_' + sys.argv[1])
+            f'scene_helpers_tests.SceneExceptionTestCase.test_{sys.argv[1]}')
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         suite = unittest.TestLoader().loadTestsFromTestCase(SceneTests)

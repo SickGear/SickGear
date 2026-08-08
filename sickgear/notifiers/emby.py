@@ -243,7 +243,7 @@ class EmbyNotifier(Notifier):
                     continue
             message += [f'OK: {cur_host}']
 
-        return self._choose(('Success, all hosts tested', '<br />\n'.join(message))[not success], success)
+        return self._choose(('Success, all hosts tested', '<br>\n'.join(message))[not success], success)
 
     ##############################################################################
     # Public functions

@@ -29,7 +29,7 @@ from lib.dateutil import tz, zoneinfo
 from lib.tzlocal import get_localzone
 
 from sg_helpers import remove_file_perm, scantree
-from six import integer_types, iteritems, string_types
+from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -183,7 +183,7 @@ def _update_zoneinfo():
     try:
         (new_zoneinfo, zoneinfo_md5) = url_data.strip().rsplit(' ')
     except (BaseException, Exception):
-        logger.debug('Fetching zoneinfo.txt failed, update contains unparsable data: %s' % url_data)
+        logger.debug(f'Fetching zoneinfo.txt failed, update contains unparsable data: {url_data}')
         return
 
     current_file = zoneinfo.ZONEFILENAME
@@ -288,36 +288,36 @@ def update_network_dict():
         pass
 
     with network_timezone_lock:
-        my_db = db.DBConnection('cache.db')
+        with db.DBConnection('cache.db') as sg_db:
 
-        # load current network timezones
-        sql_result = dict(my_db.select('SELECT * FROM network_timezones'))
+            # load current network timezones
+            sql_result = dict(sg_db.select('SELECT * FROM network_timezones'))
 
-        # list of sql commands to update the network_timezones table
-        cl = []
-        for cur_name, cur_tz in iteritems(network_tz_data):
-            network_known = cur_name in sql_result
-            if network_known and cur_tz != sql_result[cur_name]:
-                # update old record
-                cl.append(
-                    ['UPDATE network_timezones SET network_name=?, timezone=? WHERE network_name=?',
-                     [cur_name, cur_tz, cur_name]])
-            elif not network_known:
-                # add new record
-                cl.append(['REPLACE INTO network_timezones (network_name, timezone) VALUES (?,?)', [cur_name, cur_tz]])
-            if network_known:
-                del sql_result[cur_name]
+            # list of sql commands to update the network_timezones table
+            sql_l = []
+            for cur_name, cur_tz in network_tz_data.items():
+                network_known = cur_name in sql_result
+                if network_known and cur_tz != sql_result[cur_name]:
+                    # update old record
+                    sql_l.append(['UPDATE network_timezones SET network_name=?, timezone=?'
+                                  ' WHERE network_name=?', [cur_name, cur_tz, cur_name]])
+                elif not network_known:
+                    # add new record
+                    sql_l.append(['REPLACE INTO network_timezones (network_name, timezone)'
+                                  ' VALUES (?,?)', [cur_name, cur_tz]])
+                if network_known:
+                    del sql_result[cur_name]
 
-        # remove deleted records
-        if 0 < len(sql_result):
-            network_names = list([network_name for network_name in sql_result])
-            cl.append(['DELETE FROM network_timezones WHERE network_name IN (%s)'
-                       % ','.join(['?'] * len(network_names)), network_names])
+            # remove deleted records
+            if 0 < len(sql_result):
+                network_names = list([network_name for network_name in sql_result])
+                sql_l.append([f'DELETE FROM network_timezones'
+                              f' WHERE network_name IN ({",".join(["?"] * len(network_names))})', network_names])
 
-        # change all network timezone infos at once (much faster)
-        if 0 < len(cl):
-            my_db.mass_action(cl)
-            load_network_dict(load=False)
+            # change all network timezone infos at once (much faster)
+            if 0 < len(sql_l):
+                sg_db.mass_action(sql_l)
+                load_network_dict(load=False)
 
 
 def load_network_dict(load=True):
@@ -329,28 +329,28 @@ def load_network_dict(load=True):
     """
     global network_dict, network_dupes
 
-    my_db = db.DBConnection('cache.db')
     sql_name = 'REPLACE(LOWER(network_name), " ", "")'
-    try:
-        sql = 'SELECT %s AS network_name, timezone FROM [network_timezones] ' % sql_name + \
-              'GROUP BY %s HAVING COUNT(*) = 1 ORDER BY %s;' % (sql_name, sql_name)
-        cur_network_list = my_db.select(sql)
-        if load and (None is cur_network_list or 1 > len(cur_network_list)):
-            update_network_dict()
-            cur_network_list = my_db.select(sql)
-        network_dict = dict(cur_network_list)
-    except (BaseException, Exception):
-        network_dict = {}
+    sql = (f'SELECT {sql_name} AS network_name, timezone FROM [network_timezones]'
+           f' GROUP BY {sql_name} HAVING COUNT(*) = 1'
+           f' ORDER BY {sql_name};')
+    with db.DBConnection('cache.db') as sg_db:
+        try:
+            cur_network_list = sg_db.select(sql)
+            if load and (None is cur_network_list or 1 > len(cur_network_list)):
+                update_network_dict()
+                cur_network_list = sg_db.select(sql)
+            network_dict = dict(cur_network_list)
+        except (BaseException, Exception):
+            network_dict = {}
 
-    try:
-
-        case_dupes = my_db.select('SELECT * FROM [network_timezones] WHERE %s IN ' % sql_name +
-                                  '(SELECT %s FROM [network_timezones]' % sql_name +
-                                  ' GROUP BY %s HAVING COUNT(*) > 1)' % sql_name +
-                                  ' ORDER BY %s;' % sql_name)
-        network_dupes = dict(case_dupes)
-    except (BaseException, Exception):
-        network_dupes = {}
+        try:
+            case_dupes = sg_db.select(f'SELECT * FROM [network_timezones] WHERE {sql_name} IN'
+                                      f' (SELECT {sql_name} FROM [network_timezones]'
+                                      f' GROUP BY {sql_name} HAVING COUNT(*) > 1)'
+                                      f' ORDER BY {sql_name};')
+            network_dupes = dict(case_dupes)
+        except (BaseException, Exception):
+            network_dupes = {}
 
 
 def get_network_timezone(network, return_name=False):
@@ -490,12 +490,12 @@ def standardize_network(network, country):
     :param country: country name
     :return: network name
     """
-    my_db = db.DBConnection('cache.db')
-    sql_result = my_db.select('SELECT * FROM network_conversions'
-                              ' WHERE tvrage_network = ? AND tvrage_country = ?',
-                              [network, country])
-    if 1 == len(sql_result):
-        return sql_result[0]['tvdb_network']
+    with db.DBConnection('cache.db') as sg_db:
+        sql_result = sg_db.select('SELECT * FROM network_conversions'
+                                  ' WHERE tvrage_network = ? AND tvrage_country = ?',
+                                  [network, country])
+        if 1 == len(sql_result):
+            return sql_result[0]['tvdb_network']
     return network
 
 
@@ -526,32 +526,32 @@ def _load_network_conversions():
     except (IOError, OSError):
         pass
 
-    my_db = db.DBConnection('cache.db')
+    with db.DBConnection('cache.db') as sg_db:
 
-    sql_result = my_db.select('SELECT * FROM network_conversions')
-    conversions_db = helpers.build_dict(sql_result, 'tvdb_network')
+        sql_result = sg_db.select('SELECT * FROM network_conversions')
+        conversions_db = helpers.build_dict(sql_result, 'tvdb_network')
 
-    # list of sql commands to update the network_conversions table
-    cl = []
+        # list of sql commands to update the network_conversions table
+        sql_l = []
 
-    for cur_network in conversions_in:
-        cl.append([
-            'INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country) VALUES (?,?,?)',
-            [cur_network['tvdb_network'], cur_network['tvrage_network'], cur_network['tvrage_country']]])
-        try:
-            del conversions_db[cur_network['tvdb_network']]
-        except (BaseException, Exception):
-            pass
+        for cur_network in conversions_in:
+            sql_l.append([
+                'INSERT OR REPLACE INTO network_conversions (tvdb_network, tvrage_network, tvrage_country) VALUES (?,?,?)',
+                [cur_network['tvdb_network'], cur_network['tvrage_network'], cur_network['tvrage_country']]])
+            try:
+                del conversions_db[cur_network['tvdb_network']]
+            except (BaseException, Exception):
+                pass
 
-    # remove deleted records
-    if 0 < len(conversions_db):
-        network_name = list(conversions_db)
-        cl.append(['DELETE FROM network_conversions WHERE tvdb_network'
-                   ' IN (%s)' % ','.join(['?'] * len(network_name)), network_name])
+        # remove deleted records
+        if 0 < len(conversions_db):
+            network_name = list(conversions_db)
+            sql_l.append(['DELETE FROM network_conversions'
+                          ' WHERE tvdb_network IN (%s)' % ','.join(['?'] * len(network_name)), network_name])
 
-    # change all network conversion info at once (much faster)
-    if 0 < len(cl):
-        my_db.mass_action(cl)
+        # change all network conversion info at once (much faster)
+        if sql_l:
+            sg_db.mass_action(sql_l)
 
 
 def get_episode_time(d,  # type: int
@@ -607,7 +607,7 @@ def get_episode_time(d,  # type: int
         try:
             return SGDatetime.from_timestamp(ep_timestamp, tzinfo=tzinfo, tz_aware=True, local_time=False)
         except OverflowError:
-            logger.debug('Invalid timestamp: %s, using fallback' % ep_timestamp)
+            logger.debug(f'Invalid timestamp: {ep_timestamp}, using fallback')
 
     ep_time = None
     if isinstance(ep_airtime, integer_types):

@@ -26,8 +26,6 @@ from .. import logger
 from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class PTFProvider(generic.TorrentProvider):
 
@@ -36,8 +34,8 @@ class PTFProvider(generic.TorrentProvider):
 
         self.url_base = 'https://ptfiles.net/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'panel.php?tool=links',
-                     'search': self.url_base + 'browse.php?search=%s&%s&incldead=0&title=0'}
+                     'login': f'{self.url_base}panel.php?tool=links',
+                     'search': f'{self.url_base}browse.php?search=%s&%s&incldead=0&title=0'}
 
         self.categories = {'Season': [39], 'Episode': [7, 33, 42], 'anime': [23]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
@@ -66,9 +64,9 @@ class PTFProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'details', 'get': 'dl.php',
-                                                                        'snatch': 'snatches', 'seeders': r'(^\d+)',
-                                                                        'leechers': r'(\d+)$'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'details', 'get': 'dl.php',
+                                                              'snatch': 'snatches', 'seeders': r'(^\d+)',
+                                                              'leechers': r'(\d+)$'}.items()])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -77,9 +75,9 @@ class PTFProvider(generic.TorrentProvider):
                        [f for f in self.may_filter if f not in self.filter])[non_marked]
             rc['filter'] = re.compile('(?i)(%s)' % '|'.join(
                 [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
-            log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
+            log = f'{("keep", "skipp")[non_marked]}ing ({", ".join([self.may_filter[f][0] for f in filters])}) '
         for mode in search_params:
-            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile(f'(?i)cat=(?:{self._categories_string(mode, template="", delimiter="|")})')
             for search_string in search_params[mode]:
 
                 search_url = self.urls['search'] % ('+'.join(search_string.split()), self._categories_string(mode))

@@ -3,6 +3,8 @@ from ..utils.parse import is_phone_no as is_phone_no, parse_phone_no as parse_ph
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 
+IS_GROUP_ID: Incomplete
+
 class NotifyWhatsApp(NotifyBase):
     """A wrapper for WhatsApp Notifications."""
     service_name: str

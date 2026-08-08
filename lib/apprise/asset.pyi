@@ -32,10 +32,14 @@ class AppriseAsset:
     async_mode: bool
     interpret_emojis: Incomplete
     interpret_escapes: bool
+    default_service_retry: int
+    default_service_wait: float
+    abort_on_chain_failure: bool
     encoding: str
     pgp_autogen: bool
     pem_autogen: bool
     secure_logging: bool
+    http_redirects: bool
     __plugin_paths: Incomplete
     __storage_path: Incomplete
     __storage_salt: bytes

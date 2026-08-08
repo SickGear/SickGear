@@ -5,6 +5,7 @@ from .logger import logger as logger
 from .manager_config import ConfigurationManager as ConfigurationManager
 from .plugins.base import NotifyBase as NotifyBase
 from .url import URLBase as URLBase
+from .utils.cwe312 import cwe312_url as cwe312_url
 from .utils.logic import is_exclusive_match as is_exclusive_match
 from .utils.parse import GET_SCHEMA_RE as GET_SCHEMA_RE, parse_list as parse_list
 from _typeshed import Incomplete

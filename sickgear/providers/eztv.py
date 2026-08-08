@@ -19,12 +19,9 @@ import re
 import traceback
 
 from . import generic
+from ..indexers.indexer_config import TVINFO_IMDB
 from .. import logger
 from ..helpers import try_int
-from bs4_parser import BS4Parser
-
-from _23 import b64decodestring
-from six import iteritems
 
 
 class EztvProvider(generic.TorrentProvider):
@@ -33,75 +30,71 @@ class EztvProvider(generic.TorrentProvider):
 
         generic.TorrentProvider.__init__(self, 'EZTV')
 
-        self.url_home = ['https://eztv.ag/'] + \
-                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
-                            [re.sub(r'[v\sz]+', '', x[::-1]) for x in [
-                                '0vp XZ', 'uvEj d', 'i5 Wzd', 'j9 vGb', 'kV2v a', '0zdvnL', '==vg Z']],
-                            [re.sub(r'[f\sT]+', '', x[::-1]) for x in [
-                                '0TpfXZ', 'ufTEjd', 'i5WTTd', 'j9f Gb', 'kV f2a', 'z1mTTL']],
-                        ]]]
-        self.url_vars = {'search': 'search/%s', 'browse': 'page_%s'}
-        self.url_tmpl = {'config_provider_home_uri': '%(home)s',
-                         'search': '%(home)s%(vars)s', 'browse': '%(home)s%(vars)s'}
+        self.url_base = 'https://eztvx.to/'
+        self.urls = {
+            'config_provider_home_uri': self.url_base,
+            'browse': f'{self.url_base}api/get-torrents?limit=100&page=%s',
+            'search': f'{self.url_base}api/get-torrents?limit=100&page=%s&imdb_id='
+        }
 
         self.minseed = None
 
     @staticmethod
     def _has_signature(data=None):
-        return data and re.search(r'(?i)(?:EZTV\s[-]\sTV\sTorrents)', data[0:300])
+        return data and re.search(r'(?i)EZTV\s-\sTV\sTorrents', data[0:300])
 
     def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self.url:
+        if not self.url or not isinstance(kwargs['ids'], dict):
             return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'get': '^magnet:'})])
-
+        data = {
+            'imdb_id': kwargs["ids"][TVINFO_IMDB]["id"],
+            'torrents_count': 0,
+            'torrents': []
+        }
         for mode in search_params:
-            for search_string in search_params[mode]:
-                search_url = self.urls['browse'] % search_string if 'Cache' == mode else \
-                    self.urls['search'] % search_string.replace('.', ' ')
+            for _ in search_params[mode]:
+                for page in (1, 2):
+                    if 'Cache' == mode:
+                        search_url = self.urls['browse'] % page
+                    else:
+                        # 2026-05-21: IMDb id is supported HOWEVER EZTV beta** search doesn't yet support targeted
+                        # search using both season episode numbers, it may never. Therefore, fetch 2x100 releases in
+                        # the chance that at least one episode file qualifies more often than not.
+                        search_url = f'{self.urls["search"]}{data.get("imdb_id")}' % page
 
-                html = self.get_url(search_url)
+                    html = self.get_url(search_url, parse_json=True)
+                    if not isinstance(html, dict) or not html.get('torrents'):
+                        break
+                    data['torrents_count'] += len(html['torrents'])
+                    data['torrents'] += html['torrents']  #type: list
+
                 if self.should_skip():
                     return results
 
                 cnt = len(items[mode])
                 try:
-                    if not html or self._has_no_results(html):
+                    if not data.get('torrents'):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html) as soup:
-                        tbl = soup.findAll('table', attrs={'class': ['table', 'forum_header_border']})[-1]
-                        tbl_rows = [] if not tbl else tbl.find_all('tr')
-                        for tr in tbl_rows:
-                            if 5 > len(tr.find_all('td')):
-                                tr.decompose()
-                        tbl_rows = [] if not tbl else tbl.find_all('tr')
+                    for cur_rls in data.get('torrents'):  #type: dict
+                        seeders = try_int(cur_rls.get('seeds'))
+                        if self._reject_item(seeders):
+                            continue
 
-                        if 2 > len(tbl_rows):
-                            raise generic.HaltParseException
+                        try:
+                            title = cur_rls.get('title')
+                            size = cur_rls.get('size_bytes')
+                            download_url = self._link(cur_rls.get('magnet_url'))
+                        except (BaseException, Exception):
+                            continue
 
-                        head = None
-                        for tr in tbl_rows[1:]:
-                            cells = tr.find_all('td')
-                            try:
-                                head = head if None is not head else self._header_row(tr)
-                                seeders = try_int(cells[head['seed']].get_text().strip())
-                                if self._reject_item(seeders):
-                                    continue
-
-                                title = tr.select('a.epinfo')[0].get_text().strip()
-                                size = cells[head['size']].get_text().strip()
-                                download_url = self._link(tr.find('a', href=rc['get'])['href'])
-                            except (AttributeError, TypeError, ValueError, KeyError):
-                                continue
-
-                            if title and download_url:
-                                items[mode].append((title, download_url, seeders, self._bytesizer(size)))
+                        if title and download_url:
+                            items[mode].append((title, download_url, seeders, self._bytesizer(size)))
 
                 except (generic.HaltParseException, IndexError):
                     pass

@@ -50,19 +50,12 @@ $(function(){
 			command();
 		} else {
 			$.confirm({
-				'title': 'Are you sure ?',
-				'message': confirmArr.join(' and ') + ' show(s)',
-				'buttons': {
-					'Yes': {
-						'class': 'green',
-						'action': command
-					},
-					'No': {
-						'class': 'red',
-						'action': function(){
-						}	// No op. This action property can be omitted.
-					}
-				}
+				title: 'Are you sure ?',
+				text: confirmArr.join(' and ') + ' show(s)',
+				confirm	: command,
+				cancel	: function(){},
+				confirmButton: 'Yes', confirmButtonClass: 'green',
+				cancelButton: 'No', cancelButtonClass: 'red'
 			});
 		}
 

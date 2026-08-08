@@ -33,7 +33,7 @@ from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime
 
-from six import iteritems, iterkeys, string_types, text_type
+from six import string_types, text_type
 from sg_helpers import long_path, scantree
 
 import lib.rarfile.rarfile as rarfile
@@ -194,22 +194,22 @@ class ProcessTVShow(object):
             return None
 
         show_obj = None
-        my_db = db.DBConnection()
-        # noinspection SqlResolve
-        sql_result = my_db.select(
-            'SELECT indexer, showid'
-            ' FROM history' +
-            ' WHERE resource = ?' +
-            ' AND (%s)' % ' OR '.join(['action LIKE "%%%02d"' % x for x in SNATCHED_ANY]) +
-            ' ORDER BY rowid', [name])
-        if sql_result:
-            try:
-                show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])},
-                                                   check_multishow=True)
-                if hasattr(show_obj, 'name'):
-                    logger.debug('Found Show: %s in snatch history for: %s' % (show_obj.name, name))
-            except MultipleShowObjectsException:
-                show_obj = None
+        with db.DBConnection() as sg_db:
+            # noinspection SqlResolve
+            sql_result = sg_db.select(
+                'SELECT indexer, showid'
+                ' FROM history' +
+                ' WHERE resource = ?' +
+                ' AND (%s)' % ' OR '.join(["action LIKE '%%%02d'" % x for x in SNATCHED_ANY]) +
+                ' ORDER BY rowid', [name])
+            if sql_result:
+                try:
+                    show_obj = helpers.find_show_by_id({int(sql_result[-1]['indexer']): int(sql_result[-1]['showid'])},
+                                                       check_multishow=True)
+                    if hasattr(show_obj, 'name'):
+                        logger.debug(f'Found Show: {show_obj.name} in snatch history for: {name}')
+                except MultipleShowObjectsException:
+                    show_obj = None
         return show_obj
 
     def show_obj_helper(self, show_obj, base_dir, dir_name, nzb_name, pp_type, alt_show_obj=None):
@@ -275,7 +275,7 @@ class ProcessTVShow(object):
         :return: Parent root dir that matches path, or None
         :rtype: AnyStr or None
         """
-        build_path = (lambda old_path: '%s%s' % (helpers.real_path(old_path).rstrip(os.path.sep), os.path.sep))
+        build_path = (lambda old_path: f'{helpers.real_path(old_path).rstrip(os.path.sep)}{os.path.sep}')
 
         process_path = build_path(path)
         for parent in map(lambda p: build_path(p), sickgear.ROOT_DIRS.split('|')[1:]):
@@ -334,7 +334,7 @@ class ProcessTVShow(object):
 
         parent = self.find_parent(dir_name)
         if parent:
-            self._log_helper('Dir %s is subdir of show root dir: %s, not processing.' % (dir_name, parent))
+            self._log_helper(f'Dir {dir_name} is subdir of show root dir: {parent}, not processing.')
             return self.result
 
         if dir_name == sickgear.TV_DOWNLOAD_DIR:
@@ -423,7 +423,7 @@ class ProcessTVShow(object):
                                     force, force_replace, use_trash=cleanup, show_obj=show_obj)
 
         except OSError as e:
-            logger.warning('Batch skipped, %s%s' % (ex(e), e.filename and (' (file %s)' % e.filename) or ''))
+            logger.warning(f'Batch skipped, {ex(e)}{e.filename and f" (file {e.filename})" or ""}')
 
         # Process video files in TV subdirectories
         for directory in [x for x in dirs if self._validate_dir(
@@ -490,7 +490,7 @@ class ProcessTVShow(object):
                                                           self.check_video_filenames(walk_dir, video_pick)))
 
                 except OSError as e:
-                    logger.warning(f'Batch skipped, {ex(e)}{e.filename and (" (file %s)" % e.filename) or ""}')
+                    logger.warning(f'Batch skipped, {ex(e)}{e.filename and f" (file {e.filename})" or ""}')
 
                 if process_method in ('hardlink', 'symlink') and video_in_rar:
                     self._delete_files(walk_path, rar_content)
@@ -564,9 +564,9 @@ class ProcessTVShow(object):
 
             init_history_cnt = len(archive_history)
 
-            archive_history = {k_arc: v for k_arc, v in iteritems(archive_history) if os.path.isfile(k_arc)}
+            archive_history = {k_arc: v for k_arc, v in archive_history.items() if os.path.isfile(k_arc)}
 
-            unused_files = list(set([os.path.join(path, x) for x in archives]) - set(iterkeys(archive_history)))
+            unused_files = list(set([os.path.join(path, x) for x in archives]) - set(archive_history.keys()))
             archives = [os.path.basename(x) for x in unused_files]
             if unused_files:
                 for f in unused_files:
@@ -618,14 +618,14 @@ class ProcessTVShow(object):
             return False
 
         # make sure the directory isn't inside a show directory
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT * FROM tv_shows')
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select('SELECT * FROM tv_shows')
 
-        for cur_result in sql_result:
-            if dir_name.lower().startswith(os.path.realpath(cur_result['location']).lower() + os.sep) \
-                    or dir_name.lower() == os.path.realpath(cur_result['location']).lower():
-                self._log_helper('Found an episode that has already been moved to its show dir, skipping', logger.ERROR)
-                return False
+            for cur_result in sql_result:
+                if dir_name.lower().startswith(os.path.realpath(cur_result['location']).lower() + os.sep) \
+                        or dir_name.lower() == os.path.realpath(cur_result['location']).lower():
+                    self._log_helper('Found an episode that has already been moved to its show dir, skipping', logger.ERROR)
+                    return False
 
         # Get the videofile list for the next checks
         all_files = []
@@ -639,16 +639,17 @@ class ProcessTVShow(object):
         all_dirs.append(dir_name)
 
         # check if the directory have at least one tv video file
+        force_show_obj = bool(show_obj)
         for video in video_files:
             try:
-                NameParser(show_obj=show_obj).parse(video, cache_result=False)
+                NameParser(show_obj=show_obj, force_show_obj=force_show_obj).parse(video, cache_result=False)
                 return True
             except (InvalidNameException, InvalidShowException):
                 pass
 
         for directory in all_dirs:
             try:
-                NameParser(show_obj=show_obj).parse(directory, cache_result=False)
+                NameParser(show_obj=show_obj, force_show_obj=force_show_obj).parse(directory, cache_result=False)
                 return True
             except (InvalidNameException, InvalidShowException):
                 pass
@@ -659,7 +660,7 @@ class ProcessTVShow(object):
 
             for packed in packed_files:
                 try:
-                    NameParser(show_obj=show_obj).parse(packed, cache_result=False)
+                    NameParser(show_obj=show_obj, force_show_obj=force_show_obj).parse(packed, cache_result=False)
                     return True
                 except (InvalidNameException, InvalidShowException):
                     pass
@@ -713,7 +714,7 @@ class ProcessTVShow(object):
                         rar_content = [os.path.normpath(x.filename) for x in rar_handle.infolist() if not x.is_dir()]
                         renamed = self.cleanup_names(path, rar_content)
                         cur_unpacked = rar_content if not renamed else \
-                            (list(set(rar_content) - set(iterkeys(renamed))) + list(renamed.values()))
+                            (list(set(rar_content) - set(renamed.keys())) + list(renamed.values()))
                         self._log_helper('Unpacked content: ["%s"]' % '", "'.join(map(text_type, cur_unpacked)))
                         unpacked_files += cur_unpacked
                 except (rarfile.PasswordRequired, rarfile.RarWrongPassword):
@@ -802,18 +803,18 @@ class ProcessTVShow(object):
                         new_filename = new_words[::-1] + na_parts.group(1)[::-1]
                     else:
                         new_filename = file_name[::-1]
-                    logger.log('Reversing base filename "%s" to "%s"' % (file_name, new_filename))
+                    logger.log(f'Reversing base filename "{file_name}" to "{new_filename}"')
                     try:
                         os.rename(file_path, os.path.join(_dirpath, new_filename + file_extension))
                         is_renamed[os.path.relpath(file_path, directory)] = \
                             os.path.relpath(new_filename + file_extension, directory)
                     except OSError as _e:
-                        logger.error('Error unable to rename file "%s" because %s' % (cur_filename, ex(_e)))
+                        logger.error(f'Error unable to rename file "{cur_filename}" because {ex(_e)}')
                 elif helpers.has_media_ext(cur_filename) and \
                         None is not garbage_name.search(file_name) and None is not media_pattern.search(base_name):
                     _num_videos += 1
                     _old_name = file_path
-                    _new_name = os.path.join(dir_name, '%s%s' % (base_name, file_extension))
+                    _new_name = os.path.join(dir_name, f'{base_name}{file_extension}')
             return is_renamed, _num_videos, _old_name, _new_name
 
         if files:
@@ -826,12 +827,12 @@ class ProcessTVShow(object):
 
         if all([not is_renamed, 1 == num_videos, old_name, new_name]):
             try_name = os.path.basename(new_name)
-            logger.log('Renaming file "%s" using dirname as "%s"' % (os.path.basename(old_name), try_name))
+            logger.log(f'Renaming file "{os.path.basename(old_name)}" using dirname as "{try_name}"')
             try:
                 os.rename(old_name, new_name)
                 is_renamed[os.path.relpath(old_name, directory)] = os.path.relpath(new_name, directory)
             except OSError as e:
-                logger.error('Error unable to rename file "%s" because %s' % (old_name, ex(e)))
+                logger.error(f'Error unable to rename file "{old_name}" because {ex(e)}')
 
         return is_renamed
 
@@ -866,12 +867,12 @@ class ProcessTVShow(object):
                 chunk_sizes = [os.path.getsize(x) for x in chunk_set]
                 largest_chunk = max(chunk_sizes)
                 if largest_chunk >= base_filesize:
-                    outfile = '%s.001' % base_filepath
+                    outfile = f'{base_filepath}.001'
                     if outfile not in chunk_set:
                         try:
                             os.rename(base_filepath, outfile)
                         except OSError:
-                            logger.error('Error unable to rename file %s' % base_filepath)
+                            logger.error(f'Error unable to rename file {base_filepath}')
                             return result
                         chunk_set.append(outfile)
                         chunk_set.sort()
@@ -881,26 +882,26 @@ class ProcessTVShow(object):
                             return result
                 else:
                     if base_filesize == sum(chunk_sizes):
-                        logger.log('Join skipped. Total size of %s input files equal to output.. %s (%s bytes)' % (
-                            len(chunk_set), base_filepath, base_filesize))
+                        logger.log(f'Join skipped. Total size of {len(chunk_set)} input files equal to output..'
+                                   f' {base_filepath} ({base_filesize} bytes)')
                     else:
-                        logger.log('Join skipped. Found output file larger than input.. %s (%s bytes)' % (
-                            base_filepath, base_filesize))
+                        logger.log(f'Join skipped. Found output file larger than input..'
+                                   f' {base_filepath} ({base_filesize} bytes)')
                     return result
 
             with open(base_filepath, 'ab') as newfile:
                 for f in chunk_set:
-                    logger.log('Joining file %s' % f)
+                    logger.log(f'Joining file {f}')
                     try:
                         with open(f, 'rb') as part:
                             for wdata in iter(partial(part.read, 4096), b''):
                                 try:
                                     newfile.write(wdata)
                                 except (BaseException, Exception):
-                                    logger.log('Failed write to file %s' % f)
+                                    logger.log(f'Failed write to file {f}')
                                     return result
                     except (BaseException, Exception):
-                        logger.log('Failed read from file %s' % f)
+                        logger.log(f'Failed read from file {f}')
                         return result
             result = base_filepath
 
@@ -936,39 +937,25 @@ class ProcessTVShow(object):
                 # processed in the past
                 return False
 
-        showlink = ('for "<a href="%s/home/view-show?tvid_prodid=%s" target="_blank">%s</a>"' % (
-            sickgear.WEB_ROOT, parse_result.show_obj.tvid_prodid, parse_result.show_obj.name),
+        showlink = (
+            f'for "<a href="{sickgear.WEB_ROOT}/home/view-show?tvid_prodid={parse_result.show_obj.tvid_prodid}"'
+            f' target="_blank">{parse_result.show_obj.name}</a>"',
             parse_result.show_obj.name)[self.any_vid_processed]
 
         ep_detail_sql = ''
         if parse_result.show_obj.prodid and parse_result.show_obj.tvid and 0 < len(parse_result.episode_numbers) \
                 and parse_result.season_number:
-            ep_detail_sql = " AND tv_episodes.showid='%s' AND tv_episodes.indexer='%s'" \
-                            " AND tv_episodes.season='%s' AND tv_episodes.episode='%s'" % \
-                            (parse_result.show_obj.prodid, parse_result.show_obj.tvid,
-                             parse_result.season_number, parse_result.episode_numbers[0])
+            ep_detail_sql = (f" AND tv_episodes.showid='{parse_result.show_obj.prodid}'"
+                             f" AND tv_episodes.indexer='{parse_result.show_obj.tvid}'"
+                             f" AND tv_episodes.season='{parse_result.season_number}'"
+                             f" AND tv_episodes.episode='{parse_result.episode_numbers[0]}'")
 
         # Avoid processing the same directory again if we use a process method <> move
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [dir_name])
-        if sql_result:
-            self._log_helper(f'Found a release directory {showlink} that has already been processed,<br>'
-                             f'.. skipping: {dir_name}')
-            if ep_detail_sql:
-                reset_status(parse_result.show_obj.tvid,
-                             parse_result.show_obj.prodid,
-                             parse_result.season_number,
-                             parse_result.episode_numbers[0])
-            return True
-
-        else:
-            # This is needed for video whose name differ from dir_name
-
-            sql_result = my_db.select(
-                'SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select('SELECT * FROM tv_episodes WHERE release_name = ?', [dir_name])
             if sql_result:
-                self._log_helper(f'Found a video, but that release {showlink} was already processed,<br>'
-                                 f'.. skipping: {videofile}')
+                self._log_helper(f'Found a release directory {showlink} that has already been processed,<br>'
+                                 f'.. skipping: {dir_name}')
                 if ep_detail_sql:
                     reset_status(parse_result.show_obj.tvid,
                                  parse_result.show_obj.prodid,
@@ -976,26 +963,41 @@ class ProcessTVShow(object):
                                  parse_result.episode_numbers[0])
                 return True
 
-            # Needed if we have downloaded the same episode @ different quality
-            # noinspection SqlResolve
-            search_sql = 'SELECT tv_episodes.indexerid, history.resource' \
-                         ' FROM tv_episodes INNER JOIN history'\
-                         + ' ON history.showid=tv_episodes.showid AND history.indexer=tv_episodes.indexer'\
-                         + ' WHERE history.season=tv_episodes.season and history.episode=tv_episodes.episode'\
-                         + ep_detail_sql\
-                         + ' and tv_episodes.status IN (%s)' % ','.join([str(x) for x in common.Quality.DOWNLOADED])\
-                         + ' and history.resource LIKE ?'
+            else:
+                # This is needed for video whose name differ from dir_name
 
-            sql_result = my_db.select(search_sql, [f'%{videofile}'])
-            if sql_result:
-                self._log_helper(f'Found a video, but the episode {showlink} is already processed,<br>'
-                                 f'.. skipping: {videofile}')
-                if ep_detail_sql:
-                    reset_status(parse_result.show_obj.tvid,
-                                 parse_result.show_obj.prodid,
-                                 parse_result.season_number,
-                                 parse_result.episode_numbers[0])
-                return True
+                sql_result = sg_db.select(
+                    'SELECT * FROM tv_episodes WHERE release_name = ?', [videofile.rpartition('.')[0]])
+                if sql_result:
+                    self._log_helper(f'Found a video, but that release {showlink} was already processed,<br>'
+                                     f'.. skipping: {videofile}')
+                    if ep_detail_sql:
+                        reset_status(parse_result.show_obj.tvid,
+                                     parse_result.show_obj.prodid,
+                                     parse_result.season_number,
+                                     parse_result.episode_numbers[0])
+                    return True
+
+                # Needed if we have downloaded the same episode @ different quality
+                # noinspection SqlResolve
+                search_sql = 'SELECT tv_episodes.indexerid, history.resource' \
+                             ' FROM tv_episodes INNER JOIN history'\
+                             + ' ON history.showid=tv_episodes.showid AND history.indexer=tv_episodes.indexer'\
+                             + ' WHERE history.season=tv_episodes.season and history.episode=tv_episodes.episode'\
+                             + ep_detail_sql\
+                             + f' and tv_episodes.status IN ({",".join([str(x) for x in common.Quality.DOWNLOADED])})'\
+                             + ' and history.resource LIKE ?'
+
+                sql_result = sg_db.select(search_sql, [f'%{videofile}'])
+                if sql_result:
+                    self._log_helper(f'Found a video, but the episode {showlink} is already processed,<br>'
+                                     f'.. skipping: {videofile}')
+                    if ep_detail_sql:
+                        reset_status(parse_result.show_obj.tvid,
+                                     parse_result.show_obj.prodid,
+                                     parse_result.season_number,
+                                     parse_result.episode_numbers[0])
+                    return True
 
         return False
 

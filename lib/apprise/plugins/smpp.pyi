@@ -44,3 +44,8 @@ class NotifySMPP(NotifyBase):
     def parse_url(url):
         """Parses the URL and returns enough arguments that can allow us to re-
         instantiate this object."""
+    @staticmethod
+    def runtime_deps():
+        """Return a tuple of top-level Python package names that this plugin
+        imported as optional runtime dependencies.
+        """

@@ -9,16 +9,14 @@ import logging
 
 from trans import trans
 import requests
-from six import text_type
-from six.moves import http_client as httplib
-from six.moves.urllib.parse import urlencode, urljoin, quote
+from urllib.parse import urlencode, urljoin, quote
+from http import client as httplib
 
 from .constants import BASE_URI, SEARCH_BASE_URI
 from .auth import Auth
 from .exceptions import ImdbAPIError
 
 logger = logging.getLogger(__name__)
-
 
 # client method name -> api path
 _SIMPLE_GET_ENDPOINTS = {
@@ -53,6 +51,7 @@ _SIMPLE_GET_ENDPOINTS = {
 
 class Imdb(Auth):
     def __init__(self, locale=None, exclude_episodes=False, session=None, cachedir=None):
+        super().__init__()
         self.locale = locale or 'en_US'
         self.region = self.locale.split('_')[-1].upper()
         self.exclude_episodes = exclude_episodes
@@ -77,6 +76,7 @@ class Imdb(Auth):
     def get_title(self, imdb_id):
         logger.info('called get_title %s', imdb_id)
         self.validate_imdb_id(imdb_id)
+        # redirection check using API response
         self._redirection_title_check(imdb_id)
         try:
             resource = self._get_resource(
@@ -98,6 +98,7 @@ class Imdb(Auth):
     def get_title_auxiliary(self, imdb_id):
         logger.info('called get_title_auxiliary %s', imdb_id)
         self.validate_imdb_id(imdb_id)
+        # redirection check using API response
         self._redirection_title_check(imdb_id)
         path = '/template/imdb-ios-writable/title-auxiliary-v31.jstl/render'
         try:
@@ -138,22 +139,11 @@ class Imdb(Auth):
 
     def title_exists(self, imdb_id):
         self.validate_imdb_id(imdb_id)
-        page_url = 'https://www.imdb.com/title/{0}/'.format(imdb_id)
-
-        response = self.session.get(
-            page_url,
-            allow_redirects=False,
-            headers={'User-Agent': 'Mozilla/5.0'},
-        )
-        if response.status_code == httplib.OK:
+        try:
+            self._get_resource('/title/{0}/auxiliary'.format(imdb_id))
             return True
-        elif response.status_code == httplib.NOT_FOUND:
+        except LookupError:
             return False
-        elif response.status_code == httplib.MOVED_PERMANENTLY:
-            # redirection result
-            return False
-        else:
-            response.raise_for_status()
 
     def _suggest_search(self, query):
         # translates national characters into similar sounding latin characters
@@ -194,7 +184,7 @@ class Imdb(Auth):
                 continue
             result_item = {
                 'title': result['l'],
-                'year': text_type(result['y']) if result.get('y') else None,
+                'year': str(result['y']) if result.get('y') else None,
                 'imdb_id': result['id'],
                 'type': result.get('q'),
             }
@@ -335,16 +325,51 @@ class Imdb(Auth):
                 msg='{0} is a redirection imdb id'.format(imdb_id)
             )
 
-    def is_redirection_title(self, imdb_id):
+    def get_real_title_id(self, imdb_id):
+        # type: (str) -> str or bool
         self.validate_imdb_id(imdb_id)
-        page_url = 'https://www.imdb.com/title/{0}/'.format(imdb_id)
-        response = self.session.get(page_url, allow_redirects=False)
-        if response.status_code == httplib.MOVED_PERMANENTLY:
-            return True
-        else:
+        try:
+            if imdb_id.startswith('nm'):
+                resource = self._get_resource(
+                    '/name/{0}/fulldetails'.format(imdb_id)
+                )
+                returned_id = resource['base'].get('id', '')
+                if returned_id:
+                    match = re.search(r'nm\d{7,10}', returned_id)
+                    if match:
+                        actual_id = match.group()
+                        # If the returned ID differs, it's a redirection
+                        return actual_id
+            else:
+                path = (
+                    '/template/imdb-ios-writable/'
+                    'title-auxiliary-v31.jstl/render'
+                )
+                resource = self._get(
+                    url=urljoin(BASE_URI, path),
+                    params={
+                        'tconst': imdb_id,
+                        'today': date.today().strftime('%Y-%m-%d'),
+                        'region': self.region,
+                    },
+                )
+                returned_id = resource.get('id', '')
+                if returned_id:
+                    match = re.search(r'tt\d{7,10}', returned_id)
+                    if match:
+                        actual_id = match.group()
+                        # If the returned ID differs, it's a redirection
+                        return actual_id
+            return False
+        except LookupError:
+            # If ID doesn't exist at all, it's not a redirection
             return False
 
-    def _query_first_alpha_num(self, query):
+    def is_redirection_title(self, imdb_id):
+        return self.get_real_title_id(imdb_id) != imdb_id
+
+    @staticmethod
+    def _query_first_alpha_num(query):
         for char in query.lower():
             if char.isalnum():
                 return char
@@ -352,7 +377,8 @@ class Imdb(Auth):
             'invalid query, does not contain any alphanumeric characters'
         )
 
-    def _title_not_found(self, msg=''):
+    @staticmethod
+    def _title_not_found(msg=''):
         if msg:
             msg = ' {0}'.format(msg)
         raise LookupError('Title not found.{0}'.format(msg))

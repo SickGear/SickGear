@@ -40,8 +40,8 @@ class DBBasicTests(test.SickbeardTestDBCase):
             return 100000 <= version
 
     def test_select(self):
-        self.db.select('SELECT * FROM tv_episodes WHERE showid = ? AND location != ""', [0000])
-        self.db.close()
+        with self.db as sg_db:
+            sg_db.select("SELECT * FROM tv_episodes WHERE showid = ? AND location != ''", [0000])
         self.assertEqual(cache_db.TEST_BASE_VERSION is not None, self.is_testdb(cache_db.MAX_DB_VERSION))
         self.assertEqual(mainDB.TEST_BASE_VERSION is not None, self.is_testdb(mainDB.MAX_DB_VERSION))
         self.assertEqual(failed_db.TEST_BASE_VERSION is not None, self.is_testdb(failed_db.MAX_DB_VERSION))
@@ -56,19 +56,20 @@ class DBBasicTests(test.SickbeardTestDBCase):
         insert_para = [123, 321, 1, 'Test Show', '', 'ABC', 'Comedy', '14', 45, 1, 'Mondays', 1, 0, 0, 2010, 0, 'en',
                        '', '', 'tt123456', 1234567, 0, 0, None, None, 0, 0, 0, 'Some Show', None, 0, None, None, 2000,
                        4, 0, 852645]
-        result = self.db.mass_action([
-            ['REPLACE INTO tv_shows (show_id, indexer_id, indexer, show_name, location, network, genre, classification,'
-             ' runtime, quality, airs, status, flatten_folders, paused, startyear, air_by_date, lang, subtitles,'
-             ' notify_list, imdb_id, last_update_indexer, dvdorder, archive_firstmatch, rls_require_words,'
-             ' rls_ignore_words, sports, anime, scene, overview, tag, prune, rls_global_exclude_ignore,'
-             ' rls_global_exclude_require, airtime, network_id, network_is_stream, src_update_timestamp)'
-             ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-             insert_para],
-            ['SELECT * FROM tv_shows WHERE show_id = ? AND indexer = ?', [123, 1]]
-        ])
+        with self.db as sg_db:
+            result = sg_db.mass_action([
+                ['REPLACE INTO tv_shows (show_id, indexer_id, indexer, show_name, location, network, genre, classification,'
+                 ' runtime, quality, airs, status, flatten_folders, paused, startyear, air_by_date, lang, subtitles,'
+                 ' notify_list, imdb_id, last_update_indexer, dvdorder, archive_firstmatch, rls_require_words,'
+                 ' rls_ignore_words, sports, anime, scene, overview, tag, prune, rls_global_exclude_ignore,'
+                 ' rls_global_exclude_require, airtime, network_id, network_is_stream, src_update_timestamp)'
+                 ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                 insert_para],
+                ['SELECT * FROM tv_shows WHERE show_id = ? AND indexer = ?', [123, 1]]
+            ])
         for i, f in enumerate(field_list):
             self.assertEqual(str(result[-1][0][f]), str(insert_para[i]),
-                             msg='Field %s: %s != %s' % (f, result[-1][0][f], insert_para[i]))
+                             msg=f'Field {f}: {result[-1][0][f]} != {insert_para[i]}')
 
 
 if '__main__' == __name__:

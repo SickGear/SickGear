@@ -19,7 +19,7 @@ class GenericClient(object):
         self.name = name
         self.username = sickgear.TORRENT_USERNAME if username is None else username
         self.password = sickgear.TORRENT_PASSWORD if password is None else password
-        self.host = sickgear.TORRENT_HOST if host is None else host.rstrip('/') + '/'
+        self.host = sickgear.TORRENT_HOST if host is None else f'{host.rstrip("/")}/'
 
         self.url = None
         self.auth = None
@@ -31,7 +31,7 @@ class GenericClient(object):
     def _log_request_details(self, method, params=None, data=None, files=None, **kwargs):
 
         output = []
-        output += ['%s: sending %s request to %s' % (self.name, method, self.url)]
+        output += [f'{self.name}: sending {method} request to {self.url}']
 
         lines = [('params', (str(params), '')[not params]),
                  ('data', (str(data), '')[not data]),
@@ -47,9 +47,9 @@ class GenericClient(object):
             nch = len(chunks) - 1
             for i, seg in enumerate(chunks):
                 if nch == i and 'files' == arg:
-                    sample = ' ..excerpt(%s/%s)' % (m, len(lines[2][1]))
+                    sample = f' ..excerpt({m}/{len(lines[2][1])})'
                     seg = seg[0:c - (len(sample) - 2)] + sample
-                output += ['%s: request %s= %s%s%s' % (self.name, arg, ('', '..')[bool(i)], seg, ('', '..')[i != nch])]
+                output += [f'{self.name}: request {arg}= {("", "..")[bool(i)]}{seg}{("", "..")[i != nch]}']
 
         logger.debug(output)
 
@@ -61,7 +61,7 @@ class GenericClient(object):
             self.last_time = time.time()
 
             if not self._get_auth():
-                logger.error('%s: Authentication failed' % self.name)
+                logger.error(f'{self.name}: Authentication failed')
                 return False
 
         # self._log_request_details(method, params, data, files, **kwargs)
@@ -70,30 +70,30 @@ class GenericClient(object):
             response = self.session.__getattribute__(method)(self.url, params=params, data=data, files=files,
                                                              timeout=kwargs.pop('timeout', 120), verify=False, **kwargs)
         except requests.exceptions.ConnectionError as e:
-            logger.error('%s: Unable to connect %s' % (self.name, ex(e)))
+            logger.error(f'{self.name}: Unable to connect {ex(e)}')
             return False
         except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
-            logger.error('%s: Invalid host' % self.name)
+            logger.error(f'{self.name}: Invalid host')
             return False
         except requests.exceptions.HTTPError as e:
-            logger.error('%s: Invalid HTTP request %s' % (self.name, ex(e)))
+            logger.error(f'{self.name}: Invalid HTTP request {ex(e)}')
             return False
         except requests.exceptions.Timeout as e:
-            logger.error('%s: Connection timeout %s' % (self.name, ex(e)))
+            logger.error(f'{self.name}: Connection timeout {ex(e)}')
             return False
         except (BaseException, Exception) as e:
-            logger.error('%s: Unknown exception raised when sending torrent to %s: %s' % (self.name, self.name, ex(e)))
+            logger.error(f'{self.name}: Unknown exception raised when sending torrent to {self.name}: {ex(e)}')
             return False
 
         if 401 == response.status_code:
-            logger.error('%s: Invalid username or password, check your config' % self.name)
+            logger.error(f'{self.name}: Invalid username or password, check your config')
             return False
 
         if response.status_code in http_error_code:
-            logger.debug('%s: %s' % (self.name, http_error_code[response.status_code]))
+            logger.debug(f'{self.name}: {http_error_code[response.status_code]}')
             return False
 
-        logger.debug('%s: Response to %s request is %s' % (self.name, method.upper(), response.text))
+        logger.debug(f'{self.name}: Response to {method.upper()} request is {response.text}')
 
         return response
 
@@ -212,10 +212,10 @@ class GenericClient(object):
 
         r_code = False
 
-        logger.debug('Calling %s client' % self.name)
+        logger.debug(f'Calling {self.name} client')
 
         if not self._get_auth():
-            logger.error('%s: Authentication failed' % self.name)
+            logger.error(f'{self.name}: Authentication failed')
             return r_code
 
         try:
@@ -224,8 +224,8 @@ class GenericClient(object):
 
             result = self._get_torrent_hash(result)
         except (BaseException, Exception) as e:
-            logger.error('Bad torrent data: hash is %s for [%s]' % (result.hash, result.name))
-            logger.debug('Exception raised when checking torrent data: %s' % (ex(e)))
+            logger.error(f'Bad torrent data: hash is {result.hash} for [{result.name}]')
+            logger.debug(f'Exception raised when checking torrent data: {ex(e)}')
             return r_code
 
         try:
@@ -236,30 +236,30 @@ class GenericClient(object):
 
             self.created_id = isinstance(r_code, string_types) and r_code or None
             if not r_code:
-                logger.error('%s: Unable to send torrent to client' % self.name)
+                logger.error(f'{self.name}: Unable to send torrent to client')
                 return False
 
             if not self._set_torrent_pause(result):
-                logger.error('%s: Unable to set the pause for torrent' % self.name)
+                logger.error(f'{self.name}: Unable to set the pause for torrent')
 
             if not self._set_torrent_label(result):
-                logger.error('%s: Unable to set the label for torrent' % self.name)
+                logger.error(f'{self.name}: Unable to set the label for torrent')
 
             if not self._set_torrent_ratio(result):
-                logger.error('%s: Unable to set the ratio for torrent' % self.name)
+                logger.error(f'{self.name}: Unable to set the ratio for torrent')
 
             if not self._set_torrent_seed_time(result):
-                logger.error('%s: Unable to set the seed time for torrent' % self.name)
+                logger.error(f'{self.name}: Unable to set the seed time for torrent')
 
             if not self._set_torrent_path(result):
-                logger.error('%s: Unable to set the path for torrent' % self.name)
+                logger.error(f'{self.name}: Unable to set the path for torrent')
 
             if 0 != result.priority and not self._set_torrent_priority(result):
-                logger.error('%s: Unable to set priority for torrent' % self.name)
+                logger.error(f'{self.name}: Unable to set priority for torrent')
 
         except (BaseException, Exception) as e:
-            logger.error('%s: Failed sending torrent: %s - %s' % (self.name, result.name, result.hash))
-            logger.debug('%s: Exception raised when sending torrent: %s' % (self.name, ex(e)))
+            logger.error(f'{self.name}: Failed sending torrent: {result.name} - {result.hash}')
+            logger.debug(f'{self.name}: Exception raised when sending torrent: {ex(e)}')
 
         return r_code
 
@@ -271,22 +271,22 @@ class GenericClient(object):
             response = self.session.get(self.url, timeout=120, verify=False)
 
             if 401 == response.status_code:
-                return False, 'Error: Invalid %s username or password, check your config!' % self.name
+                return False, f'Error: Invalid {self.name} username or password, check your config!'
         except requests.exceptions.ConnectionError:
-            return False, 'Error: Connecting to %s' % self.name
+            return False, f'Error: Connecting to {self.name}'
         except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL):
-            return False, 'Error: Invalid %s host' % self.name
+            return False, f'Error: Invalid {self.name} host'
 
     def test_authentication(self):
 
         try:
             result = self._get_auth()
             if result:
-                return ((True, 'Success: Connected and authenticated to %s' % self.name),
+                return ((True, f'Success: Connected and authenticated to {self.name}'),
                         result)[isinstance(result, tuple)]
 
-            failed_msg = 'Error: Failed %s authentication.%s' % (self.name, getattr(self, '_errmsg', None) or '')
+            failed_msg = f'Error: Failed {self.name} authentication.{getattr(self, "_errmsg", None) or ""}'
         except (BaseException, Exception):
-            failed_msg = 'Error: Unable to connect to %s' % self.name
+            failed_msg = f'Error: Unable to connect to {self.name}'
 
         return False, failed_msg

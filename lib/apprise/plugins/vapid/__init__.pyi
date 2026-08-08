@@ -1,7 +1,4 @@
 from . import subscription as subscription
-from ...common import NotifyImageSize as NotifyImageSize, NotifyType as NotifyType, PersistentStoreMode as PersistentStoreMode
-from ...utils.base64 import base64_urlencode as base64_urlencode
-from ...utils.parse import is_email as is_email, parse_bool as parse_bool, parse_list as parse_list
 from ..base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 
@@ -75,3 +72,8 @@ class NotifyVapid(NotifyBase):
     @property
     def public_key(self):
         """Returns our public key representation."""
+    @staticmethod
+    def runtime_deps():
+        """Return a tuple of top-level Python package names that this plugin
+        imported as optional runtime dependencies.
+        """

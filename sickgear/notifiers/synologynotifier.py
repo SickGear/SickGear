@@ -33,7 +33,7 @@ class SynologyNotifier(Notifier):
             output, err, exit_status = cmdline_runner(synodsmnotify_cmd)
             self._log_debug(f'Script result: {output}')
         except (BaseException, Exception) as e:
-            self._log('Unable to run synodsmnotify: %s' % ex(e))
+            self._log(f'Unable to run synodsmnotify: {ex(e)}')
 
 
 notifier = SynologyNotifier

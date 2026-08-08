@@ -113,7 +113,7 @@ class ConsolidateProviders(InitialSchema):
         # old provider_cache is dropped before re-creation
         # noinspection SqlResolve
         self.do_query(['DROP TABLE [provider_cache]'] + self.queries['consolidate_providers'] +
-                      ['DROP TABLE [%s]' % t for t in (set(self.list_tables()) - keep_tables)])
+                      [f'DROP TABLE [{t}]' for t in (set(self.list_tables()) - keep_tables)])
         self.finish(True)
 
 
@@ -124,7 +124,7 @@ class AddBacklogParts(ConsolidateProviders):
     def execute(self):
         # noinspection SqlResolve
         self.do_query(self.queries['add_backlogparts'] +
-                      ['DROP TABLE [%s]' % t for t in ('scene_names', 'scene_exceptions_refresh', 'scene_exceptions')])
+                      [f'DROP TABLE [{t}]' for t in ('scene_names', 'scene_exceptions_refresh', 'scene_exceptions')])
         self.finish(True)
 
 

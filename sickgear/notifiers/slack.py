@@ -42,10 +42,10 @@ class SlackNotifier(Notifier):
         result = resp and resp.get('ok') or 'response: "%s"' % (resp.get('error') or self._choose(
             'bad oath access token?', None))
         if True is not result:
-            self._log_error('Failed to send message, %s' % result)
+            self._log_error(f'Failed to send message, {result}')
 
         return self._choose(('Successful test notice sent. (Note: %s clients display icon once in a sequence)'
-                             % self.name, 'Error sending notification, %s' % result)[True is not result], result)
+                             % self.name, f'Error sending notification, {result}')[True is not result], result)
 
 
 notifier = SlackNotifier

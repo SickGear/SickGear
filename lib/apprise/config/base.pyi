@@ -3,6 +3,7 @@ from ..asset import AppriseAsset as AppriseAsset
 from ..logger import logging as logging
 from ..manager_config import ConfigurationManager as ConfigurationManager
 from ..manager_plugins import NotificationManager as NotificationManager
+from ..tag import AppriseTag as AppriseTag
 from ..url import URLBase as URLBase
 from ..utils.cwe312 import cwe312_url as cwe312_url
 from ..utils.parse import GET_SCHEMA_RE as GET_SCHEMA_RE, parse_bool as parse_bool, parse_list as parse_list, parse_urls as parse_urls

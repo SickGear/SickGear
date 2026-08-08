@@ -72,6 +72,9 @@
 		});
 	}
 
+	//
+	// global jquery selector functions ($.fn = jQuery.prototype)
+	//
 	$.fn.nFileBrowser = function(callback, options){
 		options = $.extend({}, $.Browser.defaults, options);
 
@@ -205,5 +208,12 @@
 		}
 		return options.field;
 	};
+
+	//
+	// global helper function
+	//
+	$.hardReload = function(){
+		window.location.replace(window.location.href);
+	}
 
 })(jQuery);

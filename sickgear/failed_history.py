@@ -41,12 +41,12 @@ def db_cmd(sql, params, select=True):
     :param select: use selcet
     :return: sql result
     """
-    my_db = db.DBConnection('failed.db')
-    if select:
-        sql_result = my_db.select(sql, params)
-    else:
-        sql_result = my_db.action(sql, params)
-    return sql_result
+    with db.DBConnection('failed.db') as sg_db:
+        if select:
+            sql_result = sg_db.select(sql, params)
+        else:
+            sql_result = sg_db.action(sql, params)
+        return sql_result
 
 
 def db_select(sql, params):
@@ -167,7 +167,7 @@ def set_episode_failed(ep_obj):
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
-        logger.warning('Unable to get episode, please set its status manually: %s' % ex(e))
+        logger.warning(f'Unable to get episode, please set its status manually: {ex(e)}')
 
 
 def remove_failed(release):
@@ -176,7 +176,7 @@ def remove_failed(release):
     :param release: release name
     :type release: AnyStr
     """
-    db_action('DELETE FROM history WHERE %s=?' % '`release`', [prepare_failed_name(release)])
+    db_action(f'DELETE FROM history WHERE `release`=?', [prepare_failed_name(release)])
 
 
 def remove_snatched(release, size, provider):
@@ -189,7 +189,7 @@ def remove_snatched(release, size, provider):
     :param provider: provider name
     :type provider: AnyStr
     """
-    db_action('DELETE FROM history WHERE %s=? AND %s=? AND %s=?' % ('`release`', '`size`', '`provider`'),
+    db_action(f'DELETE FROM history WHERE `release`=? AND `size`=? AND `provider`=?',
               [prepare_failed_name(release), size, provider])
 
 
@@ -228,14 +228,15 @@ def revert_episode(ep_obj):
     history_eps = {r['episode']: r for r in sql_result}
 
     try:
-        logger.log('Reverting episode %sx%s: [%s]' % (ep_obj.season, ep_obj.episode, ep_obj.name))
+        logger.log(f'Reverting episode {ep_obj.season}x{ep_obj.episode}: [{ep_obj.name}]')
         with ep_obj.lock:
             if ep_obj.episode in history_eps:
                 status_revert = history_eps[ep_obj.episode]['old_status']
 
                 status, quality = Quality.split_composite_status(status_revert)
-                logger.log('Found in failed.db history with status: %s quality: %s' % (
-                    statusStrings[status], Quality.qualityStrings[quality]))
+                logger.log(f'Found in failed.db history with'
+                           f' status: {statusStrings[status]}'
+                           f' quality: {Quality.qualityStrings[quality]}')
             else:
                 status_revert = WANTED
 
@@ -245,7 +246,7 @@ def revert_episode(ep_obj):
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
-        logger.warning('Unable to create episode, please set its status manually: %s' % ex(e))
+        logger.warning(f'Unable to create episode, please set its status manually: {ex(e)}')
 
 
 def find_old_status(ep_obj):
@@ -275,7 +276,7 @@ def find_release(ep_obj):
     # Clear old snatches for this release if any exist
     from_where = ' FROM history WHERE indexer=%s AND showid=%s AND season=%s AND episode=%s' % \
                  (ep_obj.show_obj.tvid, ep_obj.show_obj.prodid, ep_obj.season, ep_obj.episode)
-    db_action('DELETE %s AND date < (SELECT max(date) %s)' % (from_where, from_where))
+    db_action(f'DELETE {from_where} AND date < (SELECT max(date) {from_where})')
 
     # Search for release in snatch history
     results = db_select(
@@ -288,7 +289,7 @@ def find_release(ep_obj):
         provider = r['provider']
 
         # Clear any incomplete snatch records for this release if any exist
-        db_action('DELETE FROM history WHERE %s=? AND %s!=?' % ('`release`', '`date`'), [release, r['date']])
+        db_action(f'DELETE FROM history WHERE `release`=? AND `date`!=?', [release, r['date']])
 
         # Found a previously failed release
         logger.debug(f'Found failed.db history release {ep_obj.season}x{ep_obj.episode}: [{release}]')
@@ -297,7 +298,7 @@ def find_release(ep_obj):
         provider = None
 
         # Release not found
-        logger.debug('No found failed.db history release for %sx%s: [%s]' % (
-            ep_obj.season, ep_obj.episode, ep_obj.show_obj.unique_name))
+        logger.debug(f'No found failed.db history release for'
+                     f' {ep_obj.season}x{ep_obj.episode}: [{ep_obj.show_obj.unique_name}]')
 
     return release, provider

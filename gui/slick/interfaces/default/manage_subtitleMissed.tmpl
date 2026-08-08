@@ -25,7 +25,7 @@
     #if $which_subs:
 
 	<h2>All of your episodes have $subs_language subtitles.</h2>
-	<br />
+	<br>
     #end if
 
 	<form action="$sbRoot/manage/subtitle-missed" method="get">
@@ -41,20 +41,20 @@
 	</form>
 #else
 
-<script type="text/javascript" src="$sbRoot/js/manageSubtitleMissed.js?v=$sbPID"></script>
+<script src="$sbRoot/js/manageSubtitleMissed.js?v=$sbPID"></script>
 	<input type="hidden" id="selectSubLang" value="$which_subs">
 
 	<form action="$sbRoot/manage/download-subtitle-missed" method="post">
 		$xsrf_form_html
 
 		<h2>Episodes without $subs_language subtitles.</h2>
-		<br />
-		Download missed subtitles for selected episodes <input class="btn btn-inline" type="submit" value="Go" />
+		<br>
+		Download missed subtitles for selected episodes <input class="btn btn-inline" type="submit" value="Go">
 		<div>
 			<button type="button" class="btn btn-xs selectAllShows">Select all</a></button>
 			<button type="button" class="btn btn-xs unselectAllShows">Clear all</a></button>
 		</div>
-		<br />
+		<br>
 		<table class="sickbeardTable manageTable" cellspacing="1" border="0" cellpadding="0">
     #for $tvid_prodid in $sorted_show_ids:
 			<tr id="$tvid_prodid">

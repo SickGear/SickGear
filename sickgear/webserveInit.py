@@ -53,7 +53,7 @@ class WebServer(threading.Thread):
         assert 'data_root' in self.options
 
         # web root
-        self.options['web_root'] = ('/' + self.options['web_root'].lstrip('/')) if self.options['web_root'] else ''
+        self.options['web_root'] = f'/{self.options["web_root"].lstrip("/")}' if self.options['web_root'] else ''
 
         # tornado setup
         self.enable_https = self.options['enable_https']
@@ -67,8 +67,8 @@ class WebServer(threading.Thread):
                 ssl_path = getattr(self, attr, None)
                 if ssl_path and not os.path.isfile(ssl_path):
                     if not ssl_path.endswith(ext):
-                        setattr(self, attr, os.path.join(ssl_path, 'server%s' % ext))
-                        setattr(sickgear, attr.upper(), 'server%s' % ext)
+                        setattr(self, attr, os.path.join(ssl_path, f'server{ext}'))
+                        setattr(sickgear, attr.upper(), f'server{ext}')
                     make_cert = True
 
             # If either the HTTPS certificate or key do not exist, make some self-signed ones.
@@ -98,7 +98,7 @@ class WebServer(threading.Thread):
                                  compress_response=True,
                                  cookie_secret=sickgear.COOKIE_SECRET,
                                  xsrf_cookies=True,
-                                 login_url='%s/login/' % self.options['web_root'],
+                                 login_url=f'{self.options["web_root"]}/login/',
                                  default_handler_class=webserve.WrongHostWebHandler)
 
         self.re_host_pattern = re_valid_hostname()
@@ -108,38 +108,38 @@ class WebServer(threading.Thread):
         self.app.is_loading_handler = True
         # webui login/logout handlers
         self.app.add_handlers(self.re_host_pattern, [
-            (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
-            (r'%s/logout(/?)' % self.options['web_root'], webserve.LogoutHandler),
+            (rf"{self.options['web_root']}/login(/?)", webserve.LoginHandler),
+            (rf"{self.options['web_root']}/logout(/?)", webserve.LogoutHandler),
         ])
 
         # Static File Handlers
         self.app.add_handlers(self.re_host_pattern, [
             # favicon
-            (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/(favicon\.ico)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'images', 'ico')}),
 
             # images
-            (r'%s/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/images/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'images')}),
 
             # css
-            (r'%s/css/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/css/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'css')}),
 
             # javascript
-            (r'%s/js/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/js/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'js')}),
         ])
 
         # Main Handler
         self.app.add_handlers(self.re_host_pattern, [
-            (r'%s/api(/?.*)' % self.options['web_root'], webapi.ApiServerLoading),
-            (r'%s/home/is-alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s(/?.*)' % self.options['web_root'], webserve.LoadingWebHandler),
+            (rf"{self.options['web_root']}/api(/?.*)", webapi.ApiServerLoading),
+            (rf"{self.options['web_root']}/home/is-alive(/?.*)", webserve.IsAliveHandler),
+            (rf"{self.options['web_root']}/ui(/?.*)", webserve.UI),
+            (rf"{self.options['web_root']}(/?.*)", webserve.LoadingWebHandler),
             # ----------------------------------------------------------------------------------------------------------
             # legacy deprecated Aug 2019
-            (r'%s/home/is_alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
+            (rf"{self.options['web_root']}/home/is_alive(/?.*)", webserve.IsAliveHandler),
         ])
 
         self.app.add_handlers(r'.*', [(r'.*', webserve.WrongHostWebHandler)])
@@ -148,83 +148,83 @@ class WebServer(threading.Thread):
         self.app.is_loading_handler = False
         # webui login/logout handlers
         self.app.add_handlers(self.re_host_pattern, [
-            (r'%s/login(/?)' % self.options['web_root'], webserve.LoginHandler),
-            (r'%s/logout(/?)' % self.options['web_root'], webserve.LogoutHandler),
+            (rf"{self.options['web_root']}/login(/?)", webserve.LoginHandler),
+            (rf"{self.options['web_root']}/logout(/?)", webserve.LogoutHandler),
         ])
 
         # Web calendar handler (Needed because option Unprotected calendar)
         self.app.add_handlers(self.re_host_pattern, [
-            (r'%s/calendar' % self.options['web_root'], webserve.CalendarHandler),
+            (rf"{self.options['web_root']}/calendar", webserve.CalendarHandler),
         ])
 
         # Static File Handlers
         self.app.add_handlers(self.re_host_pattern, [
             # favicon
-            (r'%s/(favicon\.ico)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/(favicon\.ico)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'images', 'ico')}),
 
             # images
-            (r'%s/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/images/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'images')}),
 
             # cached images
-            (r'%s/cache/images/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/cache/images/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(sickgear.CACHE_DIR, 'images')}),
 
             # css
-            (r'%s/css/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/css/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'css')}),
 
             # javascript
-            (r'%s/js/(.*)' % self.options['web_root'], webserve.BaseStaticFileHandler,
+            (rf"{self.options['web_root']}/js/(.*)", webserve.BaseStaticFileHandler,
              {'path': os.path.join(self.options['data_root'], 'js')}),
 
             # logfile
-            (r'%s/logfile/(.*)' % self.options['web_root'], webserve.LogfileHandler),
+            (rf"{self.options['web_root']}/logfile/(.*)", webserve.LogfileHandler),
 
-            (r'%s/kodi/((?:(?![|]verifypeer=false).)*)' % self.options['web_root'], webserve.RepoHandler,
+            (rf"{self.options['web_root']}/kodi/((?:(?![|]verifypeer=false).)*)", webserve.RepoHandler,
              {'path': os.path.join(sickgear.CACHE_DIR, 'clients', 'kodi'),
               'default_filename': 'index.html'}),
 
-            (r'%s/kodi-legacy/((?:(?![|]verifypeer=false).)*)' % self.options['web_root'], webserve.RepoHandler,
+            (rf"{self.options['web_root']}/kodi-legacy/((?:(?![|]verifypeer=false).)*)", webserve.RepoHandler,
              {'path': os.path.join(sickgear.CACHE_DIR, 'clients', 'kodi'),
               'default_filename': 'index.html', 'legacy': True}),
         ])
 
         # Main Handler
         self.app.add_handlers(self.re_host_pattern, [
-            (r'%s/ui(/?.*)' % self.options['web_root'], webserve.UI),
-            (r'%s/home/is-alive(/?.*)' % self.options['web_root'], webserve.IsAliveHandler),
-            (r'%s/imagecache(/?.*)' % self.options['web_root'], webserve.CachedImages),
-            (r'%s/cache(/?.*)' % self.options['web_root'], webserve.Cache),
-            (r'%s(/?update-watched-state-kodi/?)' % self.options['web_root'], webserve.NoXSRFHandler),
-            (r'%s(/?update-watched-state-kodi-legacy/?)' % self.options['web_root'], webserve.NoXSRFHandler,
+            (rf"{self.options['web_root']}/ui(/?.*)", webserve.UI),
+            (rf"{self.options['web_root']}/home/is-alive(/?.*)", webserve.IsAliveHandler),
+            (rf"{self.options['web_root']}/imagecache(/?.*)", webserve.CachedImages),
+            (rf"{self.options['web_root']}/cache(/?.*)", webserve.Cache),
+            (rf"{self.options['web_root']}(/?update-watched-state-kodi/?)", webserve.NoXSRFHandler),
+            (rf"{self.options['web_root']}(/?update-watched-state-kodi-legacy/?)", webserve.NoXSRFHandler,
              {'legacy': True}),
-            (r'%s/add-shows(/?.*)' % self.options['web_root'], webserve.AddShows),
-            (r'%s/home/process-media(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
-            (r'%s/config/general(/?.*)' % self.options['web_root'], webserve.ConfigGeneral),
-            (r'%s/config/search(/?.*)' % self.options['web_root'], webserve.ConfigSearch),
-            (r'%s/config/providers(/?.*)' % self.options['web_root'], webserve.ConfigProviders),
-            (r'%s/config/media-process(/?.*)' % self.options['web_root'], webserve.ConfigMediaProcess),
-            (r'%s/config/subtitles(/?.*)' % self.options['web_root'], webserve.ConfigSubtitles),
-            (r'%s/config/notifications(/?.*)' % self.options['web_root'], webserve.ConfigNotifications),
-            (r'%s/config/anime(/?.*)' % self.options['web_root'], webserve.ConfigAnime),
-            (r'%s/manage/search-tasks(/?.*)' % self.options['web_root'], webserve.ManageSearch),
-            (r'%s/manage/show-tasks(/?.*)' % self.options['web_root'], webserve.ShowTasks),
-            (r'%s/api/builder(/?)(.*)' % self.options['web_root'], webserve.ApiBuilder),
-            (r'%s/api(/?.*)' % self.options['web_root'], webapi.Api),
+            (rf"{self.options['web_root']}/add-shows(/?.*)", webserve.AddShows),
+            (rf"{self.options['web_root']}/home/process-media(/?.*)", webserve.HomeProcessMedia),
+            (rf"{self.options['web_root']}/config/general(/?.*)", webserve.ConfigGeneral),
+            (rf"{self.options['web_root']}/config/search(/?.*)", webserve.ConfigSearch),
+            (rf"{self.options['web_root']}/config/providers(/?.*)", webserve.ConfigProviders),
+            (rf"{self.options['web_root']}/config/media-process(/?.*)", webserve.ConfigMediaProcess),
+            (rf"{self.options['web_root']}/config/subtitles(/?.*)", webserve.ConfigSubtitles),
+            (rf"{self.options['web_root']}/config/notifications(/?.*)", webserve.ConfigNotifications),
+            (rf"{self.options['web_root']}/config/anime(/?.*)", webserve.ConfigAnime),
+            (rf"{self.options['web_root']}/manage/search-tasks(/?.*)", webserve.ManageSearch),
+            (rf"{self.options['web_root']}/manage/show-tasks(/?.*)", webserve.ShowTasks),
+            (rf"{self.options['web_root']}/api/builder(/?)(.*)", webserve.ApiBuilder),
+            (rf"{self.options['web_root']}/api(/?.*)", webapi.Api),
             # ----------------------------------------------------------------------------------------------------------
             # legacy deprecated Aug 2019 - NEVER remove as used in external scripts
-            (r'%s/home/postprocess(/?.*)' % self.options['web_root'], webserve.HomeProcessMedia),
+            (rf"{self.options['web_root']}/home/postprocess(/?.*)", webserve.HomeProcessMedia),
             # regular catchall routes - keep here at the bottom
-            (r'%s/home(/?.*)' % self.options['web_root'], webserve.Home),
-            (r'%s/manage/(/?.*)' % self.options['web_root'], webserve.Manage),
-            (r'%s/config(/?.*)' % self.options['web_root'], webserve.Config),
-            (r'%s/browser(/?.*)' % self.options['web_root'], webserve.WebFileBrowser),
-            (r'%s/errors(/?.*)' % self.options['web_root'], webserve.EventLogs),
-            (r'%s/events(/?.*)' % self.options['web_root'], webserve.EventLogs),
-            (r'%s/history(/?.*)' % self.options['web_root'], webserve.History),
-            (r'%s(/?.*)' % self.options['web_root'], webserve.MainHandler),
+            (rf"{self.options['web_root']}/home(/?.*)", webserve.Home),
+            (rf"{self.options['web_root']}/manage/(/?.*)", webserve.Manage),
+            (rf"{self.options['web_root']}/config(/?.*)", webserve.Config),
+            (rf"{self.options['web_root']}/browser(/?.*)", webserve.WebFileBrowser),
+            (rf"{self.options['web_root']}/errors(/?.*)", webserve.EventLogs),
+            (rf"{self.options['web_root']}/events(/?.*)", webserve.EventLogs),
+            (rf"{self.options['web_root']}/history(/?.*)", webserve.History),
+            (rf"{self.options['web_root']}(/?.*)", webserve.MainHandler),
         ])
 
         self.app.add_handlers(r'.*', [(r'.*', webserve.WrongHostWebHandler)])
@@ -272,7 +272,7 @@ class WebServer(threading.Thread):
                 getattr(s, nh)()
                 sickgear.classes.loading_msg.reset()
             self.io_loop.add_callback(d_f, self, new_handler)
-            logger.debug('Switching HTTP Server handlers to %s' % new_handler)
+            logger.debug(f'Switching HTTP Server handlers to {new_handler}')
 
     def shut_down(self):
         self.alive = False

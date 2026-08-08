@@ -37,7 +37,7 @@ from sickgear.webserveInit import WebServer
 from sickgear import webapi, scheduler, search_backlog, search_queue, show_queue, history, db
 from sickgear.scene_numbering import set_scene_numbering_helper
 from lib import requests
-from six import integer_types, iteritems, iterkeys, itervalues, string_types
+from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -156,7 +156,7 @@ class WebAPICase(test.SickbeardTestDBCase):
             sickgear.process_media_scheduler.is_running_job = False
             sickgear.update_show_scheduler.is_running_job = False
         except (BaseException, Exception) as e:
-            print('Failed to start WebServer: %s' % ex(e))
+            print(f'Failed to start WebServer: {ex(e)}')
 
     @classmethod
     def tearDownClass(cls):
@@ -197,11 +197,11 @@ class WebAPICase(test.SickbeardTestDBCase):
                 sickgear.ROOT_DIRS = root_dirs
             for cur_show in test_shows:
                 show_obj = TVShow(cur_show['tvid'], cur_show['prodid'])
-                for k, v in iteritems(cur_show):
+                for k, v in cur_show.items():
                     if k in ('tvid', 'prodid', 'episodes', 'quality_init', 'quality_upgrade'):
                         continue
-                    if '_%s' % k in show_obj.__dict__:
-                        show_obj.__dict__['_%s' % k] = v
+                    if f'_{k}' in show_obj.__dict__:
+                        show_obj.__dict__[f'_{k}'] = v
                     elif k in show_obj.__dict__:
                         show_obj.__dict__[k] = v
                 if 'quality_init' in cur_show and cur_show['quality_init']:
@@ -213,12 +213,12 @@ class WebAPICase(test.SickbeardTestDBCase):
                 sickgear.showList.append(show_obj)
                 sickgear.showDict.update({show_obj.sid_int: show_obj})
 
-                for season, eps in iteritems(cur_show['episodes']):
-                    for ep, data in iteritems(eps):
+                for season, eps in cur_show['episodes'].items():
+                    for ep, data in eps.items():
                         ep_obj = TVEpisode(show_obj, season, ep)
-                        for k, v in iteritems(data):
-                            if '_%s' % k in ep_obj.__dict__:
-                                ep_obj.__dict__['_%s' % k] = v
+                        for k, v in data.items():
+                            if f'_{k}' in ep_obj.__dict__:
+                                ep_obj.__dict__[f'_{k}'] = v
                             elif k in ep_obj.__dict__:
                                 ep_obj.__dict__[k] = v
                         show_obj.sxe_ep_obj.setdefault(season, {})[ep] = ep_obj
@@ -227,12 +227,12 @@ class WebAPICase(test.SickbeardTestDBCase):
                         if status in (DOWNLOADED, SNATCHED):
                             s_r = SearchResult([ep_obj])
                             s_r.show_obj, s_r.quality, s_r.provider, s_r.name = \
-                                show_obj, quality, None, '%s.S%sE%s.group' % (
-                                    show_obj.name, ep_obj.season, ep_obj.episode)
+                                show_obj, quality, None, f'{show_obj.name}.S{ep_obj.season}E{ep_obj.episode}.group'
                             history.log_snatch(s_r)
                             if DOWNLOADED == status:
-                                history.log_download(ep_obj, '%s.S%sE%s.group.mkv' % (
-                                    show_obj.name, ep_obj.season, ep_obj.episode), quality, 'group')
+                                history.log_download(
+                                    ep_obj,
+                                    f'{show_obj.name}.S{ep_obj.season}E{ep_obj.episode}.group.mkv', quality, 'group')
 
             sickgear.webserve.Home.make_showlist_unique_names()
 
@@ -254,8 +254,8 @@ class WebAPICase(test.SickbeardTestDBCase):
                 show_obj.upgrade_once = int(cur_show.get('upgrade_once', 0))
                 show_obj.scene = int(cur_show.get('scene', 0))
                 show_obj.save_to_db()
-                for season, data in iteritems(cur_show['episodes']):
-                    for ep_nb, cur_ep in iteritems(data):
+                for season, data in cur_show['episodes'].items():
+                    for ep_nb, cur_ep in data.items():
                         ep_obj = show_obj.get_episode(season, ep_nb)
                         ep_obj.status = cur_ep.get('status')
                         ep_obj.save_to_db()
@@ -268,7 +268,7 @@ class WebAPICase(test.SickbeardTestDBCase):
         param = {'cmd': webapi._functionMaper_reversed[cmd]}
         if isinstance(params, dict):
             param.update(params)
-        return requests.get('http://127.0.0.1:%s/api/%s' % (sickgear.WEB_PORT, sickgear.API_KEYS[0][1]),
+        return requests.get(f'http://127.0.0.1:{sickgear.WEB_PORT}/api/{sickgear.API_KEYS[0][1]}',
                             params=param).json()
 
     @staticmethod
@@ -280,18 +280,18 @@ class WebAPICase(test.SickbeardTestDBCase):
                 missing_list.append(f[0])
                 result = False
             elif not isinstance(data[f[0]], f[1]):
-                wrong_type[f[0]] = 'Expected: %s, Got: %s' % (type(data[f[0]]), str(f[1]))
+                wrong_type[f[0]] = f'Expected: {type(data[f[0]])}, Got: {f[1]!s}'
                 result = False
         if missing_list:
-            msg.append('Missing fields: %s' % ', '.join(missing_list))
+            msg.append(f'Missing fields: {", ".join(missing_list)}')
         if wrong_type:
-            msg.append('Wrong field type: %s' % ', '.join(['%s: %s' % (k, v) for k, v in iteritems(wrong_type)]))
-        return result, ('', ', %s' % ', '.join(msg))[0 < len(msg)]
+            msg.append(f'Wrong field type: {", ".join([f"{k}: {v}" for k, v in wrong_type.items()])}')
+        return result, ('', f', {", ".join(msg)}')[0 < len(msg)]
 
     def _check_success_base_response(self, data, endpoint, message='', data_type=dict):
         # type: (Any, Any, AnyStr, type) -> None
         r, msg = self._check_types(data, [('result', string_types), ('data', data_type), ('message', string_types)])
-        self.assertTrue(r, msg='Failed command: %s%s' % (webapi._functionMaper_reversed[endpoint], msg))
+        self.assertTrue(r, msg=f'Failed command: {webapi._functionMaper_reversed[endpoint]}{msg}')
         self.assertEqual(data['result'], 'success')
         self.assertEqual(data['message'], message)
 
@@ -303,25 +303,26 @@ class WebAPICase(test.SickbeardTestDBCase):
              ('scene_episode', integer_types), ('scene_season', integer_types), ('status', string_types),
              ('timezone', (NoneType, string_types))]
         )
-        self.assertTrue(r, msg='Failed command: %s - data episode dict%s' % (
-            webapi._functionMaper_reversed[endpoint], msg))
+        self.assertTrue(r, msg=f'Failed command: {webapi._functionMaper_reversed[endpoint]} - data episode dict{msg}')
 
     def test_sg(self):
         data = self._request_from_api(webapi.CMD_SickGear)
         r, msg = self._check_types(data, [('data', dict), ('message', string_types), ('result', string_types)])
-        self.assertTrue(r, msg='Failed command: %s%s' % (webapi._functionMaper_reversed[webapi.CMD_SickGear], msg))
+        self.assertTrue(r, msg=f'Failed command: {webapi._functionMaper_reversed[webapi.CMD_SickGear]}{msg}')
         r, msg = self._check_types(data['data'], [('api_commands', list), ('api_version', integer_types),
                                              ('fork', string_types), ('sb_version', string_types)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGear], msg))
-        needed_ele = [(k, string_types) for k in iterkeys(webapi._functionMaper) if 'listcommands' != k]
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGear]}'
+                               f' - data dict{msg}')
+        needed_ele = [(k, string_types) for k in webapi._functionMaper.keys() if 'listcommands' != k]
         r = all(v[0] in data['data']['api_commands'] for v in needed_ele)
         if not r:
             i = list(set(n[0] for n in needed_ele) - set(data['data']['api_commands']))
         else:
             i = []
-        self.assertTrue(r, msg='Failed command: %s - api_commands list%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGear], ('', ', missing: %s' % ','.join(i))[0 < len(i)]))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGear]}'
+                               f' - api_commands list{("", ", missing: %s" % ",".join(i))[0 < len(i)]}')
 
     def _check_show_fields(self, data, endpoint, include_season_list=True):
         r, msg = self._check_types(
@@ -340,23 +341,24 @@ class WebAPICase(test.SickbeardTestDBCase):
              ('tvrage_name', string_types), ('upgrade_once', integer_types)] +
             ([], [('season_list', list)])[include_season_list]
         )
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[endpoint], msg))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[endpoint]}'
+                               f' - data dict{msg}')
         r, msg = self._check_types(data['ids'],
-                                   [('%s' % k, integer_types) for k in sickgear.indexermapper.indexer_list])
-        self.assertTrue(r, msg='Failed shows "ids" check: %s' % msg)
+                                   [(f'{k}', integer_types) for k in sickgear.indexermapper.indexer_list])
+        self.assertTrue(r, msg=f'Failed shows "ids" check: {msg}')
         r, msg = self._check_types(
             data['quality_details'],
             [('archive', list), ('initial', list)]
         )
-        self.assertTrue(r, msg='Failed shows "quality_details" check: %s' % msg)
+        self.assertTrue(r, msg=f'Failed shows "quality_details" check: {msg}')
 
     def test_show(self):
         # test not found
         data = self._request_from_api(webapi.CMD_SickGearShow, params={'indexer': 1, 'indexerid': 98765})
         r, msg = self._check_types(data, [('result', string_types), ('data', dict), ('message', string_types)])
-        self.assertTrue(r, msg='Failed command: %s%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearShow], msg))
+        self.assertTrue(r, msg=f'Failed command: '
+                               f'{webapi._functionMaper_reversed[webapi.CMD_SickGearShow]}{msg}')
         self.assertEqual(data['result'], 'failure')
         self.assertEqual(data['message'], 'Show not found')
         # test existing show
@@ -371,22 +373,25 @@ class WebAPICase(test.SickbeardTestDBCase):
             data = self._request_from_api(webapi.CMD_SickGearShowSeasons,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearShowSeasons)
-            for season, eps in iteritems(cur_show['episodes']):
-                r, msg = self._check_types(data['data'], [('%s' % season, dict)])
-                self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                    webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons], msg))
-                for cur_ep in iterkeys(eps):
-                    r, msg = self._check_types(data['data']['%s' % season], [('%s' % cur_ep, dict)])
-                    self.assertTrue(r, msg='Failed command: %s - data season dict%s' % (
-                        webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons], msg))
-                    self._check_episode_data(data['data']['%s' % season]['%s' % cur_ep], webapi.CMD_SickGearShowSeasons)
+            for season, eps in cur_show['episodes'].items():
+                r, msg = self._check_types(data['data'], [(f'{season}', dict)])
+                self.assertTrue(r, msg=f'Failed command: '
+                                       f'{webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons]}'
+                                       f' - data dict{msg}')
+                for cur_ep in eps.keys():
+                    r, msg = self._check_types(data['data'][f'{season}'], [(f'{cur_ep}', dict)])
+                    self.assertTrue(r, msg=f'Failed command: '
+                                           f'{webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons]}'
+                                           f' - data season dict{msg}')
+                    self._check_episode_data(data['data'][f'{season}'][f'{cur_ep}'], webapi.CMD_SickGearShowSeasons)
 
     def test_coming_episodes(self):
         data = self._request_from_api(webapi.CMD_SickGearComingEpisodes)
         self._check_success_base_response(data, webapi.CMD_SickGearComingEpisodes)
         r, msg = self._check_types(data['data'], [('later', list), ('missed', list), ('soon', list), ('today', list)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearComingEpisodes], msg))
+        self.assertTrue(r, msg=f'Failed command: '
+                               f'{webapi._functionMaper_reversed[webapi.CMD_SickGearComingEpisodes]}'
+                               f' - data dict{msg}')
         self.assertTrue(all(0 < len(data['data'][t]) for t in ('later', 'missed', 'soon', 'today')),
                         msg='Not all categories returned')
         for t_p in ('later', 'missed', 'soon', 'today'):
@@ -402,16 +407,17 @@ class WebAPICase(test.SickbeardTestDBCase):
                      ('status', integer_types), ('status_str', string_types), ('timezone', (NoneType, string_types)),
                      ('tv_id', integer_types), ('tvdbid', integer_types), ('weekday', integer_types)]
                 )
-                self.assertTrue(r, msg='Failed command: %s - data %s dict%s' % (
-                    webapi._functionMaper_reversed[webapi.CMD_SickGearComingEpisodes], t_p, msg))
+                self.assertTrue(r, msg=f'Failed command: '
+                                       f'{webapi._functionMaper_reversed[webapi.CMD_SickGearComingEpisodes]}'
+                                       f' - data {t_p} dict{msg}')
                 r, msg = self._check_types(cur_ep['ids'],
-                                           [('%s' % k, integer_types) for k in sickgear.indexermapper.indexer_list])
-                self.assertTrue(r, msg='Failed %s "ids" check: %s' % (t_p, msg))
+                                           [(f'{k}', integer_types) for k in sickgear.indexermapper.indexer_list])
+                self.assertTrue(r, msg=f'Failed {t_p} "ids" check: {msg}')
 
     def test_all_shows(self):
         data = self._request_from_api(webapi.CMD_SickGearShows)
         self._check_success_base_response(data, webapi.CMD_SickGearShows)
-        for show_id, cur_show in iteritems(data['data']):
+        for show_id, cur_show in data['data'].items():
             self._check_show_fields(cur_show, webapi.CMD_SickGearShows, include_season_list=False)
 
     def test_episode(self):
@@ -419,14 +425,14 @@ class WebAPICase(test.SickbeardTestDBCase):
         data = self._request_from_api(webapi.CMD_SickGearEpisode,
                                       params={'indexer': 1, 'indexerid': 1234, 'season': 10, 'episode': 11})
         r, msg = self._check_types(data, [('result', string_types), ('data', dict), ('message', string_types)])
-        self.assertTrue(r, msg='Failed command: %s%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearEpisode], msg))
+        self.assertTrue(r, msg=f'Failed command: '
+                               f'{webapi._functionMaper_reversed[webapi.CMD_SickGearEpisode]}{msg}')
         self.assertEqual(data['result'], 'error')
         self.assertEqual(data['message'], 'Episode not found')
         # found episode
         for cur_show in test_shows:
-            for season, eps in iteritems(cur_show['episodes']):
-                for cur_ep in iterkeys(eps):
+            for season, eps in cur_show['episodes'].items():
+                for cur_ep in eps.keys():
                     data = self._request_from_api(webapi.CMD_SickGearEpisode,
                                                   params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid'],
                                                           'season': season, 'episode': cur_ep})
@@ -440,8 +446,9 @@ class WebAPICase(test.SickbeardTestDBCase):
                          ('scene_episode', (NoneType, integer_types)), ('scene_season', (NoneType, integer_types)),
                          ('status', string_types), ('subtitles', string_types), ('timezone', (NoneType, string_types))]
                     )
-                    self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                        webapi._functionMaper_reversed[webapi.CMD_SickGearEpisode], msg))
+                    self.assertTrue(r, msg=f'Failed command: '
+                                           f'{webapi._functionMaper_reversed[webapi.CMD_SickGearEpisode]}'
+                                           f' - data dict{msg}')
 
     def test_shutdown(self):
         data = self._request_from_api(webapi.CMD_SickGearShutdown)
@@ -467,16 +474,18 @@ class WebAPICase(test.SickbeardTestDBCase):
     def test_get_indexers(self):
         data = self._request_from_api(webapi.CMD_SickGearGetIndexers)
         self._check_success_base_response(data, webapi.CMD_SickGearGetIndexers)
-        r, msg = self._check_types(data['data'], [('%s' % k, dict) for k in sickgear.indexermapper.indexer_list])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearGetIndexers], msg))
+        r, msg = self._check_types(data['data'], [(f'{k}', dict) for k in sickgear.indexermapper.indexer_list])
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearGetIndexers]}'
+                               f' - data dict{msg}')
         for i in sickgear.indexermapper.indexer_list:
             r, msg = self._check_types(
-                data['data']['%s' % i],
+                data['data'][f'{i}'],
                 [('id', integer_types), ('main_url', string_types), ('name', string_types), ('searchable', bool),
                  ('show_url', string_types)])
-            self.assertTrue(r, msg='Failed command: %s - data %s dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearGetIndexers], i, msg))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearGetIndexers]}'
+                                   f' - data {i} dict{msg}')
 
     def test_get_seasonlist(self):
         for cur_show in test_shows:
@@ -484,68 +493,76 @@ class WebAPICase(test.SickbeardTestDBCase):
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearShowSeasonList, data_type=list)
             r = all(isinstance(v, integer_types) for v in data['data'])
-            self.assertTrue(r, msg='Failed command: %s - data dict incorrect type' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasonList]))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasonList]}'
+                                   f' - data dict incorrect type')
 
     def test_get_episodelist(self):
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearShowSeasons,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearShowSeasons)
-            r, msg = self._check_types(data['data'], [('%s' % i, dict) for i in iterkeys(cur_show['episodes'])])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons], msg))
-            for season, eps in iteritems(cur_show['episodes']):
-                r, msg = self._check_types(data['data'], [('%s' % season, dict)])
-                self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                    webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons], msg))
-                for cur_ep in iterkeys(eps):
-                    r, msg = self._check_types(data['data']['%s' % season], [('%s' % cur_ep, dict)])
-                    self.assertTrue(r, msg='Failed command: %s - data season dict%s' % (
-                        webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons], msg))
-                    self._check_episode_data(data['data']['%s' % season]['%s' % cur_ep], webapi.CMD_SickGearShowSeasons)
+            r, msg = self._check_types(data['data'], [(f'{i}', dict) for i in cur_show['episodes'].keys()])
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons]}'
+                                   f' - data dict{msg}')
+            for season, eps in cur_show['episodes'].items():
+                r, msg = self._check_types(data['data'], [(f'{season}', dict)])
+                self.assertTrue(r, msg=f'Failed command:'
+                                       f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons]}'
+                                       f' - data dict{msg}')
+                for cur_ep in eps.keys():
+                    r, msg = self._check_types(data['data'][f'{season}'], [(f'{cur_ep}', dict)])
+                    self.assertTrue(r, msg=f'Failed command:'
+                                           f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowSeasons]}'
+                                           f' - data season dict{msg}')
+                    self._check_episode_data(data['data'][f'{season}'][f'{cur_ep}'], webapi.CMD_SickGearShowSeasons)
 
     def test_get_require_words(self):
         # global
         data = self._request_from_api(webapi.CMD_SickGearListRequireWords)
         self._check_success_base_response(data, webapi.CMD_SickGearListRequireWords, message='Global require word list')
         r, msg = self._check_types(data['data'], [('require words', list), ('type', string_types), ('use regex', bool)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearListRequireWords], msg))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearListRequireWords]}'
+                               f' - data dict{msg}')
         # show based
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearListRequireWords,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearListRequireWords,
-                                              message='%s: require word list' % cur_show['name'])
+                                              message=f'{cur_show["name"]}: require word list')
             r, msg = self._check_types(
                 data['data'],
                 [('require words', list), ('type', string_types), ('use regex', bool),
                  ('global exclude require', list), ('indexer', integer_types), ('indexerid', integer_types),
                  ('show name', string_types)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearListRequireWords], msg))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearListRequireWords]}'
+                                   f' - data dict{msg}')
 
     def test_get_ignore_words(self):
         # global
         data = self._request_from_api(webapi.CMD_SickGearListIgnoreWords)
         self._check_success_base_response(data, webapi.CMD_SickGearListIgnoreWords, message='Global ignore word list')
         r, msg = self._check_types(data['data'], [('ignore words', list), ('type', string_types), ('use regex', bool)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearListIgnoreWords], msg))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearListIgnoreWords]}'
+                               f' - data dict{msg}')
         # show based
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearListIgnoreWords,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearListIgnoreWords,
-                                              message='%s: ignore word list' % cur_show['name'])
+                                              message=f'{cur_show["name"]}: ignore word list')
             r, msg = self._check_types(
                 data['data'],
                 [('ignore words', list), ('type', string_types), ('use regex', bool),
                  ('global exclude ignore', list), ('indexer', integer_types), ('indexerid', integer_types),
                  ('show name', string_types)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearListIgnoreWords], msg))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearListIgnoreWords]}'
+                                   f' - data dict{msg}')
 
     def test_get_search_queue(self):
         data = self._request_from_api(webapi.CMD_SickGearSearchQueue)
@@ -553,8 +570,9 @@ class WebAPICase(test.SickbeardTestDBCase):
         r, msg = self._check_types(
             data['data'],
             [(t, list) for t in ('backlog', 'failed', 'manual', 'proper')] + [('recent', integer_types)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearSearchQueue], msg))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearSearchQueue]}'
+                               f' - data dict{msg}')
 
     def test_get_system_default(self):
         data = self._request_from_api(webapi.CMD_SickGearGetDefaults)
@@ -563,38 +581,43 @@ class WebAPICase(test.SickbeardTestDBCase):
             data['data'],
             [('archive', list), ('flatten_folders', integer_types), ('future_show_paused', integer_types),
              ('initial', list), ('status', string_types)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearGetDefaults], msg))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearGetDefaults]}'
+                               f' - data dict{msg}')
 
     def test_get_all_qualities(self):
         data = self._request_from_api(webapi.CMD_SickGearGetQualities)
         self._check_success_base_response(data, webapi.CMD_SickGearGetQualities)
-        r, msg = self._check_types(data['data'], [(q, integer_types) for q in iterkeys(webapi.quality_map)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearGetQualities], msg))
+        r, msg = self._check_types(data['data'], [(q, integer_types) for q in webapi.quality_map.keys()])
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearGetQualities]}'
+                               f' - data dict{msg}')
 
     def test_get_human_qualities(self):
         data = self._request_from_api(webapi.CMD_SickGearGetqualityStrings)
         self._check_success_base_response(data, webapi.CMD_SickGearGetqualityStrings)
-        r, msg = self._check_types(data['data'], [('%s' % q, string_types) for q in iterkeys(Quality.qualityStrings)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearGetqualityStrings], msg))
+        r, msg = self._check_types(data['data'], [(f'{q}', string_types) for q in Quality.qualityStrings.keys()])
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearGetqualityStrings]}'
+                               f' - data dict{msg}')
 
     def test_get_scene_qualities(self):
         # global
         data = self._request_from_api(webapi.CMD_SickGearExceptions)
         self._check_success_base_response(data, webapi.CMD_SickGearExceptions)
         r = all(isinstance(e, string_types) for e in data['data'])
-        self.assertTrue(r, msg='Failed command: %s - data dict' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearExceptions]))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearExceptions]}'
+                               f' - data dict')
         # show specific
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearExceptions,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearExceptions, data_type=list)
             r = all(isinstance(e, string_types) for e in data['data'])
-            self.assertTrue(r, msg='Failed command: %s - data dict' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearExceptions]))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearExceptions]}'
+                                   f' - data dict')
 
     def test_history(self):
         data = self._request_from_api(webapi.CMD_SickGearHistory)
@@ -608,8 +631,9 @@ class WebAPICase(test.SickbeardTestDBCase):
                  ('resource', string_types), ('resource_path', string_types), ('season', integer_types),
                  ('show_name', string_types), ('status', string_types), ('tvdbid', integer_types),
                  ('version', integer_types)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearHistory], msg))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearHistory]}'
+                                   f' - data dict{msg}')
 
     def test_shows_stats(self):
         data = self._request_from_api(webapi.CMD_SickGearShowsStats)
@@ -618,8 +642,9 @@ class WebAPICase(test.SickbeardTestDBCase):
             data['data'],
             [('ep_downloaded', integer_types), ('ep_total', integer_types), ('shows_active', integer_types),
              ('shows_total', integer_types)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearShowsStats], msg))
+        self.assertTrue(r, msg=f'Failed command: '
+                               f'{webapi._functionMaper_reversed[webapi.CMD_SickGearShowsStats]}'
+                               f' - data dict{msg}')
 
     def test_show_stats(self):
         for cur_show in test_shows:
@@ -631,15 +656,17 @@ class WebAPICase(test.SickbeardTestDBCase):
                 [(statusStrings.statusStrings[status].lower().replace(" ", "_").replace("(", "").replace(
                     ")", ""), integer_types) for status in statusStrings.statusStrings
                  if status not in SNATCHED_ANY + [UNKNOWN, DOWNLOADED]] + [('downloaded', dict), ('snatched', dict)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearShowStats], msg))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowStats]}'
+                                   f' - data dict{msg}')
             for s in ('downloaded', 'snatched'):
                 r, msg = self._check_types(
                     data['data'][s],
                     [(t.lower().replace(" ", "_").replace("(", "").replace(")", ""), integer_types)
-                     for k, t in iteritems(Quality.qualityStrings) if Quality.NONE != k])
-                self.assertTrue(r, msg='Failed command: %s - data dict - %s:%s' % (
-                    webapi._functionMaper_reversed[webapi.CMD_SickGearShowStats], s, msg))
+                     for k, t in Quality.qualityStrings.items() if Quality.NONE != k])
+                self.assertTrue(r, msg=f'Failed command: '
+                                       f'{webapi._functionMaper_reversed[webapi.CMD_SickGearShowStats]}'
+                                       f' - data dict - {s}:{msg}')
 
     def test_get_root_dirs(self):
         data = self._request_from_api(webapi.CMD_SickGearGetRootDirs)
@@ -647,8 +674,9 @@ class WebAPICase(test.SickbeardTestDBCase):
         for r_d in data['data']:
             r, msg = self._check_types(r_d, [('default', integer_types), ('location', string_types),
                                              ('valid', integer_types)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearListIgnoreWords], msg))
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearListIgnoreWords]}'
+                                   f' - data dict{msg}')
 
     def test_get_schedules(self):
         data = self._request_from_api(webapi.CMD_SickGearCheckScheduler)
@@ -657,38 +685,41 @@ class WebAPICase(test.SickbeardTestDBCase):
             data['data'],
             [('backlog_is_paused', integer_types), ('backlog_is_running', integer_types),
              ('last_backlog', string_types), ('next_backlog', string_types)])
-        self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-            webapi._functionMaper_reversed[webapi.CMD_SickGearCheckScheduler], msg))
+        self.assertTrue(r, msg=f'Failed command:'
+                               f' {webapi._functionMaper_reversed[webapi.CMD_SickGearCheckScheduler]}'
+                               f' - data dict{msg}')
 
     def test_do_show_update(self):
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearShowUpdate,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearShowUpdate,
-                                              message='%s has queued to be updated' % cur_show['name'])
+                                              message=f'{cur_show["name"]} has queued to be updated')
         # check that duplicate adding fails
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearShowUpdate,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             r, msg = self._check_types(data, [('data', dict), ('message', string_types), ('result', string_types)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearShowUpdate], msg))
-            self.assertTrue('Unable to update %s.' % cur_show['name'] in data['message'], msg='Wrong failure message')
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowUpdate]}'
+                                   f' - data dict{msg}')
+            self.assertTrue(f'Unable to update {cur_show["name"]}.' in data['message'], msg='Wrong failure message')
 
     def test_do_show_refresh(self):
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearShowRefresh,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             self._check_success_base_response(data, webapi.CMD_SickGearShowUpdate,
-                                              message='%s has queued to be refreshed' % cur_show['name'])
+                                              message=f'{cur_show["name"]} has queued to be refreshed')
         # check that duplicate adding fails
         for cur_show in test_shows:
             data = self._request_from_api(webapi.CMD_SickGearShowRefresh,
                                           params={'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid']})
             r, msg = self._check_types(data, [('data', dict), ('message', string_types), ('result', string_types)])
-            self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                webapi._functionMaper_reversed[webapi.CMD_SickGearShowRefresh], msg))
-            self.assertTrue('Unable to refresh %s.' % cur_show['name'] in data['message'], msg='Wrong failure message')
+            self.assertTrue(r, msg=f'Failed command:'
+                                   f' {webapi._functionMaper_reversed[webapi.CMD_SickGearShowRefresh]}'
+                                   f' - data dict{msg}')
+            self.assertTrue(f'Unable to refresh {cur_show["name"]}.' in data['message'], msg='Wrong failure message')
 
     def test_pause_show(self):
         self.reset_show_data = True
@@ -700,9 +731,9 @@ class WebAPICase(test.SickbeardTestDBCase):
                 if None is not set_pause:
                     params.update({'pause': set_pause})
                 data = self._request_from_api(webapi.CMD_SickGearShowPause, params=params)
-                self._check_success_base_response(data, webapi.CMD_SickGearShowPause,
-                                                  message='%s has been %spaused' % (
-                                                      cur_show['name'], ('', 'un')[set_pause in (None, 0, False)]))
+                self._check_success_base_response(
+                    data, webapi.CMD_SickGearShowPause,
+                    message=f'{cur_show["name"]} has been {("", "un")[set_pause in (None, 0, False)]}paused')
 
     def test_set_scene_numbering(self):
         self.reset_show_data = True
@@ -714,15 +745,16 @@ class WebAPICase(test.SickbeardTestDBCase):
                 if None is not set_scene:
                     params.update({'activate': set_scene})
                 data = self._request_from_api(webapi.CMD_SickGearActivateSceneNumber, params=params)
-                self._check_success_base_response(data, webapi.CMD_SickGearActivateSceneNumber,
-                                                  message='Scene Numbering %sactivated' % (
-                                                      ('', 'de')[set_scene in (None, 0, False)]))
+                self._check_success_base_response(
+                    data, webapi.CMD_SickGearActivateSceneNumber,
+                    message=f'Scene Numbering {("", "de")[set_scene in (None, 0, False)]}activated')
                 r, msg = self._check_types(
                     data['data'],
                     [('indexer', integer_types), ('indexerid', integer_types), ('scenenumbering', bool),
                      ('show_name', string_types)])
-                self.assertTrue(r, msg='Failed command: %s - data dict%s' % (
-                    webapi._functionMaper_reversed[webapi.CMD_SickGearActivateSceneNumber], msg))
+                self.assertTrue(r, msg=f'Failed command:'
+                                       f' {webapi._functionMaper_reversed[webapi.CMD_SickGearActivateSceneNumber]}'
+                                       f' - data dict{msg}')
                 self.assertTrue(data['data']['scenenumbering'] == bool(set_scene))
                 self.assertTrue(data['data']['show_name'] == cur_show['name'])
 
@@ -766,8 +798,8 @@ class WebAPICase(test.SickbeardTestDBCase):
                 self._check_success_base_response(
                     data,
                     webapi.CMD_SickGearShowSetQuality,
-                    message='%s quality has been changed to %s' % (
-                        cur_show['name'], webapi._get_quality_string(show_obj.quality)))
+                    message=f'{cur_show["name"]} quality has been changed to'
+                            f' {webapi._get_quality_string(show_obj.quality)}')
                 self.assertEqual(show_obj.upgrade_once, int(set_quality['upgrade_once']))
 
     def test_set_show_scene_numbers(self):
@@ -809,18 +841,18 @@ class WebAPICase(test.SickbeardTestDBCase):
         self.reset_show_data = True
         failed_msg = 'Failed to set all or some status. Check data.'
         success_msg = 'All status set successfully.'
-        for cur_quality_str, cur_quality in itertools.chain(iteritems(webapi.quality_map), iteritems({'None': None})):
-            for cur_value, cur_status in iteritems(statusStrings.statusStrings):
+        for cur_quality_str, cur_quality in itertools.chain(webapi.quality_map.items(), {'None': None}.items()):
+            for cur_value, cur_status in statusStrings.statusStrings.items():
                 if (cur_quality and cur_value not in (SNATCHED, DOWNLOADED, ARCHIVED)) or \
                         (None is cur_quality and SNATCHED == cur_value):
                     continue
                 cur_status = cur_status.lower()
-                # print('Testing setting episode status to: %s %s' % (cur_status, cur_quality_str))
+                # print(f'Testing setting episode status to: {cur_status} {cur_quality_str}')
                 if cur_value in (UNKNOWN, UNAIRED, SNATCHED_PROPER, SNATCHED_BEST, SUBTITLED):
                     continue
                 for cur_show in test_shows:
-                    for season, eps in iteritems(cur_show['episodes']):
-                        for ep_nb, cur_ep in iteritems(eps):
+                    for season, eps in cur_show['episodes'].items():
+                        for ep_nb, cur_ep in eps.items():
                             ep_obj = sickgear.helpers.find_show_by_id({cur_show['tvid']: cur_show['prodid']}).\
                                 get_episode(season, ep_nb)
                             params = {'indexer': cur_show['tvid'], 'indexerid': cur_show['prodid'], 'season': season,

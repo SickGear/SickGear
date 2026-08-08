@@ -30,7 +30,7 @@ class DelugeAPI(GenericClient):
 
         super(DelugeAPI, self).__init__('Deluge', host, username, password)
 
-        self.url = '%s/json' % self.host.rstrip('/')
+        self.url = f'{self.host.rstrip("/")}/json'
 
     def _post_json(self, data, process=True):
         result = self.session.post(self.url, json=data, timeout=10, verify=sickgear.TORRENT_VERIFY_CERT)
@@ -52,7 +52,7 @@ class DelugeAPI(GenericClient):
             if not connected:
                 hosts = self._post_json({'method': 'web.get_hosts', 'params': [], 'id': 11})
                 if 0 == len(hosts):
-                    logger.error('%s: WebUI does not contain daemons' % self.name)
+                    logger.error(f'{self.name}: WebUI does not contain daemons')
                     return None
 
                 self._post_json({'method': 'web.connect', 'params': [hosts[0][0]], 'id': 11}, False)
@@ -60,7 +60,7 @@ class DelugeAPI(GenericClient):
                 connected = self._post_json({'method': 'web.connected', 'params': [], 'id': 10})
 
             if not connected:
-                logger.error('%s: WebUI could not connect to daemon' % self.name)
+                logger.error(f'{self.name}: WebUI could not connect to daemon')
                 return None
         except RequestException:
             return None
@@ -82,7 +82,7 @@ class DelugeAPI(GenericClient):
 
         result.hash = self._request_json({
             'method': 'core.add_torrent_file',
-            'params': ['%s.torrent' % result.name,
+            'params': [f'{result.name}.torrent',
                        b64encodestring(result.content),
                        {'move_completed': 'true',
                         'move_completed_path': sickgear.TV_DOWNLOAD_DIR}],
@@ -94,7 +94,7 @@ class DelugeAPI(GenericClient):
 
         label = sickgear.TORRENT_LABEL
         if ' ' in label:
-            logger.error('%s: Invalid label. Label must not contain a space' % self.name)
+            logger.error(f'{self.name}: Invalid label. Label must not contain a space')
             return False
 
         if label:
@@ -106,21 +106,21 @@ class DelugeAPI(GenericClient):
 
             if None is not labels:
                 if label not in labels:
-                    logger.debug('%s: %s label does not exist in Deluge we must add it' % (self.name, label))
+                    logger.debug(f'{self.name}: {label} label does not exist in Deluge we must add it')
                     self._request_json({
                         'method': 'label.add',
                         'params': [label],
                         'id': 4})
-                    logger.debug('%s: %s label added to Deluge' % (self.name, label))
+                    logger.debug(f'{self.name}: {label} label added to Deluge')
 
                 # add label to torrent
                 self._request_json({
                     'method': 'label.set_torrent',
                     'params': [result.hash, label],
                     'id': 5})
-                logger.debug('%s: %s label added to torrent' % (self.name, label))
+                logger.debug(f'{self.name}: {label} label added to torrent')
             else:
-                logger.debug('%s: label plugin not detected' % self.name)
+                logger.debug(f'{self.name}: label plugin not detected')
                 return False
 
         return True

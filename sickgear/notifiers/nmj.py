@@ -68,7 +68,7 @@ class NMJNotifier(BaseNotifier):
                 sickgear.NMJ_DATABASE = database
                 # if the device is a remote host then try to parse the mounting URL and save it to the config
                 if device.startswith('NETWORK_SHARE/'):
-                    match = re.search('.*(?=\r\n?%s)' % (re.escape(device[14:])), tnoutput)
+                    match = re.search(f'.*(?=\r\n?{re.escape(device[14:])})', tnoutput)
 
                     if not match:
                         self._log_warning('Detected a network share on the Popcorn Hour, '
@@ -121,7 +121,7 @@ class NMJNotifier(BaseNotifier):
         # build up the request URL and parameters
         params = dict(arg0='scanner_start', arg1=database, arg2='background', arg3='')
         params = urlencode(params)
-        update_url = 'http://%(host)s:8008/metadata_database?%(params)s' % {'host': host, 'params': params}
+        update_url = f'http://{host}:8008/metadata_database?{params}'
 
         # send the request to the server
         try:

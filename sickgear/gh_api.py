@@ -44,10 +44,10 @@ class GitHub(object):
         Returns a deserialized json object of the result. Doesn't do any error checking (hope it works).
         """
 
-        url = 'https://api.github.com/' + '/'.join(path)
+        url = f'https://api.github.com/{"/".join(path)}'
 
         if params and type(params) is dict:
-            url += '?' + '&'.join([str(x) + '=' + str(params[x]) for x in params])
+            url += f'?{"&".join([f"{x!s}={params[x]!s}" for x in params])}'
 
         parsed_json = helpers.get_url(url, parse_json=True)
         if not parsed_json:
@@ -84,7 +84,7 @@ class GitHub(object):
         See https://developer.github.com/v3/repos/commits
         """
         access_api = self._access_api(
-            ['repos', self.github_repo_user, self.github_repo, 'compare', base + '...' + head],
+            ['repos', self.github_repo_user, self.github_repo, 'compare', f'{base}...{head}'],
             params={'per_page': per_page})
         return access_api
 
@@ -114,7 +114,7 @@ class PullRequest(object):
         self.number = number
 
     def __repr__(self):
-        return '%s: %s' % (self.number, self.ref)
+        return f'{self.number}: {self.ref}'
 
     def fetch_name(self):
-        return 'pull/%s/head:pull/%s/%s' % (self.number, self.number, self.ref)
+        return f'pull/{self.number}/head:pull/{self.number}/{self.ref}'

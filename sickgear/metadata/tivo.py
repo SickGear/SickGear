@@ -152,7 +152,7 @@ class TIVOMetadata(generic.GenericMetadata):
         ep_obj: a TVEpisode object to get the path for
         """
         if os.path.isfile(ep_obj.location):
-            metadata_file_name = os.path.basename(ep_obj.location) + "." + self._ep_nfo_extension
+            metadata_file_name = f'{os.path.basename(ep_obj.location)}.{self._ep_nfo_extension}'
             metadata_dir_name = os.path.join(os.path.dirname(ep_obj.location), '.meta')
             metadata_file_path = os.path.join(metadata_dir_name, metadata_file_name)
         else:
@@ -224,10 +224,10 @@ class TIVOMetadata(generic.GenericMetadata):
                 return None
 
             if None is not getattr(show_info, 'seriesname', None):
-                data += ("title : " + show_info["seriesname"] + "\n")
-                data += ("seriesTitle : " + show_info["seriesname"] + "\n")
+                data += f'title : {show_info["seriesname"]}\n'
+                data += f'seriesTitle : {show_info["seriesname"]}\n'
 
-            data += ("episodeTitle : " + cur_ep_obj._format_pattern('%Sx%0E %EN') + "\n")
+            data += f'episodeTitle : {cur_ep_obj._format_pattern("%Sx%0E %EN")}\n'
 
             # This should be entered for episodic shows and omitted for movies. The standard tivo format is to enter
             # the season number followed by the episode number for that season. For example, enter 201 for season 2
@@ -238,7 +238,7 @@ class TIVOMetadata(generic.GenericMetadata):
             # This seems to disappear once the video is transferred to TiVo.
 
             # NOTE: May not be correct format, missing season, but based on description from wiki leaving as is.
-            data += ("episodeNumber : " + str(cur_ep_obj.episode) + "\n")
+            data += f'episodeNumber : {cur_ep_obj.episode!s}\n'
 
             # Must be entered as true or false. If true, the year from originalAirDate will be shown in parentheses
             # after the episode's title and before the description on the Program screen.
@@ -254,28 +254,28 @@ class TIVOMetadata(generic.GenericMetadata):
             sanitizedDescription = sanitizedDescription.replace('\u2018', '\'').replace('\u2019', '\'').replace(
                 '\u02BC', '\'')
 
-            data += ("description : " + sanitizedDescription + "\n")
+            data += f'description : {sanitizedDescription}\n'
 
             # Usually starts with "SH" and followed by 6-8 digits.
             # Tivo uses zap2it for their data, so the series id is the zap2it_id.
             if None is not getattr(show_info, 'zap2it_id', None):
-                data += ("seriesId : " + show_info["zap2it_id"] + "\n")
+                data += f'seriesId : {show_info["zap2it_id"]}\n'
 
             # This is the call sign of the channel the episode was recorded from.
             if None is not getattr(show_info, 'network', None):
-                data += ("callsign : " + show_info["network"] + "\n")
+                data += f'callsign : {show_info["network"]}\n'
 
             # This must be entered as yyyy-mm-ddThh:mm:ssZ (the t is capitalized and never changes, the Z is also
             # capitalized and never changes). This is the original air date of the episode.
             # NOTE: Hard coded the time to T00:00:00Z as we really don't know when during the day the first run happened
             if cur_ep_obj.airdate != datetime.date.fromordinal(1):
-                data += ("originalAirDate : " + str(cur_ep_obj.airdate) + "T00:00:00Z\n")
+                data += f'originalAirDate : {cur_ep_obj.airdate!s}T00:00:00Z\n'
 
             # This shows up at the beginning of the description on the Program screen and on the Details screen.
             for actor in getattr(show_info, 'actors', []):
-                data += ('vActor : %s\n' % actor['character']['name'] and actor['person']['name']
+                data += (f'vActor : {actor["character"]["name"]}\n' and actor['person']['name']
                          and actor['character']['name'] != actor['person']['name']
-                         and '%s (%s)' % (actor['character']['name'], actor['person']['name'])
+                         and f'{actor["character"]["name"]} ({actor["person"]["name"]})'
                          or actor['person']['name'] or actor['character']['name'])
 
             # This is shown on both the Program screen and the Details screen.
@@ -287,18 +287,18 @@ class TIVOMetadata(generic.GenericMetadata):
                 # convert 10 to 4 star rating. 4 * rating / 10
                 # only whole numbers or half numbers work. multiply by 2, round, divide by 2.0
                 rating = round(8 * rating / 10) / 2.0
-                data += ("starRating : " + str(rating) + "\n")
+                data += f'starRating : {rating!s}\n'
 
             # This is shown on both the Program screen and the Details screen.
             # It uses the standard TV rating system of: TV-Y7, TV-Y, TV-G, TV-PG, TV-14, TV-MA and TV-NR.
             if None is not getattr(show_info, 'contentrating', None):
-                data += ("tvRating : " + str(show_info["contentrating"]) + "\n")
+                data += f'tvRating : {show_info["contentrating"]!s}\n'
 
             # This field can be repeated as many times as necessary or omitted completely.
             if ep_obj.show_obj.genre:
                 for genre in ep_obj.show_obj.genre.split('|'):
                     if genre:
-                        data += ("vProgramGenre : " + str(genre) + "\n")
+                        data += f'vProgramGenre : {genre!s}\n'
 
                         # NOTE: The following are metadata keywords are not used
                         # displayMajorNumber

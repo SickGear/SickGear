@@ -13,6 +13,8 @@ URL_DETAILS_RE: Incomplete
 GET_EMAIL_RE: Incomplete
 IS_PHONE_NO: Incomplete
 PHONE_NO_DETECTION_RE: Incomplete
+IS_DOMAIN_SERVICE_TARGET: Incomplete
+DOMAIN_SERVICE_TARGET_DETECTION_RE: Incomplete
 PHONE_NO_WPREFIX_DETECTION_RE: Incomplete
 IS_CALL_SIGN: Incomplete
 CALL_SIGN_DETECTION_RE: Incomplete
@@ -35,6 +37,22 @@ def is_uuid(uuid):
     Returns:
         bool: Returns False if the specified element is not a uuid otherwise
               it returns True
+    """
+def is_domain_service_target(entry, domain: str = 'notify'):
+    """Determine if the specified entry a domain.service:target type
+
+    Expects a string containing the following formats:
+      - service
+      - service:target
+      - service:target1,target2
+      - domain.service:target
+      - domain.service:target1,target2
+
+    Args:
+        entry (str): The string you want to check.
+
+    Returns:
+        bool: Returns False if the entry specified is domain.service:target
     """
 def is_phone_no(phone, min_len: int = 10):
     """Determine if the specified entry is a phone number.
@@ -73,7 +91,7 @@ def is_call_sign(callsign):
         callsign (str): The string you want to check.
 
     Returns:
-        bool: Returns False if the address specified is not a phone number
+        bool: Returns False if the enry specified is not a callsign
     """
 def is_email(address):
     """Determine if the specified entry is an email address.
@@ -182,6 +200,19 @@ def parse_bool(arg, default: bool = False):
     """Support string based boolean settings.
 
     If the content could not be parsed, then the default is returned.
+    """
+def parse_domain_service_targets(*args, store_unparseable: bool = True, domain: str = 'notify', **kwargs):
+    """
+    Takes a string containing the following formats separated by space
+      - service
+      - service:target
+      - service:target1,target2
+      - domain.service:target
+      - domain.service:target1,target2
+
+      If no domain is parsed, the default domain is returned.
+
+      Targets can be comma separated (if multiple are to be defined)
     """
 def parse_phone_no(*args, store_unparseable: bool = True, prefix: bool = False, **kwargs):
     """Takes a string containing phone numbers separated by comma's and/or

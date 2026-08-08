@@ -27,8 +27,6 @@ from ..helpers import try_int
 import exceptions_helper
 import feedparser
 
-from six import iteritems
-
 
 class ImmortalSeedProvider(generic.TorrentProvider):
 
@@ -52,7 +50,7 @@ class ImmortalSeedProvider(generic.TorrentProvider):
         try:
             secret_key = 'secret_key=' + re.split(r'secret_key\s*=\s*([0-9a-zA-Z]+)', self.api_key)[1]
         except (BaseException, Exception):
-            raise exceptions_helper.AuthException('Invalid secret key for %s in Media Providers/Options' % self.name)
+            raise exceptions_helper.AuthException(f'Invalid secret key for {self.name} in Media Providers/Options')
 
         if secret_key != self.api_key:
             self.api_key = secret_key
@@ -66,9 +64,9 @@ class ImmortalSeedProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
             'seed': r'seed[^\d/]+([\d]+)', 'leech': r'leech[^\d/]+([\d]+)',
-            'size': r'size[^\d/]+([^/]+)', 'get': '(.*download.*)', 'title': r'NUKED\b\.(.*)$'})])
+            'size': r'size[^\d/]+([^/]+)', 'get': '(.*download.*)', 'title': r'NUKED\b\.(.*)$'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_string = search_string.replace(' ', '.')
@@ -106,8 +104,8 @@ class ImmortalSeedProvider(generic.TorrentProvider):
         return results
 
     def ui_string(self, key):
-        return ('%s_api_key' % self.get_id()) == key and 'Secret key' or \
-               ('%s_api_key_tip' % self.get_id()) == key and \
+        return (f'{self.get_id()}_api_key') == key and 'Secret key' or \
+               f'{self.get_id()}_api_key_tip' == key and \
                '\'secret_key=\' from the <a href="%sgetrss.php">generated RSS link</a> at %s' % \
                (self.url_base, self.name) or ''
 

@@ -51,11 +51,11 @@ class PushalotNotifier(Notifier):
                 if 410 == response.status:
                     result = f'Authentication, {response.reason} (bad API key?)'
                 else:
-                    result = 'Http response code "%s"' % response.status
+                    result = f'Http response code "{response.status}"'
 
                 self._log_error(result)
 
-        return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
+        return self._choose((True, f'Failed to send notification: {result}')[bool(result)], not bool(result))
 
 
 notifier = PushalotNotifier

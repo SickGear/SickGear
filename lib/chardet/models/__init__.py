@@ -10,15 +10,14 @@ import importlib.resources
 import math
 import struct
 import warnings
+import zlib
 
 from chardet.registry import REGISTRY, lookup_encoding
 
 _unpack_uint32 = struct.Struct(">I").unpack_from
-_iter_3bytes = struct.Struct(">BBB").iter_unpack
+_unpack_float64 = struct.Struct(">d").unpack_from
+_V2_MAGIC = b"CMD2"
 
-#: Weight applied to non-ASCII bigrams during profile construction.
-#: Imported by pipeline/confusion.py for focused bigram re-scoring.
-NON_ASCII_BIGRAM_WEIGHT: int = 8
 # Encodings that map to exactly one language, derived from the registry.
 # Keyed by canonical name only — callers always use canonical names.
 _SINGLE_LANG_MAP: dict[str, str] = {}
@@ -29,54 +28,65 @@ for _enc in REGISTRY.values():
 
 def _parse_models_bin(
     data: bytes,
-) -> tuple[dict[str, bytearray], dict[str, float]]:
-    """Parse the binary models.bin format into model tables and L2 norms.
+) -> tuple[dict[str, memoryview], dict[str, float]]:
+    """Parse the v2 dense zlib-compressed models.bin format.
 
     :param data: Raw bytes of models.bin (must be non-empty).
     :returns: A ``(models, norms)`` tuple.
     :raises ValueError: If the data is corrupt or truncated.
     """
-    models: dict[str, bytearray] = {}
-    norms: dict[str, float] = {}
-    _sqrt = math.sqrt
-    _unpack_u32 = _unpack_uint32
-    _iter_bbb = _iter_3bytes
     try:
-        offset = 0
-        (num_encodings,) = _unpack_u32(data, offset)
-        offset += 4
-
-        if num_encodings > 10_000:
-            msg = f"corrupt models.bin: num_encodings={num_encodings} exceeds limit"
+        if data[:4] != _V2_MAGIC:
+            msg = "corrupt models.bin: missing CMD2 magic"
             raise ValueError(msg)
 
-        for _ in range(num_encodings):
-            (name_len,) = _unpack_u32(data, offset)
+        offset = 4  # skip magic
+        (num_models,) = _unpack_uint32(data, offset)
+        offset += 4
+
+        if num_models > 10_000:
+            msg = f"corrupt models.bin: num_models={num_models} exceeds limit"
+            raise ValueError(msg)
+
+        names: list[str] = []
+        norms: dict[str, float] = {}
+        for _ in range(num_models):
+            (name_len,) = _unpack_uint32(data, offset)
             offset += 4
             if name_len > 256:
                 msg = f"corrupt models.bin: name_len={name_len} exceeds 256"
                 raise ValueError(msg)
             name = data[offset : offset + name_len].decode("utf-8")
             offset += name_len
-            (num_entries,) = _unpack_u32(data, offset)
-            offset += 4
-            if num_entries > 65536:
-                msg = f"corrupt models.bin: num_entries={num_entries} exceeds 65536"
-                raise ValueError(msg)
+            (norm,) = _unpack_float64(data, offset)
+            offset += 8
+            names.append(name)
+            norms[name] = norm
 
-            table = bytearray(65536)
-            sq_sum = 0
-            expected_bytes = num_entries * 3
-            chunk = data[offset : offset + expected_bytes]
-            if len(chunk) != expected_bytes:
-                msg = f"corrupt models.bin: truncated entry data for {name!r}"
-                raise ValueError(msg)
-            offset += expected_bytes
-            for b1, b2, weight in _iter_bbb(chunk):
-                table[(b1 << 8) | b2] = weight
-                sq_sum += weight * weight
-            models[name] = table
-            norms[name] = _sqrt(sq_sum)
+        # zlib.decompress is faster than decompressobj; trailing bytes are
+        # unlikely in bundled data and would not affect correctness since we
+        # validate decompressed size.  train.py uses decompressobj for
+        # stricter checking during model generation.
+        blob = zlib.decompress(data[offset:])
+        expected_size = num_models * 65536
+        if len(blob) != expected_size:
+            msg = (
+                f"corrupt models.bin: decompressed size {len(blob)} "
+                f"!= expected {expected_size}"
+            )
+            raise ValueError(msg)
+
+        # memoryview slices avoid copies; the blob bytes object is kept
+        # alive by the functools.cache on _load_models_data().
+        mv = memoryview(blob)
+        models: dict[str, memoryview] = {}
+        for i, name in enumerate(names):
+            start = i * 65536
+            models[name] = mv[start : start + 65536]
+
+    except zlib.error as e:
+        msg = f"corrupt models.bin: {e}"
+        raise ValueError(msg) from e
     except (struct.error, UnicodeDecodeError) as e:
         msg = f"corrupt models.bin: {e}"
         raise ValueError(msg) from e
@@ -85,7 +95,7 @@ def _parse_models_bin(
 
 
 @functools.cache
-def _load_models_data() -> tuple[dict[str, bytearray], dict[str, float]]:
+def _load_models_data() -> tuple[dict[str, memoryview], dict[str, float]]:
     """Load and parse models.bin, returning (models, norms).
 
     Cached: only reads from disk on first call.
@@ -105,10 +115,10 @@ def _load_models_data() -> tuple[dict[str, bytearray], dict[str, float]]:
     return _parse_models_bin(data)
 
 
-def load_models() -> dict[str, bytearray]:
+def load_models() -> dict[str, memoryview]:
     """Load all bigram models from the bundled models.bin file.
 
-    Each model is a bytearray of length 65536 (256*256).
+    Each model is a memoryview of length 65536 (256*256).
     Index: (b1 << 8) | b2 -> weight (0-255).
 
     :returns: A dict mapping model key strings to 65536-byte lookup tables.
@@ -117,14 +127,14 @@ def load_models() -> dict[str, bytearray]:
 
 
 def _build_enc_index(
-    models: dict[str, bytearray],
-) -> dict[str, list[tuple[str | None, bytearray, str]]]:
+    models: dict[str, memoryview],
+) -> dict[str, list[tuple[str | None, memoryview, str]]]:
     """Build a grouped index from a models dict.
 
     :param models: Mapping of ``"lang/encoding"`` keys to 65536-byte tables.
     :returns: Mapping of encoding name to ``[(lang, model, model_key), ...]``.
     """
-    index: dict[str, list[tuple[str | None, bytearray, str]]] = {}
+    index: dict[str, list[tuple[str | None, memoryview, str]]] = {}
     for key, model in models.items():
         lang, enc = key.split("/", 1)
         index.setdefault(enc, []).append((lang, model, key))
@@ -140,7 +150,7 @@ def _build_enc_index(
 
 
 @functools.cache
-def get_enc_index() -> dict[str, list[tuple[str | None, bytearray, str]]]:
+def get_enc_index() -> dict[str, list[tuple[str | None, memoryview, str]]]:
     """Return a pre-grouped index mapping encoding name -> [(lang, model, model_key), ...]."""
     return _build_enc_index(load_models())
 
@@ -169,69 +179,112 @@ def _get_model_norms() -> dict[str, float]:
     return _load_models_data()[1]
 
 
+@functools.cache
+def get_idf_weights() -> bytearray:
+    """Return a 65536-byte IDF weight table for bigram profile construction.
+
+    Loads a precomputed table from ``idf.bin`` (generated at training time).
+    For each bigram index, the weight reflects how discriminative that bigram
+    is across all models:
+
+    - Bigrams in every model (common ASCII) → weight 1 (minimal signal)
+    - Bigrams in one model → weight 255 (maximum signal)
+    - Bigrams not in any model → weight 1 (unknown, treat as neutral)
+    """
+    ref = importlib.resources.files("chardet.models").joinpath("idf.bin")
+    data = ref.read_bytes()
+    if len(data) != 65536:
+        warnings.warn(
+            f"chardet idf.bin has wrong size ({len(data)}), "
+            "falling back to uniform weights",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return bytearray(b"\x01" * 65536)
+    return bytearray(data)
+
+
 class BigramProfile:
     """Pre-computed bigram frequency distribution for a data sample.
 
     Computing this once and reusing it across all models reduces per-model
     scoring from O(n) to O(distinct_bigrams).
 
-    Stores a single ``weighted_freq`` dict mapping bigram index to
-    *count * weight* (weight is 8 for non-ASCII bigrams, 1 otherwise).
-    This pre-multiplies the weight during construction so the scoring
-    inner loop only needs a single dict traversal with no branching.
+    Stores a dense ``freq`` list of length 65536 indexed by bigram index, plus
+    a ``nonzero`` list of indices with non-zero frequency for fast iteration.
+    Each bigram is weighted by its IDF (inverse document frequency) across all
+    models — bigrams unique to few models get high weight, bigrams common to
+    all models get weight 1.
     """
 
-    __slots__ = ("input_norm", "weight_sum", "weighted_freq")
+    __slots__ = ("freq", "input_norm", "nonzero", "weight_sum")
 
     def __init__(self, data: bytes) -> None:
         """Compute the bigram frequency distribution for *data*.
+
+        Each bigram is weighted by its IDF (inverse document frequency) across
+        all loaded models.  Bigrams unique to few models get high weight;
+        bigrams common to all models get weight 1.
 
         :param data: The raw byte data to profile.
         """
         total_bigrams = len(data) - 1
         if total_bigrams <= 0:
-            self.weighted_freq: dict[int, int] = {}
+            # Use empty lists (not [0]*65536) to avoid a 256KB allocation
+            # for no-op profiles.  Safe because score_with_profile returns
+            # early when input_norm == 0.0, so freq is never indexed.
+            self.freq: list[int] = []
+            self.nonzero: list[int] = []
             self.weight_sum: int = 0
             self.input_norm: float = 0.0
             return
 
-        freq: dict[int, int] = {}
+        idf = get_idf_weights()
+        freq: list[int] = [0] * 65536
+        nonzero: list[int] = []
         w_sum = 0
-        hi_w = NON_ASCII_BIGRAM_WEIGHT
-        _get = freq.get
         for i in range(total_bigrams):
-            b1 = data[i]
-            b2 = data[i + 1]
-            idx = (b1 << 8) | b2
-            if b1 > 0x7F or b2 > 0x7F:
-                freq[idx] = _get(idx, 0) + hi_w
-                w_sum += hi_w
-            else:
-                freq[idx] = _get(idx, 0) + 1
-                w_sum += 1
-        self.weighted_freq = freq
+            idx = (data[i] << 8) | data[i + 1]
+            w = idf[idx]
+            if freq[idx] == 0:
+                nonzero.append(idx)
+            freq[idx] += w
+            w_sum += w
+        self.freq = freq
+        self.nonzero = nonzero
         self.weight_sum = w_sum
-        self.input_norm = math.sqrt(sum(v * v for v in freq.values()))
+        norm_sq = 0
+        for idx in nonzero:
+            v = freq[idx]
+            norm_sq += v * v
+        self.input_norm = math.sqrt(norm_sq)
 
     @classmethod
     def from_weighted_freq(cls, weighted_freq: dict[int, int]) -> "BigramProfile":
         """Create a BigramProfile from pre-computed weighted frequencies.
 
         Computes ``weight_sum`` and ``input_norm`` from *weighted_freq* to
-        ensure consistency between the three fields.
+        ensure consistency between the stored fields.
 
         :param weighted_freq: Mapping of bigram index to weighted count.
         :returns: A new :class:`BigramProfile` instance.
         """
         profile = cls(b"")
-        profile.weighted_freq = weighted_freq
+        freq: list[int] = [0] * 65536
+        nonzero: list[int] = []
+        for idx, count in weighted_freq.items():
+            freq[idx] = count
+            if count:
+                nonzero.append(idx)
+        profile.freq = freq
+        profile.nonzero = nonzero
         profile.weight_sum = sum(weighted_freq.values())
         profile.input_norm = math.sqrt(sum(v * v for v in weighted_freq.values()))
         return profile
 
 
 def score_with_profile(
-    profile: BigramProfile, model: bytearray, model_key: str = ""
+    profile: BigramProfile, model: bytearray | memoryview, model_key: str = ""
 ) -> float:
     """Score a pre-computed bigram profile against a single model using cosine similarity."""
     if profile.input_norm == 0.0:
@@ -248,8 +301,9 @@ def score_with_profile(
     if model_norm == 0.0:
         return 0.0
     dot = 0
-    for idx, wcount in profile.weighted_freq.items():
-        dot += model[idx] * wcount
+    freq = profile.freq
+    for idx in profile.nonzero:
+        dot += model[idx] * freq[idx]
     return dot / (model_norm * profile.input_norm)
 
 

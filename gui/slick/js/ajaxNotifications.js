@@ -37,8 +37,8 @@ function check_notifications() {
 $(document).ready(function(){
 	check_notifications();
 	if (test) {
-		displayPNotify('notice', 'test', 'test<br/><i class="test-class">hello <b>world</b></i><ul><li>item 1</li><li>item 2</li></ul>');
-		//setInterval(function () {displayPNotify('success', 'test2', 'test<br/><b>body2</b>')}, 2000);
-		//setInterval(function () {displayPNotify('error', 'test3', 'hola<br/><b>body2</b>')}, 2100);
+		displayPNotify('notice', 'test', 'test<br><i class="test-class">hello <b>world</b></i><ul><li>item 1</li><li>item 2</li></ul>');
+		//setInterval(function () {displayPNotify('success', 'test2', 'test<br><b>body2</b>')}, 2000);
+		//setInterval(function () {displayPNotify('error', 'test3', 'hola<br><b>body2</b>')}, 2100);
 	}
 });

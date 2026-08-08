@@ -24,7 +24,6 @@ from ..helpers import try_int
 from bs4_parser import BS4Parser
 
 from _23 import b64decodestring, quote_plus
-from six import iteritems
 
 
 class TorLockProvider(generic.TorrentProvider):
@@ -33,7 +32,7 @@ class TorLockProvider(generic.TorrentProvider):
         generic.TorrentProvider.__init__(self, 'TorLock')
 
         self.url_home = ['https://www.torlock.com/'] + \
-                        ['https://%s/' % b64decodestring(x) for x in [''.join(x) for x in [
+                        [f'https://{b64decodestring(x)}/' for x in [''.join(x) for x in [
                             [re.sub(r'[g\sF]+', '', x[::-1]) for x in [
                                 'y9FFGd', 'j9FgGb', '15 Fya', 'sF Jmb', 'rN 2Fb', 'uQW FZ', '0Vmg Y']],
                             [re.sub(r'[O\si]+', '', x[::-1]) for x in [
@@ -60,8 +59,8 @@ class TorLockProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
-            'info': r'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
+            'info': r'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'}.items()])
 
         for mode in search_params:
             for search_string in search_params[mode]:

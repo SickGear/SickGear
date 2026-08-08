@@ -150,7 +150,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
         SeriesName = etree.SubElement(tv_node, 'title')
         if None is not show_info['seriesname']:
-            SeriesName.text = '%s' % show_info['seriesname']
+            SeriesName.text = f'{show_info["seriesname"]}'
         else:
             SeriesName.text = ''
 
@@ -159,16 +159,16 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
             for genre in show_info['genre'].split('|'):
                 if genre and genre.strip():
                     cur_genre = etree.SubElement(Genres, 'Genre')
-                    cur_genre.text = '%s' % genre.strip()
+                    cur_genre.text = f'{genre.strip()}'
 
         FirstAired = etree.SubElement(tv_node, 'premiered')
         if None is not show_info['firstaired']:
-            FirstAired.text = '%s' % show_info['firstaired']
+            FirstAired.text = f'{show_info["firstaired"]}'
 
         year = etree.SubElement(tv_node, 'year')
         year_text = self.get_show_year(show_obj, show_info)
         if year_text:
-            year.text = '%s' % year_text
+            year.text = f'{year_text}'
 
         if None is not show_info['rating']:
             try:
@@ -178,28 +178,28 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
             Rating = etree.SubElement(tv_node, 'rating')
             rating_text = str(rating)
             if None is not rating_text:
-                Rating.text = '%s' % rating_text
+                Rating.text = f'{rating_text}'
 
         Status = etree.SubElement(tv_node, 'status')
         if None is not show_info['status']:
-            Status.text = '%s' % show_info['status']
+            Status.text = f'{show_info["status"]}'
 
         mpaa = etree.SubElement(tv_node, 'mpaa')
         if None is not show_info['contentrating']:
-            mpaa.text = '%s' % show_info['contentrating']
+            mpaa.text = f'{show_info["contentrating"]}'
 
         IMDB_ID = etree.SubElement(tv_node, 'id')
         if None is not show_info['imdb_id']:
             IMDB_ID.attrib['moviedb'] = 'imdb'
-            IMDB_ID.text = '%s' % show_info['imdb_id']
+            IMDB_ID.text = f'{show_info["imdb_id"]}'
 
         prodid = etree.SubElement(tv_node, 'indexerid')
         if None is not show_info['id']:
-            prodid.text = '%s' % show_info['id']
+            prodid.text = f'{show_info["id"]}'
 
         Runtime = etree.SubElement(tv_node, 'runtime')
         if None is not show_info['runtime']:
-            Runtime.text = '%s' % show_info['runtime']
+            Runtime.text = f'{show_info["runtime"]}'
 
         cast = etree.SubElement(tv_node, 'cast')
         self.add_actor_element(show_info, etree, cast)
@@ -277,7 +277,7 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
                 EpisodeName = etree.SubElement(episode, 'title')
                 if None is not cur_ep_obj.name:
-                    EpisodeName.text = '%s' % cur_ep_obj.name
+                    EpisodeName.text = f'{cur_ep_obj.name}'
                 else:
                     EpisodeName.text = ''
 
@@ -290,21 +290,21 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
                 year = etree.SubElement(episode, 'year')
                 year_text = self.get_show_year(ep_obj.show_obj, show_info)
                 if year_text:
-                    year.text = '%s' % year_text
+                    year.text = f'{year_text}'
 
                 plot = etree.SubElement(episode, 'plot')
                 if None is not show_info['overview']:
-                    plot.text = '%s' % show_info['overview']
+                    plot.text = f'{show_info["overview"]}'
 
                 Overview = etree.SubElement(episode, 'episodeplot')
                 if None is not cur_ep_obj.description:
-                    Overview.text = '%s' % cur_ep_obj.description
+                    Overview.text = f'{cur_ep_obj.description}'
                 else:
                     Overview.text = ''
 
                 mpaa = etree.SubElement(episode, 'mpaa')
                 if None is not show_info['contentrating']:
-                    mpaa.text = '%s' % show_info['contentrating']
+                    mpaa.text = f'{show_info["contentrating"]}'
 
                 if not ep_obj.related_ep_obj:
                     if None is not ep_info['rating']:
@@ -315,17 +315,17 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
                         Rating = etree.SubElement(episode, 'rating')
                         rating_text = str(rating)
                         if None is not rating_text:
-                            Rating.text = '%s' % rating_text
+                            Rating.text = f'{rating_text}'
 
                 director = etree.SubElement(episode, 'director')
                 director_text = ep_info['director']
                 if None is not director_text:
-                    director.text = '%s' % director_text
+                    director.text = f'{director_text}'
 
                 credits = etree.SubElement(episode, 'credits')
                 credits_text = ep_info['writer']
                 if None is not credits_text:
-                    credits.text = '%s' % credits_text
+                    credits.text = f'{credits_text}'
 
                 cast = etree.SubElement(episode, 'cast')
                 self.add_actor_element(show_info, etree, cast)
@@ -335,15 +335,15 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
 
                 if cur_ep_obj.name:
                     if not EpisodeName.text:
-                        EpisodeName.text = '%s' % cur_ep_obj.name
+                        EpisodeName.text = f'{cur_ep_obj.name}'
                     else:
-                        EpisodeName.text = '%s, %s' % (EpisodeName.text, cur_ep_obj.name)
+                        EpisodeName.text = f'{EpisodeName.text}, {cur_ep_obj.name}'
 
                 if cur_ep_obj.description:
                     if not Overview.text:
-                        Overview.text = '%s' % cur_ep_obj.description
+                        Overview.text = f'{cur_ep_obj.description}'
                     else:
-                        Overview.text = '%s\r%s' % (Overview.text, cur_ep_obj.description)
+                        Overview.text = f'{Overview.text}\r{cur_ep_obj.description}'
 
         sg_helpers.indent_xml(rootNode)
         data = etree.ElementTree(rootNode)
@@ -356,11 +356,11 @@ class Mede8erMetadata(mediabrowser.MediaBrowserMetadata):
         for actor in getattr(show_info, 'actors', []):
             cur_actor_name_text = actor['character']['name'] and actor['person']['name'] \
                                   and actor['character']['name'] != actor['person']['name'] \
-                                  and '%s (%s)' % (actor['character']['name'], actor['person']['name']) \
+                                  and f'{actor["character"]["name"]} ({actor["person"]["name"]})' \
                                   or actor['person']['name'] or actor['character']['name']
             if cur_actor_name_text:
                 cur_actor = et.SubElement(node, 'actor')
-                cur_actor.text = '%s' % cur_actor_name_text
+                cur_actor.text = f'{cur_actor_name_text}'
 
 
 # present a standard "interface" from the module

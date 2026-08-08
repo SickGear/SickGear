@@ -14,8 +14,8 @@
 #import os.path
 #include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/configPostProcessing.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/configPostProcessing.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -179,7 +179,7 @@
 						</div>
 """
 #end if
-						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+						<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 
 					</fieldset>
 				</div>
@@ -281,7 +281,7 @@
 							</label>
 						</div>
 
-					<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+					<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 
 					</fieldset>
 				</div>
@@ -323,13 +323,13 @@
 									<span class="component-title">Delete failed downloads</span>
 									<span class="component-desc">
 										<input id="delete_failed" type="checkbox" name="delete_failed" #if $sickgear.DELETE_FAILED == True then $checked else ''#>
-										<p>delete left over files from a failed download<br />
+										<p>delete left over files from a failed download<br>
 									</span>
 								</label>
 							</div>
 						</div>
 
-					<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+					<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 
 					</fieldset>
 				</div>
@@ -502,7 +502,7 @@
 										</tr>
 									</tbody>
 								</table>
-								<br />
+								<br>
 							</div>
 						</div>
 
@@ -523,7 +523,7 @@
 							<label for="naming_strip_year">
 								<span class="component-title">Strip show year</span>
 								<span class="component-desc">
-									<input type="checkbox" id="naming_strip_year"	name="naming_strip_year" #if $sickgear.NAMING_STRIP_YEAR then $checked else ''#/>
+									<input type="checkbox" id="naming_strip_year"	name="naming_strip_year" #if $sickgear.NAMING_STRIP_YEAR then $checked else ''#>
 									<p>when renaming files, remove years that are inside parentheses #if True then 'e.g. "(%s)"' % str(time.strftime('%Y')) else ''#</p>
 								</span>
 							</label>
@@ -540,7 +540,7 @@
 							<div class="example">
 								<span class="jumbo" id="naming_example">&nbsp;</span>
 							</div>
-							<br />
+							<br>
 						</div>
 
 						<div id="naming_example_multi_div">
@@ -550,7 +550,7 @@
 							<div class="example">
 								<span class="jumbo" id="naming_example_multi">&nbsp;</span>
 							</div>
-							<br />
+							<br>
 						</div>
 
 					</fieldset>
@@ -568,7 +568,7 @@
 						<label for="naming_custom_abd">
 							<span class="component-title">Custom air-by-date</span>
 							<span class="component-desc">
-								<input type="checkbox" class="enabler" id="naming_custom_abd" name="naming_custom_abd" #if $sickgear.NAMING_CUSTOM_ABD then $checked else ''#/>
+								<input type="checkbox" class="enabler" id="naming_custom_abd" name="naming_custom_abd" #if $sickgear.NAMING_CUSTOM_ABD then $checked else ''#>
 								<p>name air-by-date shows differently than regular shows</p>
 							</span>
 						</label>
@@ -727,7 +727,7 @@
 												</tr>
 											</tbody>
 										</table>
-										<br />
+										<br>
 									</div>
 								</div><!-- /naming_abd_custom -->
 							</div>
@@ -742,13 +742,13 @@
 									<div class="example">
 										<span class="jumbo" id="naming_abd_example">&nbsp;</span>
 									</div>
-									<br />
+									<br>
 								</div>
 							</div>
 						</fieldset>
 
 						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 						</div>
 
 					</div><!-- /naming_abd_different -->
@@ -766,7 +766,7 @@
 						<label for="naming_custom_sports">
 							<span class="component-title">Custom sports</span>
 							<span class="component-desc">
-								<input type="checkbox" class="enabler" id="naming_custom_sports" name="naming_custom_sports" #if $sickgear.NAMING_CUSTOM_SPORTS then $checked else ''#/>
+								<input type="checkbox" class="enabler" id="naming_custom_sports" name="naming_custom_sports" #if $sickgear.NAMING_CUSTOM_SPORTS then $checked else ''#>
 								<p>name sports shows differently than regular shows</p>
 							</span>
 						</label>
@@ -925,7 +925,7 @@
 												</tr>
 											</tbody>
 										</table>
-										<br />
+										<br>
 									</div>
 								</div><!-- /naming_sports_custom -->
 							</div>
@@ -942,7 +942,7 @@
 									<div class="example">
 										<span class="jumbo" id="naming_sports_example">&nbsp;</span>
 									</div>
-									<br />
+									<br>
 								</div>
 
 							</div>
@@ -950,7 +950,7 @@
 						</fieldset>
 
 						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 						</div>
 
 					</div><!-- /naming_sports_different -->
@@ -969,7 +969,7 @@
 						<label for="naming_custom_anime">
 							<span class="component-title">Custom anime</span>
 							<span class="component-desc">
-								<input type="checkbox" class="enabler" id="naming_custom_anime" name="naming_custom_anime" #if $sickgear.NAMING_CUSTOM_ANIME then $checked else ''#/>
+								<input type="checkbox" class="enabler" id="naming_custom_anime" name="naming_custom_anime" #if $sickgear.NAMING_CUSTOM_ANIME then $checked else ''#>
 								<p>name anime shows differently than regular shows</p>
 							</span>
 						</label>
@@ -1128,7 +1128,7 @@
 												</tr>
 											</tbody>
 										</table>
-										<br />
+										<br>
 									</div>
 								</div><!-- /naming_anime_custom -->
 
@@ -1158,7 +1158,7 @@
 								<div class="example">
 									<span class="jumbo" id="naming_example_anime">&nbsp;</span>
 								</div>
-								<br />
+								<br>
 							</div>
 
 							<div id="naming_example_multi_anime_div">
@@ -1168,7 +1168,7 @@
 								<div class="example">
 									<span class="jumbo" id="naming_example_multi_anime">&nbsp;</span>
 								</div>
-								<br />
+								<br>
 							</div>
 
 						</fieldset>
@@ -1179,7 +1179,7 @@
 								<label for="naming_anime">
 									<span class="component-title">Add absolute numbering</span>
 									<span class="component-desc">
-										<input type="radio" name="naming_anime" id="naming_anime" value="1" #if $sickgear.NAMING_ANIME == 1 then $checked else ''#/>
+										<input type="radio" name="naming_anime" id="naming_anime" value="1" #if $sickgear.NAMING_ANIME == 1 then $checked else ''#>
 										<p>add the absolute number to the season/episode format</p>
 										<p class="note">(eg. S15E45 - 310 vs S15E45)</p>
 									</span>
@@ -1190,7 +1190,7 @@
 								<label for="naming_anime_only">
 									<span class="component-title">Only absolute numbering</span>
 									<span class="component-desc">
-										<input type="radio" name="naming_anime" id="naming_anime_only" value="2" #if $sickgear.NAMING_ANIME == 2 then $checked else ''#/>
+										<input type="radio" name="naming_anime" id="naming_anime_only" value="2" #if $sickgear.NAMING_ANIME == 2 then $checked else ''#>
 										<p>replace season/episode format with absolute numbering</p>
 									</span>
 								</label>
@@ -1200,7 +1200,7 @@
 								<label for="naming_anime_none">
 									<span class="component-title">No absolute numbering</span>
 									<span class="component-desc">
-										<input type="radio" name="naming_anime" id="naming_anime_none" value="3" #if $sickgear.NAMING_ANIME == 3 then $checked else ''#/>
+										<input type="radio" name="naming_anime" id="naming_anime_none" value="3" #if $sickgear.NAMING_ANIME == 3 then $checked else ''#>
 										<p>do <b>not</b> include absolute numbering</p>
 									</span>
 								</label>
@@ -1209,7 +1209,7 @@
 						</fieldset>
 
 						<div class="field-pair right">
-							<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+							<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 						</div>
 
 					</div><!-- /naming_anime_different -->
@@ -1259,16 +1259,16 @@
 							<div class="metadata_options_wrapper">
 								<h4>Create:</h4>
 								<div class="metadata_options">
-									<label for="${cur_id}_show_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_show_metadata" #if $cur_metadata_inst.show_metadata then $checked else ''#/>&nbsp;Show Metadata</label>
-									<label for="${cur_id}_episode_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_metadata" #if $cur_metadata_inst.episode_metadata then $checked else ''#/>&nbsp;Episode Metadata</label>
-									<label for="${cur_id}_fanart"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_fanart" #if $cur_metadata_inst.fanart then $checked else ''#/>&nbsp;Show Fanart</label>
-									<label for="${cur_id}_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_poster" #if $cur_metadata_inst.poster then $checked else ''#/>&nbsp;Show Poster</label>
-									<label for="${cur_id}_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_banner" #if $cur_metadata_inst.banner then $checked else ''#/>&nbsp;Show Banner</label>
-									<label for="${cur_id}_episode_thumbnails"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_thumbnails" #if $cur_metadata_inst.episode_thumbnails then $checked else ''#/>&nbsp;Episode Thumbnails</label>
-									<label for="${cur_id}_season_posters"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_posters" #if $cur_metadata_inst.season_posters then $checked else ''#/>&nbsp;Season Posters</label>
-									<label for="${cur_id}_season_banners"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_banners" #if $cur_metadata_inst.season_banners then $checked else ''#/>&nbsp;Season Banners</label>
-									<label for="${cur_id}_season_all_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_poster" #if $cur_metadata_inst.season_all_poster then $checked else ''#/>&nbsp;Season All Poster</label>
-									<label for="${cur_id}_season_all_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_banner" #if $cur_metadata_inst.season_all_banner then $checked else ''#/>&nbsp;Season All Banner</label>
+									<label for="${cur_id}_show_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_show_metadata" #if $cur_metadata_inst.show_metadata then $checked else ''#>&nbsp;Show Metadata</label>
+									<label for="${cur_id}_episode_metadata"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_metadata" #if $cur_metadata_inst.episode_metadata then $checked else ''#>&nbsp;Episode Metadata</label>
+									<label for="${cur_id}_fanart"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_fanart" #if $cur_metadata_inst.fanart then $checked else ''#>&nbsp;Show Fanart</label>
+									<label for="${cur_id}_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_poster" #if $cur_metadata_inst.poster then $checked else ''#>&nbsp;Show Poster</label>
+									<label for="${cur_id}_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_banner" #if $cur_metadata_inst.banner then $checked else ''#>&nbsp;Show Banner</label>
+									<label for="${cur_id}_episode_thumbnails"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_episode_thumbnails" #if $cur_metadata_inst.episode_thumbnails then $checked else ''#>&nbsp;Episode Thumbnails</label>
+									<label for="${cur_id}_season_posters"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_posters" #if $cur_metadata_inst.season_posters then $checked else ''#>&nbsp;Season Posters</label>
+									<label for="${cur_id}_season_banners"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_banners" #if $cur_metadata_inst.season_banners then $checked else ''#>&nbsp;Season Banners</label>
+									<label for="${cur_id}_season_all_poster"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_poster" #if $cur_metadata_inst.season_all_poster then $checked else ''#>&nbsp;Season All Poster</label>
+									<label for="${cur_id}_season_all_banner"><input type="checkbox" class="metadata_checkbox" id="${cur_id}_season_all_banner" #if $cur_metadata_inst.season_all_banner then $checked else ''#>&nbsp;Season All Banner</label>
 								</div>
 							</div>
 							<div class="metadata_example_wrapper">
@@ -1289,13 +1289,13 @@
 							<input type="hidden" name="${cur_id}_data" id="${cur_id}_data" value="$cur_metadata_inst.get_config()">
 						</div>
 #end for
-						<div class="clearfix"></div><br />
+						<div class="clearfix"></div><br>
 
-						<input type="submit" class="btn config_submitter" value="Save Changes"><br />
+						<input type="submit" class="btn config_submitter" value="Save Changes"><br>
 					</fieldset>
 				</div><!-- /component-group3 //-->
 
-				<br />
+				<br>
 				<h6 class="pull-right"><b>All non-absolute folder locations are relative to <span class="path">$sickgear.DATA_DIR</span></b> </h6>
 				<input type="submit" class="btn pull-left config_submitter button" value="Save Changes">
 
@@ -1305,7 +1305,7 @@
 
 <div class="clearfix"></div>
 
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 	jQuery('#config-components').tabs();
 	jQuery('#tv_download_dir').fileBrowser({ title: 'Select completed TV downloads directory' });

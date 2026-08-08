@@ -174,9 +174,6 @@ _COMPAT_NAMES: dict[str, str] = {
     "mac-turkish": "MacTurkish",
 }
 
-# Backward compat alias
-_LEGACY_NAMES = _COMPAT_NAMES
-
 
 def apply_compat_names(
     result: DetectionDict,

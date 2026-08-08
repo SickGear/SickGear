@@ -327,7 +327,8 @@ class TVInfoImageSize(object):
 
 class TVInfoImage(object):
     def __init__(self, image_type, sizes, img_id=None, main_image=False, type_str='', rating=None, votes=None,
-                 lang=None, height=None, width=None, aspect_ratio=None, updated_at=None, has_text=None):
+                 lang=None, height=None, width=None, aspect_ratio=None, updated_at=None, has_text=None,
+                 description=None):
         self.img_id = img_id  # type: Optional[integer_types]
         self.image_type = image_type  # type: integer_types
         self.sizes = sizes  # type: Union[TVInfoImageSize, Dict]
@@ -340,6 +341,7 @@ class TVInfoImage(object):
         self.width = width  # type: Optional[integer_types]
         self.aspect_ratio = aspect_ratio  # type: Optional[Union[float, integer_types]]
         self.has_text = has_text  # type: Optional[bool]
+        self.description = description  # type: Optional[str]
         self.updated_at = updated_at  # type: Optional[integer_types]
 
     def __eq__(self, other):
@@ -962,6 +964,8 @@ class TVInfoCharacter(PersonBase):
                  name=None,  # type: AnyStr
                  episode_count=None,  # type: int
                  guest_episodes_numbers=None,  # type: Dict[int, List[int]]
+                 episode_list=None,  # type: List
+                 incl_archive_footage=None,  # type: Optional[bool]
                  **kwargs):
         # type: (...) -> None
 
@@ -969,6 +973,7 @@ class TVInfoCharacter(PersonBase):
         self.person = person  # type: List[TVInfoPerson]
         self.voice = voice  # type: Optional[bool]
         self.plays_self = plays_self  # type: Optional[bool]
+        self.incl_archive_footage = incl_archive_footage  # type: Optional[bool]
         self.regular = regular  # type: Optional[bool]
         self.ti_show = ti_show  # type: Optional[TVInfoShow]
         self.start_year = start_year  # type: Optional[integer_types]
@@ -976,6 +981,7 @@ class TVInfoCharacter(PersonBase):
         self.name = name  # type: Optional[AnyStr]
         self.episode_count = episode_count  # type: Optional[int]
         self.guest_episodes_numbers = guest_episodes_numbers or {}  # type: Dict[int, List[int]]
+        self.episode_list = episode_list  # type: List
 
     def __str__(self):
         pn = []
@@ -1459,6 +1465,16 @@ class TVInfoBase(object):
             else:
                 self.ti_shows[sid].__dict__[key] = value
 
+    def get_person_tvshow_filmography(self, p_id):
+        # type: (str) -> TVInfoPerson
+        """
+        get all tv shows with actor/actress credit
+
+        :param p_id:
+        :return: List of TVInfoShow
+        """
+        return
+
     def get_updated_shows(self):
         # type: (...) -> Dict[integer_types, integer_types]
         """
@@ -1520,6 +1536,27 @@ class TVInfoBase(object):
         # type: (...) -> List[TVInfoShow]
         """
         get new seasons
+        """
+        return []
+
+    def get_coming_soon(self, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get coming soon shows
+        """
+        return []
+
+    def get_watchlist(self, user_id, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoShow]
+        """
+        get watchlist shows
+        """
+        return []
+
+    def get_favorite_actors(self, user_id, result_count=100, **kwargs):
+        # type: (...) -> List[TVInfoPerson]
+        """
+        get favorite actors
         """
         return []
 

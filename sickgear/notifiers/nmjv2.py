@@ -42,7 +42,7 @@ class NMJv2Notifier(BaseNotifier):
         """
         result = False
         try:
-            base_url = 'http://%s:8008/' % host
+            base_url = f'http://{host}:8008/'
 
             req = urllib.request.Request('%s%s%s' % (base_url, 'file_operation?', urlencode(
                 dict(arg0='list_user_storage_file', arg1='', arg2=instance, arg3=20, arg4='true', arg5='true',
@@ -104,7 +104,7 @@ class NMJv2Notifier(BaseNotifier):
 
         # if a host is provided then attempt to open a handle to that URL
         try:
-            base_url = 'http://%s:8008/' % host
+            base_url = f'http://{host}:8008/'
 
             url_scandir = '%s%s%s' % (base_url, 'metadata_database?', urlencode(
                 dict(arg0='update_scandir', arg1=sickgear.NMJv2_DATABASE, arg2='', arg3='update_all')))

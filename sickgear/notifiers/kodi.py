@@ -100,9 +100,9 @@ class KodiNotifier(Notifier):
         # either update each host, or only attempt to update until one successful result
         result = 0
         only_first = dict(show='', first='', first_note='')
-        show_name and only_first.update(show=' for show;"%s"' % show_name)
+        show_name and only_first.update(show=f' for show;"{show_name}"')
         sickgear.KODI_UPDATE_ONLYFIRST and only_first.update(dict(
-            first=' first', first_note=' in line with the "Only update first host"%s' % ' setting'))
+            first=' first', first_note=f' in line with the "Only update first host" setting'))
 
         for cur_host in [x.strip() for x in sickgear.KODI_HOST.split(',')]:
 
@@ -117,7 +117,7 @@ class KodiNotifier(Notifier):
             if self._send_library_update(cur_host, show_name):
                 only_first.update(dict(profile=response.get('label') or 'Master', host=cur_host))
                 self._log('Success: profile;' +
-                          '"%(profile)s" at%(first)s host;%(host)s updated%(show)s%(first_note)s' % only_first)
+                          f'"{only_first["profile"]}" at{only_first["first"]} host;{only_first["host"]} updated{only_first["show"]}{only_first["first_note"]}')
             else:
                 self._maybe_log_failed_detection(cur_host)
                 result += 1
@@ -179,7 +179,7 @@ class KodiNotifier(Notifier):
         if self.password or sickgear.KODI_PASSWORD:
             args['auth'] = (self.username or sickgear.KODI_USERNAME, self.password or sickgear.KODI_PASSWORD)
 
-        url = 'http://%s/%sCmds/%sHttp' % (host, self.prefix or 'kodi', self.prefix or 'kodi')
+        url = f'http://{host}/{self.prefix or "kodi"}Cmds/{self.prefix or "kodi"}Http'
         response = sickgear.helpers.get_url(url=url, params=command,
                                              timeout=timeout, hooks=dict(response=self.cb_response), **args)
 
@@ -221,7 +221,7 @@ class KodiNotifier(Notifier):
                 return False
 
             # sql used to grab path(s)
-            response = self._send(host, {'command': 'QueryVideoDatabase(%s)' % path_sql})
+            response = self._send(host, {'command': f'QueryVideoDatabase({path_sql})'})
             if not response:
                 self._log_debug(f'Invalid response for {show_name} on {host}')
                 return False
@@ -243,7 +243,7 @@ class KodiNotifier(Notifier):
                 self._log_debug(f'Updating {show_name} on {host} at {un_enc_path}')
 
                 if not self._send(
-                        host, dict(command='ExecBuiltIn', parameter='Kodi.updatelibrary(video, %s)' % un_enc_path)):
+                        host, dict(command='ExecBuiltIn', parameter=f'Kodi.updatelibrary(video, {un_enc_path})')):
                     self._log_error(f'Update of show directory failed for {show_name} on {host} at {un_enc_path}')
                     return False
 
@@ -292,7 +292,7 @@ class KodiNotifier(Notifier):
         if self.password or sickgear.KODI_PASSWORD:
             args['auth'] = (self.username or sickgear.KODI_USERNAME, self.password or sickgear.KODI_PASSWORD)
 
-        response = sickgear.helpers.get_url(url='http://%s/jsonrpc' % host, timeout=timeout,
+        response = sickgear.helpers.get_url(url=f'http://{host}/jsonrpc', timeout=timeout,
                                              headers={'Content-type': 'application/json'}, parse_json=True,
                                              hooks=dict(response=self.cb_response), **args)
         if response:
@@ -326,7 +326,7 @@ class KodiNotifier(Notifier):
             # try fetching tvshowid using show_name with a fallback to getting show list
             show_name = unquote_plus(show_name)
             commands = [dict(method='VideoLibrary.GetTVShows',
-                             params={'filter': {'field': 'title', 'operator': 'is', 'value': '%s' % show_name},
+                             params={'filter': {'field': 'title', 'operator': 'is', 'value': f'{show_name}'},
                                      'properties': ['title']}),
                         dict(method='VideoLibrary.GetTVShows')]
 
@@ -427,19 +427,18 @@ class KodiNotifier(Notifier):
             api_version = self._get_kodi_version(cur_host)
             if self.response and 401 == self.response.get('status_code'):
                 success = False
-                message += ['Fail: Cannot authenticate with %s' % cur_host]
+                message += [f'Fail: Cannot authenticate with {cur_host}']
                 self._log_debug(f'Failed to authenticate with {cur_host}')
             elif not api_version:
                 success = False
-                message += ['Fail: No supported Kodi found at %s' % cur_host]
+                message += [f'Fail: No supported Kodi found at {cur_host}']
                 self._maybe_log_failed_detection(cur_host, 'connect and detect version for')
             else:
                 if 4 >= api_version:
-                    self._log_debug(f'Detected {self.prefix and " " + self.prefix.capitalize()}version <= 11,'
-                                    f' using HTTP API')
+                    self._log_debug(f'Detected {self.prefix}version <= 11, using HTTP API {self.prefix.capitalize()}')
                     __method_send = self._send
                     command = dict(command='ExecBuiltIn',
-                                   parameter='Notification(%s,%s)' % (title, body))
+                                   parameter=f'Notification({title},{body})')
                 else:
                     self._log_debug('Detected version >= 12, using JSON API')
                     __method_send = self._send_json
@@ -449,9 +448,9 @@ class KodiNotifier(Notifier):
 
                 response_notify = __method_send(cur_host, command, 10)
                 if response_notify:
-                    message += ['%s: %s' % ((response_notify, 'OK')['OK' in response_notify], cur_host)]
+                    message += [f'{(response_notify, "OK")["OK" in response_notify]}: {cur_host}']
 
-        return self._choose(('Success, all hosts tested', '<br />\n'.join(message))[not success], success)
+        return self._choose(('Success, all hosts tested', '<br>\n'.join(message))[not success], success)
 
 
 notifier = KodiNotifier

@@ -28,7 +28,7 @@ function goListGroup(apikey, L8, L7, L6, L5, L4, L3, L2, L1){
     // handle the show.getposter / show.getbanner differently as they return an image and not json
     if (L1 == "?cmd=sg.getnetworkicon" || L1 == "?cmd=sg.show.getposter" || L1 == "?cmd=sg.show.getbanner" || L1 == "?cmd=show.getposter" || L1 == "?cmd=show.getbanner" || L1 == "?cmd=sg.getindexericon" || L1 == "?cmd=sg.show.getfanart") {
         var imgcache = sbRoot + "/api/" + apikey + "/" + L1 + L2 + GlobalOptions;
-        var html = imgcache + '<br/><br/><img src="' + sbRoot + '/images/loading16.gif" id="imgcache">';
+        var html = imgcache + '<br><br><img src="' + sbRoot + '/images/loading16.gif" id="imgcache">';
         $('#apiResponse').html(html);
         $.ajax({
           url: sbRoot + "/api/" + apikey + "/" + L1 + L2 + GlobalOptions,
@@ -51,7 +51,7 @@ function goListGroup(apikey, L8, L7, L6, L5, L4, L3, L2, L1){
         $('#apiResponse').html(html);
     }
     else {
-        var html = sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + L8 + GlobalOptions + "<br/><pre>";
+        var html = sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + L8 + GlobalOptions + "<br><pre>";
         html += $.ajax({
           url: sbRoot + "/api/" + apikey + "/" + L1 + L2 + L3 + L4 + L5 + L6 + L7 + L8 + GlobalOptions,
           async: false,

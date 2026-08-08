@@ -46,7 +46,7 @@ FILENAME = f'show name - s0{SEASON}e0{EPISODE}.mkv'
 FILEDIR = os.path.join(TESTDIR, SHOWNAME)
 FILEPATH = os.path.join(FILEDIR, FILENAME)
 
-SHOWDIR = os.path.join(TESTDIR, SHOWNAME + ' final')
+SHOWDIR = os.path.join(TESTDIR, f'{SHOWNAME} final')
 
 # sickgear.logger.sb_log_instance = sickgear.logger.SBRotatingLogHandler(
 #     os.path.join(TESTDIR, 'sickgear.log'), sickgear.logger.NUM_LOGS, sickgear.logger.LOG_SIZE)
@@ -156,28 +156,36 @@ class TestDBConnection(db.DBConnection, object):
 
 class TestCacheDBConnection(TestDBConnection, object):
 
-    def __init__(self, provider_name):
+    def __init__(self):  #, provider_name):
         db.DBConnection.__init__(self, os.path.join(TESTDIR, TESTCACHEDBNAME))
 
         # Create the table if it's not already there
         try:
-            sql = 'CREATE TABLE ' + provider_name + \
-                  ' (name TEXT, season NUMERIC, episodes TEXT,' \
-                  ' indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);'
-            self.connection.execute(sql)
-            self.connection.commit()
-        except sqlite3.OperationalError as e:
-            if 'table %s already exists' % provider_name != str(e):
-                raise
-
+            if not self.has_table('lastUpdate'):
+                self.action('CREATE TABLE lastUpdate (provider TEXT, time NUMERIC)')
+        except (BaseException, Exception) as e:
+            if str(e) != 'table lastUpdate already exists':
+                raise e
         # Create the table if it's not already there
-        try:
-            sql = 'CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);'
-            self.connection.execute(sql)
-            self.connection.commit()
-        except sqlite3.OperationalError as e:
-            if 'table lastUpdate already exists' != str(e):
-                raise
+        # try:
+        #     sql = 'CREATE TABLE ' + provider_name + \
+        #           ' (name TEXT, season NUMERIC, episodes TEXT,' \
+        #           ' indexerid NUMERIC, url TEXT, time NUMERIC, quality TEXT);'
+        #     self.connection.execute(sql)
+        #     self.connection.commit()
+        # except sqlite3.OperationalError as e:
+        #     if 'table %s already exists' % provider_name != str(e):
+        #         raise
+        #
+        # Create the table if it's not already there
+        # try:
+        #     sql = 'CREATE TABLE lastUpdate (provider TEXT, time NUMERIC);'
+        #     self.connection.execute(sql)
+        #     self.connection.commit()
+        # except sqlite3.OperationalError as e:
+        #     if 'table lastUpdate already exists' != str(e):
+        #         raise
+
 
 
 # this will override the normal db connection
@@ -192,16 +200,19 @@ def setup_test_db():
     """upgrades the db to the latest version
     """
     # upgrading the db
-    db.migration_code(db.DBConnection())
+    with db.DBConnection() as sg_db:
+        db.migration_code(sg_db)
 
-    # fix up any db problems
-    db.sanity_check_db(db.DBConnection(), mainDB.MainSanityCheck)
+        # fix up any db problems
+        db.sanity_check_db(sg_db, mainDB.MainSanityCheck)
 
-    # and for cachedb too
-    db.upgrade_database(db.DBConnection('cache.db'), cache_db.InitialSchema)
+    with db.DBConnection('cache.db') as sg_db:
+        # and for cachedb too
+        db.upgrade_database(sg_db, cache_db.InitialSchema)
 
-    # and for faileddb too
-    db.upgrade_database(db.DBConnection('failed.db'), failed_db.InitialSchema)
+    with db.DBConnection('failed.db') as sg_db:
+        # and for faileddb too
+        db.upgrade_database(sg_db, failed_db.InitialSchema)
 
 
 def teardown_test_db():
@@ -225,17 +236,17 @@ def teardown_test_db():
     except (BaseException, Exception):
         pass
 
-    for filename in glob.glob(os.path.join(TESTDIR, TESTDBNAME) + '*'):
+    for filename in glob.glob(f'{os.path.join(TESTDIR, TESTDBNAME)}*'):
         try:
             os.remove(filename)
         except (BaseException, Exception):
             pass
-    for filename in glob.glob(os.path.join(TESTDIR, TESTCACHEDBNAME) + '*'):
+    for filename in glob.glob(f'{os.path.join(TESTDIR, TESTCACHEDBNAME)}*'):
         try:
             os.remove(filename)
         except (BaseException, Exception):
             pass
-    for filename in glob.glob(os.path.join(TESTDIR, TESTFAILEDDBNAME) + '*'):
+    for filename in glob.glob(f'{os.path.join(TESTDIR, TESTFAILEDDBNAME)}*'):
         try:
             os.remove(filename)
         except (BaseException, Exception):
@@ -280,7 +291,7 @@ if '__main__' == __name__:
     dirList = os.listdir(TESTDIR)
     for fname in dirList:
         if (0 < fname.find('_test')) and (0 > fname.find('pyc')):
-            print('- ' + fname)
+            print(f'- {fname}')
 
     print('=========================')
     print('or just call all_tests.py')

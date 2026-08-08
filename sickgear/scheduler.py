@@ -199,7 +199,7 @@ class Job(object):
     def run(self):
 
         if self.amActive and self.__class__.__name__ in ('BacklogSearcher', 'MediaProcess'):
-            logger.log(u'%s is still running, not starting it again' % self.__class__.__name__)
+            logger.log(f'{self.__class__.__name__} is still running, not starting it again')
             return
 
         if self._func:
@@ -211,7 +211,7 @@ class Job(object):
                 re_raise = e
             finally:
                 self.amActive = False
-                not self._silent and logger.log(u'%s(%s) completed' % (self.__class__.__name__, self._func.__name__))
+                not self._silent and logger.log(f'{self.__class__.__name__}({self._func.__name__}) completed')
                 if re_raise:
                     raise re_raise
 

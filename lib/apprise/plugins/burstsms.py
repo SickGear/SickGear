@@ -295,7 +295,6 @@ class NotifyBurstSMS(NotifyBase):
         targets = list(self.targets)
 
         for index in range(0, len(targets), batch_size):
-
             # Prepare our user
             payload["to"] = ",".join(self.targets[index : index + batch_size])
 
@@ -317,6 +316,7 @@ class NotifyBurstSMS(NotifyBase):
                     auth=auth,
                     verify=self.verify_certificate,
                     timeout=self.request_timeout,
+                    allow_redirects=self.redirects,
                 )
 
                 if r.status_code != requests.codes.ok:
@@ -336,7 +336,8 @@ class NotifyBurstSMS(NotifyBase):
                     )
 
                     self.logger.debug(
-                        "Response Details:\r\n%r", (r.content or b"")[:2000])
+                        "Response Details:\r\n%r", (r.content or b"")[:2000]
+                    )
 
                     # Mark our failure
                     has_error = True

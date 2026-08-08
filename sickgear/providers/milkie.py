@@ -32,12 +32,12 @@ class MilkieProvider(generic.TorrentProvider):
 
         self.url_base = 'https://milkie.cc/'
 
-        self.api = self.url_base + 'api/v1/'
+        self.api = f'{self.url_base}api/v1/'
         self.urls = dict(
             config_provider_home_uri=self.url_base,
-            login=self.api + 'auth/sessions', auth=self.api + 'auth',
-            get=self.api + 'torrents/%s/torrent',
-            search=self.api + 'torrents?pi=0&ps=100&categories=2&%s',
+            login=f'{self.api}auth/sessions', auth=f'{self.api}auth',
+            get=f'{self.api}torrents/%s/torrent',
+            search=f'{self.api}torrents?pi=0&ps=100&categories=2&%s',
             params=('t.f=0', 'mode=release&t.o=native')
         )
 
@@ -54,7 +54,7 @@ class MilkieProvider(generic.TorrentProvider):
         self._token = resp and resp.get('token')
         if self._token:
             resp = self.get_url(self.urls['auth'], skip_auth=True,
-                                headers=dict(Authorization='Bearer %s' % self._token), parse_json=True)
+                                headers=dict(Authorization=f'Bearer {self._token}'), parse_json=True)
             user = isinstance(resp, dict) and resp.get('user')
             self._dkey = user and user.get('apiKey') or user.get('downloadKey')
         return bool(self._token) and bool(self._dkey)
@@ -78,7 +78,7 @@ class MilkieProvider(generic.TorrentProvider):
                         params={'query': search_string}).prepare(), 'url', None)
                     try:
                         data_json, sess = self.get_url(search_url, resp_sess=True, parse_json=True,
-                                                       headers=dict(Authorization='Bearer %s' % self._token))
+                                                       headers=dict(Authorization=f'Bearer {self._token}'))
                         if isinstance(data_json, dict):
                             break
                     except(BaseException, Exception):

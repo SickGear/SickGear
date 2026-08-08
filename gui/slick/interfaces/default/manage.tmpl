@@ -12,7 +12,7 @@
 #import os.path
 #include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 ##
-<script type="text/javascript" charset="utf-8">
+<script charset="utf-8">
 <!--
 ## an arbitrary high number greater than a media file size
 #set $high = 1000000000000
@@ -89,7 +89,7 @@
 });
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
+<script src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else

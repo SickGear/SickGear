@@ -7,5 +7,5 @@ from within setuptools and from chardet subpackages. (see custom comment below)
 :author: Dan Blanchard (dan.blanchard@gmail.com)
 """
 
-__version__ = "7.3.0"
+__version__ = "7.4.1"
 VERSION = __version__.split(".")

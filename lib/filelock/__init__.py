@@ -2,7 +2,7 @@
 A platform independent file lock that supports the with-statement.
 
 .. autodata:: filelock.__version__
-   :no-value:
+    :no-value:
 
 """
 
@@ -14,7 +14,24 @@ from typing import TYPE_CHECKING
 
 from ._api import AcquireReturnProxy, BaseFileLock
 from ._error import Timeout
+
+if TYPE_CHECKING:
+    from ._async_read_write import (
+        AsyncAcquireReadWriteReturnProxy,
+        AsyncReadWriteLock,
+    )
+    from ._read_write import ReadWriteLock
+else:
+    try:
+        from ._async_read_write import AsyncAcquireReadWriteReturnProxy, AsyncReadWriteLock
+        from ._read_write import ReadWriteLock
+    except ImportError:  # sqlite3 may be unavailable if Python was built without it or the C library is missing
+        AsyncAcquireReadWriteReturnProxy = None
+        AsyncReadWriteLock = None
+        ReadWriteLock = None
+
 from ._soft import SoftFileLock
+from ._soft_rw import AsyncAcquireSoftReadWriteReturnProxy, AsyncSoftReadWriteLock, SoftReadWriteLock
 from ._unix import UnixFileLock, has_fcntl
 from ._windows import WindowsFileLock
 from .asyncio import (
@@ -54,15 +71,21 @@ else:
 
 __all__ = [
     "AcquireReturnProxy",
+    "AsyncAcquireReadWriteReturnProxy",
     "AsyncAcquireReturnProxy",
+    "AsyncAcquireSoftReadWriteReturnProxy",
     "AsyncFileLock",
+    "AsyncReadWriteLock",
     "AsyncSoftFileLock",
+    "AsyncSoftReadWriteLock",
     "AsyncUnixFileLock",
     "AsyncWindowsFileLock",
     "BaseAsyncFileLock",
     "BaseFileLock",
     "FileLock",
+    "ReadWriteLock",
     "SoftFileLock",
+    "SoftReadWriteLock",
     "Timeout",
     "UnixFileLock",
     "WindowsFileLock",

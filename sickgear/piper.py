@@ -11,8 +11,6 @@ from json_helper import json_loads
 from sg_helpers import cmdline_runner, is_virtualenv
 from lib.requests.structures import CaseInsensitiveDict
 
-from six import iteritems
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
@@ -180,7 +178,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
     for cur_reco_file in ['requirements.txt', 'recommended.txt']:
         try:
             with io.open(os.path.join(PROG_DIR, cur_reco_file)) as fh:
-                input_reco += ['%s\n' % line.strip() for line in fh]  # must ensure EOL marker
+                input_reco += [f'{line.strip()}\n' for line in fh]  # must ensure EOL marker
         except (BaseException, Exception):
             pass
 
@@ -194,6 +192,9 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             environment[cur_distinfo['Name']] = parse(cur_distinfo['Version'])  # type: Version
         except (BaseException, Exception):
             pass
+    # older? Pythons have version as '' here, this fills that gap
+    environment.update({cur_distinfo.metadata['Name']: parse(cur_distinfo.metadata['Version'])
+                        for cur_distinfo in distributions() if not environment.get(cur_distinfo.metadata['Name'])})
 
     save_failed = False
     known_failed = load_ignorables(DATA_DIR)
@@ -211,7 +212,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             requirement = Requirement(cur_line)  # https://packaging.pypa.io/en/latest/requirements.html
         except (BaseException, Exception) as e:
             if not cur_line.startswith('--'):
-                logger.error('Error [%s] with line: %s' % (e, cur_line))  # name@url ; whitespace/LF must follow url
+                logger.error(f'Error [{e}] with line: {cur_line}')  # name@url ; whitespace/LF must follow url
             continue
         project_name = getattr(requirement, 'name', None)
         if cur_line in known_failed and project_name not in environment:
@@ -275,7 +276,7 @@ def _check_pip_env(pip_outdated=False, reset_fails=False):
             _tuple[0]: _tuple[1] for _tuple in
             (cur_name in names_outdated and [('info', names_outdated[cur_name])] or [])
             + (cur_name in requirement_update and [('requirement', True)] or [])
-            + [('require_spec', output_reco.get(cur_name, '%s>0.0.0\n' % cur_name))]})
+            + [('require_spec', output_reco.get(cur_name, f'{cur_name}>0.0.0\n'))]})
 
     return input_reco, updates_todo, installed, failed_names
 
@@ -291,8 +292,8 @@ def pip_update(loading_msg, updates_todo, data_dir):
     input_reco = None
 
     piper_path = os.path.join(data_dir, '.pip_req_spec_temp.txt')
-    for cur_project_name, cur_data in iteritems(updates_todo):
-        msg = 'Installing package "%s"' % cur_project_name
+    for cur_project_name, cur_data in updates_todo.items():
+        msg = f'Installing package "{cur_project_name}"'
         if cur_data.get('info'):
             info = dict(name=cur_project_name, ver=cur_data.get('info').get('version'))
             if not cur_data.get('requirement'):
@@ -323,12 +324,12 @@ def pip_update(loading_msg, updates_todo, data_dir):
         try:
             # ensure '-' in a project name is not escaped in order to convert the '-' into a `[_-]` regex
             find_name = re.escape(cur_project_name.replace(r'-', r'44894489')).replace(r'44894489', r'[_-]')
-            parsed_name = re.findall(r'(?sim).*(%s\S+)\.whl.*' % find_name, output) or \
-                re.findall(r'(?sim).*Successfully installed.*?(%s\S+)' % find_name, output)
+            parsed_name = re.findall(rf'(?sim).*({find_name}\S+)\.whl.*', output) or \
+                re.findall(rf'(?sim).*Successfully installed.*?({find_name}\S+)', output)
             if not parsed_name:
-                parsed_name = re.findall(r'(?sim)up-to-date\S+\s*(%s).*?\s\(([^)]+)\)$' % find_name, output)
+                parsed_name = re.findall(rf'(?sim)up-to-date\S+\s*({find_name}).*?\s\(([^)]+)\)$', output)
                 parsed_name = ['' if not parsed_name else '-'.join(parsed_name[0])]
-            pip_version = re.findall(r'%s-([\d.]+).*?' % find_name, os.path.basename(parsed_name[0]), re.I)[0]
+            pip_version = re.findall(rf'{find_name}-([\d.]+).*?', os.path.basename(parsed_name[0]), re.I)[0]
         except (BaseException, Exception):
             pass
 
@@ -338,8 +339,8 @@ def pip_update(loading_msg, updates_todo, data_dir):
         if 0 == exit_status or (cur_project_name, pip_version) in installed:
             result = True
             installed_version = pip_version or cur_data.get('info', {}).get('latest_version') or 'n/a'
-            msg_result = 'Installed version: %s' % installed_version
-            logger.log('Installed %s version: %s' % (cur_project_name, installed_version))
+            msg_result = f'Installed version: {installed_version}'
+            logger.log(f'Installed {cur_project_name} version: {installed_version}')
         else:
             failed_lines += [cur_data.get('require_spec')]
             msg_result = 'Failed to install'
@@ -347,9 +348,9 @@ def pip_update(loading_msg, updates_todo, data_dir):
             for cur_line in output.splitlines()[::-1]:
                 if 'error' in cur_line.lower():
                     msg_result = re.sub(r'(?i)(\berror:\s*|\s*\(from.*)', '', cur_line)
-                    log_error = ': %s' % msg_result
+                    log_error = f': {msg_result}'
                     break
-            logger.debug('Failed to install %s%s' % (cur_project_name, log_error))
+            logger.debug(f'Failed to install {cur_project_name}{log_error}')
         loading_msg.set_msg_progress(msg, msg_result)
 
     if failed_lines:

@@ -138,7 +138,12 @@ class BeautifulSoupHTMLParser(HTMLParser, DetectsXMLParsedAsHTML):
         # know that this is an empty-element tag, and we want to call
         # handle_endtag ourselves.
         self.handle_starttag(tag, attrs, handle_empty_element=False)
-        self.handle_endtag(tag)
+
+        # Similarly, we set `check_already_closed` when calling
+        # handle_endtag. Since we know the start event is identical to
+        # the end event, we don't want handle_endtag() to cross off
+        # any previous end events for tags of this name.
+        self.handle_endtag(tag, check_already_closed=False)
 
     def handle_starttag(
         self,

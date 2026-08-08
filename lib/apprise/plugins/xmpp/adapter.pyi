@@ -9,6 +9,14 @@ from typing import Any, Callable
 SLIXMPP_SUPPORT_AVAILABLE: bool
 FuturesTimeoutError = Exception
 
+class XMPPChannelBindingError(Exception):
+    """SASL SCRAM-PLUS channel-binding authentication failure.
+
+    Raised when the server rejects authentication because TLS
+    channel-binding data (tls-unique or tls-exporter) was unavailable
+    or mismatched.  Callers may retry with SCRAM-PLUS disabled.
+    """
+
 class XMPPConfig:
     """Connection configuration."""
     host: str
@@ -17,6 +25,7 @@ class XMPPConfig:
     password: str
     secure: str
     verify_certificate: bool
+    use_channel_binding: bool
 
 LOGGING_ID: str
 _LOG_BRIDGE_LOCK: Incomplete
@@ -46,6 +55,20 @@ def _get_client_subclass(base_cls: type[Any]) -> type[Any]:
     creation overhead in production.
     """
 def _build_client(*args: Any, **kwargs: Any) -> Any: ...
+def _disable_channel_binding(client: Any) -> None:
+    """Patch the slixmpp feature_mechanisms plugin on *client* so that
+    SASL mechanism selection never considers -PLUS (channel-binding)
+    variants.
+
+    Works by wrapping _send_auth() -- which is called after the server's
+    mechanism list is stored in plugin.mech_list -- to strip every entry
+    whose name ends with '-PLUS' before the SASL choose() call picks
+    a mechanism.
+
+    The whole operation is wrapped in contextlib.suppress so it degrades
+    gracefully when the plugin is unavailable (e.g., in tests that use a
+    fake ClientXMPP without plugin support).
+    """
 
 class SlixmppAdapter:
     """Send a message to one or more targets.

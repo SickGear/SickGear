@@ -29,8 +29,6 @@ from .metadata.generic import GenericMetadata
 from .sgdatetime import SGDatetime
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TMDB, TVINFO_IMDB
 
-from six import itervalues, iteritems
-
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Optional, Tuple, Union
@@ -93,7 +91,7 @@ class ImageCache(object):
         :rtype: AnyStr or None
         """
         if None not in (tvid, prodid):
-            return os.path.abspath(os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'fanart'))
+            return os.path.abspath(os.path.join(self.shows_dir, f'{tvid}-{prodid}', 'fanart'))
 
     def _thumbnails_dir(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -107,12 +105,12 @@ class ImageCache(object):
         :return: path
         :rtype: AnyStr
         """
-        return os.path.abspath(os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'thumbnails'))
+        return os.path.abspath(os.path.join(self.shows_dir, f'{tvid}-{prodid}', 'thumbnails'))
 
     @staticmethod
     def _person_base_name(person_obj):
         # type: (Person) -> AnyStr
-        base_id = next((v for k, v in iteritems(cache_img_base)
+        base_id = next((v for k, v in cache_img_base.items()
                         if k in (person_obj.image_url or '') or person_obj.thumb_url), 0)
         return '%s-%s' % (cache_img_src.get(base_id, base_id), person_obj.ids.get(base_id)
                           or sg_helpers.sanitize_filename(person_obj.name))
@@ -131,7 +129,7 @@ class ImageCache(object):
         :param person_obj:
         :param base_path:
         """
-        filename = '%s.jpg' % base_path or self._person_base_name(person_obj)
+        filename = f'{base_path}.jpg' or self._person_base_name(person_obj)
         return os.path.join(self.persons_dir, filename)
 
     def person_thumb_path(self, person_obj, base_path=None):
@@ -141,7 +139,7 @@ class ImageCache(object):
         :param person_obj:
         :param base_path:
         """
-        filename = '%s_thumb.jpg' % base_path or self._person_base_name(person_obj)
+        filename = f'{base_path}_thumb.jpg' or self._person_base_name(person_obj)
         return os.path.join(self.persons_dir, filename)
 
     def person_both_paths(self, person_obj):
@@ -161,7 +159,7 @@ class ImageCache(object):
         :param show_obj:
         :param base_path:
         """
-        filename = '%s.jpg' % base_path or self._character_base_name(character_obj, show_obj)
+        filename = f'{base_path}.jpg' or self._character_base_name(character_obj, show_obj)
         return os.path.join(self.characters_dir, filename)
 
     def character_thumb_path(self, character_obj, show_obj, base_path=None):
@@ -172,7 +170,7 @@ class ImageCache(object):
         :param show_obj:
         :param base_path:
         """
-        filename = '%s_thumb.jpg' % base_path or self._character_base_name(character_obj, show_obj)
+        filename = f'{base_path}_thumb.jpg' or self._character_base_name(character_obj, show_obj)
         return os.path.join(self.characters_dir, filename)
 
     def character_both_path(self, character_obj, show_obj=None, tvid=None, proid=None, person_obj=None):
@@ -190,7 +188,7 @@ class ImageCache(object):
         if isinstance(person_obj, Person):
             person_base = self._person_base_name(person_obj)
             if person_base:
-                base_path = '%s-%s' % (base_path, person_base)
+                base_path = f'{base_path}-{person_base}'
         return self.character_path(None, None, base_path=base_path), \
             self.character_thumb_path(None, None, base_path=base_path)
 
@@ -206,7 +204,7 @@ class ImageCache(object):
         :return: a full path to the cached poster file for the given tvid prodid
         :rtype: AnyStr
         """
-        return os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'poster.jpg')
+        return os.path.join(self.shows_dir, f'{tvid}-{prodid}', 'poster.jpg')
 
     def banner_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -220,7 +218,7 @@ class ImageCache(object):
         :return: a full path to the cached banner file for the given tvid prodid
         :rtype: AnyStr
         """
-        return os.path.join(self.shows_dir, '%s-%s' % (tvid, prodid), 'banner.jpg')
+        return os.path.join(self.shows_dir, f'{tvid}-{prodid}', 'banner.jpg')
 
     def fanart_path(self, tvid, prodid, prefix=''):
         # type: (int, int, Optional[AnyStr]) -> AnyStr
@@ -236,7 +234,7 @@ class ImageCache(object):
         :return: a full path to the cached fanart file for the given tvid prodid
         :rtype: AnyStr
         """
-        return os.path.join(self._fanart_dir(tvid, prodid), '%s%s' % (prefix, 'fanart.jpg'))
+        return os.path.join(self._fanart_dir(tvid, prodid), f'{prefix}fanart.jpg')
 
     def poster_thumb_path(self, tvid, prodid):
         # type: (int, int) -> AnyStr
@@ -425,7 +423,7 @@ class ImageCache(object):
         else:
             msg_data = image.replace('%', '%%')
         msg_success = 'Treating image as %s' \
-                      + ' with extracted aspect ratio from %s' % msg_data
+                      + f' with extracted aspect ratio from {msg_data}'
         # most posters are around 0.68 width/height ratio (eg. 680/1000)
         if 0.55 <= img_ratio <= 0.8:
             logger.debug(msg_success % 'poster')
@@ -457,18 +455,18 @@ class ImageCache(object):
         :return:
         :rtype: bool
         """
-        my_db = db.DBConnection('cache.db', row_type='dict')
+        with db.DBConnection('cache.db', row_type='dict') as sg_db:
 
-        sql_result = my_db.select('SELECT time FROM lastUpdate WHERE provider = ?',
-                                  ['imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)])
+            sql_result = sg_db.select('SELECT time FROM lastUpdate WHERE provider = ?',
+                                      [f'imsg_{(image_type, self.FANART)[None is image_type]}_{provider}'])
 
-        if sql_result:
-            minutes_iv = 60 * 3
-            # daily_interval = 60 * 60 * 23
-            iv = minutes_iv
-            now_stamp = SGDatetime.timestamp_near()
-            the_time = int(sql_result[0]['time'])
-            return now_stamp - the_time > iv
+            if sql_result:
+                minutes_iv = 60 * 3
+                # daily_interval = 60 * 60 * 23
+                iv = minutes_iv
+                now_stamp = SGDatetime.timestamp_near()
+                the_time = int(sql_result[0]['time'])
+                return now_stamp - the_time > iv
 
         return True
 
@@ -481,10 +479,10 @@ class ImageCache(object):
         :param provider: provider name
         :type provider: AnyStr
         """
-        my_db = db.DBConnection('cache.db')
-        my_db.upsert('lastUpdate',
-                     {'time': SGDatetime.timestamp_near()},
-                     {'provider': 'imsg_%s_%s' % ((image_type, self.FANART)[None is image_type], provider)})
+        with db.DBConnection('cache.db') as sg_db:
+            sg_db.upsert('lastUpdate',
+                         {'time': SGDatetime.timestamp_near()},
+                         {'provider': f'imsg_{(image_type, self.FANART)[None is image_type]}_{provider}'})
 
     def _cache_image_from_file(self, image_path, img_type, tvid, prodid, prefix='', move_file=False):
         # type: (AnyStr, int, int, int, Optional[AnyStr], Optional[bool]) -> Union[AnyStr, bool]
@@ -519,8 +517,8 @@ class ImageCache(object):
         elif self.FANART == img_type:
             dest_thumb_path = None
             with open(image_path, mode='rb') as resource:
-                crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
-            dest_path = self.fanart_path(*id_args + (prefix,)).replace('.fanart.jpg', '.%s.fanart.jpg' % crc)
+                crc = f'{zlib.crc32(resource.read()) & 4294967295:05X}'
+            dest_path = self.fanart_path(*id_args + (prefix,)).replace('.fanart.jpg', f'.{crc}.fanart.jpg')
             fanart_dir = [self._fanart_dir(*id_args)]
         else:
             logger.error(f'Invalid cache image type: {img_type}')
@@ -588,7 +586,7 @@ class ImageCache(object):
             crcs = []
             for cache_file_name in glob.glob(dest_path):
                 with open(cache_file_name, mode='rb') as resource:
-                    crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
+                    crc = f'{zlib.crc32(resource.read()) & 4294967295:05X}'
                 if crc not in crcs:
                     crcs += [crc]
 
@@ -602,7 +600,7 @@ class ImageCache(object):
                 if None is img_data or self.FANART != self.which_type(img_data, is_binary=True):
                     continue
 
-                crc = '%05X' % (zlib.crc32(img_data) & 0xFFFFFFFF)
+                crc = f'{zlib.crc32(img_data) & 4294967295:05X}'
                 if crc in crcs:
                     continue
                 crcs += [crc]
@@ -682,7 +680,7 @@ class ImageCache(object):
                        self.POSTER_THUMB: not self.has_poster_thumbnail(*arg_tvid_prodid) or force,
                        self.BANNER_THUMB: not self.has_banner_thumbnail(*arg_tvid_prodid) or force}
 
-        if not any(itervalues(need_images)):
+        if not any(need_images.values()):
             logger.log(f'{show_obj.tvid_prodid}: No new cache images needed. Done.')
             return
 
@@ -704,7 +702,7 @@ class ImageCache(object):
             checked_files = []
             crcs = []
 
-            for cur_provider in itervalues(sickgear.metadata_provider_dict):
+            for cur_provider in sickgear.metadata_provider_dict.values():
                 # check the show dir for poster or banner images and use them
                 needed = []
                 if any([need_images[self.POSTER], need_images[self.BANNER]]):
@@ -725,7 +723,7 @@ class ImageCache(object):
                     cache_file_name = os.path.abspath(path_file)
 
                     with open(cache_file_name, mode='rb') as resource:
-                        crc = '%05X' % (zlib.crc32(resource.read()) & 0xFFFFFFFF)
+                        crc = f'{zlib.crc32(resource.read()) & 4294967295:05X}'
                     if crc in crcs:
                         continue
                     crcs += [crc]

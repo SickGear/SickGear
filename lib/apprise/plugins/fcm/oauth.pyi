@@ -9,9 +9,10 @@ class GoogleOAuth:
     default_token_uri: str
     clock_skew: Incomplete
     verify_certificate: Incomplete
+    redirects: Incomplete
     request_timeout: Incomplete
     user_agent: Incomplete
-    def __init__(self, user_agent=None, timeout=(5, 4), verify_certificate: bool = True) -> None:
+    def __init__(self, user_agent=None, timeout=(5, 4), verify_certificate: bool = True, redirects: bool = True) -> None:
         """Initialize our OAuth object."""
     encoding: str
     content: Incomplete

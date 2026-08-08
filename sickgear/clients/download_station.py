@@ -40,9 +40,9 @@ class DownloadStationAPI(GenericClient):
 
         super(DownloadStationAPI, self).__init__('DownloadStation', host, username, password)
 
-        self.url_base = self.host + 'webapi/'
-        self.url_info = self.url_base + 'query.cgi'
-        self.url = self.url_base + 'DownloadStation/task.cgi'
+        self.url_base = f'{self.host}webapi/'
+        self.url_info = f'{self.url_base}query.cgi'
+        self.url = f'{self.url_base}DownloadStation/task.cgi'
         self._errmsg = None
         self._testmode = False
         self._auth_version = None
@@ -68,8 +68,8 @@ class DownloadStationAPI(GenericClient):
 
     def _error(self, msg):
         # type: (AnyStr) -> None
-        out = '%s%s: %s' % (self.name, (' replied with', '')['Could not' in msg], msg)
-        self._errmsg = '<br>%s.' % out
+        out = f'{self.name}{(" replied with", "")["Could not" in msg]}: {msg}'
+        self._errmsg = f'<br>{out}.'
         logger.error(out)
 
     def _error_task(self, response):
@@ -233,7 +233,7 @@ class DownloadStationAPI(GenericClient):
             i = 0
             while retry_ids:
                 for i in tries:
-                    logger.debug('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i))
+                    logger.debug(f'{self.name}: retry {act} {len(item["fail"])} item(s) in {i}s')
                     time.sleep(i)
                     item['fail'] = []
                     for task in filter(filter_func, self._tinf(retry_ids, err=True)):
@@ -245,8 +245,8 @@ class DownloadStationAPI(GenericClient):
                     retry_ids = item['fail']
                 else:
                     if max(tries) == i:
-                        logger.debug('%s: failed to %s %s item(s) after %s tries over %s mins, aborted' %
-                                     (self.name, act, len(item['fail']), len(tries), sum(tries) / 60))
+                        logger.debug(f'{self.name}: failed to {act} {len(item["fail"])} item(s)'
+                                     f' after {len(tries)} tries over {sum(tries) / 60} mins, aborted')
 
             return (item['fail'] + item['ignore']) or True
 
@@ -260,8 +260,7 @@ class DownloadStationAPI(GenericClient):
         if 3 <= self._task_version:
             return self._add_torrent(uri={'uri': search_result.url})
 
-        logger.warning('%s: the API at %s doesn\'t support torrent magnet, download skipped' %
-                       (self.name, self.host))
+        logger.warning(f'{self.name}: the API at {self.host} doesn\'t support torrent magnet, download skipped')
 
     def _add_torrent_file(self, search_result):
         # type: (TorrentSearchResult) -> Union[AnyStr, bool]
@@ -382,8 +381,8 @@ class DownloadStationAPI(GenericClient):
             if response.get('success') and response.get('data'):
                 data = response.get('data')
                 for key, member in (('SYNO.API.Auth', 'auth'), ('SYNO.DownloadStation.Task', 'task')):
-                    self.__setattr__('_%s_version' % member, data[key]['maxVersion'])
-                    self.__setattr__('_%s_path' % member, data[key]['path'])
+                    self.__setattr__(f'_{member}_version', data[key]['maxVersion'])
+                    self.__setattr__(f'_{member}_path', data[key]['path'])
                 self.url = self.url_base + self._task_path
             else:
                 raise ValueError

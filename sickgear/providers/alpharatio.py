@@ -25,8 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class AlphaRatioProvider(generic.TorrentProvider):
 
@@ -36,10 +34,10 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         self.url_base = 'https://alpharatio.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
+                     'login_action': f'{self.url_base}login.php',
                      'search': self.url_base + 'torrents.php?searchstr=%s%s&' + '&'.join(
                          ['tags_type=1', 'order_by=time', 'order_way=desc'] +
-                         ['filter_cat[%s]=1' % c for c in (1, 2, 3, 4, 5)] +
+                         [f'filter_cat[{c}]=1' for c in (1, 2, 3, 4, 5)] +
                          ['action=basic', 'searchsubmit=1'])}
 
         self.url = self.urls['config_provider_home_uri']
@@ -59,7 +57,7 @@ class AlphaRatioProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'view', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'view', 'get': 'download'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_url = self.urls['search'] % (search_string, ('&freetorrent=1', '')[not self.freeleech])

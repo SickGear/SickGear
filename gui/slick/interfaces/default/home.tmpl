@@ -35,7 +35,7 @@
 #set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
 		.bfr{position:absolute;left:-999px;top:-999px}.bfr img{width:16px;height:16px}.spinner{display:inline-block;width:16px;height:16px;background:url(${sg_root}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
 	</style>
-	<div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif" /></div>
+	<div class="bfr"><img src="$sg_root/images/loading16${theme_suffix}.gif"></div>
 
 	<h1 class="header" style="margin-bottom:0">$showlists[0][1]</h1>
 
@@ -109,7 +109,7 @@
             #if None is $curLoadingShow.show_obj
             ##
 			<div class="show-card" data-name="0" data-date="010101" data-network="0">
-				<img alt="" title="$curLoadingShow.show_name" class="show-image" style="border-bottom:1px solid #111" src="$sg_root/images/poster.png" />
+				<img alt="" title="$curLoadingShow.show_name" class="show-image" style="border-bottom:1px solid #111" src="$sg_root/images/poster.png">
 				<div class="show-details">
 					<div class="show-add">Loading... ($curLoadingShow.show_name)</div>
 				</div>
@@ -210,9 +210,9 @@
 					<div class="show-image">
 						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
             #if $load_normal > $poster_id
-							<img alt="" class="show-image" src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" />
+							<img alt="" class="show-image" src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb">
             #else
-							<img id="poster-$poster_id" alt="" class="show-image" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" />
+							<img id="poster-$poster_id" alt="" class="show-image" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb">
 							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
             #end if
 						</a>
@@ -265,7 +265,7 @@
                 #if 'No Network' != $img_text and 'nonetwork' in $network_images[$cur_show_obj.tvid_prodid]
 								$cur_show_obj.network
                 #else
-								<img class="show-network-image" src="$sg_root/images/network/$network_images[$cur_show_obj.tvid_prodid]" alt="$img_text" title="$img_text" />
+								<img class="show-network-image" src="$sg_root/images/network/$network_images[$cur_show_obj.tvid_prodid]" alt="$img_text" title="$img_text">
                 #end if
             #end if
 							</td>
@@ -416,9 +416,9 @@
 					<div class="imgsmallposter $layout">
 						<a href="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster" rel="dialog" title="$show_name">
             #if $load_normal > $poster_id
-							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid" />
+							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid">
             #else
-							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid" />
+							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=poster_thumb" class="$layout" alt="$cur_show_obj.tvid_prodid">
 							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
             #end if
 						</a>
@@ -431,9 +431,9 @@
 					<div class="imgbanner $layout">
 						<a href="$sg_root/home/view-show?tvid_prodid=$cur_show_obj.tvid_prodid">
                 #if $load_normal > $poster_id
-							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name" />
+							<img src="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name">
                 #else
-							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name" />
+							<img id="poster-$poster_id" data-original="$sg_root/show-poster/?tvid_prodid=$cur_show_obj.tvid_prodid&amp;which=banner" class="$layout" alt="$cur_show_obj.tvid_prodid" title="$show_name">
 							<span id="loading-poster-$poster_id" class="lazy-loading-image"><i class="spinner"></i></span>
                 #end if
                         </a>
@@ -451,7 +451,7 @@
                 #if 'No Network' != $img_text and 'nonetwork' in $network_images[$cur_show_obj.tvid_prodid]
 					$cur_show_obj.network
                 #else
-					<img width="54" height="27" src="$sg_root/images/network/$network_images[$cur_show_obj.tvid_prodid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#" />
+					<img width="54" height="27" src="$sg_root/images/network/$network_images[$cur_show_obj.tvid_prodid]" alt="#echo '%s" title="%s' % ($img_text, $img_text)#">
 					<span class="sort-data">$cur_show_obj.network</span>
                 #end if
 				</td>
@@ -501,7 +501,7 @@
 #end for
 ##
 
-<script type="text/javascript" src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sg_root/js/inc_bottom.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sg_root/js/home.js?v=$sbPID"></script>
+<script src="$sg_root/js/lazyload/lazyload.min.js?v=$sbPID"></script>
+<script src="$sg_root/js/inc_bottom.js?v=$sbPID"></script>
+<script src="$sg_root/js/home.js?v=$sbPID"></script>
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_bottom.tmpl')

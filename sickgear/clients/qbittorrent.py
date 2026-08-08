@@ -66,7 +66,7 @@ class QbittorrentAPI(GenericClient):
             state='done' if 'pausedUP' == t.get('state') else ('down', 'seed')['up' in t.get('state').lower()]
         ))
         file_list = (lambda ti: self._client_request(
-            ('torrents/files', 'query/propertiesFiles/%s' % ti['hash'])[not self.api_ns],
+            ('torrents/files', f'query/propertiesFiles/{ti["hash"]}')[not self.api_ns],
             params=({'hash': ti['hash']}, {})[not self.api_ns], json=True) or {})
         valid_stat = (lambda ti: not self._ignore_state(ti)
                       and sum(list(map(lambda tf: wanted(tf) and downloaded(tf) or 0, file_list(ti)))))
@@ -100,7 +100,7 @@ class QbittorrentAPI(GenericClient):
                     cmd = 'torrents/properties'
                     params['hash'] = rid
                 else:
-                    cmd = 'query/propertiesGeneral/%s' % rid
+                    cmd = f'query/propertiesGeneral/{rid}'
             elif rid:
                 params['hashes'] = rid
             try:
@@ -163,13 +163,13 @@ class QbittorrentAPI(GenericClient):
                     params = None
 
                 response = self._client_request(
-                        '%s/topPrio' % ('torrents', 'command')[not self.api_ns],
+                        f'{("torrents", "command")[not self.api_ns]}/topPrio',
                         params=params, post_data=post_data, raise_status_code=True)
                 if True is response:
                     task = self._tinf(t.get('hash'), use_props=False, err=True)[0]
                     return 1 < task.get('priority') or self._ignore_state(task)  # then mark fail
                 elif isinstance(response, string_types) and 'queueing' in response.lower():
-                    logger.error('%s: %s' % (self.name, response))
+                    logger.error(f'{self.name}: {response}')
                     return not mark_fail
             return mark_fail
 
@@ -190,13 +190,13 @@ class QbittorrentAPI(GenericClient):
                     return not mark_fail
 
                 response = self._client_request(
-                        '%s/setCategory' % ('torrents', 'command')[not self.api_ns],
+                        f'{("torrents", "command")[not self.api_ns]}/setCategory',
                         post_data={'hashes': t.get('hash'), 'category': label, 'label': label}, raise_status_code=True)
                 if True is response:
                     task = self._tinf(t.get('hash'), use_props=False, err=True)[0]
                     return label not in task.get('category') or self._ignore_state(task)  # then mark fail
                 elif isinstance(response, string_types) and 'incorrect' in response.lower():
-                    logger.error('%s: %s. "%s" isn\'t known to qB' % (self.name, response, label))
+                    logger.error(f'{self.name}: {response}. "{label}" isn\'t known to qB')
                     return not mark_fail
             return mark_fail
 
@@ -215,8 +215,8 @@ class QbittorrentAPI(GenericClient):
                 if 'paused' in t.get('state'):
                     return not mark_fail
                 if True is self._client_request(
-                        '%s/pause' % ('torrents', 'command')[not self.api_ns],
-                        post_data={'hash' + ('es', '')[not self.api_ns]: t.get('hash')}):
+                        f'{("torrents", "command")[not self.api_ns]}/pause',
+                        post_data={f'hash{("es", "")[not self.api_ns]}': t.get('hash')}):
                     task = self._tinf(t.get('hash'), use_props=False, err=True)[0]
                     return 'paused' not in task.get('state') or self._ignore_state(task)  # then mark fail
             return mark_fail
@@ -261,8 +261,8 @@ class QbittorrentAPI(GenericClient):
             lambda t: self._ignore_state(t) or
             ('paused' in t.get('state')) and
             True is not self._client_request(
-                '%s/resume' % ('torrents', 'command')[not self.api_ns],
-                post_data={'hash' + ('es', '')[not self.api_ns]: t.get('hash')}))
+                f'{("torrents", "command")[not self.api_ns]}/resume',
+                post_data={f'hash{("es", "")[not self.api_ns]}': t.get('hash')}))
 
     def _delete_torrent(self, ids):
         # type: (Union[AnyStr, list]) -> Union[bool, list]
@@ -313,7 +313,7 @@ class QbittorrentAPI(GenericClient):
             i = 0
             while retry_ids:
                 for i in tries:
-                    logger.debug('%s: retry %s %s item(s) in %ss' % (self.name, act, len(item['fail']), i))
+                    logger.debug(f'{self.name}: retry {act} {len(item["fail"])} item(s) in {i}s')
                     time.sleep(i)
                     item['fail'] = []
                     for task in filter(filter_func, self._tinf(retry_ids, use_props=False, err=True)):
@@ -325,8 +325,8 @@ class QbittorrentAPI(GenericClient):
                     retry_ids = item['fail']
                 else:
                     if max(tries) == i:
-                        logger.debug('%s: failed to %s %s item(s) after %s tries over %s mins, aborted' %
-                                     (self.name, act, len(item['fail']), len(tries), sum(tries) / 60))
+                        logger.debug(f'{self.name}: failed to {act} {len(item["fail"])} item(s)'
+                                     f' after {len(tries)} tries over {sum(tries) / 60} mins, aborted')
 
             return (item['fail'] + item['ignore']) or True
 
@@ -371,10 +371,10 @@ class QbittorrentAPI(GenericClient):
             params.update(dict(urls=data.url))
             kwargs = dict(post_data=params)
         else:
-            kwargs = dict(post_data=params, files={'torrents': ('%s.torrent' % data.name, data.content)})
+            kwargs = dict(post_data=params, files={'torrents': (f'{data.name}.torrent', data.content)})
 
         task_stamp = SGDatetime.timestamp_near()
-        response = self._client_request(('torrents/add', 'command/%s' % cmd)[not self.api_ns], **kwargs)
+        response = self._client_request(('torrents/add', f'command/{cmd}')[not self.api_ns], **kwargs)
 
         if True is response:
             for s in (1, 3, 5, 10, 15, 30, 60):
@@ -414,13 +414,13 @@ class QbittorrentAPI(GenericClient):
         authless = bool(re.search('(?i)login|version', cmd))
         if authless or self.auth:
             if not authless and not self._get_auth():
-                logger.error('%s: Authentication failed' % self.name)
+                logger.error(f'{self.name}: Authentication failed')
                 return
 
             # self._log_request_details('%s%s' % (self.api_ns, cmd.strip('/')), **kwargs)
             response = None
             try:
-                response = get_url('%s%s%s' % (self.host, self.api_ns, cmd.strip('/')),
+                response = get_url(f'{self.host}{self.api_ns}{cmd.strip("/")}',
                                    session=self.session, **kwargs)
             except HTTPError as e:
                 if e.response.status_code in (409, 403):
@@ -444,7 +444,7 @@ class QbittorrentAPI(GenericClient):
         self.api_ns = 'api/v2/'
         response = self._client_request('auth/login', post_data=post_data, raise_status_code=True)
         if isinstance(response, string_types) and 'banned' in response.lower():
-            logger.error('%s: %s' % (self.name, response))
+            logger.error(f'{self.name}: {response}')
             response = False
         elif not response:
             self.api_ns = ''

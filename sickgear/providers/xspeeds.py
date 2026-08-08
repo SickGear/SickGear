@@ -25,8 +25,6 @@ from .. import logger
 from ..helpers import has_anime, try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class XspeedsProvider(generic.TorrentProvider):
 
@@ -36,9 +34,9 @@ class XspeedsProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.xspeeds.eu/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'edit': self.url_base + 'usercp.php?act=edit_details',
-                     'search': self.url_base + 'browse.php'}
+                     'login_action': f'{self.url_base}login.php',
+                     'edit': f'{self.url_base}usercp.php?act=edit_details',
+                     'search': f'{self.url_base}browse.php'}
 
         self.categories = {'Season': [94, 21], 'Episode': [91, 74, 54, 20, 47, 16], 'anime': [70]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
@@ -60,8 +58,8 @@ class XspeedsProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in
-                   iteritems({'info': 'detail', 'get': 'download', 'fl': 'free'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in
+                   {'info': 'detail', 'get': 'download', 'fl': 'free'}.items()])
         for mode in search_params:
             save_url, restore = self._set_categories(mode)
             if self.should_skip():
@@ -134,7 +132,7 @@ class XspeedsProvider(generic.TorrentProvider):
                     logger.error(f'Failed to parse. Traceback: {traceback.format_exc()}')
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search string: ' + search_string.replace('%', '%%'), self.name)['Cache' == mode])
+                                 (f'search string: {search_string.replace("%", "%%")}', self.name)['Cache' == mode])
 
                 if mode in 'Season' and len(items[mode]):
                     break
@@ -185,8 +183,8 @@ class XspeedsProvider(generic.TorrentProvider):
             params[name] = values[index][0]
 
         restore = params.copy()
-        restore.update(dict([('cat%s' % c, 'yes') for c in cats]))
-        params.update(dict([('cat%s' % c, 'yes') for c in (
+        restore.update(dict([(f'cat{c}', 'yes') for c in cats]))
+        params.update(dict([(f'cat{c}', 'yes') for c in (
             self.categories[(mode, 'Episode')['Propers' == mode]] +
             ([], self.categories['anime'])[
                 (re.search('(Ca|Pr)', mode) and has_anime()) or
@@ -202,7 +200,7 @@ class XspeedsProvider(generic.TorrentProvider):
     def regulate_title(title):
 
         if re.search(r'(?i)\.web.?(rip)?$', title):
-            title = '%s.x264' % title
+            title = f'{title}.x264'
 
         return title
 

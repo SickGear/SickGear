@@ -25,8 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class PrivateHDProvider(generic.TorrentProvider):
 
@@ -35,7 +33,7 @@ class PrivateHDProvider(generic.TorrentProvider):
 
         self.url_base = 'https://privatehd.to/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login': self.url_base + 'rules',
+                     'login': f'{self.url_base}rules',
                      'search': self.url_base + 'torrents?%s' % '&'.join(
                          ['in=1', 'tags=', 'type=2', 'language=0', 'subtitle=0', 'rip_type=0',
                           'video_quality=0', 'uploader=', 'search=%s', 'tv_type[]=%s'])}
@@ -66,8 +64,8 @@ class PrivateHDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v))
-                   for (k, v) in iteritems({'info': r'.*?details\s*-\s*', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}'))
+                   for (k, v) in {'info': r'.*?details\s*-\s*', 'get': 'download'}.items()])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter

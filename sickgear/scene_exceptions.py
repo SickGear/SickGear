@@ -35,7 +35,6 @@ from .sgdatetime import SGDatetime
 import lib.rarfile.rarfile as rarfile
 
 from _23 import list_range
-from six import iteritems
 
 # noinspection PyUnreachableCode
 if False:
@@ -48,7 +47,7 @@ MEMCACHE = {}
 
 class ReleaseMap(Job):
     def __init__(self):
-        super(ReleaseMap, self).__init__(self.job_run, thread_lock=True, kwargs={})
+        super(ReleaseMap, self).__init__(self.job_run, reentrant_lock=True, kwargs={})
 
         MEMCACHE.setdefault('release_map', {})
         MEMCACHE.setdefault('release_map_season', {})
@@ -56,15 +55,31 @@ class ReleaseMap(Job):
 
     def job_run(self):
 
-        # update xem id lists
-        self.fetch_xem_ids()
+        if self.lock.acquire(blocking=False):
+            log_msg = ''
+            try:
+                # update xem id lists
+                self.fetch_xem_ids()
+            except (BaseException, Exception) as e:
+                log_msg = f'Error fetching xem ids: {ex(e)}'
 
-        # update release exceptions
-        self.fetch_exceptions()
+            if not log_msg:
+                try:
+                    # update release exceptions
+                    self.fetch_exceptions()
+                except (BaseException, Exception) as e:
+                    log_msg = f'Error fetching exceptions: {ex(e)}'
+
+            if log_msg:
+                try:
+                    logger.debug(log_msg)
+                except (BaseException, Exception):
+                    pass
+            self.lock.release()
 
     def fetch_xem_ids(self):
 
-        for cur_tvid, cur_name in iteritems(sickgear.TVInfoAPI().xem_supported_sources):
+        for cur_tvid, cur_name in sickgear.TVInfoAPI().xem_supported_sources.items():
             xem_ids = self._get_xem_ids(cur_name, sickgear.TVInfoAPI(cur_tvid).config['xem_origin'])
             if len(xem_ids):
                 MEMCACHE['release_map_xem'][cur_tvid] = xem_ids
@@ -79,7 +94,7 @@ class ReleaseMap(Job):
         """
         result = []
 
-        url = 'https://thexem.info/map/havemap?origin=%s' % xem_origin
+        url = f'https://thexem.info/map/havemap?origin={xem_origin}'
 
         task = 'Fetching show ids with%s xem scene mapping%s for origin'
         logger.log(f'{task % ("", "s")} {infosrc_name}')
@@ -125,7 +140,7 @@ class ReleaseMap(Job):
                 if 'failure' == parsed_json['result']:
                     continue
 
-                for cur_prodid, cur_names in iteritems(parsed_json['data']):
+                for cur_prodid, cur_names in parsed_json['data'].items():
                     try:
                         result[(cur_tvid, int(cur_prodid))] = cur_names
                     except (BaseException, Exception):
@@ -158,59 +173,62 @@ class ReleaseMap(Job):
         Looks up release exceptions on GitHub, Xem, and Anidb, parses them into a dict, and inserts them into the
         scene_exceptions table in cache.db. Finally, clears the scene name cache.
         """
+
         def _merge_exceptions(source, dest):
             for cur_ex in source:
                 dest[cur_ex] = source[cur_ex] + ([] if cur_ex not in dest else dest[cur_ex])
 
-        exceptions = self._xem_exceptions_fetcher()  # XEM scene exceptions
-        _merge_exceptions(self._anidb_exceptions_fetcher(), exceptions)  # AniDB scene exceptions
-        _merge_exceptions(self._github_exceptions_fetcher(), exceptions)  # GitHub stored release exceptions
+        with self.lock:
 
-        exceptions_custom, count_updated_numbers, min_remain_iv = self._custom_exceptions_fetcher()
-        _merge_exceptions(exceptions_custom, exceptions)  # Custom exceptions
+            exceptions = self._xem_exceptions_fetcher()  # XEM scene exceptions
+            _merge_exceptions(self._anidb_exceptions_fetcher(), exceptions)  # AniDB scene exceptions
+            _merge_exceptions(self._github_exceptions_fetcher(), exceptions)  # GitHub stored release exceptions
 
-        is_changed_exceptions = False
+            exceptions_custom, count_updated_numbers, min_remain_iv = self._custom_exceptions_fetcher()
+            _merge_exceptions(exceptions_custom, exceptions)  # Custom exceptions
+
+            is_changed_exceptions = False
 
         # write all the exceptions we got off the net into the database
-        my_db = db.DBConnection()
-        cl = []
-        for cur_tvid_prodid in exceptions:
+        with db.DBConnection() as sg_db:
+            sql_l = []
+            for cur_tvid_prodid in exceptions:
 
-            # get a list of the existing exceptions for this ID
-            existing_exceptions = [{_x['show_name']: _x['season']} for _x in
-                                   my_db.select('SELECT show_name, season'
-                                                ' FROM [scene_exceptions]'
-                                                ' WHERE indexer = ? AND indexer_id = ?',
-                                                list(cur_tvid_prodid))]
+                # get a list of the existing exceptions for this ID
+                existing_exceptions = [{_x['show_name']: _x['season']} for _x in
+                                       sg_db.select('SELECT show_name, season'
+                                                    ' FROM [scene_exceptions]'
+                                                    ' WHERE indexer = ? AND indexer_id = ?',
+                                                    list(cur_tvid_prodid))]
 
-            # if this exception isn't already in the DB then add it
-            for cur_ex_dict in filter(lambda e: e not in existing_exceptions, exceptions[cur_tvid_prodid]):
-                try:
-                    exception, season = next(iteritems(cur_ex_dict))
-                except (BaseException, Exception):
-                    logger.error('release exception error')
-                    logger.error(traceback.format_exc())
-                    continue
+                # if this exception isn't already in the DB then add it
+                for cur_ex_dict in filter(lambda e: e not in existing_exceptions, exceptions[cur_tvid_prodid]):
+                    try:
+                        exception, season = next(iter(cur_ex_dict.items()))
+                    except (BaseException, Exception):
+                        logger.error('release exception error')
+                        logger.error(traceback.format_exc())
+                        continue
 
-                cl.append(['INSERT INTO [scene_exceptions]'
-                           ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
-                           list(cur_tvid_prodid) + [exception, season]])
-                is_changed_exceptions = True
+                    sql_l.append(['INSERT INTO [scene_exceptions]'
+                               ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+                               list(cur_tvid_prodid) + [exception, season]])
+                    is_changed_exceptions = True
 
-        if cl:
-            my_db.mass_action(cl)
-            name_cache.build_name_cache(update_only_scene=True)
+            if sql_l:
+                sg_db.mass_action(sql_l)
+                name_cache.build_name_cache(update_only_scene=True)
 
-        # since this could invalidate the results of the cache we clear it out after updating
-        if is_changed_exceptions:
-            logger.log('Updated release exceptions')
-        else:
-            logger.log('No release exceptions update needed')
+            # since this could invalidate the results of the cache we clear it out after updating
+            if is_changed_exceptions:
+                logger.log('Updated release exceptions')
+            else:
+                logger.log('No release exceptions update needed')
 
-        # cleanup
-        exceptions.clear()
+            # cleanup
+            exceptions.clear()
 
-        return is_changed_exceptions, count_updated_numbers, min_remain_iv
+            return is_changed_exceptions, count_updated_numbers, min_remain_iv
 
     def _github_exceptions_fetcher(self):
         """
@@ -289,6 +307,9 @@ class ReleaseMap(Job):
 
             helpers.remove_file(tmppath, tree=True)
 
+            if os.path.isfile(file_cache) and 0 < os.path.getsize(file_cache):
+                helpers.set_file_timestamp(file_cache, min_age=0)
+
         if refresh:
             self._set_last_refresh(src_id)
 
@@ -320,13 +341,13 @@ class ReleaseMap(Job):
 
         result = {}
         count_updated_numbers = 0
-        for cur_tvid_prodid, cur_season_data in iteritems(data):
+        for cur_tvid_prodid, cur_season_data in data.items():
             show_obj = sickgear.helpers.find_show_by_id(cur_tvid_prodid, no_mapped_ids=True)
             if not show_obj:
                 continue
 
             used = set()
-            for cur_for_season, cur_data in iteritems(cur_season_data):
+            for cur_for_season, cur_data in cur_season_data.items():
                 cur_for_season = helpers.try_int(cur_for_season, None)
                 tvid, prodid = TVidProdid(cur_tvid_prodid).tuple
                 if cur_data.get('n'):  # alt names
@@ -334,7 +355,7 @@ class ReleaseMap(Job):
                     result[(tvid, prodid)] += [{_name: cur_for_season} for _name in cur_data.get('n')]
 
                 for cur_update in cur_data.get('se') or []:
-                    for cur_for_episode, cur_se_range in iteritems(cur_update):  # scene episode alt numbers
+                    for cur_for_episode, cur_se_range in cur_update.items():  # scene episode alt numbers
                         cur_for_episode = helpers.try_int(cur_for_episode, None)
 
                         target_season, episode_range = cur_se_range.split('x')
@@ -380,14 +401,14 @@ class ReleaseMap(Job):
         :param remaining: True to return remaining seconds
         :return:
         """
-        my_db = db.DBConnection()
-        rows = my_db.select('SELECT last_refreshed FROM [scene_exceptions_refresh] WHERE list = ?', [name])
-        if rows:
-            last_refresh = int(rows[0]['last_refreshed'])
-            if remaining:
-                time_left = (last_refresh + max_refresh_age_secs - SGDatetime.timestamp_near())
-                return (0, time_left)[time_left > 0]
-            return SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
+        with db.DBConnection() as sg_db:
+            rows = sg_db.select('SELECT last_refreshed FROM [scene_exceptions_refresh] WHERE list = ?', [name])
+            if rows:
+                last_refresh = int(rows[0]['last_refreshed'])
+                if remaining:
+                    time_left = (last_refresh + max_refresh_age_secs - SGDatetime.timestamp_near())
+                    return (0, time_left)[time_left > 0]
+                return SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
         return True
 
     @staticmethod
@@ -398,10 +419,10 @@ class ReleaseMap(Job):
         :param name: name
         :type name: AnyStr
         """
-        my_db = db.DBConnection()
-        my_db.upsert('scene_exceptions_refresh',
-                     {'last_refreshed': SGDatetime.timestamp_near()},
-                     {'list': name})
+        with db.DBConnection() as sg_db:
+            sg_db.upsert('scene_exceptions_refresh',
+                         {'last_refreshed': SGDatetime.timestamp_near()},
+                         {'list': name})
 
     @staticmethod
     def update_exceptions(show_obj, release_exceptions):
@@ -412,28 +433,28 @@ class ReleaseMap(Job):
         """
         logger.log(f'Updating release exceptions for {show_obj.unique_name or show_obj.name}')
 
-        my_db = db.DBConnection()
-        my_db.action('DELETE FROM [scene_exceptions]'
-                     ' WHERE indexer = ? AND indexer_id = ?',
-                     [show_obj.tvid, show_obj.prodid])
+        with db.DBConnection() as sg_db:
+            sg_db.action('DELETE FROM [scene_exceptions]'
+                         ' WHERE indexer = ? AND indexer_id = ?',
+                         [show_obj.tvid, show_obj.prodid])
 
-        # A change has been made to the scene exception list. Clear the cache, to make this visible
-        MEMCACHE['release_map'][(show_obj.tvid, show_obj.prodid)] = defaultdict(list)
+            # A change has been made to the scene exception list. Clear the cache, to make this visible
+            MEMCACHE['release_map'][(show_obj.tvid, show_obj.prodid)] = defaultdict(list)
 
-        for cur_ex in release_exceptions:
+            for cur_ex in release_exceptions:
 
-            season, alt_name = cur_ex.split('|', 1)
-            try:
-                season = int(season)
-            except (BaseException, Exception):
-                logger.error(f'invalid season for release exception: {show_obj.tvid_prodid} - {season}:{alt_name}')
-                continue
+                season, alt_name = cur_ex.split('|', 1)
+                try:
+                    season = int(season)
+                except (BaseException, Exception):
+                    logger.error(f'invalid season for release exception: {show_obj.tvid_prodid} - {season}:{alt_name}')
+                    continue
 
-            MEMCACHE['release_map'][(show_obj.tvid, show_obj.prodid)][season].append(alt_name)
+                MEMCACHE['release_map'][(show_obj.tvid, show_obj.prodid)][season].append(alt_name)
 
-            my_db.action('INSERT INTO [scene_exceptions]'
-                         ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
-                         [show_obj.tvid, show_obj.prodid, alt_name, season])
+                sg_db.action('INSERT INTO [scene_exceptions]'
+                             ' (indexer, indexer_id, show_name, season) VALUES (?,?,?,?)',
+                             [show_obj.tvid, show_obj.prodid, alt_name, season])
 
         sickgear.name_cache.build_name_cache(update_only_scene=True)
 
@@ -456,18 +477,18 @@ class ReleaseMap(Job):
         alt_names = MEMCACHE['release_map'].get((tvid, prodid), {}).get(season, [])
 
         if not alt_names:
-            my_db = db.DBConnection()
-            exceptions = my_db.select('SELECT show_name'
-                                      ' FROM [scene_exceptions]'
-                                      ' WHERE indexer = ? AND indexer_id = ?'
-                                      ' AND season = ?',
-                                      [tvid, prodid, season])
-            if exceptions:
-                alt_names = list(set([_ex['show_name'] for _ex in exceptions]))
+            with db.DBConnection() as sg_db:
+                exceptions = sg_db.select('SELECT show_name'
+                                          ' FROM [scene_exceptions]'
+                                          ' WHERE indexer = ? AND indexer_id = ?'
+                                          ' AND season = ?',
+                                          [tvid, prodid, season])
+                if exceptions:
+                    alt_names = list(set([_ex['show_name'] for _ex in exceptions]))
 
-                if (tvid, prodid) not in MEMCACHE['release_map']:
-                    MEMCACHE['release_map'][(tvid, prodid)] = {}
-                MEMCACHE['release_map'][(tvid, prodid)][season] = alt_names
+                    if (tvid, prodid) not in MEMCACHE['release_map']:
+                        MEMCACHE['release_map'][(tvid, prodid)] = {}
+                    MEMCACHE['release_map'][(tvid, prodid)][season] = alt_names
 
         if 1 == season:  # if we were looking for season 1 we can add generic names
             alt_names += self.get_alt_names(tvid, prodid)
@@ -486,24 +507,24 @@ class ReleaseMap(Job):
 
         from .tv import TVidProdid
 
-        my_db = db.DBConnection()
-        exceptions = my_db.select('SELECT show_name, season'
-                                  ' FROM [scene_exceptions]'
-                                  ' WHERE indexer = ? AND indexer_id = ?'
-                                  ' ORDER BY season DESC, show_name DESC',
-                                  TVidProdid(tvid_prodid).list)
+        with db.DBConnection() as sg_db:
+            exceptions = sg_db.select('SELECT show_name, season'
+                                      ' FROM [scene_exceptions]'
+                                      ' WHERE indexer = ? AND indexer_id = ?'
+                                      ' ORDER BY season DESC, show_name DESC',
+                                      TVidProdid(tvid_prodid).list)
 
-        exceptions_seasons = []
-        if exceptions:
-            for cur_ex in exceptions:
-                # order as, s*, and then season desc, show_name also desc (so years in names fall the newest on top)
-                if -1 == cur_ex['season']:
-                    exceptions_dict[-1].append(cur_ex['show_name'])
-                else:
-                    exceptions_seasons += [cur_ex]
+            exceptions_seasons = []
+            if exceptions:
+                for cur_ex in exceptions:
+                    # order as, s*, and then season desc, show_name also desc (so years in names fall the newest on top)
+                    if -1 == cur_ex['season']:
+                        exceptions_dict[-1].append(cur_ex['show_name'])
+                    else:
+                        exceptions_seasons += [cur_ex]
 
-            for cur_ex in exceptions_seasons:
-                exceptions_dict[cur_ex['season']].append(cur_ex['show_name'])
+                for cur_ex in exceptions_seasons:
+                    exceptions_dict[cur_ex['season']].append(cur_ex['show_name'])
 
         return exceptions_dict
 
@@ -518,18 +539,18 @@ class ReleaseMap(Job):
         exception_seasons = MEMCACHE['release_map_season'].get((tvid, prodid), [])
 
         if not exception_seasons:
-            my_db = db.DBConnection()
-            sql_result = my_db.select('SELECT DISTINCT(season) AS season'
-                                      ' FROM [scene_exceptions]'
-                                      ' WHERE indexer = ? AND indexer_id = ?',
-                                      [tvid, prodid])
-            if sql_result:
-                exception_seasons = list(set([int(_x['season']) for _x in sql_result]))
+            with db.DBConnection() as sg_db:
+                sql_result = sg_db.select('SELECT DISTINCT(season) AS season'
+                                          ' FROM [scene_exceptions]'
+                                          ' WHERE indexer = ? AND indexer_id = ?',
+                                          [tvid, prodid])
+                if sql_result:
+                    exception_seasons = list(set([int(_x['season']) for _x in sql_result]))
 
-                if (tvid, prodid) not in MEMCACHE['release_map_season']:
-                    MEMCACHE['release_map_season'][(tvid, prodid)] = {}
+                    if (tvid, prodid) not in MEMCACHE['release_map_season']:
+                        MEMCACHE['release_map_season'][(tvid, prodid)] = {}
 
-                MEMCACHE['release_map_season'][(tvid, prodid)] = exception_seasons
+                    MEMCACHE['release_map_season'][(tvid, prodid)] = exception_seasons
 
         return exception_seasons
 

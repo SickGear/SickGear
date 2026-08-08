@@ -34,7 +34,7 @@ from lib.fanart.core import Request as fanartRequest
 import lib.fanart as fanart
 from lxml_etree import etree
 
-from six import iteritems, itervalues, string_types
+from six import string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -226,7 +226,7 @@ class GenericMetadata(object):
                 pass
         if isinstance(show_obj, sickgear.tv.TVShow):
             if year_only and show_obj.startyear:
-                return '%s' % show_obj.startyear
+                return f'{show_obj.startyear}'
             if not show_obj.sxe_ep_obj.get(1, {}).get(1, None):
                 show_obj.get_all_episodes()
             try:
@@ -235,7 +235,7 @@ class GenericMetadata(object):
                 first_ep_obj = None
             if isinstance(first_ep_obj, sickgear.tv.TVEpisode) \
                     and isinstance(first_ep_obj.airdate, datetime.date) and 1900 < first_ep_obj.airdate.year:
-                return '%s' % (first_ep_obj.airdate.year, first_ep_obj.airdate)[not year_only]
+                return f'{(first_ep_obj.airdate.year, first_ep_obj.airdate)[not year_only]}'
 
     def get_show_file_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
@@ -272,7 +272,7 @@ class GenericMetadata(object):
             else:
                 tbn_filename = tbn_filename[0]
 
-            return tbn_filename + '-thumb.jpg'
+            return f'{tbn_filename}-thumb.jpg'
 
     def get_season_poster_path(self, show_obj, season):
         # type: (sickgear.tv.TVShow, int) -> AnyStr
@@ -288,9 +288,9 @@ class GenericMetadata(object):
         if 0 == season:
             season_poster_filename = 'season-specials'
         else:
-            season_poster_filename = 'season' + str(season).zfill(2)
+            season_poster_filename = f'season{str(season).zfill(2)}'
 
-        return os.path.join(show_obj.location, season_poster_filename + '-poster.jpg')
+        return os.path.join(show_obj.location, f'{season_poster_filename}-poster.jpg')
 
     def get_season_banner_path(self, show_obj, season):
         # type: (sickgear.tv.TVShow, int) -> AnyStr
@@ -306,9 +306,9 @@ class GenericMetadata(object):
         if 0 == season:
             season_banner_filename = 'season-specials'
         else:
-            season_banner_filename = 'season' + str(season).zfill(2)
+            season_banner_filename = f'season{str(season).zfill(2)}'
 
-        return os.path.join(show_obj.location, season_banner_filename + '-banner.jpg')
+        return os.path.join(show_obj.location, f'{season_banner_filename}-banner.jpg')
 
     def get_season_all_poster_path(self, show_obj):
         # type: (sickgear.tv.TVShow) -> AnyStr
@@ -356,7 +356,7 @@ class GenericMetadata(object):
         # type: (sickgear.tv.TVShow, bool) -> bool
         result = False
         if self.show_metadata and show_obj and (not self._has_show_metadata(show_obj) or force):
-            logger.debug('Metadata provider %s creating show metadata for %s' % (self.name, show_obj.unique_name))
+            logger.debug(f'Metadata provider {self.name} creating show metadata for {show_obj.unique_name}')
             try:
                 result = self.write_show_file(show_obj)
             except BaseTVinfoError as e:
@@ -369,7 +369,7 @@ class GenericMetadata(object):
         # type: (sickgear.tv.TVEpisode, bool) -> bool
         result = False
         if self.episode_metadata and ep_obj and (not self.has_episode_metadata(ep_obj) or force):
-            logger.debug('Metadata provider %s creating episode metadata for %s' % (self.name, ep_obj.pretty_name()))
+            logger.debug(f'Metadata provider {self.name} creating episode metadata for {ep_obj.pretty_name()}')
             try:
                 result = self.write_ep_file(ep_obj)
             except BaseTVinfoError as e:
@@ -394,15 +394,15 @@ class GenericMetadata(object):
             root = show_xml.getroot()
             show_tvid = str(show_obj.tvid)
             if None is not tvid:
-                tvid.text = '%s' % show_tvid
+                tvid.text = f'{show_tvid}'
             else:
-                etree.SubElement(root, 'indexer').text = '%s' % show_tvid
+                etree.SubElement(root, 'indexer').text = f'{show_tvid}'
 
             show_prodid = str(show_obj.prodid)
             if None is not prodid:
-                prodid.text = '%s' % show_prodid
+                prodid.text = f'{show_prodid}'
             else:
-                etree.SubElement(root, 'id').text = '%s' % show_prodid
+                etree.SubElement(root, 'id').text = f'{show_prodid}'
 
             # Make it purdy
             sg_helpers.indent_xml(root)
@@ -443,7 +443,7 @@ class GenericMetadata(object):
         # type: (sickgear.tv.TVShow) -> bool
         if self.season_posters and show_obj:
             result = []
-            for season, _ in iteritems(show_obj.sxe_ep_obj):
+            for season, _ in show_obj.sxe_ep_obj.items():
                 if not self._has_season_poster(show_obj, season):
                     logger.debug(f'Metadata provider {self.name} creating season posters for {show_obj.unique_name}')
                     result = result + [self.save_season_posters(show_obj, season)]
@@ -454,7 +454,7 @@ class GenericMetadata(object):
         # type: (sickgear.tv.TVShow) -> bool
         if self.season_banners and show_obj:
             result = []
-            for season, _ in iteritems(show_obj.sxe_ep_obj):
+            for season, _ in show_obj.sxe_ep_obj.items():
                 if not self._has_season_banner(show_obj, season):
                     logger.debug(f'Metadata provider {self.name} creating season banners for {show_obj.unique_name}')
                     result = result + [self.save_season_banners(show_obj, season)]
@@ -819,7 +819,7 @@ class GenericMetadata(object):
 
         try:
             if not os.path.isdir(image_dir):
-                logger.debug(f'Metadata dir didn"t exist, creating it at {image_dir}')
+                logger.debug(f'Metadata dir didn\'t exist, creating it at {image_dir}')
                 os.makedirs(image_dir)
                 sg_helpers.chmod_as_parent(image_dir)
 
@@ -952,8 +952,8 @@ class GenericMetadata(object):
                 if None is not getattr(show_infos[tv_src], image_type, None):
                     image_url = show_infos[tv_src][image_type]
                     if image_type in ('poster', 'banner'):
-                        if None is not getattr(show_infos[tv_src], '%s_thumb' % image_type, None):
-                            thumb_url = show_infos[tv_src]['%s_thumb' % image_type]
+                        if None is not getattr(show_infos[tv_src], f'{image_type}_thumb', None):
+                            thumb_url = show_infos[tv_src][f'{image_type}_thumb']
                         else:
                             thumb_url = image_url
                     else:
@@ -966,8 +966,8 @@ class GenericMetadata(object):
                 # check extra provided images in '_banners' key
                 if None is not getattr(show_infos[tv_src], '_banners', None) and \
                         isinstance(show_infos[tv_src]['_banners'].get(image_type, None), (list, dict)):
-                    for res, value in iteritems(show_infos[tv_src]['_banners'][image_type]):
-                        for item in itervalues(value):
+                    for res, value in show_infos[tv_src]['_banners'][image_type].items():
+                        for item in value.values():
                             thumb = item['thumbnailpath']
                             if not thumb:
                                 thumb = item['bannerpath']
@@ -983,7 +983,7 @@ class GenericMetadata(object):
                 if tvinfo_type and getattr(show_infos[tv_src], 'images', None) and \
                         show_infos[tv_src].images.get(tvinfo_type):
                     for img in show_infos[tv_src].images[tvinfo_type]:  # type: TVInfoImage
-                        for img_size, img_url in iteritems(img.sizes):
+                        for img_size, img_url in img.sizes.items():
                             if tvinfo_size == img_size:
                                 img_url = _de_dupe(img_url)
                                 if not img_url:
@@ -1143,7 +1143,7 @@ class GenericMetadata(object):
                 use_tvid = default_source.attrib.get('type') or tvid
                 if isinstance(use_tvid, string_types):
                     use_tvid = {sickgear.TVInfoAPI(x).config['slug']: x
-                                for x, _ in iteritems(sickgear.TVInfoAPI().all_sources)}.get(use_tvid)
+                                for x, _ in sickgear.TVInfoAPI().all_sources.items()}.get(use_tvid)
                 prodid = sg_helpers.try_int(default_source.text, None)
                 if use_tvid and None is not prodid:
                     return use_tvid, prodid, name

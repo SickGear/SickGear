@@ -162,12 +162,12 @@ class PPScriptTests(test.SickbeardTestDBCase):
             self.has_errors = []
             self.current_script = None
             self.current_script_num = -1
-            sickgear.EXTRA_SCRIPTS = ['%s %s' % (sys.executable, os.path.join(base_path, t['EXTRA_SCRIPTS']))]
-            sickgear.SG_EXTRA_SCRIPTS = ['%s %s' % (sys.executable, os.path.join(base_path, t['SG_EXTRA_SCRIPTS']))]
+            sickgear.EXTRA_SCRIPTS = [f'{sys.executable} {os.path.join(base_path, t["EXTRA_SCRIPTS"])}']
+            sickgear.SG_EXTRA_SCRIPTS = [f'{sys.executable} {os.path.join(base_path, t["SG_EXTRA_SCRIPTS"])}']
             pp = PPTest(t['file_path'])
             ep_obj = self._create_ep(t['tvid'])
             pp._run_extra_scripts(ep_obj)
-            self.assertEqual(t['result'], pp.has_errors, msg='Test Case: %s' % t['name'])
+            self.assertEqual(t['result'], pp.has_errors, msg=f'Test Case: {t["name"]}')
             self._remove_show(ep_obj)
 
 

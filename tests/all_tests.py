@@ -42,7 +42,7 @@ if '__main__' == __name__:
     if not test_individually:
         print('this will include')
         for includedfiles in test_file_strings:
-            print('- ' + includedfiles)
+            print(f'- {includedfiles}')
 
         text_runner = unittest.TextTestRunner().run(testSuite)
         if not text_runner.wasSuccessful():
@@ -51,7 +51,7 @@ if '__main__' == __name__:
         complete_success = True
         for file_string in module_strings:
             testSuite = unittest.TestSuite([unittest.defaultTestLoader.loadTestsFromName(file_string)])
-            print('- running ' + file_string)
+            print(f'- running {file_string}')
             test_runner = unittest.TextTestRunner().run(testSuite)
             if complete_success and not test_runner.wasSuccessful():
                 complete_success = False

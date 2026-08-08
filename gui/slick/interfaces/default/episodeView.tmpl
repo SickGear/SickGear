@@ -39,12 +39,12 @@
 #end if
 
 #if $layout in ['daybyday', 'list']
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
+<script src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
 #end if
 
 #if 'daybyday' != $layout
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
-<input type="hidden" id="sbRoot" value="$sbRoot" />
+<script src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
+<input type="hidden" id="sbRoot" value="$sbRoot">
 #else
 <script>
 <!--
@@ -174,7 +174,7 @@
 </script>
 #end if
 
-<style type="text/css">
+<style>
 #SubMenu{display:none}
 #if 'daybyday' == $layout
 .ep-caret{cursor:pointer; vertical-align:middle; margin-right:2px}
@@ -408,9 +408,9 @@
 
 			<td>
         #if $cur_result['description']
-				<img alt="" src="$sbRoot/images/info32.png" height="16" width="16" class="plotInfo" id="plot-${show_id}" />
+				<img alt="" src="$sbRoot/images/info32.png" height="16" width="16" class="plotInfo" id="plot-${show_id}">
         #else
-				<img alt="" src="$sbRoot/images/info32.png" width="16" height="16" class="plotInfoNone opacity40" />
+				<img alt="" src="$sbRoot/images/info32.png" width="16" height="16" class="plotInfoNone opacity40">
         #end if
 				$cur_result['name']
 			</td>
@@ -429,13 +429,13 @@
 
 			<td align="center" style="vertical-align:middle">
         #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_url']
-				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickgear.TVInfoAPI(TVINFO_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI(TVINFO_IMDB).config.get('icon')" /></a>
+				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickgear.TVInfoAPI(TVINFO_IMDB).config.get('name')]" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI(TVINFO_IMDB).config.get('icon')"></a>
         #end if
-				<a href="<%= anon_url(sickgear.TVInfoAPI(tvid).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickgear.TVInfoAPI($tvid).config['show_url'] % cur_result['showid']}"><img alt="$sickgear.TVInfoAPI($tvid).name" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI($tvid).config['icon']" /></a>
+				<a href="<%= anon_url(sickgear.TVInfoAPI(tvid).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickgear.TVInfoAPI($tvid).config['show_url'] % cur_result['showid']}"><img alt="$sickgear.TVInfoAPI($tvid).name" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI($tvid).config['icon']"></a>
 			</td>
 
 			<td align="center">
-				<a class="ep-search" href="$sbRoot/home/search-episode?tvid_prodid=$cur_result['tvid_prodid']&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" /></a>
+				<a class="ep-search" href="$sbRoot/home/search-episode?tvid_prodid=$cur_result['tvid_prodid']&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png"></a>
 			</td>
 		</tr>
 		<!-- end $cur_result['show_name'] //-->
@@ -601,7 +601,7 @@
 			<table width="100%" border="0" cellpadding="0" cellspacing="0">
 				<tr>
 					<th #if 'banner' == $layout then 'class="nobg"' else 'rowspan="2"'# valign="top">
-						<a href="$sbRoot/home/view-show?tvid_prodid=$cur_result['tvid_prodid']"><img alt="" class="#if 'banner' == $layout then 'bannerThumb' else 'posterThumb'#" src="$sbRoot/show-poster/?tvid_prodid=$cur_result['tvid_prodid']&amp;which=#if 'poster' == $layout then 'poster_thumb' else $layout#" /></a>
+						<a href="$sbRoot/home/view-show?tvid_prodid=$cur_result['tvid_prodid']"><img alt="" class="#if 'banner' == $layout then 'bannerThumb' else 'posterThumb'#" src="$sbRoot/show-poster/?tvid_prodid=$cur_result['tvid_prodid']&amp;which=#if 'poster' == $layout then 'poster_thumb' else $layout#"></a>
 					</th>
 
         #if 'banner' == $layout
@@ -619,10 +619,10 @@
 
 							<span class="tvshowTitleIcons">
         #if $sg_var('USE_IMDB_INFO') and $cur_result['imdb_url']
-                				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickgear.TVInfoAPI(TVINFO_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI(TVINFO_IMDB).config.get('icon')" /></a>
+                				<a href="<%= anon_url(cur_result['imdb_url']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${cur_result['imdb_url']}"><img alt="[$sickgear.TVInfoAPI(TVINFO_IMDB).name]" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI(TVINFO_IMDB).config.get('icon')"></a>
         #end if
-								<a href="<%= anon_url(sickgear.TVInfoAPI(tvid).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickgear.TVInfoAPI($tvid).config['show_url'] % cur_result['showid']}"><img alt="$sickgear.TVInfoAPI($tvid).name" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI($tvid).config['icon']" /></a>
-								<span><a class="ep-search" href="$sbRoot/home/search-episode?tvid_prodid=$cur_result['tvid_prodid']&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png" /></a></span>
+								<a href="<%= anon_url(sickgear.TVInfoAPI(tvid).config['show_url'] % cur_result['showid']) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false" title="${sickgear.TVInfoAPI($tvid).config['show_url'] % cur_result['showid']}"><img alt="$sickgear.TVInfoAPI($tvid).name" height="16" width="16" src="$sbRoot/images/$sickgear.TVInfoAPI($tvid).config['icon']"></a>
+								<span><a class="ep-search" href="$sbRoot/home/search-episode?tvid_prodid=$cur_result['tvid_prodid']&amp;season=$cur_result['season']&amp;episode=$cur_result['episode']" title="Manual Search"><img title="[search]" alt="[search]" height="16" width="16" src="$sbRoot/images/search16.png"></a></span>
 							</span>
 						</div>
 
@@ -647,10 +647,10 @@
 						<div>
         #if $cur_result['description']
 							<span class="title" style="vertical-align:middle">Plot:</span>
-							<img class="ep_summaryTrigger" src="$sbRoot/images/plus.png" height="16" width="16" alt="" title="Toggle Summary" /><div class="ep_summary">$cur_result['description']</div>
+							<img class="ep_summaryTrigger" src="$sbRoot/images/plus.png" height="16" width="16" alt="" title="Toggle Summary"><div class="ep_summary">$cur_result['description']</div>
         #else
 							<span class="title ep_summaryTriggerNone" style="vertical-align:middle">Plot:</span>
-							<img class="ep_summaryTriggerNone" src="$sbRoot/images/plus.png" height="16" width="16" alt="" />
+							<img class="ep_summaryTriggerNone" src="$sbRoot/images/plus.png" height="16" width="16" alt="">
         #end if
 						</div>
 					</td>
@@ -842,7 +842,7 @@
 							<div id="show-${show_id}" class="daybyday-show" data-name="$cur_result['data_show_name']" data-season="$cur_result['season']" data-episode="$cur_result['episode']" data-network="$cur_result['data_network']" data-time="$cur_result['localtime'].strftime('%Y%m%d%H%M')" data-rawname="$cur_result['show_name']">
 								<div class="poster">
 									<a${title_text} href="$sbRoot/home/view-show?tvid_prodid=$cur_result['tvid_prodid']">
-									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/show-poster/?tvid_prodid=$cur_result['tvid_prodid']&amp;which=#echo ('banner', 'poster')[$bool($sg_var('EPISODE_VIEW_POSTERS', True))]#_thumb" /></a>
+									<img${img_id} class="img-responsive${plot_class}" alt="" src="$sbRoot/show-poster/?tvid_prodid=$cur_result['tvid_prodid']&amp;which=#echo ('banner', 'poster')[$bool($sg_var('EPISODE_VIEW_POSTERS', True))]#_thumb"></a>
 								</div>
 								<div class="state#if len($cur_result['state']) then ' %s" title="%s"' % ($cur_result['state'], $cur_result['state-title']) else '"' #></div>
 								<div class="text">
@@ -860,8 +860,8 @@
 								<span class="over-layer1">[paused]</span>
                         #elif $state_current == $cur_result['state']
                             #set $endtime = $decode_str($SGDatetime.sbftime($cur_result['localtime'] + datetime.timedelta(minutes = $cur_result['runtime']), markup=True), $sickgear.SYS_ENCODING)
-								<span class="over-layer0 on-air0">On Air until<br />$endtime</span>
-								<span class="over-layer1 on-air1">On Air until<br />$endtime</span>
+								<span class="over-layer0 on-air0">On Air until<br>$endtime</span>
+								<span class="over-layer1 on-air1">On Air until<br>$endtime</span>
                         #end if
 							</div><!-- end show-$cur_result['tvid_prodid'] //-->
 

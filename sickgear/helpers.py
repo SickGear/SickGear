@@ -43,7 +43,7 @@ from lxml_etree import etree, is_lxml
 from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
 
 from _23 import decode_bytes, decode_str, scandir
-from six import iteritems, string_types, text_type
+from six import string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
 
@@ -70,7 +70,7 @@ if False:
 
 RE_XML_ENCODING = re.compile(r'^(<\?xml[^>]+)\s+(encoding\s*=\s*[\"\'][^\"\']*[\"\'])(\s*\?>|)', re.U)
 RE_IMDB_ID = r'tt\d{7,10}'
-RC_IMDB_ID = re.compile(r'(?i)(%s)' % RE_IMDB_ID)
+RC_IMDB_ID = re.compile(rf'(?i)({RE_IMDB_ID})')
 
 
 def remove_extension(name):
@@ -155,11 +155,17 @@ def has_media_ext(filename):
     """
     # ignore samples
     if re.search(r'(^|[\W_])(sample\d*)[\W_]', filename, re.I) \
-            or filename.startswith('._'):  # and MAC OS's 'resource fork' files
+            or filename.startswith('._'):  # and macOS's 'resource fork' files
         return False
 
     sep_file = filename.rpartition('.')
-    return (None is re.search('extras?$', sep_file[0], re.I)) and (sep_file[2].lower() in mediaExtensions)
+    found = bool(re.search(
+        'extras|'
+        r'-(Behind\sThe\sScenes|Deleted\sScenes|'
+        'Featurettes|Interviews|Scenes|Shorts|Trailers|Other)',
+        sep_file[0], re.I))
+
+    return not found and (sep_file[2].lower() in mediaExtensions)
 
 
 def has_image_ext(filename):
@@ -238,7 +244,7 @@ def find_show_by_id(
 
             if isinstance(show_id, dict):
                 if no_mapped_ids:
-                    sid_int_list = [sickgear.tv.TVShow.create_sid(k, v) for k, v in iteritems(show_id) if k and v and
+                    sid_int_list = [sickgear.tv.TVShow.create_sid(k, v) for k, v in show_id.items() if k and v and
                                     0 < v and sickgear.tv.tvid_bitmask >= k]
                     if not check_multishow:
                         return next((sickgear.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
@@ -246,7 +252,7 @@ def find_show_by_id(
                     results = [sickgear.showDict.get(_show_sid_id) for _show_sid_id in sid_int_list
                                if sickgear.showDict.get(_show_sid_id)]
                 else:
-                    results = [_show_obj for k, v in iteritems(show_id) if k and v and 0 < v
+                    results = [_show_obj for k, v in show_id.items() if k and v and 0 < v
                                for _show_obj in show_list if v == _show_obj.internal_ids.get(k, {'id': 0})['id']]
 
     num_shows = len(set(results))
@@ -301,7 +307,7 @@ def search_infosrc_for_show_id(reg_show_name, tvid=None, prodid=None, ui=None):
         t = sickgear.TVInfoAPI(cur_tvid).setup(**tvinfo_config)
 
         for cur_name in show_names:
-            logger.debug('Trying to find %s on %s' % (cur_name, sickgear.TVInfoAPI(cur_tvid).name))
+            logger.debug(f'Trying to find {cur_name} on {sickgear.TVInfoAPI(cur_tvid).name}')
 
             try:
                 if prodid:
@@ -364,7 +370,7 @@ def list_media_files(path):
     result = []
     if path:
         if [direntry for direntry in scantree(path, include=[r'\.sickgearignore'], filter_kind=False, recurse=False)]:
-            logger.debug('Skipping folder "%s" because it contains ".sickgearignore"' % path)
+            logger.debug(f'Skipping folder "{path}" because it contains ".sickgearignore"')
         else:
             result = [direntry.path for direntry in scantree(path, exclude_dirs=[
                 '^Extras$',
@@ -525,7 +531,7 @@ def delete_empty_folders(check_empty_dir, keep_dir=None):
                 [check_file in ignore_items for check_file in check_files])):
             # directory is empty or contains only ignore_items
             try:
-                logger.log(f"Deleting empty folder: {check_empty_dir}")
+                logger.log(f'Deleting empty folder: {check_empty_dir}')
                 # need shutil.rmtree when ignore_items is really implemented
                 os.rmdir(check_empty_dir)
                 # do a Synology library update
@@ -553,18 +559,18 @@ def get_absolute_number_from_season_and_episode(show_obj, season, episode):
     absolute_number = None
 
     if season and episode:
-        my_db = db.DBConnection()
-        sql_result = my_db.select('SELECT *'
-                                  ' FROM tv_episodes'
-                                  ' WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?',
-                                  [show_obj.tvid, show_obj.prodid, season, episode])
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select('SELECT *'
+                                      ' FROM tv_episodes'
+                                      ' WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?',
+                                      [show_obj.tvid, show_obj.prodid, season, episode])
 
         if 1 == len(sql_result):
             absolute_number = int(sql_result[0]["absolute_number"])
             logger.debug(f'Found absolute_number:{absolute_number} by {season}x{episode}')
         else:
-            logger.debug('No entries for absolute number in show: %s found using %sx%s' %
-                         (show_obj.unique_name, str(season), str(episode)))
+            logger.debug(f'No entries for absolute number in show: {show_obj.unique_name}'
+                         f' found using {str(season)}x{str(episode)}')
 
     return absolute_number
 
@@ -603,7 +609,7 @@ def sanitize_scene_name(name):
         bad_chars = ',:()£\'!?\u2019'
 
         # strip out any bad chars
-        name = re.sub(r'[%s]' % bad_chars, '', name, flags=re.U)
+        name = re.sub(rf'[{bad_chars}]', '', name, flags=re.U)
 
         # tidy up stuff that doesn't belong in scene names
         name = re.sub(r'(-?\s|/)', '.', name).replace('&', 'and')
@@ -654,7 +660,7 @@ def parse_xml(data, del_xmlns=False):
     try:
         parsed_xml = etree.fromstring(data)
     except (BaseException, Exception) as e:
-        logger.debug(f"Error trying to parse xml data. Error: {ex(e)}")
+        logger.debug(f'Error trying to parse xml data. Error: {ex(e)}')
         parsed_xml = None
 
     return parsed_xml
@@ -672,12 +678,12 @@ def backup_versioned_file(old_file, version):
     """
     num_tries = 0
 
-    new_file = '%s.v%s' % (old_file, version)
+    new_file = f'{old_file}.v{version}'
 
     if os.path.isfile(new_file):
         changed_old_db = False
         for back_nr in range(1, 10000):
-            alt_name = '%s.r%s' % (new_file, back_nr)
+            alt_name = f'{new_file}.r{back_nr}'
             if not os.path.isfile(alt_name):
                 try:
                     shutil.move(new_file, alt_name)
@@ -856,7 +862,7 @@ def anon_url(*url):
     :return: a URL string consisting of the Anonymous redirect URL and an arbitrary number of values appended
     :rtype: AnyStr
     """
-    return '' if None in url else '%s%s' % (sickgear.ANON_REDIRECT, ''.join([str(s) for s in url]))
+    return '' if None in url else f'{sickgear.ANON_REDIRECT}{"".join([str(s) for s in url])}'
 
 
 def starify(text, verify=False):
@@ -871,8 +877,8 @@ def starify(text, verify=False):
              replaced with asterisks. Useful for securely presenting api keys to a ui.
     """
     return '' if not text\
-        else ((('%s%s' % (text[:len(text) // 2], '*' * (len(text) // 2))),
-               ('%s%s%s' % (text[:4], '*' * (len(text) - 8), text[-4:])))[12 <= len(text)],
+        else ((f'{text[:len(text) // 2]}{"*" * (len(text) // 2)}',
+               f'{text[:4]}{"*" * (len(text) - 8)}{text[-4:]}')[12 <= len(text)],
               set('*') == set((text[len(text) // 2:], text[4:-4])[12 <= len(text)]))[verify]
 
 
@@ -923,6 +929,16 @@ def full_sanitize_scene_name(name):
     :rtype: AnyStr
     """
     return re.sub('[. -]', ' ', sanitize_scene_name(name)).lower().lstrip()
+
+
+def full_sanitize_scene_name_without_year(name):
+    # type: (str) -> str
+    """
+    sanitize scene name
+
+    :param name: name
+    """
+    return re.sub(r'[. -]\(?\d{4}\)?$', '', full_sanitize_scene_name(name)).lower().lstrip()
 
 
 def get_show(name, try_scene_exceptions=False):
@@ -1030,10 +1046,10 @@ def clear_cache(force=False):
     dirty = None
     del_time = SGDatetime.timestamp_near(td=datetime.timedelta(hours=12))
     direntry_args = dict(follow_symlinks=False)
-    for direntry in scantree(sickgear.CACHE_DIR, exclude_dirs=['images|rss|zoneinfo'], follow_symlinks=True):
+    for direntry in scantree(sickgear.CACHE_DIR, exclude_dirs=['images|rss|zoneinfo|alts'], follow_symlinks=True):
         if direntry.is_file(**direntry_args) and (force or del_time > direntry.stat(**direntry_args).st_mtime):
             dirty = dirty or False if remove_file_perm(direntry.path) else True
-        elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers']:
+        elif direntry.is_dir(**direntry_args) and direntry.name not in ['cheetah', 'sessions', 'indexers', 'alts']:
             dirty = dirty or False
             try:
                 os.rmdir(direntry.path)
@@ -1075,7 +1091,7 @@ def human(size):
         formatted_size = str(round(num, ndigits=precision))
 
     # noinspection PyUnboundLocalVariable
-    return '%s %s' % (formatted_size, suffix)
+    return f'{formatted_size} {suffix}'
 
 
 def get_size(start_path='.'):
@@ -1232,7 +1248,7 @@ def wait_for_free_port(host, port):
         else:
             return
 
-    raise IOError("Port %r is not free on %r" % (port, host))
+    raise IOError(f'Port {port!r} is not free on {host!r}')
 
 
 def check_port(host, port, timeout=1.0):
@@ -1277,9 +1293,9 @@ def clear_unused_providers():
     providers = [x.cache.providerID for x in sickgear.providers.sorted_sources() if x.is_active()]
 
     if providers:
-        my_db = db.DBConnection('cache.db')
-        my_db.action('DELETE FROM provider_cache WHERE provider NOT IN (%s)' % ','.join(['?'] * len(providers)),
-                     providers)
+        with db.DBConnection('cache.db') as sg_db:
+            sg_db.action(f'DELETE FROM provider_cache WHERE provider NOT IN ({",".join(["?"] * len(providers))})',
+                         providers)
 
 
 def make_search_segment_html_string(segment, max_eps=5):
@@ -1297,7 +1313,7 @@ def make_search_segment_html_string(segment, max_eps=5):
                        % (divider, x, maybe_plural(ep_c), ', '.join(eps), ep_c, maybe_plural(ep_c))
             divider = ', '
     elif segment:
-        episode_numbers = ['S%sE%s' % (str(x.season).zfill(2), str(x.episode).zfill(2)) for x in segment]
+        episode_numbers = [f'S{str(x.season).zfill(2)}E{str(x.episode).zfill(2)}' for x in segment]
         seg_str = f'Episode{maybe_plural(len(episode_numbers))}: {", ".join(episode_numbers)}'
     return seg_str
 
@@ -1384,7 +1400,7 @@ def should_delete_episode(status):
     s = Quality.split_composite_status(status)[0]
     if s not in SNATCHED_ANY + [DOWNLOADED, ARCHIVED, IGNORED]:
         return True
-    logger.debug('not safe to delete episode from db because of status: %s' % statusStrings[s])
+    logger.debug(f'not safe to delete episode from db because of status: {statusStrings[s]}')
     return False
 
 
@@ -1508,7 +1524,7 @@ def path_mapper(search, replace, subject):
     search = re.sub(r'\\', delim, search)
     replace = re.sub(r'\\', delim, replace)
     path = re.sub(r'\\', delim, subject)
-    result = re.sub('(?i)^%s' % search, replace, path)
+    result = re.sub(f'(?i)^{search}', replace, path)
     result = os.path.normpath(re.sub(delim, '/', result))
 
     return result, result != subject
@@ -1585,7 +1601,7 @@ def count_files_dirs(base_dir):
             try:
                 files = s_d
             except OSError as e:
-                logger.warning('Unable to count files %s / %s' % (repr(e), ex(e)))
+                logger.warning(f'Unable to count files {e!r} / {ex(e)}')
             else:
                 for e in files:
                     if e.is_file():
@@ -1593,28 +1609,28 @@ def count_files_dirs(base_dir):
                     elif e.is_dir():
                         d += 1
     except OSError as e:
-        logger.warning('Unable to count files %s / %s' % (repr(e), ex(e)))
+        logger.warning(f'Unable to count files {e!r} / {ex(e)}')
 
     return f, d
 
 
 def upgrade_new_naming():
-    my_db = db.DBConnection()
-    sql_result = my_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id FROM tv_shows')
-    show_list = {}
-    for cur_result in sql_result:
-        show_list[int(cur_result['prod_id'])] = int(cur_result['tv_id'])
+    with db.DBConnection() as sg_db:
+        sql_result = sg_db.select('SELECT indexer AS tv_id, indexer_id AS prod_id FROM tv_shows')
+        show_list = {}
+        for cur_result in sql_result:
+            show_list[int(cur_result['prod_id'])] = int(cur_result['tv_id'])
 
-    if sickgear.FANART_RATINGS:
-        from sickgear.tv import TVidProdid
-        ne = {}
-        for k, v in iteritems(sickgear.FANART_RATINGS):
-            nk = show_list.get(try_int(k))
-            if nk:
-                ne[TVidProdid({nk: int(k)})()] = sickgear.FANART_RATINGS[k]
-        sickgear.FANART_RATINGS = ne
-        sickgear.CFG.setdefault('GUI', {})['fanart_ratings'] = '%s' % ne
-        sickgear.CFG.write()
+        if sickgear.FANART_RATINGS:
+            from sickgear.tv import TVidProdid
+            ne = {}
+            for k, v in sickgear.FANART_RATINGS.items():
+                nk = show_list.get(try_int(k))
+                if nk:
+                    ne[TVidProdid({nk: int(k)})()] = sickgear.FANART_RATINGS[k]
+            sickgear.FANART_RATINGS = ne
+            sickgear.CFG.setdefault('GUI', {})['fanart_ratings'] = f'{ne}'
+            sickgear.CFG.write()
 
     image_cache_dir = os.path.join(sickgear.CACHE_DIR, 'images')
     bp_match = re.compile(r'(\d+)\.((?:banner|poster|(?:\d+(?:\.\w*)?\.\w{5,8}\.)?fanart)\.jpg)', flags=re.I)
@@ -1628,7 +1644,7 @@ def upgrade_new_naming():
         elif 1 > c % s:
             ps = c / s
         if None is not ps:
-            sickgear.classes.loading_msg.set_msg_progress(p_msg, '{:6.2f}%'.format(ps))
+            sickgear.classes.loading_msg.set_msg_progress(p_msg, f'{ps:6.2f}%')
 
     for d in ['', 'thumbnails']:
         bd = os.path.join(image_cache_dir, d)
@@ -1636,7 +1652,7 @@ def upgrade_new_naming():
             fc, dc = count_files_dirs(bd)
             step = fc / float(100)
             cf = 0
-            p_text = 'Upgrading %s' % (d, 'banner/poster')[not d]
+            p_text = f'Upgrading {(d, "banner/poster")[not d]}'
             _set_progress(p_text, 0, 0)
             with scandir(bd) as s_d:
                 for entry in scandir(bd):
@@ -1648,7 +1664,7 @@ def upgrade_new_naming():
                             old_id = int(b_s.group(1))
                             tvid = show_list.get(old_id)
                             if tvid:
-                                nb_dir = os.path.join(sickgear.CACHE_DIR, 'images', 'shows', '%s-%s' % (tvid, old_id), d)
+                                nb_dir = os.path.join(sickgear.CACHE_DIR, 'images', 'shows', f'{tvid}-{old_id}', d)
                                 if not os.path.isdir(nb_dir):
                                     try:
                                         os.makedirs(nb_dir)
@@ -1658,8 +1674,7 @@ def upgrade_new_naming():
                                 try:
                                     move_file(entry.path, new_name)
                                 except (BaseException, Exception) as e:
-                                    logger.warning('Unable to rename %s to %s: %s / %s'
-                                                   % (entry.path, new_name, repr(e), ex(e)))
+                                    logger.warning(f'Unable to rename {entry.path} to {new_name}: {repr(e)} / {ex(e)}')
                             else:
                                 # clean up files without reference in db
                                 try:
@@ -1681,7 +1696,7 @@ def upgrade_new_naming():
                                     try:
                                         entries = s_p
                                     except OSError as e:
-                                        logger.warning('Unable to stat dirs %s / %s' % (repr(e), ex(e)))
+                                        logger.warning(f'Unable to stat dirs {e!r} / {ex(e)}')
                                         continue
                                     for d_entry in entries:
                                         if d_entry.is_dir():
@@ -1692,7 +1707,7 @@ def upgrade_new_naming():
                                                 new_id = show_list.get(old_id)
                                                 if new_id:
                                                     new_dir_name = os.path.join(sickgear.CACHE_DIR, 'images', 'shows',
-                                                                                '%s-%s' % (new_id, old_id), 'fanart')
+                                                                                f'{new_id}-{old_id}', 'fanart')
                                                     try:
                                                         move_file(d_entry.path, new_dir_name)
                                                     except (BaseException, Exception) as e:
@@ -1723,7 +1738,7 @@ def upgrade_new_naming():
                                                                                 f' to {args[1]}: {repr(e)} / {ex(e)}')
                                                         except OSError as e:
                                                             logger.warning(
-                                                                'Unable to rename %s / %s' % (repr(e), ex(e)))
+                                                                f'Unable to rename {e!r} / {ex(e)}')
                                                 else:
                                                     try:
                                                         shutil.rmtree(d_entry.path)
@@ -1734,7 +1749,7 @@ def upgrade_new_naming():
                                             except (BaseException, Exception):
                                                 pass
                             except OSError as e:
-                                logger.warning('Unable to stat dirs %s / %s' % (repr(e), ex(e)))
+                                logger.warning(f'Unable to stat dirs {e!r} / {ex(e)}')
                                 continue
                         try:
                             os.rmdir(entry.path)
@@ -1821,7 +1836,7 @@ def generate_word_str(words, regex=False, join_chr=','):
     :return: combined string
     :rtype: basestring
     """
-    return '%s%s' % (('', 'regex:')[True is regex], join_chr.join(words))
+    return f'{("", "regex:")[True is regex]}{join_chr.join(words)}'
 
 
 def split_word_str(word_list):

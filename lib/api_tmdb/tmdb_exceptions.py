@@ -5,7 +5,8 @@ __author__ = 'Prinz23'
 __version__ = '1.0'
 
 __all__ = ['TmdbException', 'TmdbError', 'TmdbUserabort', 'TmdbShownotfound',
-           'TmdbSeasonnotfound', 'TmdbEpisodenotfound', 'TmdbAttributenotfound', 'TmdbTokenexpired']
+           'TmdbSeasonnotfound', 'TmdbEpisodenotfound', 'TmdbAttributenotfound', 'TmdbTokenexpired',
+           'TmdbPersonNotFound']
 
 from lib.tvinfo_base.exceptions import *
 
@@ -56,5 +57,11 @@ class TmdbAttributenotfound(BaseTVinfoAttributenotfound, TmdbError):
 
 class TmdbTokenexpired(BaseTVinfoAuthenticationerror, TmdbError):
     """token expired or missing themoviedb.org
+    """
+    pass
+
+
+class TmdbPersonNotFound(BaseTVinfoPersonNotFound, TmdbError):
+    """person not found on themoviedb.org
     """
     pass

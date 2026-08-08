@@ -160,7 +160,7 @@
                     #if None is not $provider
 					<img src="$sbRoot/images/providers/<%= provider.image_name() %>" width="16" height="16" /><span>$provider.name</span>
                     #else
-					<img src="$sbRoot/images/providers/missing.png" width="16" height="16" title="missing provider" /><span>Missing Provider</span>
+					<img src="$sbRoot/images/providers/missing.png" width="16" height="16" title="missing provider"><span>Missing Provider</span>
                     #end if
                 #else
 					<img src="$sbRoot/images/subtitles/<%= hItem['provider']+'.png' %>" width="16" height="16" /><span><%= hItem['provider'].capitalize() %></span>
@@ -212,13 +212,13 @@
             #if $curStatus in $SNATCHED_ANY + [$FAILED]
                 #set $provider = $providers.get_by_id($generic.GenericProvider.make_id($action['provider']))
                 #if None is not $provider
-                    #set $prov_list += ['<span%s><img class="help" src="%s/images/providers/%s" width="16" height="16" alt="%s" title="%s.. %s: %s" /></span>'\
+                    #set $prov_list += ['<span%s><img class="help" src="%s/images/providers/%s" width="16" height="16" alt="%s" title="%s.. %s: %s"></span>'\
                         % (('', ' class="fail"')[$FAILED == $curStatus], $sbRoot, $provider.image_name(), $provider.name,
                         ('%s%s' % ($order, 'th' if $order in [11, 12, 13] or str($order)[-1] not in $ordinal_indicators else $ordinal_indicators[str($order)[-1]]), 'Snatch failed')[$FAILED == $curStatus],
                         $provider.name, $basename)]
                     #set $order += (0, 1)[$curStatus in $SNATCHED_ANY]
                 #else
-					#set $prov_list += ['<img src="%s/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider" />'\
+					#set $prov_list += ['<img src="%s/images/providers/missing.png" width="16" height="16" alt="missing provider" title="missing provider">'\
 					    % $sbRoot]
                 #end if
             #end if
@@ -602,7 +602,7 @@
 			<div id="check-$check" data-check="check_$check" class="check-site" style="margin-bottom:10px">
 				<input type="button" class="btn" value="Check $check_name">
 				<span style="line-height:26px">Test if site is up<span class="result"></span>
-					<a class="addQTip" style="margin-left:2px;display:none" href="$sickgear.helpers.anon_url('http://www.isitdownrightnow.com/downorjustme.php?url=' + $check_url)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View full report for $check_name in new tab"><img alt="[IsItDown]" height="16" width="16" src="$sbRoot/images/iidrn.png" /></a>
+					<a class="addQTip" style="margin-left:2px;display:none" href="$sickgear.helpers.anon_url('http://www.isitdownrightnow.com/downorjustme.php?url=' + $check_url)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View full report for $check_name in new tab"><img alt="[IsItDown]" height="16" width="16" src="$sbRoot/images/iidrn.png"></a>
 				</span>
 			</div>
     #end for

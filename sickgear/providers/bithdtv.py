@@ -23,8 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class BitHDTVProvider(generic.TorrentProvider):
 
@@ -47,7 +45,7 @@ class BitHDTVProvider(generic.TorrentProvider):
             logged_in=(lambda y=None: all(
                 [(None is y or re.search(r'(?i)rss\slink', y)),
                  self.has_all_cookies(['su', 'sp', 'sl'], 'h_'), 'search' in self.urls] +
-                [(self.session.cookies.get('h_' + x) or 'sg!no!pw') in self.digest for x in ('su', 'sp', 'sl')])),
+                [(self.session.cookies.get(f'h_{x}') or 'sg!no!pw') in self.digest for x in ('su', 'sp', 'sl')])),
             failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     @staticmethod
@@ -62,7 +60,7 @@ class BitHDTVProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'detail', 'get': r'download\.'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'detail', 'get': r'download\.'}.items()])
 
         for mode in search_params:
             for search_string in search_params[mode]:

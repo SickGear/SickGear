@@ -8,6 +8,13 @@ IS_TOPIC: Incomplete
 IS_REGION: Incomplete
 AWS_HTTP_ERROR_MAP: Incomplete
 
+class SNSMode:
+    """Tracks the mode of operation for SNS Notifications."""
+    SMS: str
+    TOPIC: str
+
+SNS_MODES: Incomplete
+
 class NotifySNS(NotifyBase):
     """A wrapper for AWS SNS (Amazon Simple Notification)"""
     service_name: str
@@ -15,11 +22,10 @@ class NotifySNS(NotifyBase):
     secure_protocol: str
     setup_url: str
     request_rate_per_sec: float
-    body_maxlen: int
-    title_maxlen: int
     templates: Incomplete
     template_tokens: Incomplete
     template_args: Incomplete
+    aws_session_token: Incomplete
     aws_access_key_id: Incomplete
     aws_secret_access_key: Incomplete
     aws_region_name: Incomplete
@@ -31,7 +37,8 @@ class NotifySNS(NotifyBase):
     aws_auth_version: str
     aws_auth_algorithm: str
     aws_auth_request: str
-    def __init__(self, access_key_id, secret_access_key, region_name, targets=None, **kwargs) -> None:
+    mode: Incomplete
+    def __init__(self, access_key_id, secret_access_key, region_name, targets=None, session_token=None, mode=None, **kwargs) -> None:
         """Initialize Notify AWS SNS Object."""
     def send(self, body, title: str = '', notify_type=..., **kwargs):
         """Wrapper to send_notification since we can alert more then one
@@ -82,6 +89,12 @@ class NotifySNS(NotifyBase):
 
         Targets or end points should never be identified here.
         """
+    @property
+    def title_maxlen(self):
+        """Maximum title length: 100 for topic mode, 0 for SMS."""
+    @property
+    def body_maxlen(self):
+        """Maximum body length: 256 KB for topic mode, 160 for SMS."""
     def url(self, privacy: bool = False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
     def __len__(self) -> int:

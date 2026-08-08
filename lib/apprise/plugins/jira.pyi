@@ -1,0 +1,109 @@
+from ..common import NotifyType as NotifyType, PersistentStoreMode as PersistentStoreMode
+from ..utils.parse import is_uuid as is_uuid, parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
+from .base import NotifyBase as NotifyBase
+from _typeshed import Incomplete
+
+class JiraCategory(NotifyBase):
+    """
+    We define the different category types that we can notify
+    """
+    USER: str
+    SCHEDULE: str
+    ESCALATION: str
+    TEAM: str
+
+JIRA_CATEGORIES: Incomplete
+
+class JiraAlertAction:
+    """
+    Defines the supported actions
+    """
+    MAP: str
+    NEW: str
+    CLOSE: str
+    DELETE: str
+    ACKNOWLEDGE: str
+    NOTE: str
+
+JIRA_ACTIONS: Incomplete
+
+class JiraRegion:
+    US: str
+    EU: str
+
+JIRA_API_LOOKUP: Incomplete
+JIRA_REGIONS: Incomplete
+
+class JiraPriority:
+    LOW: int
+    MODERATE: int
+    NORMAL: int
+    HIGH: int
+    EMERGENCY: int
+
+JIRA_PRIORITIES: Incomplete
+JIRA_PRIORITY_MAP: Incomplete
+
+class NotifyJira(NotifyBase):
+    """
+    A wrapper for Jira Notifications
+    """
+    service_name: str
+    service_url: str
+    secure_protocol: str
+    setup_url: str
+    body_maxlen: int
+    storage_mode: Incomplete
+    jira_body_minlen: int
+    jira_default_region: Incomplete
+    default_batch_size: int
+    jira_message_map: Incomplete
+    templates: Incomplete
+    template_tokens: Incomplete
+    template_args: Incomplete
+    template_kwargs: Incomplete
+    apikey: Incomplete
+    priority: Incomplete
+    region_name: Incomplete
+    action: Incomplete
+    mapping: Incomplete
+    details: Incomplete
+    batch_size: Incomplete
+    __tags: Incomplete
+    entity: Incomplete
+    alias: Incomplete
+    targets: Incomplete
+    def __init__(self, apikey, targets, region_name=None, details=None, priority=None, alias=None, entity=None, batch: bool = False, tags=None, action=None, mapping=None, **kwargs) -> None:
+        """
+        Initialize Jira Object
+        """
+    def _fetch(self, method, url, payload, params=None):
+        """
+        Performs server retrieval/update and returns JSON Response
+        """
+    def send(self, body, title: str = '', notify_type=..., **kwargs):
+        """
+        Perform Jira Notification
+        """
+    @property
+    def url_identifier(self):
+        """
+        Returns all of the identifiers that make this URL unique from
+        another simliar one. Targets or end points should never be identified
+        here.
+        """
+    def url(self, privacy: bool = False, *args, **kwargs):
+        """
+        Returns the URL built dynamically based on specified arguments.
+        """
+    def __len__(self) -> int:
+        """
+        Returns the number of targets associated with this notification
+        """
+    @staticmethod
+    def parse_url(url):
+        """
+        Parses the URL and returns enough arguments that can allow
+        us to re-instantiate this object.
+
+        """

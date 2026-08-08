@@ -45,12 +45,12 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
     """
     log_date = datetime.datetime.now().strftime(dateFormat)
 
-    my_db = db.DBConnection()
-    my_db.action(
-        'INSERT INTO history'
-        ' (action, date, showid, season, episode, quality, resource, provider, version, indexer, hide)'
-        ' VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-        [action, log_date, int(prodid), int(season), int(episode), quality, resource, provider, version, int(tvid), 0])
+    with db.DBConnection() as sg_db:
+        sg_db.action(
+            'INSERT INTO history'
+            ' (action, date, showid, season, episode, quality, resource, provider, version, indexer, hide)'
+            ' VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [action, log_date, int(prodid), int(season), int(episode), quality, resource, provider, version, int(tvid), 0])
 
 
 def log_snatch(search_result):
@@ -152,8 +152,6 @@ def reset_status(tvid, prodid, season, episode):
     :param season: season number
     :param episode: episode number
     """
-    my_db = db.DBConnection()
-
     history_sql = 'SELECT h.action,  h.indexer AS tv_id, h.showid AS prod_id, h.season, h.episode, t.status' \
                   ' FROM history AS h' \
                   ' INNER JOIN tv_episodes AS t' \
@@ -165,54 +163,55 @@ def reset_status(tvid, prodid, season, episode):
                   ' ORDER BY h.date DESC' \
                   ' LIMIT 1'
 
-    sql_history = my_db.select(history_sql, [str(tvid), str(prodid), str(season), str(episode)])
-    if 1 == len(sql_history):
-        history = sql_history[0]
+    with db.DBConnection() as sg_db:
+        sql_history = sg_db.select(history_sql, [str(tvid), str(prodid), str(season), str(episode)])
+        if 1 == len(sql_history):
+            history = sql_history[0]
 
-        # update status only if status differs
-        # FIXME: this causes issues if the user changed status manually
-        #        replicating refactored behavior anyway.
-        if history['status'] != history['action']:
-            undo_status = 'UPDATE tv_episodes' \
-                          ' SET status = ?' \
-                          ' WHERE indexer = ? AND showid = ?' \
-                          ' AND season = ? AND episode = ?'
+            # update status only if status differs
+            # FIXME: this causes issues if the user changed status manually
+            #        replicating refactored behavior anyway.
+            if history['status'] != history['action']:
+                undo_status = 'UPDATE tv_episodes' \
+                              ' SET status = ?' \
+                              ' WHERE indexer = ? AND showid = ?' \
+                              ' AND season = ? AND episode = ?'
 
-            my_db.action(undo_status, [history['action'],
-                                       history['tv_id'], history['prod_id'],
-                                       history['season'], history['episode']])
+                sg_db.action(undo_status, [history['action'],
+                                           history['tv_id'], history['prod_id'],
+                                           history['season'], history['episode']])
 
 
 def history_snatched_proper_fix():
-    my_db = db.DBConnection()
-    if not my_db.has_flag('history_snatch_proper'):
-        logger.log('Updating history items with status Snatched Proper in a background process...')
-        # noinspection SqlResolve
-        sql_result = my_db.select('SELECT rowid, `resource`, quality,'
-                                  ' indexer AS tv_id, showid AS prod_id'
-                                  ' FROM history'
-                                  ' WHERE action LIKE "%%%02d"' % SNATCHED +
-                                  ' AND (UPPER(resource) LIKE "%PROPER%"'
-                                  ' OR UPPER(resource) LIKE "%REPACK%"'
-                                  ' OR UPPER(resource) LIKE "%REAL%")')
-        if sql_result:
-            cl = []
-            for r in sql_result:
-                show_obj = None
-                try:
-                    show_obj = helpers.find_show_by_id({int(r['tv_id']): int(r['prod_id'])}, check_multishow=True)
-                except (BaseException, Exception):
-                    pass
-                np = NameParser(False, show_obj=show_obj, testing=True)
-                try:
-                    pr = np.parse(r['resource'])
-                except (BaseException, Exception):
-                    continue
-                if 0 < Quality.get_proper_level(pr.extra_info_no_name(), pr.version, pr.is_anime):
-                    cl.append(['UPDATE history SET action = ? WHERE rowid = ?',
-                               [Quality.composite_status(SNATCHED_PROPER, int(r['quality'])),
-                                r['rowid']]])
-            if cl:
-                my_db.mass_action(cl)
-            logger.log('Completed the history table update with status Snatched Proper.')
-        my_db.add_flag('history_snatch_proper')
+    with db.DBConnection() as sg_db:
+        if not sg_db.has_flag('history_snatch_proper'):
+            logger.log('Updating history items with status Snatched Proper in a background process...')
+            # noinspection SqlResolve
+            sql_result = sg_db.select('SELECT rowid, `resource`, quality,'
+                                      ' indexer AS tv_id, showid AS prod_id'
+                                      ' FROM history'
+                                      " WHERE action LIKE '%%%02d'" % SNATCHED +
+                                      " AND (UPPER(resource) LIKE '%PROPER%'"
+                                      " OR UPPER(resource) LIKE '%REPACK%'"
+                                      " OR UPPER(resource) LIKE '%REAL%')")
+            if sql_result:
+                sql_l = []
+                for r in sql_result:
+                    show_obj = None
+                    try:
+                        show_obj = helpers.find_show_by_id({int(r['tv_id']): int(r['prod_id'])}, check_multishow=True)
+                    except (BaseException, Exception):
+                        pass
+                    np = NameParser(False, show_obj=show_obj, testing=True)
+                    try:
+                        pr = np.parse(r['resource'])
+                    except (BaseException, Exception):
+                        continue
+                    if 0 < Quality.get_proper_level(pr.extra_info_no_name(), pr.version, pr.is_anime):
+                        sql_l.append(['UPDATE history SET action = ? WHERE rowid = ?',
+                                      [Quality.composite_status(SNATCHED_PROPER, int(r['quality'])),
+                                       r['rowid']]])
+                if sql_l:
+                    sg_db.mass_action(sql_l)
+                logger.log('Completed the history table update with status Snatched Proper.')
+            sg_db.add_flag('history_snatch_proper')

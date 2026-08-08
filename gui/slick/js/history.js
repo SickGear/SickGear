@@ -252,7 +252,7 @@ $(document).ready(function() {
 			url: $.SickGear.Root + '/manage/search-tasks/retry-provider?provider=' + match[1],
 			type: 'GET',
 			complete: function () {
-				window.location.reload(true);
+				$.hardReload();
 			}
 		});
 	});
@@ -264,7 +264,7 @@ $(document).ready(function() {
 			url: $.SickGear.Root + '/history/retry_domain?domain=' + domain,
 			type: 'GET',
 			complete: function () {
-				window.location.reload(true);
+				$.hardReload();
 			}
 		});
 	});

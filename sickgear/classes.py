@@ -25,7 +25,7 @@ import sickgear
 from ._legacy_classes import LegacySearchResult, LegacyProper
 from .common import Quality
 
-from six import integer_types, iteritems, string_types
+from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -129,14 +129,14 @@ class SearchResult(LegacySearchResult):
             return 'Invalid provider, unable to print self'
 
         return '\n'.join([
-            '%s @ %s' % (self.provider.name, self.url),
+            f'{self.provider.name} @ {self.url}',
             'Extra Info:',
-            '\n'.join(['  %s' % x for x in self.extraInfo]),
-            'Episode: %s' % self.ep_obj_list,
-            'Quality: %s' % Quality.qualityStrings[self.quality],
-            'Name: %s' % self.name,
-            'Size: %s' % self.size,
-            'Release Group: %s' % self.release_group])
+            '\n'.join([f'  {x}' for x in self.extraInfo]),
+            f'Episode: {self.ep_obj_list}',
+            f'Quality: {Quality.qualityStrings[self.quality]}',
+            f'Name: {self.name}',
+            f'Size: {self.size}',
+            f'Release Group: {self.release_group}'])
 
     def get_data(self):
         """
@@ -184,7 +184,7 @@ class ShowInfoFilter(object):
     def __init__(self, config, log=None):
         self.config = config
         self.log = log
-        self.bad_names = [re.compile('(?i)%s' % r) for r in (
+        self.bad_names = [re.compile(f'(?i){r}') for r in (
             r'[*]+\s*(?:403:|do not add|dupli[^s]+\s*(?:\d+|<a\s|[*])|inval)',
             r'(?:inval|not? allow(ed)?)(?:[,\s]*period)?\s*[*]',
             r'[*]+\s*dupli[^\s*]+\s*[*]+\s*(?:\d+|<a\s)',
@@ -357,7 +357,7 @@ class OrderedDefaultdict(OrderedDict):
 
     def __reduce__(self):  # optional, for pickle support
         args = (self.default_factory,) if self.default_factory else ()
-        return self.__class__, args, None, None, iteritems(self)
+        return self.__class__, args, None, None, self.items()
 
     def first_key(self):
         return next(iter(self))
@@ -442,8 +442,8 @@ class SimpleNamespace(object):
 
     def __repr__(self):
         keys = sorted(self.__dict__)
-        items = ["{}={!r}".format(k, self.__dict__[k]) for k in keys]
-        return "{}({})".format(type(self).__name__, ", ".join(items))
+        items = [f'{k}={self.__dict__[k]!r}' for k in keys]
+        return f'{type(self).__name__}({", ".join(items)})'
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__

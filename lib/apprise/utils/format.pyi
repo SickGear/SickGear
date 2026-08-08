@@ -1,5 +1,5 @@
 from _typeshed import Incomplete
-from apprise.common import NotifyFormat
+from apprise.common import NotifyFormat as NotifyFormat
 
 PUNCTUATION_CHARS: str
 PUNCT_SPLIT_PATTERN: Incomplete

@@ -210,7 +210,7 @@ tvinfo_config = {
 src = TVINFO_TVDB
 tvinfo_config[src].update(dict(
     base_url=(tvinfo_config[src]['main_url'] +
-              'api/%(apikey)s/series/' % tvinfo_config[src]['api_params']),
+              f'api/{tvinfo_config[src]["api_params"]["apikey"]}/series/'),
     show_url='%s?tab=series&id=%%d' % tvinfo_config[src]['main_url'],
     finder=(tvinfo_config[src]['main_url'] +
             'index.php?fieldlocation=2&language=7&order=translation&searching=Search&tab=advancedsearch&seriesname=%s'),
@@ -230,7 +230,7 @@ tvinfo_config[src].update(dict(
 src = TVINFO_TVRAGE
 tvinfo_config[src].update(dict(
     base_url=(tvinfo_config[src]['main_url'] +
-              'showinfo.php?key=%(apikey)s&sid=' % tvinfo_config[src]['api_params']),
+              f'showinfo.php?key={tvinfo_config[src]["api_params"]["apikey"]}&sid='),
     show_url='%sshows/id-%%d' % tvinfo_config[src]['main_url'],
     scene_url='https://sickgear.github.io/sg_tvrage_scene_exceptions/exceptions.txt',
     defunct=True,

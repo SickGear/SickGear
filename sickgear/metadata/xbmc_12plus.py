@@ -126,7 +126,7 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
                          f' skipping it')
             raise e
         except BaseTVinfoError as e:
-            logger.error('%s is down, can\'t use its data to add this show' % sickgear.TVInfoAPI(show_obj.tvid).name)
+            logger.error(f'{sickgear.TVInfoAPI(show_obj.tvid).name} is down, can\'t use its data to add this show')
             raise e
 
         if not self._valid_show(show_info, show_obj):
@@ -140,32 +140,32 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
         title = etree.SubElement(tv_node, 'title')
         if None is not getattr(show_info, 'seriesname', None):
-            title.text = '%s' % show_info['seriesname']
+            title.text = f'{show_info["seriesname"]}'
 
         rating = etree.SubElement(tv_node, 'rating')
         if None is not getattr(show_info, 'rating', None):
-            rating.text = '%s' % show_info['rating']
+            rating.text = f'{show_info["rating"]}'
 
         year = etree.SubElement(tv_node, 'year')
         year_text = self.get_show_year(show_obj, show_info)
         if year_text:
-            year.text = '%s' % year_text
+            year.text = f'{year_text}'
 
         plot = etree.SubElement(tv_node, 'plot')
         if None is not getattr(show_info, 'overview', None):
-            plot.text = '%s' % show_info['overview']
+            plot.text = f'{show_info["overview"]}'
 
         episodeguide = etree.SubElement(tv_node, 'episodeguide')
         episodeguideurl = etree.SubElement(episodeguide, 'url')
         episodeguideurl2 = etree.SubElement(tv_node, 'episodeguideurl')
         if None is not getattr(show_info, 'id', None):
-            showurl = sickgear.TVInfoAPI(show_obj.tvid).config['base_url'] + str(show_info['id']) + '/all/en.zip'
-            episodeguideurl.text = '%s' % showurl
-            episodeguideurl2.text = '%s' % showurl
+            showurl = f'{sickgear.TVInfoAPI(show_obj.tvid).config["base_url"]}{show_info["id"]!s}/all/en.zip'
+            episodeguideurl.text = f'{showurl}'
+            episodeguideurl2.text = f'{showurl}'
 
         mpaa = etree.SubElement(tv_node, 'mpaa')
         if None is not getattr(show_info, 'contentrating', None):
-            mpaa.text = '%s' % show_info['contentrating']
+            mpaa.text = f'{show_info["contentrating"]}'
 
         prodid = etree.SubElement(tv_node, 'id')
         if None is not getattr(show_info, 'id', None):
@@ -182,11 +182,11 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
         premiered = etree.SubElement(tv_node, 'premiered')
         if None is not getattr(show_info, 'firstaired', None):
-            premiered.text = '%s' % show_info['firstaired']
+            premiered.text = f'{show_info["firstaired"]}'
 
         studio = etree.SubElement(tv_node, 'studio')
         if None is not getattr(show_info, 'network', None):
-            studio.text = '%s' % show_info['network']
+            studio.text = f'{show_info["network"]}'
 
         self.add_actor_element(show_info, etree, tv_node)
 
@@ -244,8 +244,9 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
             try:
                 ep_info = show_info[cur_ep_obj.season][cur_ep_obj.episode]
             except (BaseTVinfoEpisodenotfound, BaseTVinfoSeasonnotfound) as e:
-                logger.log('Unable to find episode %sx%s on %s.. has it been removed? Should I delete from db?' %
-                           (cur_ep_obj.season, cur_ep_obj.episode, sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name))
+                logger.log(f'Unable to find episode {cur_ep_obj.season}x{cur_ep_obj.episode}'
+                           f' on {sickgear.TVInfoAPI(ep_obj.show_obj.tvid).name}.. has it been removed?'
+                           f' Should I delete from db?')
                 return None
             except (BaseException, Exception):
                 logger.debug('Not generating nfo because failed to fetched tv info data at this time')
@@ -267,11 +268,11 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
             title = etree.SubElement(episode, 'title')
             if None is not cur_ep_obj.name:
-                title.text = '%s' % cur_ep_obj.name
+                title.text = f'{cur_ep_obj.name}'
 
             showtitle = etree.SubElement(episode, 'showtitle')
             if None is not cur_ep_obj.show_obj.name:
-                showtitle.text = '%s' % cur_ep_obj.show_obj.name
+                showtitle.text = f'{cur_ep_obj.show_obj.name}'
 
             season = etree.SubElement(episode, 'season')
             season.text = str(cur_ep_obj.season)
@@ -290,29 +291,29 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
 
             plot = etree.SubElement(episode, 'plot')
             if None is not cur_ep_obj.description:
-                plot.text = '%s' % cur_ep_obj.description
+                plot.text = f'{cur_ep_obj.description}'
 
             runtime = etree.SubElement(episode, 'runtime')
             if 0 != cur_ep_obj.season:
                 if None is not getattr(show_info, 'runtime', None):
-                    runtime.text = '%s' % show_info['runtime']
+                    runtime.text = f'{show_info["runtime"]}'
 
             displayseason = etree.SubElement(episode, 'displayseason')
             if None is not getattr(ep_info, 'airsbefore_season', None):
                 displayseason_text = ep_info['airsbefore_season']
                 if None is not displayseason_text:
-                    displayseason.text = '%s' % displayseason_text
+                    displayseason.text = f'{displayseason_text}'
 
             displayepisode = etree.SubElement(episode, 'displayepisode')
             if None is not getattr(ep_info, 'airsbefore_episode', None):
                 displayepisode_text = ep_info['airsbefore_episode']
                 if None is not displayepisode_text:
-                    displayepisode.text = '%s' % displayepisode_text
+                    displayepisode.text = f'{displayepisode_text}'
 
             thumb = etree.SubElement(episode, 'thumb')
             thumb_text = getattr(ep_info, 'filename', None)
             if None is not thumb_text:
-                thumb.text = '%s' % thumb_text
+                thumb.text = f'{thumb_text}'
 
             watched = etree.SubElement(episode, 'watched')
             watched.text = 'false'
@@ -320,24 +321,24 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
             credits = etree.SubElement(episode, 'credits')
             credits_text = getattr(ep_info, 'writer', None)
             if None is not credits_text:
-                credits.text = '%s' % credits_text
+                credits.text = f'{credits_text}'
 
             director = etree.SubElement(episode, 'director')
             director_text = getattr(ep_info, 'director', None)
             if None is not director_text:
-                director.text = '%s' % director_text
+                director.text = f'{director_text}'
 
             rating = etree.SubElement(episode, 'rating')
             rating_text = getattr(ep_info, 'rating', None)
             if None is not rating_text:
-                rating.text = '%s' % rating_text
+                rating.text = f'{rating_text}'
 
             gueststar_text = getattr(ep_info, 'gueststars', None)
             if isinstance(gueststar_text, string_types):
                 for actor in (x.strip() for x in gueststar_text.split('|') if x.strip()):
                     cur_actor = etree.SubElement(episode, 'actor')
                     cur_actor_name = etree.SubElement(cur_actor, 'name')
-                    cur_actor_name.text = '%s' % actor
+                    cur_actor_name.text = f'{actor}'
 
             self.add_actor_element(show_info, etree, episode)
 
@@ -357,17 +358,17 @@ class XBMC12PlusMetadata(generic.GenericMetadata):
             cur_actor_name = et.SubElement(cur_actor, 'name')
             cur_actor_name_text = actor['person']['name']
             if cur_actor_name_text:
-                cur_actor_name.text = '%s' % cur_actor_name_text
+                cur_actor_name.text = f'{cur_actor_name_text}'
 
             cur_actor_role = et.SubElement(cur_actor, 'role')
             cur_actor_role_text = actor['character']['name']
             if cur_actor_role_text:
-                cur_actor_role.text = '%s' % cur_actor_role_text
+                cur_actor_role.text = f'{cur_actor_role_text}'
 
             cur_actor_thumb = et.SubElement(cur_actor, 'thumb')
             cur_actor_thumb_text = actor['character']['image']
             if None is not cur_actor_thumb_text:
-                cur_actor_thumb.text = '%s' % cur_actor_thumb_text
+                cur_actor_thumb.text = f'{cur_actor_thumb_text}'
 
 
 # present a standard 'interface' from the module

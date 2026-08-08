@@ -5,7 +5,6 @@
     Quality, statusStrings, WANTED, SKIPPED, ARCHIVED, IGNORED, FAILED, DOWNLOADED
 #from sickgear.helpers import anon_url, get_size, human, maybe_plural, generate_word_str
 #from sickgear.indexers.indexer_config import TVINFO_TVDB, TVINFO_IMDB
-#from six import iteritems
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
 ##
@@ -23,7 +22,7 @@
 #set global $inc_top_glide = True
 #set global $inc_ofi = True
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
-<script type="text/javascript" src="$sbRoot/js/cast.js?v=$sbPID"></script>
+<script src="$sbRoot/js/cast.js?v=$sbPID"></script>
 
 <input type="hidden" id="sbRoot" value="$sbRoot">
 <script>
@@ -44,16 +43,16 @@
 	}
 //-->
 </script>
-<script type="text/javascript" src="$sbRoot/js/displayShow.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/sceneExceptionsTooltip.js?v=$sbPID"></script>
+<script src="$sbRoot/js/displayShow.js?v=$sbPID"></script>
+<script src="$sbRoot/js/plotTooltip.js?v=$sbPID"></script>
+<script src="$sbRoot/js/sceneExceptionsTooltip.js?v=$sbPID"></script>
 #if $sg_var('USE_IMDB_INFO')
-<script type="text/javascript" src="$sbRoot/js/ratingTooltip.js?v=$sbPID"></script>
+<script src="$sbRoot/js/ratingTooltip.js?v=$sbPID"></script>
 #end if
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/ajaxEpSubtitles.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/lib/jquery.bookmarkscroll.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/lib/jquery.collapser.min.js?v=$sbPID"></script>
+<script src="$sbRoot/js/ajaxEpSearch.js?v=$sbPID"></script>
+<script src="$sbRoot/js/ajaxEpSubtitles.js?v=$sbPID"></script>
+<script src="$sbRoot/js/lib/jquery.bookmarkscroll.js?v=$sbPID"></script>
+<script src="$sbRoot/js/lib/jquery.collapser.min.js?v=$sbPID"></script>
 <script src="$sbRoot/js/lib/select2.full.min.js"></script>
 
 <link href="$sbRoot/css/lib/select2.css" rel="stylesheet">
@@ -85,7 +84,7 @@
 
 <div class="displayshow-wrapper">
 	<div id="change-show" class="pull-left form-inline">
-		Change show:
+		View:
 #set $displayshowlist = []
 #set $cur_sel = 0
 #for $cur_showlist in $sortedShowLists
@@ -127,31 +126,22 @@
 				<div class="details-right top">
 #if 0 < len($seasons)
     #set $show_ended = '' != $show_obj.status and $show_obj.status in ['ended', 'Ended', 'Canceled']
-					<div>
-    #if $getVar('has_special', 0 == $seasons[-1][0])
-						<span class="details-title">Specials</span>
-						<span class="details-info">#if $sg_var('DISPLAY_SHOW_SPECIALS')#<a href="#season-0">View</a><span style="margin:0 7px">-</span>#end if#<a class="inner" href="$sbRoot/toggle-specials-view-show/?tvid_prodid=$show_obj.tvid_prodid">#echo ('Show', 'Hide')[$sg_var('DISPLAY_SHOW_SPECIALS')]#</a></span>
-    #end if
-					</div>
+    #set $season_list = [s[0] for s in $seasons]
     #set $many_seasons = 12 < len($seasons)
+    #set $special_text = ('', 'Specials')[bool($sg_var('DISPLAY_SHOW_SPECIALS'))]
 					<div class="details-seasons">
 						<span class="details-title#echo ('', ' combo-seasons')[$many_seasons]#">Season</span>
 						<span class="details-info">
-    #set $season_list = [s[0] for s in $seasons]
     #if $many_seasons
 							<select id="seasonJump" class="form-control form-control-inline input-sm">
 								<option value="jump">Jump to season</option>
         #for $number in $season_list
-            #if 0 != $number
-								<option value="#season-$number">Season $number</option>
-            #end if
+								<option value="#season-$number" title="Click to scroll to specials">#echo ($special_text,'Season %d' % $number)[bool($number)]#</option>
         #end for
 							</select>
     #else
         #for $number in $season_list
-            #if 0 != $number
-							<a href="#season-$number">$number</a>
-            #end if
+							<a href="#season-$number" title="Click to scroll to specials">#echo ($special_text, $number)[bool($number)]#</a>
         #end for
     #end if
 						</span>
@@ -205,7 +195,7 @@
 .main span{border-bottom:1px solid #0a0}
 </style>
 #set $tvdb_id = None
-#for $src_id, $src_name in iteritems($TVInfoAPI().all_sources)
+#for $src_id, $src_name in $TVInfoAPI().all_sources.items()
     #if $TVInfoAPI($src_id).config.get('defunct') and $src_id != $show_obj.tvid
         #continue
     #end if
@@ -221,17 +211,17 @@
         #else#
 							<a class="service addQTip" href="$sbRoot/home/edit-show?tvid_prodid=$show_obj.tvid_prodid#core-component-group3" title="Edit related show IDs">
         #end if#
-								<span><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($src_id).config['icon']" /></span>
+								<span><img alt="$src_name" height="16" width="16" src="$sbRoot/images/$TVInfoAPI($src_id).config['icon']"></span>
 							</a>
     #end if
 #end for
 #if $has_art and $tvdb_id
 							<a class="service addQTip" href="$anon_url('https://fanart.tv/series/', $tvdb_id)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View Fanart.tv info in new tab">
-								<img alt="Fanart.tv" height="16" width="16" src="$sbRoot/images/fanart.png" />
+								<img alt="Fanart.tv" height="16" width="16" src="$sbRoot/images/fanart.png">
 							</a>
 #end if
 #if $xem_numbering or $xem_absolute_numbering
-							<a class="service addQTip" href="$anon_url('http://thexem.info/search?q=', $show_obj.name)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png" /></a>
+							<a class="service addQTip" href="$anon_url('http://thexem.info/search?q=', $show_obj.name)" rel="noreferrer" onclick="window.open(this.href, '_blank'); return !1;" title="View XEM info in new tab"><img alt="[xem]" height="16" width="16" src="$sbRoot/images/xem.png"></a>
 #end if
 						</span>
 					</div>
@@ -269,7 +259,7 @@
 							<span class="space-right">#echo ($startyear, 'Unknown')[None is $startyear]#</span>
     #if $flags
         #for $country in $show_obj.imdb_info['country_codes'].split('|')
-							<img class="flag space-right" src="$sbRoot/images/flags/${$country.lower()}.png" width="16" height="11" />
+							<img class="flag space-right" src="$sbRoot/images/flags/${$country.lower()}.png" width="24" height="20">
         #end for
     #end if
 						</span>
@@ -310,7 +300,7 @@
 						<span class="details-title">IMDb rating</span>
 						<span class="details-info">
     #if $show_obj.imdb_info['votes']
-        #set $rating_tip = '%s of 10 stars<br />%s votes' % (str($show_obj.imdb_info['rating']), str($show_obj.imdb_info['votes']))
+        #set $rating_tip = '%s of 10 stars<br>%s votes' % (str($show_obj.imdb_info['rating']), str($show_obj.imdb_info['votes']))
 							<span class="imdbstars" qtip-content="$rating_tip">$show_obj.imdb_info['rating']</span>
     #else
 							<span>No votes available</span>
@@ -320,6 +310,7 @@
 #end if
 
 #set $anyQualities, $bestQualities = $Quality.split_quality(int($show_obj.quality))
+#set $upgradable = False
 #if $show_obj.quality in $qualityPresets
 					<div>
 						<span class="details-title">Quality</span>
@@ -332,15 +323,18 @@
 					<div>
 						<span class="details-title">Qualities</span>
 						<span class="details-info">
-							#echo ', '.join([$Quality.get_quality_ui($x) for $x in sorted($anyQualities)])#
+        #set qually = ['<span class="quality %s">%s</span>' % ($Quality.get_quality_css($x), Quality.get_quality_ui($x)) for $x in sorted($anyQualities)]
+							#echo (qually[0], ', '.join(qually[0:-1]) + ' or ' + qually[-1])[1 < len(qually)]#
 						</span>
 					</div>
     #end if
     #if $bestQualities
+        #set $upgradable = True
 					<div>
 						<span class="details-title">Upgrade to</span>
 						<span class="details-info">
-							#echo ', '.join([$Quality.get_quality_ui($x) for $x in sorted($bestQualities)])#
+        #set qually = ['<span class="quality %s">%s</span>' % ($Quality.get_quality_css($x), Quality.get_quality_ui($x)) for $x in sorted($bestQualities)]
+							#echo (qually[0], ', '.join(qually[0:-1]) + ' or ' + qually[-1])[1 < len(qually)]#
 						</span>
 					</div>
     #end if
@@ -349,7 +343,6 @@
 
 				<div id="details-left">
 #set $has_overview = '' != $show_obj.overview
-#set $ep_tally = ('', '(<span class="hint">%s episodes</span>)' % $ep_counts['eps_all'])[0 < $ep_counts['eps_all']]
 					<div class="#echo ('no', 'details')[$has_overview]#-plot">
 #set $cast_list = $show_obj.cast_list
 #if $cast_list
@@ -412,6 +405,10 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 #else
 						<span id="about-show">
 #end if
+#set $ep_cnt = $ep_counts['eps_all']
+#set $sp_cnt = $ep_counts['totals'].get(0, 0)
+#set $sp_tally = ('', ', %s specials' % $sp_cnt)[bool($sp_cnt)]
+#set $ep_tally = ('', '(<span class="hint">%s episodes%s</span>)' % ($ep_cnt - $sp_cnt, $sp_tally))[0 < $ep_cnt]
 							$ep_tally
 #if $has_overview
 							$show_obj.overview
@@ -431,7 +428,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 					</div>
 
 					<div id="details-bottom">
-						<span class="label addQTip" title="Info language, $show_obj.lang"><img src="$sbRoot/images/flags/${show_obj.lang}.png" width="16" height="11" alt="" style="margin-top:-1px" /></span>
+						<span class="label addQTip" title="Info language, $show_obj.lang"><img src="$sbRoot/images/flags/svg/lang/${show_obj.lang}.png" width="24" height="20" alt="" style="margin-top:-1px"></span>
 						<span class="label addQTip" title="Location#echo (' no longer exists" style="background-color:#8f1515"', '"')[$showLoc[1]]#>$showLoc[0]</span>
 						<span id="data-size" class="label" style="cursor:help">$human($get_size($showLoc[0]))</span>
 #set $filecount = sum([$c for $k, $c in $ep_counts['videos'].items()])
@@ -445,19 +442,19 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 						<span class="label">Upgrade once</span>
 #end if
 #if $show_obj.exceptions
-						<span class="label addQTip" title="$exceptions_string.replace(', ', '<br />')">Scene names</span>
+						<span class="label addQTip" title="$exceptions_string.replace(', ', '<br>')">Scene names</span>
 #end if
 #if $show_obj.rls_ignore_words
-						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_ignore_words, $show_obj.rls_ignore_words_regex, join_chr='<br />')#">Ignored words</span>
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_ignore_words, $show_obj.rls_ignore_words_regex, join_chr='<br>')#">Ignored words</span>
 #end if
 #if $show_obj.rls_require_words
-						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_require_words, $show_obj.rls_require_words_regex, join_chr='<br />')#">Required words</span>
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_require_words, $show_obj.rls_require_words_regex, join_chr='<br>')#">Required words</span>
 #end if
 #if $show_obj.rls_global_exclude_ignore
-						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_global_exclude_ignore, join_chr='<br />')#">Excluded global ignored words</span>
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_global_exclude_ignore, join_chr='<br>')#">Excluded global ignored words</span>
 #end if
 #if $show_obj.rls_global_exclude_require
-						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_global_exclude_require, join_chr='<br />')#">Excluded global required words</span>
+						<span class="label addQTip" title="#echo $generate_word_str($show_obj.rls_global_exclude_require, join_chr='<br>')#">Excluded global required words</span>
 #end if
 #if $show_obj.flatten_folders or $sg_var('NAMING_FORCE_FOLDERS')
 						<span class="label">Flat folders</span>
@@ -481,10 +478,10 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 						<span class="label">Anime</span>
 #end if
 #if $anigroups and $anigroups.allowlist
-						<span class="label addQTip" title="#echo ', '.join($anigroups.allowlist).replace(',', '<br />')#">Wanted group$maybe_plural(len($anigroups.allowlist))</span>
+						<span class="label addQTip" title="#echo ', '.join($anigroups.allowlist).replace(',', '<br>')#">Wanted group$maybe_plural(len($anigroups.allowlist))</span>
 #end if
 #if $anigroups and $anigroups.blocklist
-						<span class="label addQTip" title="#echo ', '.join($anigroups.blocklist).replace(',', '<br />')#">Unwanted group$maybe_plural(len($anigroups.blocklist))</span>
+						<span class="label addQTip" title="#echo ', '.join($anigroups.blocklist).replace(',', '<br>')#">Unwanted group$maybe_plural(len($anigroups.blocklist))</span>
 #end if
 					</div>
 				</div>
@@ -522,7 +519,9 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 			<label for="good"><span class="good"><input type="checkbox" id="good" checked="checked"> Downloaded: <b>$ep_counts[$Overview.GOOD]</b></span></label>
 			<label for="snatched"><span class="snatched"><input type="checkbox" id="snatched" checked="checked"> Snatched: <b>$ep_counts[$Overview.SNATCHED]</b></span></label>
 			<label for="wanted"><span class="wanted"><input type="checkbox" id="wanted" checked="checked"> Wanted: <b>$ep_counts[$Overview.WANTED]</b></span></label>
-			<label for="qual"><span class="qual"><input type="checkbox" id="qual" checked="checked"> Low Quality: <b>$ep_counts[$Overview.QUAL]</b></span></label>
+#if $upgradable
+			<label for="qual"><span class="qual"><input type="checkbox" id="qual" checked="checked"> Upgradable: <b>$ep_counts[$Overview.QUAL]</b></span></label>
+#end if
 			<label for="skipped"><span class="skipped"><input type="checkbox" id="skipped" checked="checked"> Skipped: <b>$ep_counts[$Overview.SKIPPED]</b></span></label>
 		</div>
 
@@ -557,7 +556,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
                     #continue
                 #end if
             #end if
-
+            #slurp
             #if $working_season != $season
                 #if 0 <= $working_season
 	</tbody>
@@ -574,22 +573,21 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 	<thead>
 		<tr>
 			<th class="row-seasonheader" colspan="13">
-                #if None is $has_art#<span class="red-text pull-right">Restart SickGear to reveal new options here</span>
-                #elif not (1 == $lowest_season and 1 == $latest_season and $latest_season >= $highest_season)
-				<button id="showseason-$season" type="button" class="btn btn-default pull-right"><span class="onshow">Show $human_season.lower()<i class="sgicon-arrowdown"></i></span><span class="onhide">Hide $human_season.lower()<i class="sgicon-arrowup"></i></span></button>
+				#if None is $has_art#<span class="red-text pull-right">Restart SickGear to reveal new options here</span>
+				#elif not (1 == $lowest_season and 1 == $latest_season and $latest_season >= $highest_season)#<button id="showseason-$season" type="button" class="btn btn-default pull-right"><span class="onshow">Show $human_season.lower()<i class="sgicon-arrowdown"></i></span><span class="onhide">Hide $human_season.lower()<i class="sgicon-arrowup"></i></span></button>
 				<button type="button" class="btn btn-default pull-right allseasons"><span class="onshow">Show all</span><span class="onhide">Hide most</span><i class="icon-glyph"></i></button>
-                <span class="images pull-right hide"><i class="spinner"></i></span>
+				<span class="images pull-right hide"><i class="spinner"></i></span>
                 #end if
                 #set $videos = $ep_counts['videos'].get($season, '0')
                 #set $season_stats = $ep_counts['status'].get($season, {})
                 #set $snatched = $season_stats.get($Overview.SNATCHED, None)
                 #set $wanted = $season_stats.get($Overview.WANTED, None)
-                #set $qual = $season_stats.get($Overview.QUAL, None)
+                #set $to_upgrade = $season_stats.get($Overview.QUAL, None)
                 #set $good = $season_stats.get($Overview.GOOD, '0')
                 #set $archived = False if $season not in $ep_counts['archived'] else $ep_counts['archived'][$season]
 				<h3 id="season-$show_obj.tvid_prodid-$season"><span class="title">$human_season</span><a id="season-$season" name="season-$season"></a>
                 #if None is not $has_art
-					<span class="season-status"><span class="good status-badge">&nbsp;D: <strong>$good</strong>&nbsp;</span>#if snatched#<span class="snatched status-badge">&nbsp;S: <strong>$snatched</strong>&nbsp;</span>#end if##if $wanted#<span class="wanted status-badge">&nbsp;W: <strong>$wanted</strong>&nbsp;</span>#end if##if $qual#<span class="qual status-badge">&nbsp;LQ: <strong>$qual</strong>&nbsp;</span>#end if#&nbsp;of&nbsp;<span class="footerhighlight">$ep_counts['totals'][$season]</span>#if 0 < $archived#&nbsp;with <span class="footerhighlight">$archived</span> archived#end if##if int($videos)#&nbsp;#echo ('with', 'and')[0 < $archived]#&nbsp;<span class="footerhighlight">$videos</span> file$maybe_plural($videos)#end if#</span>
+					<span class="season-status"><span class="good status-badge">&nbsp;D: <strong>$good</strong>&nbsp;</span>#if snatched#<span class="snatched status-badge">&nbsp;S: <strong>$snatched</strong>&nbsp;</span>#end if##if $wanted#<span class="wanted status-badge">&nbsp;W: <strong>$wanted</strong>&nbsp;</span>#end if##if $to_upgrade#<span class="qual status-badge">&nbsp;U: <strong>$to_upgrade</strong>&nbsp;</span>#end if#&nbsp;of&nbsp;<span class="footerhighlight">$ep_counts['totals'][$season]</span>#if 0 < $archived#&nbsp;with <span class="footerhighlight">$archived</span> archived#end if##if int($videos)#&nbsp;#echo ('with', 'and')[0 < $archived]#&nbsp;<span class="footerhighlight">$videos</span> file$maybe_plural($videos)#end if#</span>
                 #end if
 				</h3>
 			</th>
@@ -611,10 +609,8 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 	<tbody class="collapse">
             #end if
             #if None is $ep
-	</tbody>
                 #continue
             #end if
-
 #set global $episode = $ep
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_displayShow.tmpl')
         #end for

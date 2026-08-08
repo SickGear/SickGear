@@ -26,7 +26,6 @@ from bs4_parser import BS4Parser
 from json_helper import json_dumps
 
 from _23 import unquote_plus
-from six import iteritems
 
 
 class NebulanceProvider(generic.TorrentProvider):
@@ -36,13 +35,13 @@ class NebulanceProvider(generic.TorrentProvider):
 
         self.url_base = 'https://nebulance.io/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'user': self.url_base + 'ajax.php?action=index',
-                     'api_key': self.url_base + 'user.php?action=edit&userid=%s',
-                     'api': self.url_base + 'api.php',
-                     'browse': self.url_base + 'ajax.php?action=browse&auth=%s&passkey=%s',
+                     'login_action': f'{self.url_base}login.php',
+                     'user': f'{self.url_base}ajax.php?action=index',
+                     'api_key': f'{self.url_base}user.php?action=edit&userid=%s',
+                     'api': f'{self.url_base}api.php',
+                     'browse': f'{self.url_base}ajax.php?action=browse&auth=%s&passkey=%s',
                      'search': '&searchstr=%s',
-                     'get': self.url_base + 'torrents.php?action=download&authkey=%s&torrent_pass=%s&id=%s'}
+                     'get': f'{self.url_base}torrents.php?action=download&authkey=%s&torrent_pass=%s&id=%s'}
 
         self.url = self.urls['config_provider_home_uri']
         self.user_authkey, self.user_passkey, self.uid = 3 * [None]
@@ -80,7 +79,7 @@ class NebulanceProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'nodots': r'[\.\s]+'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'nodots': r'[\.\s]+'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
 
@@ -104,7 +103,7 @@ class NebulanceProvider(generic.TorrentProvider):
                             try:
                                 title_parts = group_name.split('[')
                                 maybe_res = re.findall(r'((?:72|108|216)0\w)', title_parts[1])
-                                maybe_ext = re.findall('(?i)(%s)' % '|'.join(common.mediaExtensions), title_parts[1])
+                                maybe_ext = re.findall(f'(?i)({"|".join(common.mediaExtensions)})', title_parts[1])
                                 detail = title_parts[1].split('/')
                                 detail[1] = detail[1].strip().lower().replace('mkv', 'x264')
                                 with BS4Parser(title_parts[0].strip()).soup as soup:
@@ -135,16 +134,16 @@ class NebulanceProvider(generic.TorrentProvider):
         t = ['']
         bl = r'[*\[({]+\s*'
         br = r'\s*[})\]*]+'
-        title = re.sub('(?i)(.*?)(%sproper%s)(.*)' % (bl, br), r'\1\3\2', item['groupName'])
+        title = re.sub(f'(?i)(.*?)({bl}proper{br})(.*)', r'\1\3\2', item['groupName'])
         for r in (r'\s+-\s+', r'(?:19|20)\d\d(?:\-\d\d\-\d\d)?', r'S\d\d+(?:E\d\d+)?'):
-            m = re.findall('(.*%s)(.*)' % r, title)
+            m = re.findall(f'(.*{r})(.*)', title)
             if any(m) and len(m[0][0]) > len(t[0]):
                 t = m[0]
         t = (tuple(title), t)[any(t)]
 
         tag_str = '_'.join(item['tags'])
         tags = [re.findall(x, tag_str, flags=re.X) for x in
-                ('(?i)%sProper%s|\bProper\b$' % (bl, br),
+                (f'(?i){bl}Proper{br}|\x08Proper\x08$',
                  r'(?i)\d{3,4}(?:[pi]|hd)',
                  '''
                  (?i)(hr.ws.pdtv|blu.?ray|hddvd|
@@ -160,7 +159,7 @@ class NebulanceProvider(generic.TorrentProvider):
             re.sub(r'(?i)(\d{3,4})hd', r'\1p', '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
             ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
         for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
-                  ('(?i)%s(Proper)%s' % (bl, br), r'`\1`'), (r'%s\s*%s' % (bl, br), '`')]:
+                  (f'(?i){bl}(Proper){br}', r'`\1`'), (rf'{bl}\s*{br}', '`')]:
             title = re.sub(r[0], r[1], title)
 
         grp = list(filter(lambda rn: '.release' in rn.lower(), item['tags']))
@@ -170,7 +169,7 @@ class NebulanceProvider(generic.TorrentProvider):
         for r in [(r'\s+[-]?\s+|\s+`|`\s+', '`'), ('`+', '.')]:
             title = re.sub(r[0], r[1], title)
 
-        title += + any(tags[4]) and ('.%s' % tags[4][0]) or ''
+        title += + any(tags[4]) and (f'.{tags[4][0]}') or ''
         return title
 
     def _search_rpc(self, search_params):
@@ -189,9 +188,9 @@ class NebulanceProvider(generic.TorrentProvider):
 
                 params = {'release': search_string}
                 if 'Cache' == mode:
-                    params = {'age': '< %s' % (24 * 60 * 60)}
+                    params = {'age': f'< {24 * 60 * 60}'}
                 elif 'Propers' == mode:
-                    params.update({'age': '< %s' % (4 * 24 * 60 * 60)})
+                    params.update({'age': f'< {4 * 24 * 60 * 60}'})
 
                 response = self.get_url(self.urls['api'], post_data=json_rpc({'params': params}), parse_json=True)
                 if self.should_skip():
@@ -204,11 +203,11 @@ class NebulanceProvider(generic.TorrentProvider):
                     seeders, leechers, size, download = [try_int(n, n) for n in [
                         cur_item.get(x) for x in ['seed', 'leech', 'size', 'download']]]
                     if not self._reject_item(seeders, leechers):
-                        items[mode].append((cur_item.get('rls_name'), '%s%s' % (self.url_base.rstrip('/'), download),
+                        items[mode].append((cur_item.get('rls_name'), f'{self.url_base.rstrip("/")}{download}',
                                             seeders, self._bytesizer(size)))
 
                 self._log_search(mode, len(items[mode]) - cnt,
-                                 ('search_string: ' + str(search_string), self.name)['Cache' == mode])
+                                 (f'search_string: {search_string!s}', self.name)['Cache' == mode])
 
             results = self._sort_seeding(mode, results + items[mode])
 
@@ -218,12 +217,13 @@ class NebulanceProvider(generic.TorrentProvider):
         profile_page = 'profile page'
         try:
             if self._check_auth(True) and self._authorised():
-                profile_page = '<a href="%s">%s</a>' % (self.urls['api_key'] % self.uid, profile_page)
+                api_url = self.urls['api_key'] % self.uid
+                profile_page = f'<a href="{api_url}">{profile_page}</a>'
         except (BaseException, Exception):
             pass
 
-        return ('%s_api_key' % self.get_id()) == key and 'API key' or \
-            ('%s_api_key_tip' % self.get_id()) == key and \
+        return (f'{self.get_id()}_api_key') == key and 'API key' or \
+            f'{self.get_id()}_api_key_tip' == key and \
             '\'API key\' is at %s %s with "Download" enabled<br>' \
             '%s has no result' \
             % (self.name, profile_page,

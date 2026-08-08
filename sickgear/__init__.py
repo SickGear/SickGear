@@ -35,7 +35,7 @@ import zlib
 
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
-    show_queue, show_updater, subtitles, trakt_helpers, version_checker, watchedstate_queue
+    show_queue, show_updater, subtitles, version_checker, watchedstate_queue
 from . import auto_media_process, properFinder  # must come after the above imports
 from .common import SD, SKIPPED, USER_AGENT
 from .config import check_section, check_setting_int, check_setting_str, ConfigMigrator, minimax
@@ -57,7 +57,7 @@ from api_trakt import TraktAPI
 
 from _23 import b64encodestring, decode_bytes, scandir
 from sg_helpers import remove_file_perm
-from six import iteritems, string_types
+from six import string_types
 import sg_helpers
 
 # noinspection PyUnreachableCode
@@ -66,7 +66,6 @@ if False:
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
-    from lib.api_trakt.trakt import TraktAccount
 
 PID = None
 ENV = {}
@@ -86,6 +85,9 @@ MY_FULLNAME = None
 MY_ARGS = []
 SYS_ENCODING = ''
 DATA_DIR = ''
+
+BTN_SETTINGS_FILE = ''
+STATES_DATA_FILE = ''
 
 # system events
 # noinspection PyTypeChecker
@@ -109,8 +111,6 @@ plex_watched_state_scheduler = None  # type: Optional[scheduler.Scheduler]
 process_media_scheduler = None  # type: Optional[scheduler.Scheduler]
 # noinspection PyTypeChecker
 background_mapping_task = None  # type: threading.Thread
-# deprecated
-# trakt_checker_scheduler = None
 
 provider_ping_thread_pool = {}
 
@@ -446,15 +446,8 @@ PUSHALOT_NOTIFY_ONDOWNLOAD = False
 PUSHALOT_NOTIFY_ONSUBTITLEDOWNLOAD = False
 PUSHALOT_AUTHORIZATIONTOKEN = None
 
+# -- deprecated service, but flag kept for logic relating to existing active tabs (2026-08-07)
 USE_TRAKT = False
-TRAKT_REMOVE_WATCHLIST = False
-TRAKT_REMOVE_SERIESLIST = False
-TRAKT_USE_WATCHLIST = False
-TRAKT_METHOD_ADD = 0
-TRAKT_START_PAUSED = False
-TRAKT_SYNC = False
-TRAKT_DEFAULT_INDEXER = None
-TRAKT_UPDATE_COLLECTION = {}
 
 USE_SLACK = False
 SLACK_NOTIFY_ONSNATCH = False
@@ -475,13 +468,6 @@ DISCORD_USERNAME = None
 DISCORD_ICON_URL = None
 DISCORD_AS_TTS = 0
 DISCORD_ACCESS_TOKEN = None
-
-USE_GITTER = False
-GITTER_NOTIFY_ONSNATCH = False
-GITTER_NOTIFY_ONDOWNLOAD = False
-GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = False
-GITTER_ROOM = None
-GITTER_ACCESS_TOKEN = None
 
 USE_TELEGRAM = False
 TELEGRAM_NOTIFY_ONSNATCH = False
@@ -591,27 +577,11 @@ CALENDAR_UNPROTECTED = False
 TMDB_API_KEY = TmdbIndexer.API_KEY
 FANART_API_KEY = '3728ca1a2a937ba0c93b6e63cc86cecb'
 
-# to switch between staging and production TRAKT environment
-TRAKT_STAGING = False
-
+TRAKT_BASE_URL = 'https://api.trakt.tv/'
+TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'
+TRAKT_MRU = ''
 TRAKT_TIMEOUT = 60
 TRAKT_VERIFY = True
-TRAKT_CONNECTED_ACCOUNT = None
-TRAKT_ACCOUNTS = {}  # type: Dict[int, TraktAccount]
-TRAKT_MRU = ''
-
-if TRAKT_STAGING:
-    # staging trakt values:
-    TRAKT_CLIENT_ID = '2aae3052f90b14235d184cc8f709b12b4fd8ae35f339a060a890c70db92be87a'
-    TRAKT_CLIENT_SECRET = '900e03471220503843d4a856bfbef17080cddb630f2b7df6a825e96e3ff3c39e'
-    TRAKT_PIN_URL = 'https://staging.trakt.tv/pin/638'
-    TRAKT_BASE_URL = 'http' + '://api.staging.trakt.tv/'
-else:
-    # production trakt values:
-    TRAKT_CLIENT_ID = 'f1c453c67d81f1307f9118172c408a883eb186b094d5ea33080d59ddedb7fc7c'
-    TRAKT_CLIENT_SECRET = '12efb6fb6e863a08934d9904032a90008325df7e23514650cade55e7e7c118c5'
-    TRAKT_PIN_URL = 'https://trakt.tv/pin/6314'
-    TRAKT_BASE_URL = 'https://api.trakt.tv/'
 
 IMDB_MRU = ''
 MC_MRU = ''
@@ -667,7 +637,8 @@ def init_stage_1(console_logging):
         CREATE_MISSING_SHOW_DIRS, SHOW_DIRS_WITH_DOTS, \
         RECENTSEARCH_STARTUP, NAMING_FORCE_FOLDERS, SOCKET_TIMEOUT, DEBUG, TVINFO_DEFAULT, \
         CONFIG_FILE, CONFIG_VERSION, CONFIG_OLD, CONFIG_LOADED, \
-        REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES
+        REMOVE_FILENAME_CHARS, IMPORT_DEFAULT_CHECKED_SHOWS, WANTEDLIST_CACHE, MODULE_UPDATE_STRING, EXT_UPDATES, \
+        BTN_SETTINGS_FILE, STATES_DATA_FILE
     # Add Show Search
     global RESULTS_SORTBY
     # Add Show Defaults
@@ -762,17 +733,14 @@ def init_stage_1(console_logging):
         USE_PUSHBULLET, PUSHBULLET_NOTIFY_ONSNATCH, PUSHBULLET_NOTIFY_ONDOWNLOAD, \
         PUSHBULLET_NOTIFY_ONSUBTITLEDOWNLOAD, PUSHBULLET_ACCESS_TOKEN, PUSHBULLET_DEVICE_IDEN
     # Notification Settings/Social
-    global USE_TRAKT, TRAKT_CONNECTED_ACCOUNT, TRAKT_ACCOUNTS, TRAKT_MRU, TRAKT_VERIFY, \
-        TRAKT_USE_WATCHLIST, TRAKT_REMOVE_WATCHLIST, TRAKT_TIMEOUT, TRAKT_METHOD_ADD, TRAKT_START_PAUSED, \
-        TRAKT_SYNC, TRAKT_DEFAULT_INDEXER, TRAKT_REMOVE_SERIESLIST, TRAKT_UPDATE_COLLECTION, \
-        MC_MRU, NE_MRU, TMDB_MRU, TVC_MRU, TVDB_MRU, TVM_MRU, \
+
+    global USE_TRAKT, TRAKT_MRU, TRAKT_TIMEOUT, TRAKT_VERIFY, \
+        IMDB_MRU, MC_MRU, NE_MRU, TMDB_MRU, TVC_MRU, TVDB_MRU, TVM_MRU, \
         USE_SLACK, SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD, \
         SLACK_CHANNEL, SLACK_AS_AUTHED, SLACK_BOT_NAME, SLACK_ICON_URL, SLACK_ACCESS_TOKEN, \
         USE_DISCORD, DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, \
         DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD, \
         DISCORD_AS_AUTHED, DISCORD_USERNAME, DISCORD_ICON_URL, DISCORD_AS_TTS, DISCORD_ACCESS_TOKEN,\
-        USE_GITTER, GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD,\
-        GITTER_ROOM, GITTER_ACCESS_TOKEN, \
         USE_TELEGRAM, TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD, \
         TELEGRAM_SEND_IMAGE, TELEGRAM_QUIET, TELEGRAM_ACCESS_TOKEN, TELEGRAM_CHATID, \
         USE_EMAIL, EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD, EMAIL_FROM, \
@@ -820,6 +788,9 @@ def init_stage_1(console_logging):
             logger.error('!!! creating local zoneinfo dir failed')
     sg_helpers.CACHE_DIR = CACHE_DIR
     sg_helpers.DATA_DIR = DATA_DIR
+
+    BTN_SETTINGS_FILE = os.path.join(DATA_DIR, 'btn-status.json')
+    STATES_DATA_FILE = os.path.join(DATA_DIR, 'states-data.json')
 
     THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
     GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
@@ -1181,19 +1152,8 @@ def init_stage_1(console_logging):
     SYNOLOGYNOTIFIER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(
         check_setting_int(CFG, 'SynologyNotifier', 'synologynotifier_notify_onsubtitledownload', 0))
 
-    USE_TRAKT = bool(check_setting_int(CFG, 'Trakt', 'use_trakt', 0))
-    TRAKT_REMOVE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_watchlist', 0))
-    TRAKT_REMOVE_SERIESLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_remove_serieslist', 0))
-    TRAKT_USE_WATCHLIST = bool(check_setting_int(CFG, 'Trakt', 'trakt_use_watchlist', 0))
-    TRAKT_METHOD_ADD = check_setting_int(CFG, 'Trakt', 'trakt_method_add', 0)
-    TRAKT_START_PAUSED = bool(check_setting_int(CFG, 'Trakt', 'trakt_start_paused', 0))
-    TRAKT_SYNC = bool(check_setting_int(CFG, 'Trakt', 'trakt_sync', 0))
-    TRAKT_DEFAULT_INDEXER = check_setting_int(CFG, 'Trakt', 'trakt_default_indexer', 1)
-    TRAKT_UPDATE_COLLECTION = trakt_helpers.read_config_string(
-        check_setting_str(CFG, 'Trakt', 'trakt_update_collection', ''))
-    TRAKT_ACCOUNTS = TraktAPI.read_config_string(check_setting_str(CFG, 'Trakt', 'trakt_accounts', ''))
     TRAKT_MRU = check_setting_str(CFG, 'Trakt', 'trakt_mru', '')
-
+    IMDB_MRU = check_setting_str(CFG, 'IMDB', 'imdb_mru', '')
     MC_MRU = check_setting_str(CFG, 'Metacritic', 'mc_mru', '')
     NE_MRU = check_setting_str(CFG, 'NextEpisode', 'ne_mru', '')
     TMDB_MRU = check_setting_str(CFG, 'TMDB', 'tmdb_mru', '')
@@ -1241,13 +1201,6 @@ def init_stage_1(console_logging):
     DISCORD_ICON_URL = check_setting_str(CFG, 'Discord', 'discord_icon_url', '')
     DISCORD_AS_TTS = bool(check_setting_str(CFG, 'Discord', 'discord_as_tts', 0))
     DISCORD_ACCESS_TOKEN = check_setting_str(CFG, 'Discord', 'discord_access_token', '')
-
-    USE_GITTER = bool(check_setting_int(CFG, 'Gitter', 'use_gitter', 0))
-    GITTER_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsnatch', 0))
-    GITTER_NOTIFY_ONDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_ondownload', 0))
-    GITTER_NOTIFY_ONSUBTITLEDOWNLOAD = bool(check_setting_int(CFG, 'Gitter', 'gitter_notify_onsubtitledownload', 0))
-    GITTER_ROOM = check_setting_str(CFG, 'Gitter', 'gitter_room', '')
-    GITTER_ACCESS_TOKEN = check_setting_str(CFG, 'Gitter', 'gitter_access_token', '')
 
     USE_TELEGRAM = bool(check_setting_int(CFG, 'Telegram', 'use_telegram', 0))
     TELEGRAM_NOTIFY_ONSNATCH = bool(check_setting_int(CFG, 'Telegram', 'telegram_notify_onsnatch', 0))
@@ -1395,13 +1348,13 @@ def init_stage_1(console_logging):
         # check int with a default of str, don't add to block settings
         attr = 'seed_time'
         if hasattr(torrent_prov, attr):
-            torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, '%s_%s' % (prov_id, attr), '')
+            torrent_prov.seed_time = check_setting_int(CFG, prov_id_uc, f'{prov_id}_{attr}', '')
 
         # custom cond, don't add to block settings
         attr = 'enable_recentsearch'
         if hasattr(torrent_prov, attr):
             torrent_prov.enable_recentsearch = bool(check_setting_int(
-                CFG, prov_id_uc, '%s_%s' % (prov_id, attr), True)) or not getattr(torrent_prov, 'supports_backlog')
+                CFG, prov_id_uc, f'{prov_id}_{attr}', True)) or not getattr(torrent_prov, 'supports_backlog')
 
         # check str with a default of list, don't add to block settings
         if hasattr(torrent_prov, 'filter'):
@@ -1419,7 +1372,7 @@ def init_stage_1(console_logging):
             ('search_mode', 'eponly'), ('search_fallback', False)
         ]:
             if hasattr(torrent_prov, attr):
-                attr_check = '%s_%s' % (prov_id, attr.strip('_'))
+                attr_check = f'{prov_id}_{attr.strip("_")}'
                 if isinstance(default, bool):
                     setattr(torrent_prov, attr, bool(check_setting_int(CFG, prov_id_uc, attr_check, default)))
                 elif isinstance(default, string_types):
@@ -1436,7 +1389,7 @@ def init_stage_1(console_logging):
         attr = 'enable_recentsearch'
         if hasattr(nzb_prov, attr):
             nzb_prov.enable_recentsearch = bool(check_setting_int(
-                CFG, prov_id_uc, '%s_%s' % (prov_id, attr), True)) or not getattr(nzb_prov, 'supports_backlog')
+                CFG, prov_id_uc, f'{prov_id}_{attr}', True)) or not getattr(nzb_prov, 'supports_backlog')
 
         for (attr, default) in [
             ('enable_backlog', True), ('enable_scheduled_backlog', True),
@@ -1446,7 +1399,7 @@ def init_stage_1(console_logging):
             ('search_mode', 'eponly'), ('search_fallback', False), ('server_type', NewznabConstants.SERVER_DEFAULT)
         ]:
             if hasattr(nzb_prov, attr):
-                attr_check = '%s_%s' % (prov_id, attr.strip('_'))
+                attr_check = f'{prov_id}_{attr.strip("_")}'
                 if isinstance(default, bool):
                     setattr(nzb_prov, attr, bool(check_setting_int(CFG, prov_id_uc, attr_check, default)))
                 elif isinstance(default, string_types):
@@ -1525,7 +1478,6 @@ def init_stage_2():
     # Misc
     global __INITIALIZED__, MEMCACHE, MEMCACHE_FLAG_IMAGES, RECENTSEARCH_STARTUP
     # Schedulers
-    # global trakt_checker_scheduler
     global update_software_scheduler, update_packages_scheduler, \
         update_show_scheduler, update_release_mappings_scheduler, \
         search_backlog_scheduler, search_propers_scheduler, \
@@ -1549,20 +1501,20 @@ def init_stage_2():
     global EMBY_WATCHEDSTATE_INTERVAL, PLEX_WATCHEDSTATE_INTERVAL
 
     # initialize main database
-    my_db = db.DBConnection()
-    db.migration_code(my_db)
+    with db.DBConnection() as sg_db:
+        db.migration_code(sg_db)
 
     # initialize the cache database
-    my_db = db.DBConnection('cache.db')
-    db.upgrade_database(my_db, cache_db.InitialSchema)
+    with db.DBConnection('cache.db') as sg_db:
+        db.upgrade_database(sg_db, cache_db.InitialSchema)
 
     # initialize the failed downloads database
-    my_db = db.DBConnection('failed.db')
-    db.upgrade_database(my_db, failed_db.InitialSchema)
+    with db.DBConnection('failed.db') as sg_db:
+        db.upgrade_database(sg_db, failed_db.InitialSchema)
 
     # fix up any db problems
-    my_db = db.DBConnection()
-    db.sanity_check_db(my_db, mainDB.MainSanityCheck)
+    with db.DBConnection() as sg_db:
+        db.sanity_check_db(sg_db, mainDB.MainSanityCheck)
 
     # initialize metadata_providers
     metadata_provider_dict = metadata.get_metadata_generator_dict()
@@ -1731,7 +1683,6 @@ def init_stage_2():
 
 
 def enabled_schedulers(is_init=False):
-    # ([], [trakt_checker_scheduler])[USE_TRAKT] + \
     return ([], [events])[is_init] \
            + ([], [update_software_scheduler, update_packages_scheduler,
                    update_show_scheduler, update_release_mappings_scheduler,
@@ -1762,7 +1713,7 @@ def start():
                 if p.is_active() and getattr(p, 'ping_iv', None):
                     # noinspection PyProtectedMember
                     provider_ping_thread_pool[p.get_id()] = threading.Thread(
-                        name='PING-PROVIDER %s' % p.name, target=p._ping)
+                        name=f'PING-PROVIDER {p.name}', target=p._ping)
                     provider_ping_thread_pool[p.get_id()].start()
 
             for thread in enabled_schedulers(is_init=True):  # type: threading.Thread
@@ -1792,10 +1743,10 @@ def sig_handler(signum=None, _=None):
     msg = 'Signal "%s" found' % (signal.SIGINT == signum and 'CTRL-C' or is_ctrlbreak and 'CTRL+BREAK' or
                                  signal.SIGTERM == signum and 'Termination' or signum)
     if None is signum or signum in (signal.SIGINT, signal.SIGTERM) or is_ctrlbreak:
-        logger.log('%s, saving and exiting...' % msg)
+        logger.log(f'{msg}, saving and exiting...')
         events.put(events.SystemEvent.SHUTDOWN)
     else:
-        logger.log('%s, not exiting' % msg)
+        logger.log(f'{msg}, not exiting')
 
 
 def halt():
@@ -1820,9 +1771,9 @@ def halt():
             for p in provider_ping_thread_pool:
                 try:
                     provider_ping_thread_pool[p].join(10)
-                    logger.log('Thread %s has exit' % provider_ping_thread_pool[p].name)
+                    logger.log(f'Thread {provider_ping_thread_pool[p].name} has exit')
                 except RuntimeError:
-                    logger.log('Fail, thread %s did not exit' % provider_ping_thread_pool[p].name)
+                    logger.log(f'Fail, thread {provider_ping_thread_pool[p].name} did not exit')
                     pass
 
             if ADBA_CONNECTION:
@@ -1832,9 +1783,9 @@ def halt():
                     pass
                 try:
                     ADBA_CONNECTION.join(10)
-                    logger.log('Thread %s has exit' % ADBA_CONNECTION.name)
+                    logger.log(f'Thread {ADBA_CONNECTION.name} has exit')
                 except (BaseException, Exception):
-                    logger.log('Fail, thread %s did not exit' % ADBA_CONNECTION.name)
+                    logger.log(f'Fail, thread {ADBA_CONNECTION.name} did not exit')
 
             for thread in enabled_schedulers():  # type: scheduler.Scheduler
                 try:
@@ -1845,17 +1796,17 @@ def halt():
                         except (BaseException, Exception):
                             pass
                 except Exception as e:
-                    logger.log('Thread %s stop failed with: %s' % (thread.name, e))
+                    logger.log(f'Thread {thread.name} stop failed with: {e}')
 
             for thread in enabled_schedulers():  # type: threading.Thread
                 try:
                     thread.join(10)
-                    logger.log('Thread %s has exit' % thread.name)
+                    logger.log(f'Thread {thread.name} has exit')
                 except RuntimeError:
                     # this just means it's the current thread, can be ignored
-                    logger.log('Thread %s is exiting' % thread.name)
+                    logger.log(f'Thread {thread.name} is exiting')
                 except (BaseException, Exception) as e:
-                    logger.log('Thread %s exception %s' % (thread.name, e))
+                    logger.log(f'Thread {thread.name} exception {e}')
 
             try:
                 config_events.join(10)
@@ -2086,7 +2037,7 @@ def _save_config(force=False, **kwargs):
             if (value and not ('search_mode' == attr and 'eponly' == value)
                     # must allow the following to save '0' not '1' because default is enable (1) instead of disable (0)
                     and (attr not in default_not_zero) or not value and (attr in default_not_zero)):
-                new_config[src_id_uc]['%s_%s' % (src_id, attr)] = value
+                new_config[src_id_uc][f'{src_id}_{attr}'] = value
 
         if getattr(src, '_seed_ratio', None):
             new_config[src_id_uc][src_id + '_seed_ratio'] = src.seed_ratio()
@@ -2107,7 +2058,7 @@ def _save_config(force=False, **kwargs):
         for attr in filter(lambda _a: None is not getattr(src, _a, None),
                            ('api_key', 'digest', 'username', 'search_mode')):
             if 'search_mode' != attr or 'eponly' != getattr(src, attr):
-                new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr)
+                new_config[src_id_uc][f'{src_id}_{attr}'] = getattr(src, attr)
 
         for attr in filter(lambda _a: None is not getattr(src, _a, None), (
                 'enable_recentsearch', 'enable_backlog', 'enable_scheduled_backlog',
@@ -2117,17 +2068,17 @@ def _save_config(force=False, **kwargs):
             value = helpers.try_int(getattr(src, attr, None))
             # must allow the following to save '0' not '1' because default is enable (1) instead of disable (0)
             if (value and (attr not in default_not_zero)) or (not value and (attr in default_not_zero)):
-                new_config[src_id_uc]['%s_%s' % (src_id, attr)] = value
+                new_config[src_id_uc][f'{src_id}_{attr}'] = value
 
         attr = 'scene_or_contain'
         if getattr(src, attr, None):
-            new_config[src_id_uc]['%s_%s' % (src_id, attr)] = getattr(src, attr, '')
+            new_config[src_id_uc][f'{src_id}_{attr}'] = getattr(src, attr, '')
 
         if not new_config[src_id_uc]:
             del new_config[src_id_uc]
 
     cfg_keys = []
-    for (cfg, items) in iteritems(OrderedDict([
+    for (cfg, items) in OrderedDict([
         # -----------------------------------
         # Config/Search
         # -----------------------------------
@@ -2253,24 +2204,16 @@ def _save_config(force=False, **kwargs):
         # new_config['Pushalot']['pushalot_authorizationtoken'] = PUSHALOT_AUTHORIZATIONTOKEN
         ('Trakt', [
             ('use_%s', int(USE_TRAKT)),
-            ('update_collection', TRAKT_UPDATE_COLLECTION
-                and trakt_helpers.build_config_string(TRAKT_UPDATE_COLLECTION)),
-            ('accounts', TraktAPI.build_config_string(TRAKT_ACCOUNTS)),
             ('mru', TRAKT_MRU),
-            # new_config['Trakt'] = {}
-            # new_config['Trakt']['trakt_remove_watchlist'] = int(TRAKT_REMOVE_WATCHLIST)
-            # new_config['Trakt']['trakt_remove_serieslist'] = int(TRAKT_REMOVE_SERIESLIST)
-            # new_config['Trakt']['trakt_use_watchlist'] = int(TRAKT_USE_WATCHLIST)
-            # new_config['Trakt']['trakt_method_add'] = int(TRAKT_METHOD_ADD)
-            # new_config['Trakt']['trakt_start_paused'] = int(TRAKT_START_PAUSED)
-            # new_config['Trakt']['trakt_sync'] = int(TRAKT_SYNC)
-            # new_config['Trakt']['trakt_default_indexer'] = int(TRAKT_DEFAULT_INDEXER)
         ]),
         ('Metacritic', [
             ('mru', MC_MRU)
         ]),
         ('NextEpisode', [
             ('mru', NE_MRU)
+        ]),
+        ('IMDB', [
+            ('mru', IMDB_MRU)
         ]),
         ('TMDB', [
             ('mru', TMDB_MRU)
@@ -2300,11 +2243,6 @@ def _save_config(force=False, **kwargs):
             ('as_tts', int(DISCORD_AS_TTS)),
             ('access_token', DISCORD_ACCESS_TOKEN),
         ]),
-        ('Gitter', [
-            ('use_%s', int(USE_GITTER)),
-            ('room', GITTER_ROOM),
-            ('access_token', GITTER_ACCESS_TOKEN),
-        ]),
         ('Telegram', [
             ('use_%s', int(USE_TELEGRAM)),
             ('send_image', int(TELEGRAM_SEND_IMAGE)),
@@ -2322,7 +2260,7 @@ def _save_config(force=False, **kwargs):
             ('list', EMAIL_LIST),
         ]),
         # (, [(, )]),
-    ])):
+    ]).items():
         cfg_lc = cfg.lower()
         cfg_keys += [cfg]
         new_config[cfg] = {}
@@ -2352,17 +2290,16 @@ def _save_config(force=False, **kwargs):
 
         ('Slack', SLACK_NOTIFY_ONSNATCH, SLACK_NOTIFY_ONDOWNLOAD, SLACK_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Discord', DISCORD_NOTIFY_ONSNATCH, DISCORD_NOTIFY_ONDOWNLOAD, DISCORD_NOTIFY_ONSUBTITLEDOWNLOAD),
-        ('Gitter', GITTER_NOTIFY_ONSNATCH, GITTER_NOTIFY_ONDOWNLOAD, GITTER_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Telegram', TELEGRAM_NOTIFY_ONSNATCH, TELEGRAM_NOTIFY_ONDOWNLOAD, TELEGRAM_NOTIFY_ONSUBTITLEDOWNLOAD),
         ('Email', EMAIL_NOTIFY_ONSNATCH, EMAIL_NOTIFY_ONDOWNLOAD, EMAIL_NOTIFY_ONSUBTITLEDOWNLOAD),
     ]:
         if any([onsnatch, ondownload, onsubtitledownload]):
             if onsnatch:
-                new_config[notifier]['%s_notify_onsnatch' % notifier.lower()] = int(onsnatch)
+                new_config[notifier][f'{notifier.lower()}_notify_onsnatch'] = int(onsnatch)
             if ondownload:
-                new_config[notifier]['%s_notify_ondownload' % notifier.lower()] = int(ondownload)
+                new_config[notifier][f'{notifier.lower()}_notify_ondownload'] = int(ondownload)
             if onsubtitledownload:
-                new_config[notifier]['%s_notify_onsubtitledownload' % notifier.lower()] = int(onsubtitledownload)
+                new_config[notifier][f'{notifier.lower()}_notify_onsubtitledownload'] = int(onsubtitledownload)
 
     # remove empty stanzas
     for k in filter(lambda c: not new_config[c], cfg_keys):

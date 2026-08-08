@@ -21,7 +21,6 @@ import sickgear
 from exceptions_helper import ex
 
 from _23 import b64encodestring, decode_str, etree, unquote_plus, urlencode
-from six import iteritems
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 
@@ -54,7 +53,7 @@ class PLEXNotifier(Notifier):
         enc_command = urlencode(command)
         self._log_debug(f'Encoded API command: {enc_command}')
 
-        url = 'http://%s/xbmcCmds/xbmcHttp/?%s' % (host, enc_command)
+        url = f'http://{host}/xbmcCmds/xbmcHttp/?{enc_command}'
         try:
             req = urllib.request.Request(url)
             if password:
@@ -67,7 +66,8 @@ class PLEXNotifier(Notifier):
             result = decode_str(http_response_obj.read(), sickgear.SYS_ENCODING)
             http_response_obj.close()
 
-            self._log_debug('HTTP response: ' + result.replace('\n', ''))
+            newline = '\n'
+            self._log_debug(f'HTTP response: {result.replace(f"{newline}", "")}')
             return True
 
         except (urllib.error.URLError, IOError) as e:
@@ -86,7 +86,7 @@ class PLEXNotifier(Notifier):
             if cur_host.startswith('https://'):
                 host_list += ([], [cur_host])[enable_secure]
             else:
-                host_list += ([], ['https://%s' % cur_host])[enable_secure] + ['http://%s' % cur_host]
+                host_list += ([], [f'https://{cur_host}'])[enable_secure] + [f'http://{cur_host}']
 
         return host_list
 
@@ -108,7 +108,7 @@ class PLEXNotifier(Notifier):
         password = self._choose(password, sickgear.PLEX_PASSWORD)
 
         command = {'command': 'ExecBuiltIn',
-                   'parameter': 'Notification(%s,%s)' % (title.encode('utf-8'), body.encode('utf-8'))}
+                   'parameter': f'Notification({title.encode("utf-8")},{body.encode("utf-8")})'}
 
         results = []
         for cur_host in [x.strip() for x in host.split(',')]:
@@ -135,7 +135,7 @@ class PLEXNotifier(Notifier):
         if '<br>' == result:
             result += 'Fail: No valid host set to connect with'
         return (('Test result for', 'Successful test of')['Fail' not in result]
-                + ' Plex server(s) ... %s<br>\n' % result)
+                + f' Plex server(s) ... {result}<br>\n')
 
     def update_library(self, ep_obj=None, host=None, username=None, password=None, location=None, **kwargs):
         """Handles updating the Plex Media Server host via HTTP API
@@ -150,7 +150,7 @@ class PLEXNotifier(Notifier):
         if not host:
             msg = 'No Plex Media Server host specified, check your settings'
             self._log_debug(msg)
-            return '%sFail: %s' % (('', '<br>')[self._testing], msg)
+            return f'{("", "<br>")[self._testing]}Fail: {msg}'
 
         username = self._choose(username, sickgear.PLEX_USERNAME)
         password = self._choose(password, sickgear.PLEX_PASSWORD)
@@ -159,7 +159,7 @@ class PLEXNotifier(Notifier):
         token_arg = None
         if username and password:
 
-            self._log_debug('Fetching plex.tv credentials for user: ' + username)
+            self._log_debug(f'Fetching plex.tv credentials for user: {username}')
             req = urllib.request.Request('https://plex.tv/users/sign_in.xml', data=b'')
             req.add_header('Authorization', 'Basic %s' % b64encodestring('%s:%s' % (username, password)))
             req.add_header('X-Plex-Device-Name', 'SickGear')
@@ -173,13 +173,13 @@ class PLEXNotifier(Notifier):
                 auth_tree = etree.parse(http_response_obj)
                 http_response_obj.close()
                 token = auth_tree.findall('.//authentication-token')[0].text
-                token_arg = '?X-Plex-Token=' + token
+                token_arg = f'?X-Plex-Token={token}'
 
             except urllib.error.URLError as e:
                 self._log(f'Error fetching credentials from plex.tv for user {username}: {ex(e)}')
 
             except (ValueError, IndexError) as e:
-                self._log('Error parsing plex.tv response: ' + ex(e))
+                self._log(f'Error parsing plex.tv response: {ex(e)}')
 
         file_location = location if None is not location else '' if None is ep_obj else ep_obj.location
         host_validate = self._get_host_list(host, all([token_arg]))
@@ -188,7 +188,7 @@ class PLEXNotifier(Notifier):
         hosts_failed = []
         for cur_host in host_validate:
             response = sickgear.helpers.get_url(
-                '%s/library/sections%s' % (cur_host, token_arg or ''), timeout=10,
+                f'{cur_host}/library/sections{token_arg or ""}', timeout=10,
                 mute_connect_err=True, mute_read_timeout=True, mute_connect_timeout=True)
             if response:
                 response = sickgear.helpers.parse_xml(response)
@@ -198,7 +198,7 @@ class PLEXNotifier(Notifier):
 
             sections = response.findall('.//Directory')
             if not sections:
-                self._log('Plex Media Server not running on: ' + cur_host)
+                self._log(f'Plex Media Server not running on: {cur_host}')
                 hosts_failed.append(cur_host)
                 continue
 
@@ -223,11 +223,11 @@ class PLEXNotifier(Notifier):
         if not self._testing:
             hosts_try = (hosts_all.copy(), hosts_match.copy())[any(hosts_match)]
             host_list = []
-            for section_key, cur_host in iteritems(hosts_try):
+            for section_key, cur_host in hosts_try.items():
                 refresh_result = None
                 if not self._testing:
                     refresh_result = sickgear.helpers.get_url(
-                        '%s/library/sections/%s/refresh%s' % (cur_host, section_key, token_arg or ''))
+                        f'{cur_host}/library/sections/{section_key}/refresh{token_arg or ""}')
                 if (not self._testing and '' == refresh_result) or self._testing:
                     host_list.append(cur_host)
                 else:
@@ -236,7 +236,7 @@ class PLEXNotifier(Notifier):
 
             if len(hosts_failed) == len(host_validate):
                 self._log('No successful Plex host updated')
-                return 'Fail no successful Plex host updated: %s' % ', '.join([host for host in hosts_failed])
+                return f'Fail no successful Plex host updated: {", ".join([host for host in hosts_failed])}'
             else:
                 hosts = ', '.join(set(host_list))
                 if len(hosts_match):
@@ -257,10 +257,10 @@ class PLEXNotifier(Notifier):
 
         return '<br>' + '<br>'.join([result for result in [
             ('', 'Fail: username/password when fetching credentials from plex.tv')[False is token_arg],
-            ('', 'OK (secure connect): %s' % ', '.join(secured))[any(secured)],
-            ('', 'OK%s: %s' % ((' (legacy connect)', '')[None is token_arg], ', '.join(hosts)))[any(hosts)],
-            ('', 'Fail (secure connect): %s' % failed_secured)[any(failed_secured)],
-            ('', 'Fail%s: %s' % ((' (legacy connect)', '')[None is token_arg], failed))[bool(failed)]] if result])
+            ('', f'OK (secure connect): {", ".join(secured)}')[any(secured)],
+            ('', f'OK{(" (legacy connect)", "")[None is token_arg]}: {", ".join(hosts)}')[any(hosts)],
+            ('', f'Fail (secure connect): {failed_secured}')[any(failed_secured)],
+            ('', f'Fail{(" (legacy connect)", "")[None is token_arg]}: {failed}')[bool(failed)]] if result])
 
 
 notifier = PLEXNotifier

@@ -1,4 +1,4 @@
-from ..common import NOTIFY_TYPES as NOTIFY_TYPES, NotifyType as NotifyType, PersistentStoreMode as PersistentStoreMode
+from ..common import NotifyType as NotifyType, PersistentStoreMode as PersistentStoreMode
 from ..utils.parse import is_uuid as is_uuid, parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
@@ -22,7 +22,6 @@ class OpsgenieAlertAction:
     NOTE: str
 
 OPSGENIE_ACTIONS: Incomplete
-OPSGENIE_ALERT_MAP: Incomplete
 
 class OpsgenieRegion:
     US: str

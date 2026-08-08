@@ -51,7 +51,7 @@ $(document).ready(function(){
 		$('#tableDiv').html('<img id="searchingAnim"'
 			+ ' style="margin-right:10px"'
 			+ ' src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif"'
-			+ ' height="32" width="32" />'
+			+ ' height="32" width="32">'
 			+ ' scanning parent folders...');
 
 		$.get(sbRoot + '/add-shows/mass-add-table', params,
@@ -89,7 +89,7 @@ $(document).ready(function(){
 			$('#rootDirStaticList').append('<li class="ui-state-default ui-corner-all">'
 				+ '<input id="' + id + '" type="checkbox"' + ' checked=checked'
 				+ ' class="dir_check"'
-				+ ' />'
+				+ '>'
 				+ ' <label for="' + id + '"'
 				+ ' style="color:#09A2FF">'
 				+ '<b>' + id + '</b></label>'

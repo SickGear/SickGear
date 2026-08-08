@@ -2,7 +2,7 @@
 /** @namespace config.defaultHost */
 $(document).ready(function(){
 
-	var loading = '<img src="' + $.SickGear.Root + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />',
+	var loading = '<img src="' + $.SickGear.Root + '/images/loading16' + themeSpinner + '.gif" height="16" width="16">',
 		handleSCGI = function() {
 			var opts$ = $('#torrent-username-option,#torrent-password-option');
 			$('#torrent_username,#torrent_password').each(function() {$(this).val(
@@ -50,9 +50,9 @@ $(document).ready(function(){
 		$('#test-sabnzbd-result').html('Click below to test');
 		$([blackholeSettings, nzbgetSettings, sabnzbdSettings].join(',')).hide();
 
-		if ('blackhole' == selectedProvider) {
+		if ('blackhole' === selectedProvider) {
 			$(blackholeSettings).show();
-		} else if ('nzbget' == selectedProvider) {
+		} else if ('nzbget' === selectedProvider) {
 			$(nzbgetSettings).show();
 		} else {
 			$(sabnzbdSettings).show();
@@ -60,6 +60,26 @@ $(document).ready(function(){
 	};
 	$('#nzb_method').change($(this).nzbMethodHandler);
 	$(this).nzbMethodHandler();
+
+	$.fn.torrentMethodAdvHandler = function () {
+		const selectedProvider = $('#torrent_method').find(':selected').val(),
+			advButton = '.feature-toggle.client',
+			onState = /on/.test($('.feature-toggle:first').attr('data-state')),
+			verifyCertOption = '#torrent-verify-cert-option',
+			highBandwidthOption = '#torrent-high-bandwidth-option';
+		$(advButton).hide();
+		onState && $([verifyCertOption, highBandwidthOption].join(',')).hide();
+		switch (selectedProvider) {
+			case 'deluge':
+				$(advButton).show();
+				onState && $(verifyCertOption).show();
+				break;
+			case 'transmission':
+				$(advButton).show();
+				onState && $(highBandwidthOption).show();
+				break;
+		}
+	};
 
 	$.fn.torrentMethodHandler = function() {
 
@@ -79,13 +99,14 @@ $(document).ready(function(){
 		$('#test-torrent-result').html('Click below to test');
 		$('.default-host').html(config.defaultHost[selectedProvider]);
 
-		if ('blackhole' != selectedProvider) {
+		$.fn.torrentMethodAdvHandler();
+
+		if ('blackhole' !== selectedProvider) {
 			var labelWarningDeluge = '#label-warning-deluge',
 				hostDesc = '#host-desc-torrent',
 				hostDescDeluge = '#host-desc-deluge',
 				hostDescRtorrent = '#host-desc-rtorrent',
 				usernameOption = '#torrent-username-option',
-				verifyCertOption = '#torrent-verify-cert-option',
 				labelOption = '#torrent-label-option',
 				qBitTorrent = '.qbittorrent',
 				rTorrent = '.rtorrent',
@@ -95,11 +116,10 @@ $(document).ready(function(){
 				pathBlank = '#path-blank',
 				seedTimeOption = '#torrent-seed-time-option',
 				pausedOption = '#torrent-paused-option',
-				highBandwidthOption = '#torrent-high-bandwidth-option',
 				torrentHost$ = $('#torrent_host');
 
-			$([labelWarningDeluge, hostDescDeluge, hostDescRtorrent, verifyCertOption, seedTimeOption,
-				highBandwidthOption, qBitTorrent, rTorrent, synology, transmission].join(',')).hide();
+			$([labelWarningDeluge, hostDescDeluge, hostDescRtorrent, seedTimeOption,
+				qBitTorrent, rTorrent, synology, transmission].join(',')).hide();
 
 			$([hostDesc, usernameOption, pathOption, labelOption, pathBlank, pausedOption].join(',')).show();
 			$(pathOption).find('.fileBrowser').show();
@@ -115,15 +135,15 @@ $(document).ready(function(){
 				case 'deluge':
 					client = 'Deluge'; hideHostDesc = !0;
 					$(usernameOption).hide();
-					$([hostDescDeluge, verifyCertOption, labelWarningDeluge].join(',')).show();
+					$([hostDescDeluge, labelWarningDeluge].join(',')).show();
 					break;
 				case 'transmission':
 					client = 'Transmission'; hideLabelOption = !1; hidePathBlank = !0;
-					$([transmission, highBandwidthOption].join(',')).show();
+					$([transmission].join(',')).show();
 					break;
 				case 'qbittorrent':
 					client = 'qBittorrent'; hidePathBlank = !0;
-					$([qBitTorrent, highBandwidthOption].join(',')).show();
+					$([qBitTorrent].join(',')).show();
 					break;
 				case 'download_station':
 					client = 'Synology DS'; hideLabelOption = !0;

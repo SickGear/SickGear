@@ -47,11 +47,11 @@ class DiscordNotifier(Notifier):
 
         result = '' == resp or self._choose('bad webhook?', None)
         if True is not result:
-            self._log_error('%s failed to send message: %s' % (self.name, result))
+            self._log_error(f'{self.name} failed to send message: {result}')
 
         return self._choose(('Success, notification sent. (Note: %s displays the icon once in a sequence)%s'
                              % (self.name, success_and_deprecated_msg),
-                             'Failed to send notification, %s' % result)[True is not result], result)
+                             f'Failed to send notification, {result}')[True is not result], result)
 
 
 notifier = DiscordNotifier

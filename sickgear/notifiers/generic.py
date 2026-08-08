@@ -37,7 +37,7 @@ class BaseNotifier(object):
 
     @property
     def _sg_logo_url(self):
-        return 'https://raw.githubusercontent.com/SickGear/SickGear/main/gui/slick/images/ico/' + self.sg_logo_file
+        return f'https://raw.githubusercontent.com/SickGear/SickGear/main/gui/slick/images/ico/{self.sg_logo_file}'
 
     def _log(self, msg, level=logger.MESSAGE):
         logger.log(f'{self.name}: {msg}', level)
@@ -77,7 +77,7 @@ class BaseNotifier(object):
 
     @classmethod
     def is_enabled(cls, action=None):
-        return getattr(sickgear, action and '%s_%s' % (cls.id(), action) or 'USE_%s' % cls.id(), False)
+        return getattr(sickgear, action and f'{cls.id()}_{action}' or f'USE_{cls.id()}', False)
 
     def notify_snatch(self, *args, **kwargs):
         pass
@@ -119,7 +119,7 @@ class Notifier(BaseNotifier):
 
     def test_notify(self, *args, **kwargs):
         self._testing = True
-        r = self._pre_notify('test_title', notify_strings['test_body'] % (self.name + ' notifier'), *args, **kwargs)
+        r = self._pre_notify('test_title', notify_strings['test_body'] % (f'{self.name} notifier'), *args, **kwargs)
         return (r, (('Success, notification sent.', 'Failed to send notification.')[not r]))[r in (True, False)]
 
     @staticmethod
@@ -134,7 +134,7 @@ class Notifier(BaseNotifier):
         self._pre_notify('download', self.pretty_name(ep_obj), ep_obj=ep_obj, **kwargs)
 
     def notify_subtitle_download(self, ep_obj, lang, **kwargs):
-        self._pre_notify('subtitle_download', '%s : %s' % (ep_obj.pretty_name(), lang), ep_obj=ep_obj, **kwargs)
+        self._pre_notify('subtitle_download', f'{ep_obj.pretty_name()} : {lang}', ep_obj=ep_obj, **kwargs)
 
     def notify_git_update(self, new_version='??', **kwargs):
         self._pre_notify('git_updated', notify_strings['git_updated_text'] + new_version, **kwargs)

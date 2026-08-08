@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 
+import json
+import tempfile
+from datetime import datetime
+from urllib.parse import urlparse, parse_qs
+import diskcache
+import requests
+from dateutil.parser import parse
+from dateutil.tz import tzutc
+
 try:
     # noinspection PyProtectedMember
     from base64 import encodebytes
 except ImportError:
     from base64 import encodestring as encodebytes
-
-from datetime import datetime
 from hashlib import sha256 as sha256
 from hashlib import sha1 as sha
-import hmac
-import json
-import requests
-import tempfile
-import time
-
-import diskcache
-from dateutil.parser import parse
-from dateutil.tz import tzutc
-from six.moves.urllib.parse import urlparse, parse_qs, quote
+from six.moves.urllib.parse import quote
 from six import string_types, text_type
+import hmac
+import time
 
 from .constants import APP_KEY, HOST, USER_AGENT, BASE_URI
 
@@ -50,7 +50,7 @@ class ZuluHmacAuthV3HTTPHandler(object):
         them into a string, separated by newlines.
         """
         vals = sorted(['%s:%s' % (n.lower().strip(),
-                    headers_to_sign[n].strip()) for n in headers_to_sign])
+                                  headers_to_sign[n].strip()) for n in headers_to_sign])
         return '\n'.join(vals)
 
     def headers_to_sign(self, http_request):
@@ -90,16 +90,14 @@ class ZuluHmacAuthV3HTTPHandler(object):
         headers_to_sign = self.headers_to_sign(http_request)
         canonical_qs = self.canonical_query_string(http_request)
         canonical_headers = self.canonical_headers(headers_to_sign)
-        string_to_sign = '\n'.join(
-            (
-                http_request.method,
-                http_request.path,
-                canonical_qs,
-                canonical_headers,
-                '',
-                http_request.body,
-            )
-        )
+        string_to_sign = '\n'.join((
+            http_request.method,
+            http_request.path,
+            canonical_qs,
+            canonical_headers,
+            '',
+            http_request.body
+        ))
         return string_to_sign, headers_to_sign
 
     def add_auth(self, req):
@@ -253,7 +251,6 @@ class HTTPRequest(object):
 
 
 class Auth(object):
-
     SOON_EXPIRES_SECONDS = 60
     _CREDS_STORAGE_KEY = 'imdbpie-credentials'
 
@@ -270,8 +267,7 @@ class Auth(object):
                     import os
                     os.remove(os.path.join(self._cachedir, diskcache.core.DBNAME))
                     return self._get_creds(retry=True)
-                else:
-                    raise e
+                raise e
 
     def _set_creds(self, creds):
         with diskcache.Cache(directory=self._cachedir) as cache:
@@ -314,24 +310,19 @@ class Auth(object):
         handler = ZuluHmacAuthV3HTTPHandler(
             host=HOST,
             secret_key=creds['secretAccessKey'],
-            security_token=creds['sessionToken'], access_key=creds['accessKeyId']
+            security_token=creds['sessionToken'],
+            access_key=creds['accessKeyId']
         )
+
         parsed_url = urlparse(url_path)
         params = {
             key: val[0] for key, val in parse_qs(parsed_url.query).items()
         }
         request = HTTPRequest(
-            method='GET',
-            protocol='https',
-            host=HOST,
-            port=443,
-            path=parsed_url.path,
-            auth_path=None,
+            method='GET', protocol='https', host=HOST,
+            port=443, path=parsed_url.path, auth_path=None,
             params=params,
-            headers={'User-Agent': USER_AGENT},
-            body='',
+            headers={'User-Agent': USER_AGENT}, body=''
         )
         handler.add_auth(req=request)
-        headers = request.headers
-
-        return headers
+        return request.headers

@@ -109,4 +109,4 @@ class FailedProcessor(LegacyFailedProcessor):
         :type level: int
         """
         logger.log(message, level)
-        self.log += message + '\n'
+        self.log += f'{message}\n'

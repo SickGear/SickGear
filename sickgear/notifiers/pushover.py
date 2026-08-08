@@ -122,7 +122,7 @@ class PushoverNotifier(Notifier):
 
                 self._log_error(result)
 
-        return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
+        return self._choose((True, f'Failed to send notification: {result}')[bool(result)], not bool(result))
 
 
 notifier = PushoverNotifier

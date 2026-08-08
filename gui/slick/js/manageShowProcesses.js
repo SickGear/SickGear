@@ -60,46 +60,34 @@ $(document).ready(function() {
 	$('input[id^="clear-btn-"]').click(function() {
 		var param = {'show_type': $(this).data('action')};
 		$.confirm({
-			'title': 'Confirm cancel',
-			'message': 'Cancel pending actions ?',
-			'buttons': {
-				'Yes': {
-					'class': 'green',
-					'action': function () {
-						$.getJSON(sbRoot + '/manage/show-tasks/clear-show-queue', param)
-							.done(function(){
-								location.reload();
-						});
-					}
-				},
-				'No': {
-					'class': 'red',
-					'action': function () {}
-				}
-			}
+			title: 'Confirm cancel',
+			text: 'Cancel pending actions ?',
+			confirm	: function(){
+				$.getJSON(sbRoot + '/manage/show-tasks/clear-show-queue', param)
+					.done(function(){
+						location.reload();
+					});
+			},
+			cancel	: function(){},
+			confirmButton: 'Yes', confirmButtonClass: 'green',
+			cancelButton: 'No', cancelButtonClass: 'red'
 		});
 	});
 
 	$('input[id^="clear-people-btn"]').click(function() {
 		var param = {'people_type': $(this).data('action')};
 		$.confirm({
-			'title': 'Confirm cancel',
-			'message': 'Cancel pending actions ?',
-			'buttons': {
-				'Yes': {
-					'class': 'green',
-					'action': function () {
-						$.getJSON(sbRoot + '/manage/show-tasks/clear-people-queue', param)
-							.done(function(){
-								location.reload();
-							});
-					}
-				},
-				'No': {
-					'class': 'red',
-					'action': function () {}
-				}
-			}
+			title: 'Confirm cancel',
+			text: 'Cancel pending actions ?',
+			confirm	: function(){
+				$.getJSON(sbRoot + '/manage/show-tasks/clear-people-queue', param)
+					.done(function(){
+						location.reload();
+					});
+			},
+			cancel	: function(){},
+			confirmButton: 'Yes', confirmButtonClass: 'green',
+			cancelButton: 'No', cancelButtonClass: 'red'
 		});
 	});
 

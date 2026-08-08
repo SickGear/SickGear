@@ -21,7 +21,6 @@ import sickgear
 from . import db
 from .helpers import full_sanitize_scene_name, try_int
 
-from six import iteritems
 from _23 import map_consume
 
 # noinspection PyUnreachableCode
@@ -88,9 +87,9 @@ def build_name_cache(show_obj=None, update_only_scene=False):
                 # search for only the requested show id and flush old show entries from namecache
                 show_ids = {show_obj.tvid: [show_obj.prodid]}
 
-                nameCache = dict([(k, v) for k, v in iteritems(nameCache)
+                nameCache = dict([(k, v) for k, v in nameCache.items()
                                   if not (v[0] == show_obj.tvid and v[1] == show_obj.prodid)])
-                sceneNameCache = dict([(k, v) for k, v in iteritems(sceneNameCache)
+                sceneNameCache = dict([(k, v) for k, v in sceneNameCache.items()
                                        if not (v[0] == show_obj.tvid and v[1] == show_obj.prodid)])
 
                 # add standard indexer name to namecache
@@ -117,12 +116,12 @@ def build_name_cache(show_obj=None, update_only_scene=False):
             tmp_scene_name_cache = {}
 
         cache_results = []
-        cache_db = db.DBConnection()
-        for cur_tvid, cur_prodid_list in iteritems(show_ids):
-            cache_results += cache_db.select(
-                f'SELECT show_name, indexer AS tv_id, indexer_id AS prod_id, season'
-                f' FROM scene_exceptions'
-                f' WHERE indexer = {cur_tvid} AND indexer_id IN ({",".join(map(str, cur_prodid_list))})')
+        with db.DBConnection() as cache_db:
+            for cur_tvid, cur_prodid_list in show_ids.items():
+                cache_results += cache_db.select(
+                    f'SELECT show_name, indexer AS tv_id, indexer_id AS prod_id, season'
+                    f' FROM scene_exceptions'
+                    f' WHERE indexer = {cur_tvid} AND indexer_id IN ({",".join(map(str, cur_prodid_list))})')
 
         if cache_results:
             for cur_result in cache_results:
@@ -147,4 +146,4 @@ def remove_from_namecache(tvid, prodid):
 
     with nameCacheLock:
         if nameCache:
-            nameCache = dict([(k, v) for k, v in iteritems(nameCache) if not (v[0] == tvid and v[1] == prodid)])
+            nameCache = dict([(k, v) for k, v in nameCache.items() if not (v[0] == tvid and v[1] == prodid)])

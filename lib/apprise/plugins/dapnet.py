@@ -249,7 +249,6 @@ class NotifyDapnet(NotifyBase):
         targets = list(self.targets)
 
         for index in range(0, len(targets), batch_size):
-
             # prepare JSON payload
             payload = {
                 "text": body,
@@ -273,6 +272,7 @@ class NotifyDapnet(NotifyBase):
                     ),
                     verify=self.verify_certificate,
                     timeout=self.request_timeout,
+                    allow_redirects=self.redirects,
                 )
                 if r.status_code != requests.codes.created:
                     # We had a problem
@@ -287,7 +287,8 @@ class NotifyDapnet(NotifyBase):
                     )
 
                     self.logger.debug(
-                        "Response Details:\r\n%r", (r.content or b"")[:2000])
+                        "Response Details:\r\n%r", (r.content or b"")[:2000]
+                    )
 
                     # Mark our failure
                     has_error = True

@@ -53,7 +53,7 @@ class PackagesUpdater(Job):
         if not sickgear.EXT_UPDATES \
                 and self.check_for_new_version(force) \
                 and sickgear.UPDATE_PACKAGES_AUTO:
-            msg = 'Automatic %s enabled, restarting to update...' % self.install_type
+            msg = f'Automatic {self.install_type} enabled, restarting to update...'
             logger.log(msg)
             ui.notifications.message(msg)
             time.sleep(3)
@@ -73,24 +73,24 @@ class PackagesUpdater(Job):
             return False
 
         if force and not sickgear.UPDATE_PACKAGES_MENU:
-            logger.log('Checking not enabled from menu action for %s' % self.install_type)
+            logger.log(f'Checking not enabled from menu action for {self.install_type}')
             return False
 
         if not sickgear.UPDATE_PACKAGES_NOTIFY and not sickgear.UPDATE_PACKAGES_AUTO and not force:
-            logger.log('Checking not enabled for %s' % self.install_type)
+            logger.log(f'Checking not enabled for {self.install_type}')
             return False
 
-        logger.log('Checking for %s%s' % (self.install_type, ('', ' (from menu)')[force]))
+        logger.log(f'Checking for {self.install_type}{("", " (from menu)")[force]}')
         sickgear.UPDATES_TODO = check_pip_outdated(force)
         if not sickgear.UPDATES_TODO:
-            msg = 'No %s needed' % self.install_type
+            msg = f'No {self.install_type} needed'
             logger.log(msg)
 
             if force:
                 ui.notifications.message(msg)
             return False
 
-        logger.log('Update(s) for %s found %s' % (self.install_type, list(sickgear.UPDATES_TODO)))
+        logger.log(f'Update(s) for {self.install_type} found {list(sickgear.UPDATES_TODO)}')
 
         # save updates_todo to config to be loaded after restart
         sickgear.save_config()
@@ -151,7 +151,7 @@ class SoftwareUpdater(Job):
         """
         branch = self.get_branch()
         branch = ('dev', branch)[branch in ('main', 'dev')]
-        data = get_url(r'https://github.com/SickGear/SickGear/raw/%s/sickgear/py_requirement.data' % branch,
+        data = get_url(rf'https://github.com/SickGear/SickGear/raw/{branch}/sickgear/py_requirement.data',
                        failure_monitor=False)
         try:
             self._min_python = (100, 0)  # set default to absurdly high to prevent update
@@ -202,10 +202,10 @@ class SoftwareUpdater(Job):
             self._log_cannot_update()
             return False
 
-        logger.log('Checking for "%s" software update%s' % (self.install_type, ('', ' (from menu)')[force]))
+        logger.log(f'Checking for "{self.install_type}" software update{("", " (from menu)")[force]}')
         if not self.updater.need_update():
             sickgear.NEWEST_VERSION_STRING = None
-            msg = 'No "%s" software update needed' % self.install_type
+            msg = f'No "{self.install_type}" software update needed'
             logger.log(msg)
 
             if force:
@@ -266,7 +266,7 @@ class UpdateManager(object):
 
     @staticmethod
     def get_update_url():
-        return '%s/home/update/?pid=%s' % (sickgear.WEB_ROOT, sickgear.PID)
+        return f'{sickgear.WEB_ROOT}/home/update/?pid={sickgear.PID}'
 
 
 class GitUpdateManager(UpdateManager):
@@ -363,10 +363,10 @@ class GitUpdateManager(UpdateManager):
             logger.debug(f'git output: {output}')
 
         except OSError:
-            logger.log('Failed command: %s' % cmd)
+            logger.log(f'Failed command: {cmd}')
 
         except (BaseException, Exception) as e:
-            logger.log('Failed command: %s, %s' % (cmd, ex(e)))
+            logger.log(f'Failed command: {cmd}, {ex(e)}')
 
         if 0 == exit_status:
             logger.debug(f'Successful return: {cmd}')
@@ -446,7 +446,7 @@ class GitUpdateManager(UpdateManager):
         self._num_commits_ahead = 0
 
         # get all new info from GitHub
-        _, _, exit_status = self._run_git(['fetch', '%s' % sickgear.GIT_REMOTE])
+        _, _, exit_status = self._run_git(['fetch', f'{sickgear.GIT_REMOTE}'])
 
         if 0 != exit_status:
             logger.error("Unable to contact github, can't check for update")
@@ -490,8 +490,8 @@ class GitUpdateManager(UpdateManager):
                          f', num_commits_ahead = {self._num_commits_ahead}')
         else:
             # we need to treat pull requests specially as it doesn't seem possible to set their "@{upstream}" tag
-            output, _, _ = self._run_git(['ls-remote', '%s' % sickgear.GIT_REMOTE,
-                                          'refs/pull/%s/head' % self._cur_pr_number])
+            output, _, _ = self._run_git(['ls-remote', f'{sickgear.GIT_REMOTE}',
+                                          f'refs/pull/{self._cur_pr_number}/head'])
             self._newest_commit_hash = re.findall('(.*)\t', output)[0]
             self._old_commit_hash = None
             self._old_branch = None
@@ -499,16 +499,16 @@ class GitUpdateManager(UpdateManager):
     def set_newest_text(self):
         # if we're up-to-date then don't set this
         newest_text = None
-        url = 'https://github.com/%s/%s' % (self.github_repo_user, self.github_repo)
+        url = f'https://github.com/{self.github_repo_user}/{self.github_repo}'
 
         if self._num_commits_ahead:
-            newest_text = 'Local branch is ahead of %s. Automatic update not possible.' % self.branch
+            newest_text = f'Local branch is ahead of {self.branch}. Automatic update not possible.'
             logger.error(newest_text)
 
         elif 0 < self._num_commits_behind:
 
             if self._newest_commit_hash:
-                url += '/compare/%s...%s' % (self._cur_commit_hash, self._newest_commit_hash)
+                url += f'/compare/{self._cur_commit_hash}...{self._newest_commit_hash}'
             else:
                 url += '/commits/'
 
@@ -518,7 +518,7 @@ class GitUpdateManager(UpdateManager):
                            ('', 's')[1 < self._num_commits_behind], self.get_update_url())
 
         elif self._cur_pr_number and (self._cur_commit_hash != self._newest_commit_hash):
-            url += '/commit/%s' % self._newest_commit_hash
+            url += f'/commit/{self._newest_commit_hash}'
 
             newest_text = 'There is a <a href="%s" onclick="window.open(this.href); return !1;">newer' \
                           ' version available</a> &mdash; <a href="%s">Update Now</a>' % (url, self.get_update_url())
@@ -541,7 +541,7 @@ class GitUpdateManager(UpdateManager):
         try:
             self._check_github_for_update()
         except (BaseException, Exception) as e:
-            logger.error(f"Unable to contact github, can't check for update: {e!r}")
+            logger.error(f'Unable to contact github, can"t check for update: {e!r}')
             return False
 
         if 0 < self._num_commits_behind:
@@ -576,11 +576,11 @@ class GitUpdateManager(UpdateManager):
                 cur_branch = self._find_installed_branch()
                 if cur_branch and self._old_branch != cur_branch:
                     # in case of a branch switch first switch back to old branch
-                    _, _, exit_status = self._run_git(['checkout', '-f', '-B', '%s' % self._old_branch,
-                                                       '%s/%s' % (sickgear.GIT_REMOTE, self._old_branch)])
+                    _, _, exit_status = self._run_git(['checkout', '-f', '-B', f'{self._old_branch}',
+                                                       f'{sickgear.GIT_REMOTE}/{self._old_branch}'])
                     if 0 != exit_status:
                         return exit_status
-            _, _, exit_status = self._run_git(['reset', '--hard', '%s' % self._old_commit_hash])
+            _, _, exit_status = self._run_git(['reset', '--hard', f'{self._old_commit_hash}'])
             if 0 == exit_status:
                 self.branch = self._old_branch
                 sickgear.BRANCH = self.branch
@@ -601,16 +601,16 @@ class GitUpdateManager(UpdateManager):
 
         if self.branch == self._find_installed_branch():
             if not self._cur_pr_number:
-                _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', '%s' % sickgear.GIT_REMOTE,
-                                                   '%s' % self.branch])
+                _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', f'{sickgear.GIT_REMOTE}',
+                                                   f'{self.branch}'])
             else:
-                _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', '%s' % sickgear.GIT_REMOTE,
-                                                   'pull/%s/head:%s' % (self._cur_pr_number, self.branch)])
+                _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', f'{sickgear.GIT_REMOTE}',
+                                                   f'pull/{self._cur_pr_number}/head:{self.branch}'])
 
         else:
-            self._run_git(['fetch', '%s' % sickgear.GIT_REMOTE])
-            _, _, exit_status = self._run_git(['checkout', '-f', '-B', '%s' % self.branch,
-                                               '%s/%s' % (sickgear.GIT_REMOTE, self.branch)])
+            self._run_git(['fetch', f'{sickgear.GIT_REMOTE}'])
+            _, _, exit_status = self._run_git(['checkout', '-f', '-B', f'{self.branch}',
+                                               f'{sickgear.GIT_REMOTE}/{self.branch}'])
 
         try:
             if 0 == exit_status:
@@ -633,7 +633,7 @@ class GitUpdateManager(UpdateManager):
             self._old_commit_hash = None
 
     def list_remote_branches(self):
-        output, _, exit_status = self._run_git(['ls-remote', '--heads', '%s' % sickgear.GIT_REMOTE])
+        output, _, exit_status = self._run_git(['ls-remote', '--heads', f'{sickgear.GIT_REMOTE}'])
         if 0 == exit_status and output:
             return re.findall(r'\S+\Wrefs/heads/(.*)', output)
         return []
@@ -643,7 +643,7 @@ class GitUpdateManager(UpdateManager):
         return gh.pull_requests()
 
     def fetch(self, pull_request):
-        _, _, exit_status = self._run_git(['fetch', '-f', '%s' % sickgear.GIT_REMOTE, '%s' % pull_request])
+        _, _, exit_status = self._run_git(['fetch', '-f', f'{sickgear.GIT_REMOTE}', f'{pull_request}'])
         return 0 == exit_status
 
     def get_cur_pr_number(self):
@@ -679,7 +679,7 @@ class SourceUpdateManager(UpdateManager):
         try:
             self._check_github_for_update()
         except (BaseException, Exception) as e:
-            logger.error(f"Unable to contact github, can't check for update: {e!r}")
+            logger.error(f'Unable to contact github, can"t check for update: {e!r}')
             return False
 
         installed_branch = self._find_installed_branch()
@@ -747,9 +747,9 @@ class SourceUpdateManager(UpdateManager):
                           % self.get_update_url()
 
         elif 0 < self._num_commits_behind:
-            url = 'https://github.com/%s/%s' % (self.github_repo_user, self.github_repo)
+            url = f'https://github.com/{self.github_repo_user}/{self.github_repo}'
             if self._newest_commit_hash:
-                url += '/compare/' + self._cur_commit_hash + '...' + self._newest_commit_hash
+                url += f'/compare/{self._cur_commit_hash}...{self._newest_commit_hash}'
             else:
                 url += '/commits/'
 
@@ -785,11 +785,11 @@ class SourceUpdateManager(UpdateManager):
             urllib.request.urlretrieve(tar_download_url, tar_download_path)
 
             if not os.path.isfile(tar_download_path):
-                logger.error(f"Unable to retrieve new version from {tar_download_url}, can't update")
+                logger.error(f'Unable to retrieve new version from {tar_download_url}, can\'t update')
                 return False
 
             if not tarfile.is_tarfile(tar_download_path):
-                logger.error(f"Retrieved version from {tar_download_url} is corrupt, can't update")
+                logger.error(f'Retrieved version from {tar_download_url} is corrupt, can\'t update')
                 return False
 
             # extract to sg-update dir

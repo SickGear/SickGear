@@ -23,8 +23,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class SceneHDProvider(generic.TorrentProvider):
 
@@ -57,8 +55,8 @@ class SceneHDProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({'info': 'detail', 'get': 'download',
-                                                                        'nuked': 'nuke', 'filter': 'free'})])
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': 'detail', 'get': 'download',
+                                                              'nuked': 'nuke', 'filter': 'free'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode, '%s', ','))

@@ -23,15 +23,13 @@ from .. import logger
 from ..helpers import anon_url, try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 
 class SceneTimeProvider(generic.TorrentProvider):
 
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'SceneTime')
 
-        self.url_home = ['https://%s.scenetime.com/' % u for u in ('www', 'uk')]
+        self.url_home = [f'https://{u}.scenetime.com/' for u in ('www', 'uk')]
 
         self.url_vars = {'login': 'support.php', 'search': 'browse.php?cata=yes&%s&search=%s%s',
                          'get': 'download.php/%s.torrent'}
@@ -73,7 +71,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                                                     '+'.join(search_string.replace('.', ' ').split()),
                                                     ('', '&freeleech=on')[self.freeleech])
                 for page in range((3, 5)['Cache' == mode])[:-1]:
-                    urls[-1] += [search_url + '&page=%s' % page]
+                    urls[-1] += [f'{search_url}&page={page}']
             results += self._search_urls(mode, last_recent_search, urls)
             last_recent_search = ''
 
@@ -84,9 +82,9 @@ class SceneTimeProvider(generic.TorrentProvider):
         results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v)) for (k, v) in iteritems({
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
             'info': 'detail', 'get': r'.*id=(\d+).*', 'id': r'.php\/(\d+)', 'fl': r'\[freeleech\]',
-            'cats': 'cat=(?:%s)' % self._categories_string(mode=mode, template='', delimiter='|')})])
+            'cats': f'cat=(?:{self._categories_string(mode=mode, template="", delimiter="|")})'}.items()])
 
         lrs_found = False
         lrs_new = True
@@ -136,7 +134,7 @@ class SceneTimeProvider(generic.TorrentProvider):
                                     continue
 
                                 title = self.regulate_title((info.attrs.get('title') or info.get_text()).strip())
-                                download_url = self._link('%s/%s' % (dl_id, str(title).replace(' ', '.')))
+                                download_url = self._link(f'{dl_id}/{str(title).replace(" ", ".")}')
                             except (AttributeError, TypeError, ValueError, KeyError):
                                 continue
 
@@ -163,15 +161,15 @@ class SceneTimeProvider(generic.TorrentProvider):
         # convert a non-standard release title into a usable format
         name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
         fmt = '((h.?|x)26[45]|vp9|av1|hevc)'
-        webfmt = 'web.?(dl|rip|.%s)' % fmt
+        webfmt = f'web.?(dl|rip|.{fmt})'
         rips = 'b[r|d]rip'
         # check none of the formal structures apply to this title
         if not name_has(['(720|1080|2160)[pi]|720hd']) and \
-                not name_has(['(dvd.?rip|%s)(.ws)?(.(xvid|divx|%s))?' % (rips, fmt)]):
+                not name_has([f'(dvd.?rip|{rips})(.ws)?(.(xvid|divx|{fmt}))?']):
             if (not name_has(['hr.ws.pdtv.(h.?|x)264'])
-                and not (name_has([r'(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|%s))' % fmt])
+                and not (name_has([rf'(hdtv|pdtv|dsr|tvrip)([-]|.((aac|ac3|dd).?\d\.?\d.)*(xvid|{fmt}))'])
                          or name_has(['(xvid|divx|480p|hevc|x265)']))) \
-                    or not name_has([webfmt, 'xvid|%s' % fmt]):
+                    or not name_has([webfmt, f'xvid|{fmt}']):
                 # non standard SD `aac.mp4-` -> `hdtv.x264.aac-`
                 name = re.sub(r'([.\s])AAC([.\s])MP4[-]', r'\1hdtv\2x264\2aac-', name)
         return name

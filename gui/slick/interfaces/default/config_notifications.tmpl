@@ -1,7 +1,6 @@
 #import base64
 #import sickgear
 #import re
-#from lib.api_trakt import TraktAPI
 #from sickgear.helpers import anon_url, starify
 #from sickgear.notifiers import NotifierFactory
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
@@ -14,8 +13,8 @@
 ##
 #include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript" src="$sbRoot/js/configNotifications.js?v=$sbPID"></script>
-<script type="text/javascript" src="$sbRoot/js/config.js?v=$sbPID"></script>
+<script src="$sbRoot/js/configNotifications.js?v=$sbPID"></script>
+<script src="$sbRoot/js/config.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -315,7 +314,7 @@
 									<label for="plex-update-library">
 										<span class="component-title">Update server library</span>
 										<span class="component-desc">
-											<input type="checkbox" name="plex_update_library" id="plex-update-library" #if $sickgear.PLEX_UPDATE_LIBRARY then 'checked="checked" ' else ''#/>
+											<input type="checkbox" name="plex_update_library" id="plex-update-library" #if $sickgear.PLEX_UPDATE_LIBRARY then 'checked="checked" ' else ''#>
 											<p>update Plex Media Server library when a download finishes</p>
 										</span>
 									</label>
@@ -603,7 +602,7 @@
 
 				<div class="component-group">
 					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/nmj.png" alt="" title="Networked Media Jukebox v2"/>
+						<img class="notifier-icon" src="$sbRoot/images/notifiers/nmj.png" alt="" title="Networked Media Jukebox v2">
 						<h3><a name="nmjv2" href="<%= anon_url('http://www.popcornhour.com/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">NMJv2</a></h3>
 						<p>The Networked Media Jukebox, is the official media jukebox interface for Popcorn Hour 300/400 series.</p>
 					</div>
@@ -635,7 +634,7 @@
 										<input type="radio" NAME="nmjv2_dbloc" VALUE="local" id="NMJV2_DBLOC_A" #if $sickgear.NMJv2_DBLOC=='local' then 'checked="checked"' else ''#>PCH Local Media
 									</label>
 									<label for="NMJV2_DBLOC_B">
-										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickgear.NMJv2_DBLOC=='network' then 'checked="checked"' else ''#/>PCH Network Media
+										<input type="radio" NAME="nmjv2_dbloc" VALUE="network" id="NMJV2_DBLOC_B" #if $sickgear.NMJv2_DBLOC=='network' then 'checked="checked"' else ''#>PCH Network Media
 									</label>
 								</span>
 							</div>
@@ -1319,185 +1318,13 @@
 				<div class="component-group bubblelist">
 					<div class="type bgcol">
 						<span class="list"><div class="item text">Bubble links:</div>
-							<div class="item"><a href="#trakt" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/trakt.png">Trakt</a></div>
 							<div class="item"><a href="#slack" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/slack.png">Slack</a></div>
 							<div class="item"><a href="#discord" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/discord.png">Discord</a></div>
-							<div class="item"><a href="#gitter" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/gitter.png">Gitter</a></div>
 							<div class="item"><a href="#telegram" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/telegram.png">Telegram</a></div>
 							<div class="item"><a href="#email" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/email.png">Email</a></div>
 						</span>
 					</div>
 				</div>
-
-				<div class="component-group clear-left">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/trakt.png" alt="" title="Trakt"/>
-						<h3><a name="trakt" href="<%= anon_url('http://trakt.tv/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Trakt</a></h3>
-						<p>Trakt can recommend shows based on notifications. (Add show... Trakt cards/Recommend)</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use-trakt">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_trakt" id="use-trakt" #if $sickgear.USE_TRAKT then 'checked="checked"' else ''#>
-									<p>should SickGear use Trakt.tv ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use-trakt">
-							<div class="field-pair">
-								<label for="trakt-accounts">
-									<span class="component-title">Trakt account (status):</span>
-									<span class="component-desc">
-									<select id="trakt-accounts" class="pull-left form-control input-sm">
-										<option value="new" selected="selected">Add account</option>
-#set $trakt_accounts = $sickgear.TRAKT_ACCOUNTS
-#for $void, $account in $trakt_accounts.items()
-											<option value="$account.account_id">$account.account_id - $account.name #if $account.active and $account.name then '(ok)' else '(inactive)'#</option>
-#end for
-									</select>
-									<input type="button" class="btn" value="Delete" id="trakt-delete" disabled="disabled">
-									</span>
-								</label>
-								<label for="trakt-pin">
-									<span class="component-title">Trakt PIN:</span>
-									<span class="component-desc">
-										<input type="text" id="trakt-pin" value="" class="form-control input-sm input250">
-										<input type="button" class="btn" value="Connect" id="trakt-authenticate">
-										<div class="clear-left"><p>get an active PIN using: <a href="<%= anon_url(sickgear.TRAKT_PIN_URL) %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;"><b>$sickgear.TRAKT_PIN_URL</b></a>
-										<br>tip: easily add accounts by using the link in other browsers "signed in" to Trakt
-										</p></div>
-									</span>
-								</label>
-								<div class="test-notification" id="trakt-authentication-result"></div>
-							</div>
-
-							<div class="field-pair">
-								<span class="trakt component-desc" style="width:100%">
-#set num_accounts = len($trakt_accounts)
-#set $num_columns = (1, num_accounts)[1 < num_accounts]
-									<table id="trakt-collection" class="solid-border" cellpadding="0" cellspacing="0" border="0">
-										<thead>
-											<tr>
-												<th class="col-1" style="font-size:12px;font-weight:normal" rowspan="2"><i>Update multiple accounts with downloaded episode info</i></th>
-												<th colspan="$num_columns">#echo not len($trakt_accounts) and '<i>Connect New Pin</i>' or 1 < len($trakt_accounts) and 'Trakt accounts' or 'Account'#</th>
-											</tr>
-											<tr>
-#if not len($trakt_accounts)
-												<th>..</th>
-#end if
-#for $void, $account in $trakt_accounts.items()
-												<th class="tid-$account.account_id">$account.name#if $account.active then '' else '<br>(inactive)'#</th>
-#end for
-											</tr>
-										</thead>
-										<tbody>
-#if not $root_dirs:
-	#set $root_dirs = [{'root_def': False, 'loc': 'all folders. Multiple parent folders will appear here.', 'b64': ''}]
-#end if
-#for $root_info in $root_dirs:
-											<tr class="solid-border-top">
-												<td class="col-1"><span style="font-size:13px;font-weight:bold" data-loc="$root_info['b64']">Update collection</span></td>
-	#if not len($trakt_accounts)
-												<td class="opt">..</td>
-	#end if
-	#for $void, $account in $trakt_accounts.items()
-		#set $cur_selected = ('', ' checked="checked"')[$root_info['loc'] in $sickgear.TRAKT_UPDATE_COLLECTION.get($account.account_id, '')]
-		#set $id_loc = "update-trakt-%s-%s" % ($account.account_id, $root_info['b64'])
-												<td class="opt">
-													<input type="checkbox" id="$id_loc" name="$id_loc"$cur_selected>
-												</td>
-	#end for
-												</tr>
-											<tr>
-												<td colspan="${1 + $num_columns}">for #if $root_info['root_def'] then '*' else ''#$root_info['loc']</td>
-											</tr>
-#end for
-										</tbody>
-									</table>
-								</span>
-							</div>
-							<!--
-							<div class="field-pair">
-								<label for="trakt-default-indexer">
-									<span class="component-title">Default indexer:</span>
-									<span class="component-desc">
-										<select id="trakt-default-indexer" name="trakt_default_indexer" class="form-control input-sm">
-											#for $indexer in $sickgear.TVInfoAPI().sources
-											<option value="$indexer" #if $indexer == $sickgear.TRAKT_DEFAULT_INDEXER then 'selected="selected"' else ''#>$sickgear.TVInfoAPI().sources[$indexer]</option>
-											#end for
-										</select>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="trakt-sync">
-									<span class="component-title">Sync libraries:</span>
-									<span class="component-desc">
-										<input type="checkbox" class="enabler" name="trakt_sync" id="trakt-sync" #if $sickgear.TRAKT_SYNC then 'checked="checked"' else ''#>
-										<p>sync SickGear show library with a trakt show library</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="trakt-use-watchlist">
-									<span class="component-title">Use watchlist:</span>
-									<span class="component-desc">
-										<input type="checkbox" class="enabler" name="trakt_use_watchlist" id="trakt-use-watchlist" #if $sickgear.TRAKT_USE_WATCHLIST then 'checked="checked"' else ''#>
-										<p>get new shows from your trakt watchlist</p>
-									</span>
-								</label>
-							</div>
-							<div id="content_trakt_use_watchlist">
-								<div class="field-pair">
-									<label for="trakt-method-add">
-										<span class="component-title">Watchlist add method:</span>
-										<span class="component-desc">
-											<select id="trakt-method-add" name="trakt_method_add" class="form-control input-sm">
-												<option value="0" #if $sickgear.TRAKT_METHOD_ADD == 0 then 'selected="selected"' else ''#>Skip All</option>
-												<option value="1" #if $sickgear.TRAKT_METHOD_ADD == 1 then 'selected="selected"' else ''#>Download Pilot Only</option>
-												<option value="2" #if $sickgear.TRAKT_METHOD_ADD == 2 then 'selected="selected"' else ''#>Get whole show</option>
-											</select>
-											<div class="clear-left">method in which to download episodes for new show's</div>
-										</span>
-									</label>
-								</div>
-								<div class="field-pair">
-									<label for="trakt-remove-watchlist">
-										<span class="component-title">Remove episode:</span>
-										<span class="component-desc">
-											<input type="checkbox" name="trakt_remove_watchlist" id="trakt-remove-watchlist" #if $sickgear.TRAKT_REMOVE_WATCHLIST then 'checked="checked"' else ''#>
-											<p>remove an episode from your watchlist after it is downloaded</p>
-										</span>
-									</label>
-								 </div>
-								<div class="field-pair">
-									<label for="trakt-remove-serieslist">
-										<span class="component-title">Remove series:</span>
-										<span class="component-desc">
-											<input type="checkbox" name="trakt_remove_serieslist" id="trakt-remove-serieslist" #if $sickgear.TRAKT_REMOVE_SERIESLIST then 'checked="checked"' else ''#>
-											<p>remove the whole series from your watchlist after any download</p>
-										</span>
-									</label>
-								</div>
-								<div class="field-pair">
-									<label for="trakt-start-paused">
-										<span class="component-title">Start paused:</span>
-										<span class="component-desc">
-											<input type="checkbox" name="trakt_start_paused" id="trakt-start-paused" #if $sickgear.TRAKT_START_PAUSED then 'checked="checked"' else ''#>
-											<p>show's grabbed from your trakt watchlist start paused</p>
-										</span>
-									</label>
-								</div>
-							</div>
-							-->
-							<input type="submit" class="btn config_submitter" value="Save Changes">
-						</div><!-- /content_use-trakt //-->
-					</fieldset>
-				</div><!-- /trakt component-group //-->
-
 
 				<div class="component-group">
 					<div class="component-group-desc">
@@ -1708,76 +1535,6 @@
 						</div><!-- /content_use-discord //-->
 					</fieldset>
 				</div><!-- /discord component-group //-->
-
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/gitter.png" alt="" title="Gitter">
-						<h3><a name="gitter" href="<%= anon_url('https://gitter.im/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Gitter</a></h3>
-						<p>Gitter chat and networking platform.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use-gitter">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_gitter" id="use-gitter" #if $sickgear.USE_GITTER then 'checked="checked"' else ''#>
-									<p>should SickGear send Gitter notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use-gitter">
-							<div class="field-pair">
-								<label for="gitter-notify-onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="gitter_notify_onsnatch" id="gitter-notify-onsnatch" #if $sickgear.GITTER_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-notify-ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="gitter_notify_ondownload" id="gitter-notify-ondownload" #if $sickgear.GITTER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-notify-onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="gitter_notify_onsubtitledownload" id="gitter-notify-onsubtitledownload" #if $sickgear.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-room">
-									<span class="component-title">Gitter room name</span>
-									<span class="component-desc">
-										<input type="text" name="gitter_room" id="gitter-room" value="$sickgear.GITTER_ROOM" class="form-control input-sm input250">
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-access-token">
-									<span class="component-title">Gitter oauth access token</span>
-									<span class="component-desc">
-										<input type="text" name="gitter_access_token" id="gitter-access-token" value="$sickgear.GITTER_ACCESS_TOKEN" class="form-control input-sm input350">
-										<div class="clear-left"><p>sign in, copy the access token from <a href="<%= anon_url('https://developer.gitter.im/apps') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">here</a>, paste it to the above field</p></div>
-									</span>
-								</label>
-							</div>
-							<div class="test-notification" id="test-gitter-result">Click below to test</div>
-							<input type="button" class="btn" value="Test Gitter" id="test-gitter">
-							<input type="submit" class="btn config_submitter" value="Save Changes">
-						</div><!-- /content_use-gitter //-->
-					</fieldset>
-				</div><!-- /gitter component-group //-->
 
 
 				<div class="component-group">

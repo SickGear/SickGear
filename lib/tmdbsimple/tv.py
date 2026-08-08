@@ -8,7 +8,7 @@ functionality of tmdbsimple.
 
 Created by Celia Oakley on 2013-10-31.
 
-:copyright: (c) 2013-2025 by Celia Oakley
+:copyright: (c) 2013-2026 by Celia Oakley
 :license: GPLv3, see LICENSE for more details
 """
 
@@ -27,6 +27,7 @@ class TV(TMDB):
         'account_states': '/{id}/account_states',
         'alternative_titles': '/{id}/alternative_titles',
         'content_ratings': '/{id}/content_ratings',
+        'aggregate_credits': '/{id}/aggregate_credits',
         'credits': '/{id}/credits',
         'episode_groups': '/{id}/episode_groups',
         'external_ids': '/{id}/external_ids',
@@ -121,6 +122,23 @@ class TV(TMDB):
             A dict respresentation of the JSON returned from the API.
         """
         path = self._get_id_path('content_ratings')
+
+        response = self._GET(path, kwargs)
+        self._set_attrs_to_values(response)
+        return response
+
+    def aggregate_credits(self, **kwargs):
+        """
+        Get the aggregate credits (cast and crew) that have been added to a
+        TV show.
+
+        Args:
+            language: (optional) ISO 639 code.
+
+        Returns:
+            A dict respresentation of the JSON returned from the API.
+        """
+        path = self._get_id_path('aggregate_credits')
 
         response = self._GET(path, kwargs)
         self._set_attrs_to_values(response)
@@ -335,6 +353,7 @@ class TV(TMDB):
 
         response = self._GET(path, kwargs)
         self._set_attrs_to_values(response)
+        return response
 
     def rating(self, **kwargs):
         """
@@ -493,10 +512,13 @@ class TV_Seasons(TMDB):
     URLS = {
         'info': '',
         'account_states': '/account_states',
+        'aggregate_credits': '/aggregate_credits',
         'credits': '/credits',
         'external_ids': '/external_ids',
         'images': '/images',
+        'translations': '/translations',
         'videos': '/videos',
+        'watch_providers': '/watch/providers',
     }
 
     def __init__(self, tv_id, season_number):
@@ -538,6 +560,23 @@ class TV_Seasons(TMDB):
             A dict respresentation of the JSON returned from the API.
         """
         path = self._get_tv_id_season_number_path('account_states')
+
+        response = self._GET(path, kwargs)
+        self._set_attrs_to_values(response)
+        return response
+
+    def aggregate_credits(self, **kwargs):
+        """
+        Get the aggregate credits (cast and crew) that have been added to a
+        TV season.
+
+        Args:
+            language: (optional) ISO 639 code.
+
+        Returns:
+            A dict respresentation of the JSON returned from the API.
+        """
+        path = self._get_tv_id_season_number_path('aggregate_credits')
 
         response = self._GET(path, kwargs)
         self._set_attrs_to_values(response)
@@ -602,6 +641,22 @@ class TV_Seasons(TMDB):
         self._set_attrs_to_values(response)
         return response
 
+    def translations(self, **kwargs):
+        """
+        Get the translations for a TV season.
+
+        Args:
+            None
+
+        Returns:
+            A dict respresentation of the JSON returned from the API.
+        """
+        path = self._get_tv_id_season_number_path('translations')
+
+        response = self._GET(path, kwargs)
+        self._set_attrs_to_values(response)
+        return response
+
     def videos(self, **kwargs):
         """
         Get the videos that have been added to a TV season.
@@ -613,6 +668,22 @@ class TV_Seasons(TMDB):
             A dict respresentation of the JSON returned from the API.
         """
         path = self._get_tv_id_season_number_path('videos')
+
+        response = self._GET(path, kwargs)
+        self._set_attrs_to_values(response)
+        return response
+
+    def watch_providers(self, **kwargs):
+        """
+        Get the list of streaming providers we have for a TV season.
+
+        Args:
+            language: (optional) ISO 639 code.
+
+        Returns:
+            A dict respresentation of the JSON returned from the API.
+        """
+        path = self._get_tv_id_season_number_path('watch_providers')
 
         response = self._GET(path, kwargs)
         self._set_attrs_to_values(response)

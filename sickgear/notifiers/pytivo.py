@@ -59,8 +59,8 @@ class PyTivoNotifier(BaseNotifier):
         root = show_path.replace(show_name, '')
         show_and_season = root_show_and_season.replace(root, '')
 
-        container = share_name + '/' + show_and_season
-        file_path = '/' + abs_path.replace(root, '')
+        container = f'{share_name}/{show_and_season}'
+        file_path = f'/{abs_path.replace(root, "")}'
 
         # Finally create the url and make request
         request_url = 'http://%s/TiVoConnect?%s' % (host, urlencode(
@@ -76,10 +76,10 @@ class PyTivoNotifier(BaseNotifier):
 
         except urllib.error.HTTPError as e:
             if hasattr(e, 'reason'):
-                self._log_error('Error, failed to reach a server - ' + e.reason)
+                self._log_error(f'Error, failed to reach a server - {e.reason}')
                 return False
             elif hasattr(e, 'code'):
-                self._log_error('Error, the server couldn\'t fulfill the request - ' + e.code)
+                self._log_error(f'Error, the server couldn\'t fulfill the request - {e.code}')
             return False
 
         except (BaseException, Exception) as e:

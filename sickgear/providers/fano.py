@@ -25,8 +25,6 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 FLTAG = r'</a>\s+<img[^>]+%s[^<]+<br'
 
 
@@ -37,8 +35,8 @@ class FanoProvider(generic.TorrentProvider):
 
         self.url_base = 'https://www.fano.in/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': self.url_base + 'login.php',
-                     'search': self.url_base + 'browse_old.php?search=%s&%s&incldead=0'}
+                     'login_action': f'{self.url_base}login.php',
+                     'search': f'{self.url_base}browse_old.php?search=%s&%s&incldead=0'}
 
         self.categories = {'Season': [49], 'Episode': [6, 23, 32, 35], 'anime': [27]}
         self.categories['Cache'] = self.categories['Season'] + self.categories['Episode']
@@ -63,8 +61,8 @@ class FanoProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile('(?i)' + v))
-                   for (k, v) in iteritems({'abd': r'(\d{4}(?:[.]\d{2}){2})', 'info': 'details', 'get': 'download'})])
+        rc = dict([(k, re.compile(f'(?i){v}'))
+                   for (k, v) in {'abd': r'(\d{4}(?:[.]\d{2}){2})', 'info': 'details', 'get': 'download'}.items()])
         log = ''
         if self.filter:
             non_marked = 'f0' in self.filter
@@ -73,9 +71,9 @@ class FanoProvider(generic.TorrentProvider):
                        [f for f in self.may_filter if f not in self.filter])[non_marked]
             rc['filter'] = re.compile('(?i)(%s)' % '|'.join(
                 [self.may_filter[f][2] for f in filters if self.may_filter[f][1]]))
-            log = '%sing (%s) ' % (('keep', 'skipp')[non_marked], ', '.join([self.may_filter[f][0] for f in filters]))
+            log = f'{("keep", "skipp")[non_marked]}ing ({", ".join([self.may_filter[f][0] for f in filters])}) '
         for mode in search_params:
-            rc['cats'] = re.compile('(?i)cat=(?:%s)' % self._categories_string(mode, template='', delimiter='|'))
+            rc['cats'] = re.compile(f'(?i)cat=(?:{self._categories_string(mode, template="", delimiter="|")})')
             for search_string in search_params[mode]:
                 search_string = '+'.join(rc['abd'].sub(r'%22\1%22', search_string).split())
                 search_url = self.urls['search'] % (search_string, self._categories_string(mode))

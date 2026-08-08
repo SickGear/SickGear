@@ -24,6 +24,7 @@ class NotifyMattermost(NotifyBase):
     image_size: Incomplete
     body_maxlen: int
     title_maxlen: int
+    attachment_support: bool
     storage_mode: Incomplete
     default_cache_expiry_sec: Incomplete
     request_rate_per_sec: float
@@ -48,7 +49,7 @@ class NotifyMattermost(NotifyBase):
 
         Resolution occurs only during send(); results are persistently cached.
         """
-    def send(self, body: str, title: str = '', notify_type: NotifyType = ..., **kwargs: Any) -> bool:
+    def send(self, body: str, title: str = '', notify_type: NotifyType = ..., attach=None, **kwargs: Any) -> bool:
         """Perform Mattermost Notification."""
     @property
     def url_identifier(self) -> tuple[Any, ...]:

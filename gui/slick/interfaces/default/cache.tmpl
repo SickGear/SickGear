@@ -12,7 +12,7 @@
 #from sickgear.sgdatetime import SGDatetime
 #include $os.path.join($sickgear.PROG_DIR, 'gui/slick/interfaces/default/inc_top.tmpl')
 
-<script type="text/javascript">
+<script>
 <!--
 \$(document).ready(function()
 {
@@ -80,7 +80,7 @@
 				<td class="col-cache">$hItem['season']</td>
 				<td class="col-episodes" style="white-space:nowrap">$hItem['episodes'].strip('|').replace('|', ',')</td>
 				<td class="col-cache">$hItem['indexerid']</td>
-				<td class="col-cache"><span title="$hItem['url']" class="addQTip"><img src="$sbRoot/images/info32.png" width="16" height="16" /></span></td>
+				<td class="col-cache"><span title="$hItem['url']" class="addQTip"><img src="$sbRoot/images/info32.png" width="16" height="16"></span></td>
 				<td class="col-cache">$hItem['time']</td>
 				<td class="col-cache"><span class="quality $Quality.get_quality_css($quality)">$Quality.get_quality_ui($quality)</span></td>
 				<td class="col-cache">$hItem['release_group']</td>

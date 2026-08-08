@@ -69,3 +69,8 @@ class NotifyMQTT(NotifyBase):
         Taken from https://golang.org/src/crypto/x509/root_linux.go
         TODO: Maybe refactor to a general utility function?
         """
+    @staticmethod
+    def runtime_deps():
+        """Return a tuple of top-level Python package names that this plugin
+        imported as optional runtime dependencies.
+        """

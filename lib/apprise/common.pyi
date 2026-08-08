@@ -93,3 +93,5 @@ class PersistentStoreState(str, Enum):
 PERSISTENT_STORE_STATES: frozenset[str]
 MATCH_ALL_TAG: str
 MATCH_ALWAYS_TAG: str
+APPRISE_MAX_SERVICE_RETRY: int
+APPRISE_MAX_SERVICE_WAIT: float

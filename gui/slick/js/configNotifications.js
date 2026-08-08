@@ -4,7 +4,7 @@
 /** @namespace JSONData.num_accounts */
 /** @namespace JSONData.chatid */
 $(document).ready(function(){
-	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16" />';
+	var loading = '<img src="' + sbRoot + '/images/loading16' + themeSpinner + '.gif" height="16" width="16">';
 
 	$('#test-growl').click(function () {
 		var growlHost = $.trim($('#growl-host').val());
@@ -470,27 +470,6 @@ $(document).ready(function(){
 		}
 	});
 
-	$('#test-gitter').click(function () {
-		var gitterRoom = $('#gitter-room').val(),
-			accessToken = '#gitter-access-token', gitterAccessToken = $(accessToken).val();
-
-		$(accessToken).removeClass('warning');
-		if (!gitterAccessToken) {
-			$('#test-gitter-result').html('Please fill out the necessary fields above.');
-			if (!gitterAccessToken)
-				$(accessToken).addClass('warning');
-		} else {
-			$(this).prop('disabled', !0);
-			$('#test-gitter-result').html(loading);
-			$.get(sbRoot + '/home/test-gitter',
-				{room_name: gitterRoom, access_token: gitterAccessToken})
-				.done(function (data) {
-					$('#test-gitter-result').html(data);
-					$('#test-gitter').prop('disabled', !1);
-				});
-		}
-	});
-
 	$('#test-telegram').click(function () {
 		var telegramSendImage = $('#telegram-send-image').prop('checked'),
 			telegramQuiet = $('#telegram-quiet').prop('checked'),
@@ -590,166 +569,6 @@ $(document).ready(function(){
 	if ($('#use-pushbullet').prop('checked')) {
 		getPushbulletDevices();
 	}
-
-	var elTraktAuth = $('#trakt-authenticate'), elTraktAuthResult = $('#trakt-authentication-result');
-
-	function traktSendAuth(){
-		var elAccountSelect = $('#trakt-accounts'), strCurAccountId = elAccountSelect.find('option:selected').val(),
-			elTraktPin = $('#trakt-pin'), strPin = $.trim(elTraktPin.val());
-
-		elTraktAuthResult.html(loading);
-
-		$.get(sbRoot + '/home/trakt-authenticate',
-			{pin: strPin, account: strCurAccountId})
-			.done(function(data) {
-				elTraktAuth.prop('disabled', !1);
-				elTraktPin.val('');
-
-				var JSONData = $.parseJSON(data);
-
-				elTraktAuthResult.html('Success' === JSONData.result
-					? JSONData.result + ' account: ' + JSONData.account_name
-					: JSONData.result + ' ' + JSONData.error_message);
-
-				if ('Success' === JSONData.result) {
-					var elUpdateRows = $('#trakt-collection').find('tr');
-					if ('new' === strCurAccountId) {
-						elAccountSelect.append($('<option>', {value: JSONData.account_id, text: JSONData.account_id + ' - '  + JSONData.account_name + ' (ok)'}));
-
-						if ('Connect New Pin' === elUpdateRows.eq(0).find('th').last().text()) {
-							elUpdateRows.eq(0).find('th').last().html('Account');
-							elUpdateRows.eq(1).find('th').last().html(JSONData.account_name);
-							elUpdateRows.eq(1).find('th').last().addClass('tid-' + JSONData.account_id);
-							elUpdateRows.has('td').each(function(nRow) {
-								var elCells = $(this).find('td');
-								if (!(nRow % 2)) {
-									var IdLoc = 'update-trakt-' + JSONData.account_id + '-' + elCells.eq(0).find('span').attr('data-loc');
-									elCells.last().html('<input type="checkbox" id="' + IdLoc + '" name="' + IdLoc + '">');
-								} else {
-									elCells.attr('colspan', 1);
-								}
-							});
-						}
-						else
-						{
-							elUpdateRows.eq(0).find('th').last().html('Trakt accounts');
-							elUpdateRows.eq(0).find('th').last().attr('colspan', 1 + parseInt(elUpdateRows.eq(0).find('th').last().attr('colspan'), 10));
-							elUpdateRows.eq(1).find('th').last().after('<th>' + JSONData.account_name + '</th>');
-							elUpdateRows.eq(1).find('th').last().addClass('tid-' + JSONData.account_id);
-							elUpdateRows.has('td').each(function(nRow) {
-								var elCells = $(this).find('td');
-								if (!(nRow % 2)) {
-									var IdLoc = 'update-trakt-' + JSONData.account_id + '-' + elCells.eq(0).find('span').attr('data-loc');
-									elCells.last().after('<td class="opt"><input type="checkbox" id="' + IdLoc + '" name="' + IdLoc + '"></td>');
-								} else {
-									elCells.attr('colspan', 1 + parseInt(elCells.attr('colspan'), 10));
-								}
-							});
-						}
-					}
-					else
-					{
-						elAccountSelect.find('option[value=' + strCurAccountId + ']').html(JSONData.account_id + ' - '  + JSONData.account_name + ' (ok)');
-						elUpdateRows.eq(1).find('th[class*="tid-' + JSONData.account_id + '"]').text(JSONData.account_name);
-					}
-				}
-			});
-	}
-
-	elTraktAuth.click(function(e) {
-		var elTraktPin = $('#trakt-pin');
-
-		elTraktPin.removeClass('warning');
-		if (!$.trim(elTraktPin.val())) {
-			elTraktPin.addClass('warning');
-			elTraktAuthResult.html('Please enter a required PIN above.');
-		} else {
-			var elAccountSelect = $('#trakt-accounts'), elSelected = elAccountSelect.find('option:selected');
-			$(this).prop('disabled', !0);
-			if ('new' !== elSelected.val()) {
-				$.confirm({
-					'title'		: 'Replace Trakt Account',
-					'message'	: 'Are you sure you want to replace <span class="footerhighlight">' + elSelected.text() + '</span> ?<br /><br />',
-					'buttons'	: {
-						'Yes'	: {
-							'class'	: 'green',
-							'action': function() {
-									traktSendAuth();
-								}
-						},
-						'No'	: {
-							'class'	: 'red',
-							'action': function() {
-								e.preventDefault();
-								elTraktAuth.prop('disabled', !1);
-							}
-						}
-					}
-				});
-			}
-			else
-			{
-				traktSendAuth();
-			}
-		}
-	});
-
-	$('#trakt-accounts').change(function() {
-		$('#trakt-delete').prop('disabled', 'new' === $('#trakt-accounts').val());
-	});
-
-	$('#trakt-delete').click(function(e) {
-		var elAccountSelect = $('#trakt-accounts'), elSelected = elAccountSelect.find('option:selected'), that = $(this);
-
-		that.prop('disabled', !0);
-		$.confirm({
-			'title'		: 'Remove Trakt Account',
-			'message'	: 'Are you sure you want to remove <span class="footerhighlight">' + elSelected.text() + '</span> ?<br /><br />',
-			'buttons'	: {
-				'Yes'	: {
-					'class'	: 'green',
-					'action': function() {
-						$.get(sbRoot + '/home/trakt-delete',
-							{accountid: elSelected.val()})
-							.done(function(data) {
-								that.prop('disabled', !1);
-								var JSONData = $.parseJSON(data);
-								if ('Success' === JSONData.result) {
-									var elCollection = $('#trakt-collection'), elUpdateRows = elCollection.find('tr'),
-										header = elCollection.find('th[class*="tid-' + JSONData.account_id + '"]'),
-										numAcc = parseInt(JSONData.num_accounts, 10);
-
-									elUpdateRows.eq(0).find('th').last().html(!numAcc && '<i>Connect New Pin</i>' ||
-										(1 < numAcc ? 'Trakt accounts' : 'Account'));
-									elUpdateRows.find('th[colspan]').attr('colspan', 1 < numAcc ? numAcc : 1);
-
-									!numAcc && header.html('..') || header.remove();
-
-									var elInputs = elUpdateRows.find('input[id*=update-trakt-' + JSONData.account_id + ']');
-									!numAcc && elInputs.parent().html('..') || elInputs.parent().remove();
-
-									elUpdateRows.find('td[colspan]').each(function() {
-										$(this).attr('colspan', (numAcc ? 1 + numAcc : 2))
-									});
-
-									elSelected.remove();
-									$('#trakt-accounts').change();
-
-									elTraktAuthResult.html('Deleted account: ' + JSONData.account_name);
-								}
-							});
-					}
-				},
-				'No'	: {
-					'class'	: 'red',
-					'action': function() {
-						e.preventDefault();
-						$('#trakt-accounts').change();
-					}
-				}
-			}
-		});
-	});
 
 	function loadShowNotifyLists() {
 		$.get(sbRoot + '/home/load-show-notify-lists', function (data) {

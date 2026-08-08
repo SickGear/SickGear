@@ -48,7 +48,7 @@ import requests
 import requests.cookies
 
 from _23 import decode_bytes, make_btih, quote, quote_plus, urlparse
-from six import iteritems, iterkeys, itervalues, string_types
+from six import string_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
@@ -115,7 +115,7 @@ class ProviderFailList(object):
                     value = SGDatetime.timestamp_far(e.fail_time)
                 default = {'date': str(fail_date), 'date_time': date_time,
                            'timestamp': helpers.try_int(value), 'multirow': False}
-                for et in itervalues(ProviderFailTypes.names):
+                for et in ProviderFailTypes.names.values():
                     default[et] = b_d.copy()
                 fail_dict.setdefault(date_time, default)[ProviderFailTypes.names[e.fail_type]]['count'] = 1
             else:
@@ -128,28 +128,28 @@ class ProviderFailList(object):
                     fail_dict[date_time][ProviderFailTypes.names[e.fail_type]].setdefault('code', {})[e.code] = 1
 
         row_count = {}
-        for (k, v) in iteritems(fail_dict):
+        for (k, v) in fail_dict.items():
             row_count.setdefault(v.get('date'), 0)
             if v.get('date') in row_count:
                 row_count[v.get('date')] += 1
-        for (k, v) in iteritems(fail_dict):
+        for (k, v) in fail_dict.items():
             if 1 < row_count.get(v.get('date')):
                 fail_dict[k]['multirow'] = True
 
-        fail_list = sorted([fail_dict[k] for k in iterkeys(fail_dict)], key=lambda y: y.get('date_time'), reverse=True)
+        fail_list = sorted([fail_dict[k] for k in fail_dict.keys()], key=lambda y: y.get('date_time'), reverse=True)
 
         totals = {}
         for fail_date in set([fail.get('date') for fail in fail_list]):
             daytotals = {}
-            for et in itervalues(ProviderFailTypes.names):
+            for et in ProviderFailTypes.names.values():
                 daytotals.update({et: sum([x.get(et).get('count') for x in fail_list if fail_date == x.get('date')])})
             totals.update({fail_date: daytotals})
-        for (fail_date, total) in iteritems(totals):
+        for (fail_date, total) in totals.items():
             for i, item in enumerate(fail_list):
                 if fail_date == item.get('date'):
                     if item.get('multirow'):
                         fail_list[i:i] = [item.copy()]
-                        for et in itervalues(ProviderFailTypes.names):
+                        for et in ProviderFailTypes.names.values():
                             fail_list[i][et] = {'count': total[et]}
                             if et == ProviderFailTypes.names[ProviderFailTypes.http]:
                                 fail_list[i][et]['code'] = {}
@@ -164,53 +164,54 @@ class ProviderFailList(object):
             with self.lock:
                 self.dirty = True
                 self._fails.append(fail)
-                logger.debug('Adding fail.%s for %s' % (ProviderFailTypes.names.get(
-                    fail.fail_type, ProviderFailTypes.names[ProviderFailTypes.other]), self.provider_name()))
+                fail_type = ProviderFailTypes.names.get(
+                    fail.fail_type, ProviderFailTypes.names[ProviderFailTypes.other])
+                logger.debug(f'Adding fail.{fail_type} for {self.provider_name()}')
             self.save_list()
 
     def save_list(self):
         if self.dirty:
             self.clear_old()
             with self.lock:
-                my_db = db.DBConnection('cache.db')
-                cl = []
+                sql_l = []
                 for f in self._fails:
                     if isinstance(f.fail_time, datetime.datetime):
                         value = SGDatetime.timestamp_near(f.fail_time)
                     else:
                         value = SGDatetime.timestamp_far(f.fail_time)
-                    cl.append(['INSERT OR IGNORE INTO provider_fails (prov_name, fail_type, fail_code, fail_time) '
-                               'VALUES (?,?,?,?)', [self.provider_name(), f.fail_type, f.code, value]])
+                    sql_l.append(['INSERT OR IGNORE INTO provider_fails (prov_name, fail_type, fail_code, fail_time) '
+                                  'VALUES (?,?,?,?)', [self.provider_name(), f.fail_type, f.code, value]])
                 self.dirty = False
-                if cl:
-                    my_db.mass_action(cl)
+                if sql_l:
+                    with db.DBConnection('cache.db') as sg_db:
+                        sg_db.mass_action(sql_l)
             self.last_save = datetime.datetime.now()
 
     def load_list(self):
         with self.lock:
             try:
-                my_db = db.DBConnection('cache.db')
-                if my_db.has_table('provider_fails'):
-                    results = my_db.select('SELECT * FROM provider_fails WHERE prov_name = ?', [self.provider_name()])
-                    self._fails = []
-                    for r in results:
-                        try:
-                            self._fails.append(ProviderFail(
-                                fail_type=helpers.try_int(r['fail_type']), code=helpers.try_int(r['fail_code']),
-                                fail_time=datetime.datetime.fromtimestamp(helpers.try_int(r['fail_time']))))
-                        except (BaseException, Exception):
-                            continue
+                with db.DBConnection('cache.db') as sg_db:
+                    if sg_db.has_table('provider_fails'):
+                        results = sg_db.select('SELECT * FROM provider_fails WHERE prov_name = ?', [self.provider_name()])
+                        self._fails = []
+                        for r in results:
+                            try:
+                                self._fails.append(ProviderFail(
+                                    fail_type=helpers.try_int(r['fail_type']), code=helpers.try_int(r['fail_code']),
+                                    fail_time=datetime.datetime.fromtimestamp(helpers.try_int(r['fail_time']))))
+                            except (BaseException, Exception):
+                                continue
             except (BaseException, Exception):
                 pass
 
     def clear_old(self):
         with self.lock:
             try:
-                my_db = db.DBConnection('cache.db')
-                if my_db.has_table('provider_fails'):
-                    # noinspection PyCallByClass,PyTypeChecker
-                    time_limit = SGDatetime.timestamp_near(td=datetime.timedelta(days=28))
-                    my_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
+                with db.DBConnection('cache.db') as sg_db:
+                    if sg_db.has_table('provider_fails'):
+                        # noinspection PyCallByClass,PyTypeChecker
+                        time_limit = SGDatetime.timestamp_near(td=datetime.timedelta(days=28))
+                        sg_db.action('DELETE FROM provider_fails WHERE fail_time < ?', [time_limit])
             except (BaseException, Exception):
                 pass
 
@@ -290,34 +291,34 @@ class GenericProvider(object):
 
     def _load_fail_values(self):
         if hasattr(sickgear, 'DATA_DIR'):
-            my_db = db.DBConnection('cache.db')
-            if my_db.has_table('provider_fails_count'):
-                r = my_db.select('SELECT * FROM provider_fails_count WHERE prov_name = ?', [self.get_id()])
-                if r:
-                    self._failure_count = helpers.try_int(r[0]['failure_count'], 0)
-                    if r[0]['failure_time']:
-                        self._failure_time = datetime.datetime.fromtimestamp(r[0]['failure_time'])
-                    else:
-                        self._failure_time = None
-                    self._tmr_limit_count = helpers.try_int(r[0]['tmr_limit_count'], 0)
-                    if r[0]['tmr_limit_time']:
-                        self._tmr_limit_time = datetime.datetime.fromtimestamp(r[0]['tmr_limit_time'])
-                    else:
-                        self._tmr_limit_time = None
-                    if r[0]['tmr_limit_wait']:
-                        self._tmr_limit_wait = datetime.timedelta(seconds=helpers.try_int(r[0]['tmr_limit_wait'], 0))
-                    else:
-                        self._tmr_limit_wait = None
-                self._last_fail_type = self.last_fail
+            with db.DBConnection('cache.db') as sg_db:
+                if sg_db.has_table('provider_fails_count'):
+                    r = sg_db.select('SELECT * FROM provider_fails_count WHERE prov_name = ?', [self.get_id()])
+                    if r:
+                        self._failure_count = helpers.try_int(r[0]['failure_count'], 0)
+                        if r[0]['failure_time']:
+                            self._failure_time = datetime.datetime.fromtimestamp(r[0]['failure_time'])
+                        else:
+                            self._failure_time = None
+                        self._tmr_limit_count = helpers.try_int(r[0]['tmr_limit_count'], 0)
+                        if r[0]['tmr_limit_time']:
+                            self._tmr_limit_time = datetime.datetime.fromtimestamp(r[0]['tmr_limit_time'])
+                        else:
+                            self._tmr_limit_time = None
+                        if r[0]['tmr_limit_wait']:
+                            self._tmr_limit_wait = datetime.timedelta(seconds=helpers.try_int(r[0]['tmr_limit_wait'], 0))
+                        else:
+                            self._tmr_limit_wait = None
+                    self._last_fail_type = self.last_fail
 
     def _save_fail_value(self, field, value):
-        my_db = db.DBConnection('cache.db')
-        if my_db.has_table('provider_fails_count'):
-            r = my_db.action('UPDATE provider_fails_count SET %s = ? WHERE prov_name = ?' % field,
-                             [value, self.get_id()])
-            if 0 == r.rowcount:
-                my_db.action('REPLACE INTO provider_fails_count (prov_name, %s) VALUES (?,?)' % field,
-                             [self.get_id(), value])
+        with db.DBConnection('cache.db') as sg_db:
+            if sg_db.has_table('provider_fails_count'):
+                r = sg_db.action(f'UPDATE provider_fails_count SET {field} = ? WHERE prov_name = ?',
+                                 [value, self.get_id()])
+                if 0 == r.rowcount:
+                    sg_db.action(f'REPLACE INTO provider_fails_count (prov_name, {field}) VALUES (?,?)',
+                                 [self.get_id(), value])
 
     @property
     def last_fail(self):
@@ -511,7 +512,7 @@ class GenericProvider(object):
             if time_left > datetime.timedelta(seconds=0):
                 if log_warning:
                     # Ensure provider name output (e.g. when displaying config/provs) instead of e.g. thread "Tornado"
-                    prepend = ('[%s] :: ' % self.name, '')[any(x.name in threading.current_thread().name
+                    prepend = (f'[{self.name}] :: ', '')[any(x.name in threading.current_thread().name
                                                                for x in sickgear.providers.sorted_sources())]
                     logger.warning(f'{prepend}Too many requests reached at {self.fmt_delta(self.tmr_limit_time)},'
                                    f' waiting for {self.fmt_delta(time_left)}')
@@ -525,9 +526,11 @@ class GenericProvider(object):
             if self.is_waiting():
                 if log_warning:
                     time_left = self.wait_time() - self.fail_newest_delta()
-                    logger.warning('Failed %s times, skipping provider for %s, last failure at %s with fail type: %s' % (
-                        self.failure_count, self.fmt_delta(time_left), self.fmt_delta(self.failure_time),
-                        ProviderFailTypes.names.get(self.last_fail, ProviderFailTypes.names[ProviderFailTypes.other])))
+                    fail_type = ProviderFailTypes.names.get(
+                        self.last_fail, ProviderFailTypes.names[ProviderFailTypes.other])
+                    logger.warning(
+                        f'Failed {self.failure_count} times, skipping provider for {self.fmt_delta(time_left)},'
+                        f' last failure at {self.fmt_delta(self.failure_time)} with fail type: {fail_type}')
                 return True
         return False
 
@@ -542,7 +545,7 @@ class GenericProvider(object):
             self._last_fail_type = fail_type
             self.fails.add_fail(*args, **kwargs)
         else:
-            logger.debug('%s: Not logging same failure within 3 seconds' % self.name)
+            logger.debug(f'{self.name}: Not logging same failure within 3 seconds')
 
     def get_url(self, url, skip_auth=False, use_tmr_limit=True, use_failure_counter=True, *args, **kwargs):
         # type: (AnyStr, bool, bool, bool, Any, Any) -> Optional[AnyStr, Dict]
@@ -571,9 +574,9 @@ class GenericProvider(object):
         kwargs['failure_monitor'] = False
         kwargs['exclude_no_data'] = False
         sickgear.MEMCACHE.setdefault('cookies', {})
-        for k, v in iteritems(dict(
+        for k, v in dict(
                 headers=self.headers, hooks=dict(response=self.cb_response),
-                url_solver=sickgear.FLARESOLVERR_HOST, memcache_cookies=sickgear.MEMCACHE['cookies'])):
+                url_solver=sickgear.FLARESOLVERR_HOST, memcache_cookies=sickgear.MEMCACHE['cookies']).items():
             kwargs.setdefault(k, v)
         if 'nzbs.in' not in url:  # this provider returns 503's 3 out of 4 requests with the persistent session system
             kwargs.setdefault('session', self.session)
@@ -590,7 +593,7 @@ class GenericProvider(object):
             if data and not isinstance(data, tuple) \
                     or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:
-                    logger.debug('Unblocking provider: %s' % self.get_id())
+                    logger.debug(f'Unblocking provider: {self.get_id()}')
                 self.failure_count = 0
                 self.failure_time = None
             else:
@@ -636,10 +639,10 @@ class GenericProvider(object):
         if self.should_skip(log_warning=False):
             post = []
             if post_data:
-                post += [' .. Post params: [%s]' % '&'.join([post_data])]
+                post += [f' .. Post params: [{post_data}]']
             if post_json:
-                post += [' .. Json params: [%s]' % '&'.join([post_json])]
-            logger.warning('Failure URL: %s%s' % (url, ''.join(post)))
+                post += [f' .. Json params: [{post_json}]']
+            logger.warning(f'Failure URL: {url}{"".join(post)}')
 
     def get_id(self):
         # type: (...) -> AnyStr
@@ -661,11 +664,11 @@ class GenericProvider(object):
         :param default_name:
         :return:
         """
-        for name in ['%s.%s' % (self.get_id(), image_ext) for image_ext in ['png', 'gif', 'jpg']]:
+        for name in [f'{self.get_id()}.{image_ext}' for image_ext in ['png', 'gif', 'jpg']]:
             if os.path.isfile(os.path.join(sickgear.PROG_DIR, 'gui', sickgear.GUI_NAME, 'images', 'providers', name)):
                 return name
 
-        return '%s.png' % ('newznab', default_name[0])[any(default_name)]
+        return f'{("newznab", default_name[0])[any(default_name)]}.png'
 
     def _authorised(self):
         # type: (...) -> bool
@@ -718,7 +721,6 @@ class GenericProvider(object):
             (sickgear.PLEX_PASSWORD, 'plex_password'), (sickgear.XBMC_PASSWORD, 'xbmc_password'),
             (sickgear.EMAIL_PASSWORD, 'email_password'), (sickgear.ANIDB_PASSWORD, 'anidb_password'),
             (sickgear.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
-            (sickgear.GITTER_ACCESS_TOKEN, 'gitter_access_token'),
             (('', sickgear.GROWL_HOST[:sickgear.GROWL_HOST.find('@')])['@' in sickgear.GROWL_HOST], 'growl_host'),
             (sickgear.PUSHBULLET_ACCESS_TOKEN, 'pushbullet_access_token'),
             (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'),
@@ -726,16 +728,9 @@ class GenericProvider(object):
             (sickgear.PUSHALOT_AUTHORIZATIONTOKEN, 'pushalot_authorizationtoken'),
             (sickgear.SLACK_ACCESS_TOKEN, 'slack_access_token'),
             (sickgear.TELEGRAM_ACCESS_TOKEN, 'telegram_access_token'),
-        ] + [(_k[1], 'sg_apikey_%s' % _k[0]) for _k in sickgear.API_KEYS if _k[1]] +\
+        ] + [(_k[1], f'sg_apikey_{_k[0]}') for _k in sickgear.API_KEYS if _k[1]] +\
             ([], [(sickgear.SUBTITLES_SERVICES_AUTH[0][1],
-                   'opensubs_%s' % sickgear.SUBTITLES_SERVICES_AUTH[0][0])])[any(sickgear.SUBTITLES_SERVICES_AUTH)] +\
-            [(sickgear.TRAKT_CLIENT_SECRET, 'trakt_client_secret')] +\
-            [(_t, 'trakt_tk_%s' % _n) for (_t, _n) in [
-                (getattr(x, 'token', ''), getattr(x, 'name', ''))
-                for x in sickgear.TRAKT_ACCOUNTS.values()] if _t] +\
-            [(_t, 'trakt_rt_%s' % _n) for (_t, _n) in [
-                (getattr(x, 'refresh_token', ''), getattr(x, 'name', ''))
-                for x in sickgear.TRAKT_ACCOUNTS.values()] if _t]:
+                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)]:
             if not cur_auth[0] or 4 > len(cur_auth[0]):
                 continue
             if cur_auth[0] not in dedupe.keys():
@@ -822,7 +817,7 @@ class GenericProvider(object):
 
                 if not btih or not re.search('(?i)[0-9a-f]{32,40}', btih):
                     assert not result.url.startswith('http')
-                    logger.error('Unable to extract torrent hash from link: ' + ex(result.url))
+                    logger.error(f'Unable to extract torrent hash from link: {ex(result.url)}')
                     return False
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
@@ -877,7 +872,7 @@ class GenericProvider(object):
 
         if not saved and 'magnet' == link_type:
             logger.debug('All torrent cache servers failed to return a downloadable result')
-            final_file = os.path.join(final_dir, '%s.%s' % (helpers.sanitize_filename(result.name), link_type))
+            final_file = os.path.join(final_dir, f'{helpers.sanitize_filename(result.name)}.{link_type}')
             try:
                 with open(final_file, 'wb') as fp:
                     fp.write(decode_bytes(result.url))
@@ -986,7 +981,7 @@ class GenericProvider(object):
         return title, url
 
     def _link(self, url, url_tmpl=None, url_quote=None):
-        url = '%s' % url  # ensure string type
+        url = f'{url}'  # ensure string type
         if url and not re.match('(?i)magnet:', url):
             url = url.strip().replace('&amp;', '&')
         if not url:
@@ -1007,9 +1002,9 @@ class GenericProvider(object):
         :return: dict column indices or None for leech, seeds, and size
         """
         results = {}
-        rc = dict([(k, re.compile('(?i)' + r)) for (k, r) in itertools.chain(iteritems(
-            {'seed': r'(?:seed|s/l)', 'leech': r'(?:leech|peers)', 'size': r'(?:size)'}),
-            iteritems(({}, custom_match)[any([custom_match])]))])
+        rc = dict([(k, re.compile(f'(?i){r}')) for (k, r) in itertools.chain(
+            {'seed': r'(?:seed|s/l)', 'leech': r'(?:leech|peers)', 'size': r'(?:size)'}.items(),
+            ({}, custom_match)[any([custom_match])].items())])
         table = table_row.find_parent('table')
         header_row = table.tr or table.thead.tr or table.tbody.tr
         for y in [x for x in header_row(True) if x.attrs.get('class')]:
@@ -1019,12 +1014,12 @@ class GenericProvider(object):
 
         headers = [re.sub(
             r'\s+', '',
-            ((any([cell.get_text()]) and any(rc[x].search(cell.get_text()) for x in iterkeys(rc)) and cell.get_text())
-             or (cell.attrs.get('id') and any(rc[x].search(cell['id']) for x in iterkeys(rc)) and cell['id'])
-             or (cell.attrs.get('title') and any(rc[x].search(cell['title']) for x in iterkeys(rc)) and cell['title'])
+            ((any([cell.get_text()]) and any(rc[x].search(cell.get_text()) for x in rc.keys()) and cell.get_text())
+             or (cell.attrs.get('id') and any(rc[x].search(cell['id']) for x in rc.keys()) and cell['id'])
+             or (cell.attrs.get('title') and any(rc[x].search(cell['title']) for x in rc.keys()) and cell['title'])
              or next(iter(set(filter(lambda rz: any([rz]), [
                 next(iter(set(filter(lambda ry: any([ry]), [
-                    cell.find(tag, **p) for p in [{attr: rc[x]} for x in iterkeys(rc)]]))), {}).get(attr)
+                    cell.find(tag, **p) for p in [{attr: rc[x]} for x in rc.keys()]]))), {}).get(attr)
                 for (tag, attr) in [
                     ('img', 'title'), ('img', 'src'), ('i', 'title'), ('i', 'class'),
                     ('abbr', 'title'), ('a', 'title'), ('a', 'href')] + (custom_tags or [])]))), '')
@@ -1038,13 +1033,13 @@ class GenericProvider(object):
             for i, width in enumerate(colspans):
                 all_headers += [headers[i]] + ([''] * (width - 1))
 
-        for k, r in iteritems(rc):
+        for k, r in rc.items():
             if k not in results:
                 for name in filter(lambda v: any([v]) and r.search(v), all_headers[::-1]):
                     results[k] = all_headers.index(name) - len(all_headers)
                     break
 
-        for missing in set(iterkeys(rc)) - set(iterkeys(results)):
+        for missing in set(rc.keys()) - set(results.keys()):
             results[missing] = None
 
         return results
@@ -1145,7 +1140,8 @@ class GenericProvider(object):
                 if cur_param in search_done:
                     continue
                 search_done += [cur_param]
-                item_list += self._search_provider(cur_param, search_mode=search_mode, epcount=len(ep_obj_list))
+                item_list += self._search_provider(
+                    cur_param, search_mode=search_mode, epcount=len(ep_obj_list), ids=show_obj.ids)
                 if self.should_skip():
                     break
 
@@ -1189,11 +1185,11 @@ class GenericProvider(object):
                     else:
                         items[quality].append(item)
 
-            item_list = list(itertools.chain(*[v for (k, v) in sorted(iteritems(items), reverse=True)]))
+            item_list = list(itertools.chain(*[v for (k, v) in sorted(items.items(), reverse=True)]))
             item_list += items_unknown if items_unknown else []
 
         # filter results
-        cl = []
+        sql_l = []
         for item in item_list:
             (title, url) = self._title_and_url(item)
 
@@ -1283,7 +1279,7 @@ class GenericProvider(object):
                 logger.debug(f'Adding item from search to cache: {title}')
                 ci = self.cache.add_cache_entry(title, url, parse_result=parse_result)
                 if None is not ci:
-                    cl.append(ci)
+                    sql_l.append(ci)
                 continue
 
             # make sure we want the episode
@@ -1308,7 +1304,7 @@ class GenericProvider(object):
             for cur_ep_num in episode_numbers:
                 ep_obj_results.append(parsed_show_obj.get_episode(season_number, cur_ep_num))
 
-            result = self.get_result(ep_obj_results, url)
+            result = self.get_result(ep_obj_results, url)  # type: Union[NZBSearchResult, TorrentSearchResult]
             if None is result:
                 continue
             result.show_obj = parsed_show_obj
@@ -1343,9 +1339,9 @@ class GenericProvider(object):
                 results[ep_num].append(result)
 
         # check if we have items to add to cache
-        if 0 < len(cl):
-            my_db = self.cache.get_db()
-            my_db.mass_action(cl)
+        if sql_l:
+            with self.cache.get_db() as sg_db:
+                sg_db.mass_action(sql_l)
 
         return results
 
@@ -1388,8 +1384,8 @@ class GenericProvider(object):
         :param count: count of successfully processed items
         :param url: source url of item(s)
         """
-        stats = list(map(lambda arg: ('_reject_%s' % arg[0], arg[1]),
-                         filter(lambda _arg: all([getattr(self, '_reject_%s' % _arg[0], None)]),
+        stats = list(map(lambda arg: (f'_reject_{arg[0]}', arg[1]),
+                         filter(lambda _arg: all([getattr(self, f'_reject_{_arg[0]}', None)]),
                                 (('seed', '%s <min seeders'), ('leech', '%s <min leechers'),
                                 ('notfree', '%s not freeleech'), ('unverified', '%s unverified'),
                                 ('container', '%s unwanted containers')))))
@@ -1398,8 +1394,8 @@ class GenericProvider(object):
             setattr(self, attr, None)
 
         if not self.should_skip():
-            str1, thing, str3 = (('', '%s item' % mode.lower(), ''), (' usable', 'proper', ' found'))['Propers' == mode]
-            logger.log(('%s %s in response%s from %s' % (('No' + str1, count)[0 < count], (
+            str1, thing, str3 = (('', f'{mode.lower()} item', ''), (' usable', 'proper', ' found'))['Propers' == mode]
+            logger.log(('%s %s in response%s from %s' % ((f'No{str1}', count)[0 < count], (
                 '%s%s%s%s' % (('', 'freeleech ')[getattr(self, 'freeleech', False)], thing, maybe_plural(count), str3)),
                 ('', ' (rejects: %s)' % rejects)[bool(rejects)], re.sub(r'(\s)\s+', r'\1', url))).replace('%%', '%'))
 
@@ -1416,7 +1412,7 @@ class GenericProvider(object):
                 if callable(ui_string_method):
                     pid = self.get_id()
                     # `cookie_str_only` prevents circular call via _valid_home() in ui_string_method
-                    key = ('%s_digest' % pid, 'cookie_str_only')[
+                    key = (f'{pid}_digest', 'cookie_str_only')[
                         pid in ('ptfiles', 'scenetime', 'torrentday', 'torrentleech')]
                     reqd = 'cf_clearance'
                     if reqd in ui_string_method(key) and reqd not in cookies:
@@ -1445,7 +1441,7 @@ class GenericProvider(object):
     def has_all_cookies(self, cookies=None, pre=''):
 
         cookies = cookies and ([cookies], cookies)[isinstance(cookies, list)] or ['uid', 'pass']
-        return all(['%s%s' % (pre, item) in self.session.cookies for item in cookies])
+        return all([f'{pre}{item}' in self.session.cookies for item in cookies])
 
     def _categories_string(self, mode='Cache', template='c%s=1', delimiter='&'):
 
@@ -1522,7 +1518,7 @@ class NZBProvider(GenericProvider):
             return has_key
         if None is has_key:
             raise AuthException('%s for %s is empty in Media Providers/Options'
-                                % ('API key' + ('', ' and/or Username')[hasattr(self, 'username')], self.name))
+                                % (f'API key{("", " and/or Username")[hasattr(self, "username")]}', self.name))
 
         return GenericProvider._check_auth(self)
 
@@ -1556,12 +1552,12 @@ class NZBProvider(GenericProvider):
         if shows:
             search_terms += ['.proper.', '.repack.', '.real.']
             regex += ['proper|repack', Quality.real_check]
-            proper_check = re.compile(r'(?i)(\b%s\b)' % '|'.join(regex))
+            proper_check = re.compile(rf'(?i)(\b{"|".join(regex)}\b)')
         if anime:
             terms = 'v2|v3|v4|v5|v6|v7|v8|v9'
             search_terms += [terms]
             regex += [terms]
-            proper_check = re.compile(r'(?i)(%s)' % '|'.join(regex))
+            proper_check = re.compile(rf'(?i)({"|".join(regex)})')
 
         urls = []
         while index < len(search_terms):
@@ -1696,7 +1692,7 @@ class TorrentProvider(GenericProvider):
                 (all([container]), 'container'),
         )):
             reject = True
-            attr = '_reject_%s' % attr
+            attr = f'_reject_{attr}'
             rejected = getattr(self, attr, None)
             setattr(self, attr, 1 if not rejected else 1 + rejected)
 
@@ -1763,9 +1759,9 @@ class TorrentProvider(GenericProvider):
         sp_detail = ([sp_detail], sp_detail)[isinstance(sp_detail, list)]
         detail = ({}, {'Season_only': sp_detail})[detail_only
                                                   and not self.show_obj.is_sports and not self.show_obj.is_anime]
-        return [dict(itertools.chain(iteritems({'Season': self._build_search_strings(sp_detail, scene, prefix,
-                                                                                     season=season)}),
-                                     iteritems(detail)))]
+        return [dict(itertools.chain({'Season': self._build_search_strings(sp_detail, scene, prefix,
+                                                                           season=season)}.items(),
+                                     detail.items()))]
 
     def _episode_strings(self,
                          ep_obj,  # type: TVEpisode
@@ -1798,7 +1794,7 @@ class TorrentProvider(GenericProvider):
                 if 'date_detail' not in kwargs else kwargs['date_detail'](ep_obj.airdate)
             if show_obj.is_sports:
                 month = ep_obj.airdate.strftime('%b')
-                ep_detail = (ep_detail + [month], ['%s|%s' % (x, month) for x in ep_detail])[date_or]
+                ep_detail = (ep_detail + [month], [f'{x}|{month}' for x in ep_detail])[date_or]
         elif show_obj.is_anime:
             ep_detail = ep_obj.scene_absolute_number \
                 if 'ep_detail_anime' not in kwargs else kwargs['ep_detail_anime'](ep_obj.scene_absolute_number)
@@ -1810,9 +1806,9 @@ class TorrentProvider(GenericProvider):
                 ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)] + ['%d' % ep_dict['episodenumber']]
         ep_detail = ([ep_detail], ep_detail)[isinstance(ep_detail, list)]
         detail = ({}, {'Episode_only': ep_detail})[detail_only and not show_obj.is_sports and not show_obj.is_anime]
-        return [dict(itertools.chain(iteritems({'Episode': self._build_search_strings(ep_detail, scene, prefix,
-                                                                                      season=season)}),
-                                     iteritems(detail)))]
+        return [dict(itertools.chain({'Episode': self._build_search_strings(ep_detail, scene, prefix,
+                                                                            season=season)}.items(),
+                                     detail.items()))]
 
     @staticmethod
     def _ep_dict(ep_obj):
@@ -1844,7 +1840,7 @@ class TorrentProvider(GenericProvider):
         for name in get_show_names_all_possible(self.show_obj, scenify=process_name and getattr(self, 'scene', True),
                                                 season=season):
             for detail in ep_detail:
-                search_params += [crop.sub(r'\1', '%s %s%s' % (name, x, detail)) for x in prefix]
+                search_params += [crop.sub(r'\1', f'{name} {x}{detail}') for x in prefix]
         return search_params
 
     @staticmethod
@@ -1882,7 +1878,7 @@ class TorrentProvider(GenericProvider):
 
         seen_attr = 'PROVIDER_SEEN'
         if obf and self.__module__ not in getattr(sickgear, seen_attr, []):
-            file_path = '%s.py' % os.path.join(sickgear.PROG_DIR, *self.__module__.split('.'))
+            file_path = f'{os.path.join(sickgear.PROG_DIR, *self.__module__.split("."))}.py'
             if os.path.isfile(file_path):
                 with open(file_path, 'rb') as file_hd:
                     c = bytearray(codecs.encode(decode_bytes(str(zlib.crc32(file_hd.read()))), 'hex_codec'))
@@ -1891,7 +1887,7 @@ class TorrentProvider(GenericProvider):
                     if self.__module__.endswith(self._decode(bytearray(b64decode(x)), c)):
                         for ux in obf[x]:
                             urls += [self._decode(bytearray(
-                                b64decode(''.join([re.sub(r'[\s%s]+' % ux[0], '', x[::-1]) for x in ux[1:]]))), c)]
+                                b64decode(''.join([re.sub(rf'[\s{ux[0]}]+', '', x[::-1]) for x in ux[1:]]))), c)]
                         url_exclude = url_exclude or []
                         if url_exclude:
                             urls = urls[1:]
@@ -1940,7 +1936,7 @@ class TorrentProvider(GenericProvider):
         if not url_list and getattr(self, 'url_edit', None) or not any(filter(lambda u: 10 < len(u), url_list)):
             return None
 
-        url_list = list(map(lambda u: '%s/' % u.rstrip('/'), url_list))
+        url_list = list(map(lambda u: f'{u.rstrip("/")}/', url_list))
         last_url, expire = sickgear.PROVIDER_HOMES.get(self.get_id(), ('', None))
         url_drop = (url_exclude or []) + getattr(self, 'url_drop', [])
         if url_drop and any(url in last_url for url in url_drop):  # deprecate url
@@ -1963,10 +1959,10 @@ class TorrentProvider(GenericProvider):
                 return None
             failure_count += self.failure_count
             self.failure_count = 0
-            cur_url = cur_url.replace('{ts}', '%s.' % str(time.time())[2:6])
+            cur_url = cur_url.replace('{ts}', f'{str(time.time())[2:6]}.')
             if 10 < len(cur_url) and ((expire and (expire > int(time.time()))) or
                                       self._has_signature(self.get_url(cur_url, skip_auth=True))):
-                for k, v in iteritems(getattr(self, 'url_tmpl', {})):
+                for k, v in getattr(self, 'url_tmpl', {}).items():
                     self.urls[k] = v % {'home': cur_url, 'vars': getattr(self, 'url_vars', {}).get(k, '')}
 
                 if last_url != cur_url or (expire and not (expire > int(time.time()))):
@@ -1982,9 +1978,9 @@ class TorrentProvider(GenericProvider):
         if self.should_skip():
             return None
 
-        logger.log('Failed to identify a "%s" page with %s %s (local network issue, site down, or ISP blocked) ' %
-                   (self.name, len(url_list), ('URL', 'different URLs')[1 < len(url_list)]) +
-                   (attempt_fetch and ('Suggest; 1) Disable "%s" 2) Use a proxy/VPN' % self.get_id()) or ''),
+        logger.log(f'Failed to identify a "{self.name}" page with {len(url_list)}'
+                   f' {("URL", "different URLs")[1 < len(url_list)]} (local network issue, site down, or ISP blocked) '
+                   + (attempt_fetch and (f'Suggest; 1) Disable "{self.get_id()}" 2) Use a proxy/VPN') or ''),
                    (logger.WARNING, logger.ERROR)[self.enabled])
         if not hasattr(self, 'url_api'):
             self.urls = {}
@@ -1995,9 +1991,9 @@ class TorrentProvider(GenericProvider):
     def is_valid_mod(self, url):
         # type: (AnyStr) -> bool
         parsed, s, is_valid = urlparse(url), 70000700, True
-        if 2012691328 == s + zlib.crc32(decode_bytes(('.%s' % parsed.netloc).split('.')[-2])):
+        if 2012691328 == s + zlib.crc32(decode_bytes(f'.{parsed.netloc}'.split('.')[-2])):
             is_valid = False
-            file_name = '%s.py' % os.path.join(sickgear.PROG_DIR, *self.__module__.split('.'))
+            file_name = f'{os.path.join(sickgear.PROG_DIR, *self.__module__.split("."))}.py'
             if os.path.isfile(file_name):
                 with open(file_name, 'rb') as file_hd:
                     is_valid = s + zlib.crc32(file_hd.read()) in (1661931498, 472149389)
@@ -2028,7 +2024,7 @@ class TorrentProvider(GenericProvider):
                 if not self._check_auth():
                     return False
             except AuthException as e:
-                logger.error('%s' % ex(e))
+                logger.error(f'{ex(e)}')
                 return False
 
         if isinstance(url, type([])):
@@ -2084,10 +2080,10 @@ class TorrentProvider(GenericProvider):
                 post_params = dict(username=self.username, password=self.password)
             elif isinstance(post_params, type({})):
                 # noinspection PyUnresolvedReferences
-                if self.username not in itervalues(post_params):
+                if self.username not in post_params.values():
                     # noinspection PyUnresolvedReferences
                     post_params['username'] = self.username
-                if self.password not in itervalues(post_params):
+                if self.password not in post_params.values():
                     post_params[(passfield, 'password')[not passfield]] = self.password
 
         # noinspection PyTypeChecker
@@ -2138,7 +2134,7 @@ class TorrentProvider(GenericProvider):
         else:
             return not is_required and GenericProvider._check_auth(self)
 
-        raise AuthException('%s for %s is empty in Media Providers/Options' % (setting, self.name))
+        raise AuthException(f'{setting} for {self.name} is empty in Media Providers/Options')
 
     def find_propers(self, anime=False, **kwargs):
         # type: (bool, Any) -> List[classes.Proper]
@@ -2171,7 +2167,7 @@ class TorrentProvider(GenericProvider):
             if self.should_skip(log_warning=False):
                 break
 
-            proper_check = re.compile(r'(?i)%s' % clean_term.sub('', proper_term))
+            proper_check = re.compile(rf'(?i){clean_term.sub("", proper_term)}')
             for item in items:
                 if self.should_skip(log_warning=False):
                     break
@@ -2230,21 +2226,22 @@ class TorrentProvider(GenericProvider):
     def last_recent_search(self):
         if not self._last_recent_search:
             try:
-                my_db = db.DBConnection('cache.db')
-                res = my_db.select('SELECT' + ' "datetime" FROM "lastrecentsearch" WHERE "name"=?', [self.get_id()])
-                if res:
-                    self._last_recent_search = res[0]['datetime']
+                with db.DBConnection('cache.db') as sg_db:
+                    res = sg_db.select("SELECT 'datetime' FROM 'lastrecentsearch' WHERE 'name'=?",
+                                       [self.get_id()])
+                    if res:
+                        self._last_recent_search = res[0]['datetime']
             except (BaseException, Exception):
                 pass
         return self._last_recent_search
 
     @last_recent_search.setter
     def last_recent_search(self, value):
-        value = 0 if not value else re.sub('^(id-)+', r'\1', 'id-%s' % value)
+        value = 0 if not value else re.sub('^(id-)+', r'\1', f'id-{value}')
         try:
-            my_db = db.DBConnection('cache.db')
-            my_db.action('INSERT OR REPLACE INTO "lastrecentsearch" (name, datetime) VALUES (?,?)',
-                         [self.get_id(), value])
+            with db.DBConnection('cache.db') as sg_db:
+                sg_db.action("INSERT OR REPLACE INTO 'lastrecentsearch' (name, datetime) VALUES (?,?)",
+                             [self.get_id(), value])
         except (BaseException, Exception):
             pass
         self._last_recent_search = value

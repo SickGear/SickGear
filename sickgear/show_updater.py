@@ -24,7 +24,7 @@ from exceptions_helper import ex
 import sickgear
 from . import db, logger, network_timezones, properFinder, ui
 from .scheduler import Job
-from .config import backup_config
+from .config import backup_config, backup_btn_status
 
 # noinspection PyUnreachableCode
 if False:
@@ -76,6 +76,7 @@ class ShowUpdater(Job):
                     if isinstance(backup_success, tuple) and backup_success[0]:
                         # backup config.ini
                         backup_config()
+                        backup_btn_status()
                 except (BaseException, Exception):
                     logger.error('backup db error')
 
@@ -93,17 +94,11 @@ class ShowUpdater(Job):
                 logger.debug('error loading webdl_types')
 
             # update xem id lists
-            try:
-                sickgear.scene_exceptions.ReleaseMap().fetch_xem_ids()
-            except (BaseException, Exception):
-                logger.error('xem id list update error')
-                logger.error(traceback.format_exc())
-
             # update scene exceptions
             try:
-                sickgear.scene_exceptions.ReleaseMap().fetch_exceptions()
+                sickgear.update_release_mappings_scheduler.force_run()
             except (BaseException, Exception):
-                logger.error('scene exceptions update error')
+                logger.error('xem/exceptions id list update error')
                 logger.error(traceback.format_exc())
 
             # clear the data of unused providers
@@ -175,19 +170,19 @@ class ShowUpdater(Job):
 
             # last_update_date <= 90 days, sorted ASC because dates are ordinal
             from sickgear.tv import TVidProdid
-            my_db = db.DBConnection()
-            # noinspection SqlRedundantOrderingDirection
-            mass_sql_result = my_db.mass_action([
-                ['SELECT indexer || ? || indexer_id AS tvid_prodid'
-                 ' FROM tv_shows'
-                 ' WHERE last_update_indexer <= ?'
-                 ' AND last_update_indexer >= ?'
-                 ' ORDER BY last_update_indexer ASC LIMIT 10;',
-                 [TVidProdid.glue, stale_update_date, stale_update_date_max]],
-                ['SELECT indexer || ? || indexer_id AS tvid_prodid'
-                 ' FROM tv_shows'
-                 ' WHERE last_update_indexer < ?;',
-                 [TVidProdid.glue, stale_update_date_max]]])
+            with db.DBConnection() as sg_db:
+                # noinspection SqlRedundantOrderingDirection
+                mass_sql_result = sg_db.mass_action([
+                    ['SELECT indexer || ? || indexer_id AS tvid_prodid'
+                     ' FROM tv_shows'
+                     ' WHERE last_update_indexer <= ?'
+                     ' AND last_update_indexer >= ?'
+                     ' ORDER BY last_update_indexer ASC LIMIT 10;',
+                     [TVidProdid.glue, stale_update_date, stale_update_date_max]],
+                    ['SELECT indexer || ? || indexer_id AS tvid_prodid'
+                     ' FROM tv_shows'
+                     ' WHERE last_update_indexer < ?;',
+                     [TVidProdid.glue, stale_update_date_max]]])
 
             for sql_result in mass_sql_result:
                 for cur_result in sql_result:

@@ -21,8 +21,6 @@ import re
 from . import generic
 from ..helpers import anon_url, try_int
 
-from six import iteritems
-
 
 class TorrentLeechProvider(generic.TorrentProvider):
     def __init__(self):
@@ -31,8 +29,8 @@ class TorrentLeechProvider(generic.TorrentProvider):
         self.url_base = 'https://tlgetin.cc/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base,
-                     'browse': self.url_base + 'torrents/browse/list/categories/%(cats)s/%(x)s',
-                     'search': self.url_base + 'torrents/browse/list/categories/%(cats)s/%(x)s/query/%(query)s'}
+                     'browse': f'{self.url_base}torrents/browse/list/categories/%(cats)s/%(x)s',
+                     'search': f'{self.url_base}torrents/browse/list/categories/%(cats)s/%(x)s/query/%(query)s'}
 
         self.categories = {'shows': [26, 27, 32, 35], 'anime': [34]}
 
@@ -66,7 +64,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                     urls[-1] += [self.urls[('search', 'browse')['Cache' == mode]] % {
                         'cats': self._categories_string(mode, '', ','),
                         'query': search_string,
-                        'x': '%spage/%s' % (('facets/tags:FREELEECH/', '')[not self.freeleech], page)
+                        'x': f'{("facets/tags:FREELEECH/", "")[not self.freeleech]}page/{page}'
                     }]
             results += self._search_urls(mode, last_recent_search, urls)
             last_recent_search = ''
@@ -78,7 +76,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
         results = []
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(id=r'download.*?/([\d]+)')))
+        rc = dict((k, re.compile(f'(?i){v}')) for (k, v) in dict(id=r'download.*?/([\d]+)').items())
         lrs_found = False
         lrs_new = True
         for search_urls in urls:  # this intentionally iterates once to preserve indentation
@@ -124,7 +122,7 @@ class TorrentLeechProvider(generic.TorrentProvider):
                             download_url = None
                             if dl and dl_id:
                                 # noinspection PyUnresolvedReferences
-                                download_url = self._link('download/%s/%s' % (dl_id, dl))
+                                download_url = self._link(f'download/{dl_id}/{dl}')
                         except (BaseException, Exception):
                             continue
 

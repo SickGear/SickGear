@@ -5,7 +5,8 @@ __author__ = 'Prinz23'
 __version__ = '1.0'
 
 __all__ = ['TvMazeException', 'TvMazeError', 'TvMazeUserabort', 'TvMazeShownotfound',
-           'TvMazeSeasonnotfound', 'TvMazeEpisodenotfound', 'TvMazeAttributenotfound', 'TvMazeTokenexpired']
+           'TvMazeSeasonnotfound', 'TvMazeEpisodenotfound', 'TvMazeAttributenotfound', 'TvMazeTokenexpired',
+           'TvMazePersonNotFound']
 
 from lib.tvinfo_base.exceptions import *
 
@@ -56,5 +57,11 @@ class TvMazeAttributenotfound(BaseTVinfoAttributenotfound, TvMazeError):
 
 class TvMazeTokenexpired(BaseTVinfoAuthenticationerror, TvMazeError):
     """token expired or missing tvmaze.com
+    """
+    pass
+
+
+class TvMazePersonNotFound(BaseTVinfoPersonNotFound, TvMazeError):
+    """person id not found at tvmaze.com
     """
     pass

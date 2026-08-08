@@ -26,8 +26,6 @@ import exceptions_helper
 from exceptions_helper import ex
 from lxml_etree import etree
 
-from six import iteritems
-
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Optional, Tuple, Union
@@ -254,7 +252,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                          f'on {sickgear.TVInfoAPI(show_obj.tvid).name}, skipping it')
             raise e
         except BaseTVinfoError as e:
-            logger.error('%s is down, can\'t use its data to make the NFO' % sickgear.TVInfoAPI(show_obj.tvid).name)
+            logger.error(f'{sickgear.TVInfoAPI(show_obj.tvid).name} is down, can\'t use its data to make the NFO')
             raise e
 
         if not self._valid_show(show_info, show_obj):
@@ -276,79 +274,79 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
         SeriesName = etree.SubElement(tv_node, "SeriesName")
         if None is not getattr(show_info, 'seriesname', None):
-            SeriesName.text = '%s' % show_info['seriesname']
+            SeriesName.text = f'{show_info["seriesname"]}'
 
         Status = etree.SubElement(tv_node, "Status")
         if None is not getattr(show_info, 'status', None):
-            Status.text = '%s' % show_info['status']
+            Status.text = f'{show_info["status"]}'
 
         Network = etree.SubElement(tv_node, "Network")
         if None is not getattr(show_info, 'network', None):
-            Network.text = '%s' % show_info['network']
+            Network.text = f'{show_info["network"]}'
 
         Airs_Time = etree.SubElement(tv_node, "Airs_Time")
         if None is not getattr(show_info, 'airs_time', None):
-            Airs_Time.text = '%s' % show_info['airs_time']
+            Airs_Time.text = f'{show_info["airs_time"]}'
 
         Airs_DayOfWeek = etree.SubElement(tv_node, "Airs_DayOfWeek")
         if None is not getattr(show_info, 'airs_dayofweek', None):
-            Airs_DayOfWeek.text = '%s' % show_info['airs_dayofweek']
+            Airs_DayOfWeek.text = f'{show_info["airs_dayofweek"]}'
 
         FirstAired = etree.SubElement(tv_node, "FirstAired")
         if None is not getattr(show_info, 'firstaired', None):
-            FirstAired.text = '%s' % show_info['firstaired']
+            FirstAired.text = f'{show_info["firstaired"]}'
 
         ContentRating = etree.SubElement(tv_node, "ContentRating")
         MPAARating = etree.SubElement(tv_node, "MPAARating")
         certification = etree.SubElement(tv_node, "certification")
         if None is not getattr(show_info, 'contentrating', None):
-            ContentRating.text = '%s' % show_info['contentrating']
-            MPAARating.text = '%s' % show_info['contentrating']
-            certification.text = '%s' % show_info['contentrating']
+            ContentRating.text = f'{show_info["contentrating"]}'
+            MPAARating.text = f'{show_info["contentrating"]}'
+            certification.text = f'{show_info["contentrating"]}'
 
         MetadataType = etree.SubElement(tv_node, "Type")
         MetadataType.text = "Series"
 
         Overview = etree.SubElement(tv_node, "Overview")
         if None is not getattr(show_info, 'overview', None):
-            Overview.text = '%s' % show_info['overview']
+            Overview.text = f'{show_info["overview"]}'
 
         PremiereDate = etree.SubElement(tv_node, "PremiereDate")
         if None is not getattr(show_info, 'firstaired', None):
-            PremiereDate.text = '%s' % show_info['firstaired']
+            PremiereDate.text = f'{show_info["firstaired"]}'
 
         Rating = etree.SubElement(tv_node, "Rating")
         if None is not getattr(show_info, 'rating', None):
-            Rating.text = '%s' % show_info['rating']
+            Rating.text = f'{show_info["rating"]}'
 
         ProductionYear = etree.SubElement(tv_node, "ProductionYear")
         year_text = self.get_show_year(show_obj, show_info)
         if year_text:
-            ProductionYear.text = '%s' % year_text
+            ProductionYear.text = f'{year_text}'
 
         RunningTime = etree.SubElement(tv_node, "RunningTime")
         Runtime = etree.SubElement(tv_node, "Runtime")
         if None is not getattr(show_info, 'runtime', None):
-            RunningTime.text = '%s' % show_info['runtime']
-            Runtime.text = '%s' % show_info['runtime']
+            RunningTime.text = f'{show_info["runtime"]}'
+            Runtime.text = f'{show_info["runtime"]}'
 
         IMDB_ID = etree.SubElement(tv_node, "IMDB_ID")
         IMDB = etree.SubElement(tv_node, "IMDB")
         IMDbId = etree.SubElement(tv_node, "IMDbId")
         if None is not getattr(show_info, 'imdb_id', None):
-            IMDB_ID.text = '%s' % show_info['imdb_id']
-            IMDB.text = '%s' % show_info['imdb_id']
-            IMDbId.text = '%s' % show_info['imdb_id']
+            IMDB_ID.text = f'{show_info["imdb_id"]}'
+            IMDB.text = f'{show_info["imdb_id"]}'
+            IMDbId.text = f'{show_info["imdb_id"]}'
 
         Zap2ItId = etree.SubElement(tv_node, "Zap2ItId")
         if None is not getattr(show_info, 'zap2it_id', None):
-            Zap2ItId.text = '%s' % show_info['zap2it_id']
+            Zap2ItId.text = f'{show_info["zap2it_id"]}'
 
         Genres = etree.SubElement(tv_node, "Genres")
         for genre in show_info['genre'].split('|'):
             if genre:
                 cur_genre = etree.SubElement(Genres, "Genre")
-                cur_genre.text = '%s' % genre
+                cur_genre.text = f'{genre}'
 
         Genre = etree.SubElement(tv_node, "Genre")
         if None is not getattr(show_info, 'genre', None):
@@ -357,22 +355,22 @@ class MediaBrowserMetadata(generic.GenericMetadata):
         Studios = etree.SubElement(tv_node, "Studios")
         Studio = etree.SubElement(Studios, "Studio")
         if None is not getattr(show_info, 'network', None):
-            Studio.text = '%s' % show_info['network']
+            Studio.text = f'{show_info["network"]}'
 
         Persons = etree.SubElement(tv_node, 'Persons')
         for actor in getattr(show_info, 'actors', []):
             cur_actor = etree.SubElement(Persons, 'Person')
 
             cur_actor_name = etree.SubElement(cur_actor, 'Name')
-            cur_actor_name.text = '%s' % actor['person']['name']
+            cur_actor_name.text = f'{actor["person"]["name"]}'
 
             cur_actor_type = etree.SubElement(cur_actor, 'Type')
             cur_actor_type.text = 'Actor'
 
             cur_actor_role = etree.SubElement(cur_actor, 'Role')
-            cur_actor_role_text = '%s' % actor['character']['name']
+            cur_actor_role_text = f'{actor["character"]["name"]}'
             if cur_actor_role_text:
-                cur_actor_role.text = '%s' % cur_actor_role_text
+                cur_actor_role.text = f'{cur_actor_role_text}'
 
         sg_helpers.indent_xml(tv_node)
 
@@ -445,7 +443,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
                 EpisodeName = etree.SubElement(episode, "EpisodeName")
                 if None is not cur_ep_obj.name:
-                    EpisodeName.text = '%s' % cur_ep_obj.name
+                    EpisodeName.text = f'{cur_ep_obj.name}'
                 else:
                     EpisodeName.text = ""
 
@@ -462,7 +460,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 if not ep_obj.related_ep_obj:
                     absolute_number = etree.SubElement(episode, "absolute_number")
                     if None is not getattr(ep_info, 'absolute_number', None):
-                        absolute_number.text = '%s' % ep_info['absolute_number']
+                        absolute_number.text = f'{ep_info["absolute_number"]}'
 
                 FirstAired = etree.SubElement(episode, "FirstAired")
                 if cur_ep_obj.airdate != datetime.date.fromordinal(1):
@@ -475,22 +473,22 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
                 Overview = etree.SubElement(episode, "Overview")
                 if None is not cur_ep_obj.description:
-                    Overview.text = '%s' % cur_ep_obj.description
+                    Overview.text = f'{cur_ep_obj.description}'
                 else:
                     Overview.text = ""
 
                 if not ep_obj.related_ep_obj:
                     Rating = etree.SubElement(episode, "Rating")
                     if None is not getattr(ep_info, 'rating', None):
-                        Rating.text = '%s' % ep_info['rating']
+                        Rating.text = f'{ep_info["rating"]}'
 
                     IMDB_ID = etree.SubElement(episode, "IMDB_ID")
                     IMDB = etree.SubElement(episode, "IMDB")
                     IMDbId = etree.SubElement(episode, "IMDbId")
                     if None is not getattr(show_info, 'imdb_id', None):
-                        IMDB_ID.text = '%s' % show_info['imdb_id']
-                        IMDB.text = '%s' % show_info['imdb_id']
-                        IMDbId.text = '%s' % show_info['imdb_id']
+                        IMDB_ID.text = f'{show_info["imdb_id"]}'
+                        IMDB.text = f'{show_info["imdb_id"]}'
+                        IMDbId.text = f'{show_info["imdb_id"]}'
 
                 prodid = etree.SubElement(episode, "id")
                 prodid.text = str(cur_ep_obj.show_obj.prodid)
@@ -502,7 +500,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
                 Language = etree.SubElement(episode, "Language")
                 try:
-                    Language.text = '%s' % cur_ep_obj.show_obj.lang
+                    Language.text = f'{cur_ep_obj.show_obj.lang}'
                 except (BaseException, Exception):
                     Language.text = 'en'  # tvrage api doesn't provide language so we must assume a value here
 
@@ -512,7 +510,7 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 # note: renaming files after nfo generation will break this, tough luck
                 thumb_text = self.get_episode_thumb_path(ep_obj)
                 if thumb_text:
-                    thumb.text = '%s' % thumb_text
+                    thumb.text = f'{thumb_text}'
 
             else:
                 # append data from (if any) related episodes
@@ -520,15 +518,15 @@ class MediaBrowserMetadata(generic.GenericMetadata):
 
                 if cur_ep_obj.name:
                     if not EpisodeName.text:
-                        EpisodeName.text = '%s' % cur_ep_obj.name
+                        EpisodeName.text = f'{cur_ep_obj.name}'
                     else:
-                        EpisodeName.text = '%s, %s' % (EpisodeName.text, cur_ep_obj.name)
+                        EpisodeName.text = f'{EpisodeName.text}, {cur_ep_obj.name}'
 
                 if cur_ep_obj.description:
                     if not Overview.text:
-                        Overview.text = '%s' % cur_ep_obj.description
+                        Overview.text = f'{cur_ep_obj.description}'
                     else:
-                        Overview.text = '%s\r%s' % (Overview.text, cur_ep_obj.description)
+                        Overview.text = f'{Overview.text}\r{cur_ep_obj.description}'
 
             # collect all directors, guest stars and writers
             if None is not getattr(ep_info, 'director', None):
@@ -539,15 +537,15 @@ class MediaBrowserMetadata(generic.GenericMetadata):
                 persons_dict['Writer'] += [x.strip() for x in ep_info['writer'].split('|') if x]
 
         # fill in Persons section with collected directors, guest starts and writers
-        for person_type, names in iteritems(persons_dict):
+        for person_type, names in persons_dict.items():
             # remove doubles
             names = list(set(names))
             for cur_name in names:
                 Person = etree.SubElement(Persons, "Person")
                 cur_person_name = etree.SubElement(Person, "Name")
-                cur_person_name.text = '%s' % cur_name
+                cur_person_name.text = f'{cur_name}'
                 cur_person_type = etree.SubElement(Person, "Type")
-                cur_person_type.text = '%s' % person_type
+                cur_person_type.text = f'{person_type}'
 
         sg_helpers.indent_xml(rootNode)
         data = etree.ElementTree(rootNode)

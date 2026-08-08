@@ -29,8 +29,6 @@ from ..tv import TVEpisode
 
 from bs4_parser import BS4Parser
 
-from six import iteritems
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional
@@ -43,9 +41,9 @@ class FSTProvider(generic.NZBProvider):
 
         self.url_base = 'https://filesharingtalk.com/'  # type: AnyStr
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'cache': self.url_base + 'nzbs/tv/%s?sort=age&order=desc',
-                     'search_init': self.url_base + 'search.php?search_type=1#ads=15',
-                     'search': self.url_base + 'search.php?do=process'}  # type: Dict[AnyStr, AnyStr]
+                     'cache': f'{self.url_base}nzbs/tv/%s?sort=age&order=desc',
+                     'search_init': f'{self.url_base}search.php?search_type=1#ads=15',
+                     'search': f'{self.url_base}search.php?do=process'}  # type: Dict[AnyStr, AnyStr]
         self.url = self.urls['config_provider_home_uri']
 
         self.digest = None
@@ -102,8 +100,8 @@ class FSTProvider(generic.NZBProvider):
         if not cats:
             return results
 
-        rc = dict((k, re.compile('(?i)' + v)) for (k, v) in iteritems(dict(
-            cat='(?:%s)' % '|'.join(cats), results='(?:collections|searchbits)')))
+        rc = dict((k, re.compile(f'(?i){v}')) for (k, v) in dict(
+            cat=f'(?:{"|".join(cats)})', results='(?:collections|searchbits)').items())
         mode = ('search', 'cache')['' == search]
         post_data = None
         if 'cache' == mode:
@@ -120,7 +118,7 @@ class FSTProvider(generic.NZBProvider):
             else:
                 post_data = {'ngsubcategory[]': [16, 17, 53, 22, 23, 51, 49, 24]}
                 post_data.update(dict(
-                    query='%s' % search, securitytoken='%s' % token, dosearch='Search+Now', saveprefs=0, searchdate=0,
+                    query=f'{search}', securitytoken=f'{token}', dosearch='Search+Now', saveprefs=0, searchdate=0,
                     searchuser='', s='', sortby='dateline', order='descending', beforeafter='after', overridesearch=1,
                     searchfromtype='fstNZB:Collection', contenttypeid='', do='process'))
                 pages = ['']
@@ -244,7 +242,7 @@ class FSTProvider(generic.NZBProvider):
 
                 if collection:
                     with BS4Parser(html, parse_only={'div': {'id': 'binaryeditor'}}) as soup:
-                        nzb_rows = [] if not soup else soup.find_all('li', {'data-collectionid': '%s' % collection})
+                        nzb_rows = [] if not soup else soup.find_all('li', {'data-collectionid': f'{collection}'})
                         try:
                             files = sorted([_x.find(class_='subject').find('dd').get_text(strip=True)
                                             for _x in nzb_rows], key=len, reverse=True)
@@ -268,7 +266,7 @@ class FSTProvider(generic.NZBProvider):
                             #
                             # if 'disclaimer' in self.session.cookies:
                             # all the following to be indented +1 if above is uncommented into use
-                            json = self.get_url(base_url + 'search/json?q=%s' % base_name, parse_json=True,
+                            json = self.get_url(f'{base_url}search/json?q={base_name}', parse_json=True,
                                                 params=dict(max=100, minage=0, maxage=0, sort='agedesc',
                                                             hidespam=1, hidepassword=0, minsize=0, maxsize=0,
                                                             complete=0, hidecross=0, hasNFO=0, poster='', p=0))
@@ -282,11 +280,11 @@ class FSTProvider(generic.NZBProvider):
                                 idx_eq_fst = idx_eq_fst and fn_reg.sub(r'\1', cur_result['name']) in files
 
                             if idx_eq_fst:
-                                nzb = '%s.nzb' % base_name
-                                response = self.get_url(base_url + 'download/' + nzb, post_data={'n': nzb, 'r[]': ids})
+                                nzb = f'{base_name}.nzb'
+                                response = self.get_url(f'{base_url}download/{nzb}', post_data={'n': nzb, 'r[]': ids})
 
                                 if '</nzb>' not in response:
-                                    logger.debug('Failed nzb data response: %s' % response)
+                                    logger.debug(f'Failed nzb data response: {response}')
                                 else:
                                     result = response
         return result

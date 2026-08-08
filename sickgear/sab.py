@@ -47,7 +47,7 @@ def send_nzb(search_result):
         if 1 == search_result.priority:
             params['priority'] = 1
 
-        params['nzbname'] = '%s.nzb' % search_result.name
+        params['nzbname'] = f'{search_result.name}.nzb'
 
         kwargs = {}
         # if it's a normal result we just pass SAB the URL
@@ -65,11 +65,11 @@ def send_nzb(search_result):
             nzb_data = search_result.get_data()
             if not nzb_data:
                 return False
-            kwargs['files'] = {'nzbfile': ('%s.nzb' % search_result.name, nzb_data)}
+            kwargs['files'] = {'nzbfile': (f'{search_result.name}.nzb', nzb_data)}
 
         logger.log(f'Sending {nzb_type} to SABnzbd: {search_result.name}')
 
-        url = '%sapi' % sickgear.SAB_HOST
+        url = f'{sickgear.SAB_HOST}api'
         logger.debug(f'SABnzbd at {url} sent params: {params}')
         success, result = _get_url(url, **kwargs)
 
@@ -110,7 +110,7 @@ def _get_url(url, params=None, **kwargs):
 
 def access_method(host):
 
-    success, result = _get_url('%sapi' % host, params={'mode': 'auth', 'output': 'json'})
+    success, result = _get_url(f'{host}api', params={'mode': 'auth', 'output': 'json'})
     if not success:
         return False, result
     return True, result['auth']
@@ -129,7 +129,7 @@ def test_authentication(host=None, username=None, password=None, apikey=None):
 
     # build up the URL parameters
     params = {'mode': 'queue', 'ma_username': username, 'ma_password': password, 'apikey': apikey, 'output': 'json'}
-    url = '%sapi' % host
+    url = f'{host}api'
 
     # send the test request
     logger.debug(f'SABnzbd test URL: {url} with parameters: {params}')

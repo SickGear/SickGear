@@ -1,7 +1,3 @@
-from ...apprise_attachment import AppriseAttachment as AppriseAttachment
-from ...common import NotifyImageSize as NotifyImageSize, NotifyType as NotifyType
-from ...utils.logic import dict_full_update as dict_full_update
-from ...utils.parse import parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
 from ..base import NotifyBase as NotifyBase
 from .color import FCMColorManager as FCMColorManager
 from .common import FCMMode as FCMMode, FCM_MODES as FCM_MODES
@@ -65,3 +61,8 @@ class NotifyFCM(NotifyBase):
     def parse_url(url):
         """Parses the URL and returns enough arguments that can allow us to re-
         instantiate this object."""
+    @staticmethod
+    def runtime_deps():
+        """Return a tuple of top-level Python package names that this plugin
+        imported as optional runtime dependencies.
+        """

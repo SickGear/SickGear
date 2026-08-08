@@ -398,7 +398,7 @@ class ShowAddTests(test.SickbeardTestDBCase):
             show_obj.save_to_db()
             sickgear.showList = [show_obj]
             sickgear.showDict[show_obj.sid_int] = show_obj
-            cl = []
+            sql_l = []
             ep_id = ep_base * 10000
             for ep in w['episodes']:
                 ep_id += 1
@@ -412,24 +412,26 @@ class ShowAddTests(test.SickbeardTestDBCase):
                 episode.epid = ep_id
                 episode.show_obj = show_obj
                 episode.tvid = show_obj.tvid
-                cl.append(episode.get_sql())
+                sql_l.append(episode.get_sql())
 
-            cur_db = db.DBConnection()
-            if cl:
-                cur_db.mass_action(cl)
+            if sql_l:
+                with db.DBConnection() as sg_db:
+                    sg_db.mass_action(sql_l)
 
             qi = QueueItemAdd(w['show']['indexer'], w['show']['indexerid'], '', None, Quality.NONE,
                               None, None, None, False, False, False, None, None,
                               w['start_wanted'], w['end_wanted'], None, None)
             qi.show_obj = show_obj
             # start tests
-            tr = qi._get_wanted(cur_db, w['start_wanted'], False)
-            self.assertEqual(
-                tr, w['result']['start'].get('count'),
-                msg='%s: start: got: %s, expected: %s' % (w['name'], tr, w['result']['start'].get('count')))
-            results = cur_db.select('SELECT status, season, episode FROM tv_episodes WHERE indexer = ? AND showid = ?'
-                                    ' ORDER BY season, episode',
-                                    [show_obj.tvid, show_obj.prodid])
+            with db.DBConnection() as sg_db:
+                tr = qi._get_wanted(sg_db, w['start_wanted'], False)
+                self.assertEqual(
+                    tr, w['result']['start'].get('count'),
+                    msg=f'{w["name"]}: start: got: {tr}, expected: {w["result"]["start"].get("count")}')
+                results = sg_db.select('SELECT status, season, episode FROM tv_episodes'
+                                       ' WHERE indexer = ? AND showid = ?'
+                                       ' ORDER BY season, episode',
+                                       [show_obj.tvid, show_obj.prodid])
             for r in results:
                 expected = w['result']['start'].get('episodes').get(r['season'], {}).get(r['episode'], None)
                 self.assertEqual(
@@ -438,12 +440,14 @@ class ShowAddTests(test.SickbeardTestDBCase):
                         (w['name'], r['season'], r['episode'], statusStrings[r['status']], statusStrings[expected]))
 
             # end tests
-            tr = qi._get_wanted(cur_db, w['end_wanted'], True)
-            self.assertEqual(tr, w['result']['end'].get('count'),
-                             msg='%s: end: got: %s, expected: %s' % (w['name'], tr, w['result']['end'].get('count')))
-            results = cur_db.select('SELECT status, season, episode FROM tv_episodes WHERE indexer = ? AND showid = ?'
-                                    ' ORDER BY season, episode',
-                                    [show_obj.tvid, show_obj.prodid])
+            with db.DBConnection() as sg_db:
+                tr = qi._get_wanted(sg_db, w['end_wanted'], True)
+                self.assertEqual(tr, w['result']['end'].get('count'),
+                                 msg=f'{w["name"]}: end: got: {tr}, expected: {w["result"]["end"].get("count")}')
+                results = sg_db.select('SELECT status, season, episode FROM tv_episodes'
+                                       ' WHERE indexer = ? AND showid = ?'
+                                       ' ORDER BY season, episode',
+                                       [show_obj.tvid, show_obj.prodid])
             for r in results:
                 expected = w['result']['end'].get('episodes').get(r['season'], {}).get(r['episode'], None)
                 self.assertEqual(r['status'], expected,

@@ -65,7 +65,7 @@ class NotifyNtfy(NotifyBase):
     __actions: Incomplete
     avatar_url: Incomplete
     topics: Incomplete
-    def __init__(self, targets=None, attach=None, filename=None, click=None, delay=None, email=None, priority=None, tags=None, actions=None, mode=None, include_image: bool = True, avatar_url=None, auth=None, token=None, **kwargs) -> None:
+    def __init__(self, targets=None, attach=None, filename=None, click=None, delay=None, email=None, priority=None, xtags=None, actions=None, mode=None, include_image: bool = True, avatar_url=None, auth=None, token=None, **kwargs) -> None:
         """Initialize ntfy Object."""
     def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
         """Perform ntfy Notification."""

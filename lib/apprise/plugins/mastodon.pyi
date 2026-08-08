@@ -7,6 +7,9 @@ from _typeshed import Incomplete
 
 IS_USER: Incomplete
 USER_DETECTION_RE: Incomplete
+MENTION_DETECTION_RE: Incomplete
+HASHTAG_DETECTION_RE: Incomplete
+HASHTAG_VALUE_RE: Incomplete
 
 class MastodonMessageVisibility:
     """The visibility of any status message made."""
@@ -33,7 +36,7 @@ class NotifyMastodon(NotifyBase):
     mastodon_toot: str
     mastodon_dm: str
     title_maxlen: int
-    body_maxlen: int
+    mastodon_body_maxlen: int
     notify_format: Incomplete
     request_rate_per_sec: int
     ratelimit_reset: Incomplete
@@ -53,7 +56,9 @@ class NotifyMastodon(NotifyBase):
     idempotency_key: Incomplete
     language: Incomplete
     targets: Incomplete
-    def __init__(self, token=None, targets=None, batch: bool = True, sensitive=None, spoiler=None, visibility=None, cache: bool = True, key=None, language=None, **kwargs) -> None:
+    hashtags: Incomplete
+    ping: Incomplete
+    def __init__(self, token=None, targets=None, batch: bool = True, sensitive=None, spoiler=None, visibility=None, cache: bool = True, key=None, language=None, ping=None, **kwargs) -> None:
         """Initialize Notify Mastodon Object."""
     @property
     def url_identifier(self):
@@ -62,12 +67,29 @@ class NotifyMastodon(NotifyBase):
 
         Targets or end points should never be identified here.
         """
+    @property
+    def body_maxlen(self):
+        """Return the body space available after configured status tokens."""
     def url(self, privacy: bool = False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
     def __len__(self) -> int:
         """Returns the number of targets associated with this notification."""
     def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
         """Wrapper to _send since we can alert more then one channel."""
+    def ping_tokens(self, *args, normalize: bool = False, seen=None):
+        """
+        Takes one or more strings and returns Mastodon-recognizable mention
+        and hashtag tokens detected within.
+        """
+    @staticmethod
+    def ping_payload(tokens):
+        """Return a status suffix from one or more ping tokens."""
+    @staticmethod
+    def normalize_ping_token(token):
+        """Normalize a configured ping token into a mention or hashtag."""
+    @staticmethod
+    def valid_hashtag(token):
+        """Return True if a token is a valid Mastodon hashtag."""
     def _whoami(self, lazy: bool = True):
         """Looks details of current authenticated user."""
     def _request(self, path, payload=None, method: str = 'POST'):

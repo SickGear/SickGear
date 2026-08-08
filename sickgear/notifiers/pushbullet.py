@@ -71,7 +71,7 @@ class PushbulletNotifier(Notifier):
                 result = 'no response'
             self._log_warning(f'{result}')
 
-        return self._choose((True, 'Failed to send notification: %s' % result)[bool(result)], not bool(result))
+        return self._choose((True, f'Failed to send notification: {result}')[bool(result)], not bool(result))
 
 
 notifier = PushbulletNotifier

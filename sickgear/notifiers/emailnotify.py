@@ -69,7 +69,7 @@ class EmailNotifier(Notifier):
             srv.quit()
 
         except (BaseException, Exception) as e:
-            self.last_err = '%s' % ex(e)
+            self.last_err = f'{ex(e)}'
             return False
 
         return True
@@ -87,12 +87,12 @@ class EmailNotifier(Notifier):
 
         # Grab the recipients for the show
         if None is not show_name:
-            my_db = db.DBConnection()
-            for result in my_db.select('SELECT notify_list FROM tv_shows WHERE show_name = ?', (show_name,)):
-                if result['notify_list']:
-                    for email_address in result['notify_list'].split(','):
-                        if any(email_address.strip()):
-                            email_list.append(email_address)
+            with db.DBConnection() as sg_db:
+                for result in sg_db.select('SELECT notify_list FROM tv_shows WHERE show_name = ?', (show_name,)):
+                    if result['notify_list']:
+                        for email_address in result['notify_list'].split(','):
+                            if any(email_address.strip()):
+                                email_list.append(email_address)
 
         return list(set(email_list))
 
@@ -110,7 +110,7 @@ class EmailNotifier(Notifier):
             msg = MIMEMultipart('alternative')
             msg.attach(MIMEText(
                 '<body style="font-family:Helvetica, Arial, sans-serif;">' +
-                '<h3>SickGear Notification - %s</h3>\n' % title +
+                f'<h3>SickGear Notification - {title}</h3>\n' +
                 '<p>Show: <b>' + show_name.encode('ascii', 'xmlcharrefreplace') +
                 '</b></p>\n<p>Episode: <b>' +
                 text_type(re.search('.+ - (.+?-.+) -.+', body).group(1)).encode('ascii', 'xmlcharrefreplace') +
@@ -123,9 +123,9 @@ class EmailNotifier(Notifier):
             try:
                 msg = MIMEText(body)
             except (BaseException, Exception):
-                msg = MIMEText('Episode %s' % title)
+                msg = MIMEText(f'Episode {title}')
 
-        msg['Subject'] = '%s%s: %s' % (lang, title, body)
+        msg['Subject'] = f'{lang}{title}: {body}'
         msg['From'] = sickgear.EMAIL_FROM
         msg['To'] = ','.join(to)
         msg['Date'] = formatdate(localtime=True)
@@ -138,7 +138,7 @@ class EmailNotifier(Notifier):
     def test_notify(self, host, port, smtp_from, use_tls, user, pwd, to):
         self._testing = True
 
-        msg = MIMEText('Success.  This is a SickGear test message. Typically sent on, %s' % notify_strings['download'])
+        msg = MIMEText(f'Success.  This is a SickGear test message. Typically sent on, {notify_strings["download"]}')
         msg['Subject'] = 'SickGear: Test message'
         msg['From'] = smtp_from
         msg['To'] = to
@@ -146,7 +146,7 @@ class EmailNotifier(Notifier):
 
         r = self._sendmail(host, port, smtp_from, use_tls, user, pwd, [to], msg, True)
         return self._choose(('Success, notification sent.',
-                             'Failed to send notification: %s' % self.last_err)[not r], r)
+                             f'Failed to send notification: {self.last_err}')[not r], r)
 
     def notify_snatch(self, ep_obj, title=None, **kwargs):
         """
@@ -181,7 +181,7 @@ class EmailNotifier(Notifier):
         """
 
         title = sickgear.EMAIL_OLD_SUBJECTS and 'Subtitle Downloaded' or title or notify_strings['subtitle_download']
-        self._notify(title, ep_obj.pretty_name(), '%s ' % lang, '</b></p>\n<p>Language: <b>%s' % lang)
+        self._notify(title, ep_obj.pretty_name(), f'{lang} ', f'</b></p>\n<p>Language: <b>{lang}')
 
 
 notifier = EmailNotifier

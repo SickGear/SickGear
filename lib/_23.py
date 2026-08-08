@@ -35,8 +35,11 @@ import datetime
 import xml.etree.ElementTree as etree
 
 # noinspection PyUnresolvedReferences
-from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
-    urlencode, urlsplit, urlunparse, urlunsplit
+# from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
+#     urlencode, urlsplit, urlunparse, urlunsplit
+
+from urllib.parse import (quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus,
+                          urlencode, urlsplit, urlunparse, urlunsplit)
 
 # noinspection PyUnreachableCode
 if False:

@@ -19,6 +19,7 @@ class NotifySES(NotifyBase):
     templates: Incomplete
     template_tokens: Incomplete
     template_args: Incomplete
+    aws_session_token: Incomplete
     aws_access_key_id: Incomplete
     aws_secret_access_key: Incomplete
     aws_region_name: Incomplete
@@ -35,7 +36,7 @@ class NotifySES(NotifyBase):
     from_name: Incomplete
     from_addr: Incomplete
     reply_to: Incomplete
-    def __init__(self, access_key_id, secret_access_key, region_name, reply_to=None, from_addr=None, from_name=None, targets=None, cc=None, bcc=None, **kwargs) -> None:
+    def __init__(self, access_key_id, secret_access_key, region_name, reply_to=None, from_addr=None, from_name=None, targets=None, cc=None, bcc=None, session_token=None, **kwargs) -> None:
         """Initialize Notify AWS SES Object."""
     def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
         """Wrapper to send_notification since we can alert more then one

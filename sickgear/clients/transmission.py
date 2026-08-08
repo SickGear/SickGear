@@ -31,7 +31,7 @@ class TransmissionAPI(GenericClient):
 
         super(TransmissionAPI, self).__init__('Transmission', host, username, password)
 
-        self.url = self.host + 'transmission/rpc'
+        self.url = f'{self.host}transmission/rpc'
         self.blankable, self.download_dir = None, None
         self.rpc_version = 0
 
@@ -71,8 +71,8 @@ class TransmissionAPI(GenericClient):
 
         self.rpc_version = resp.get('arguments', {}).get('rpc-version', 0)
         self.download_dir = resp.get('arguments', {}).get('download-dir', '')
-        client_text = '%s %s' % (self.name, resp.get('arguments', {}).get('version', '0').split()[0] or '')
-        return True, 'Success: Connected and authenticated to %s' % client_text
+        client_text = f'{self.name} {resp.get("arguments", {}).get("version", "0").split()[0] or ""}'
+        return True, f'Success: Connected and authenticated to {client_text}'
 
     def _add_torrent_uri(self, result):
 
@@ -86,7 +86,7 @@ class TransmissionAPI(GenericClient):
 
         # populate blanked and download_dir
         if not self._get_auth():
-            logger.error('%s: Authentication failed' % self.name)
+            logger.error(f'{self.name}: Authentication failed')
             return False
 
         download_dir = None

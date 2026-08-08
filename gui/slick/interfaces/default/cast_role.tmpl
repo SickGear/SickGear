@@ -3,7 +3,6 @@
 #from sickgear import TVInfoAPI
 #from sickgear.helpers import anon_url
 #from sickgear.tv import PersonGenders
-#from six import iteritems
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
 ##
@@ -20,7 +19,7 @@
 #import os.path
 #set global $inc_ofi = True
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')
-<script type="text/javascript" src="$sbRoot/js/cast.js?v=$sbPID"></script>
+<script src="$sbRoot/js/cast.js?v=$sbPID"></script>
 
 #if $varExists('header')
 	<h1 class="header">$header</h1>
@@ -130,7 +129,7 @@ def param(visible=True, rid=None, cache_person=None, cache_char=None, person=Non
 </style>
 
 #set $section_links = False
-#for $cur_src, $cur_sid in sorted(iteritems($character.ids))
+#for $cur_src, $cur_sid in sorted($character.ids.items())
     #if $TVInfoAPI($cur_src).config.get('character_url')
         #if not $section_links
             #set $section_links = True
