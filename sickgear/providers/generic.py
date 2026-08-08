@@ -731,14 +731,7 @@ class GenericProvider(object):
             (sickgear.TELEGRAM_ACCESS_TOKEN, 'telegram_access_token'),
         ] + [(_k[1], f'sg_apikey_{_k[0]}') for _k in sickgear.API_KEYS if _k[1]] +\
             ([], [(sickgear.SUBTITLES_SERVICES_AUTH[0][1],
-                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)] +\
-            [(sickgear.TRAKT_CLIENT_SECRET, 'trakt_client_secret')] +\
-            [(_t, f'trakt_tk_{_n}') for (_t, _n) in [
-                (getattr(x, 'token', ''), getattr(x, 'name', ''))
-                for x in sickgear.TRAKT_ACCOUNTS.values()] if _t] +\
-            [(_t, f'trakt_rt_{_n}') for (_t, _n) in [
-                (getattr(x, 'refresh_token', ''), getattr(x, 'name', ''))
-                for x in sickgear.TRAKT_ACCOUNTS.values()] if _t]:
+                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)]:
             if not cur_auth[0] or 4 > len(cur_auth[0]):
                 continue
             if cur_auth[0] not in dedupe.keys():

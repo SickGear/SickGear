@@ -4622,20 +4622,14 @@ class CMD_Shows(CMD_SickGearShows):
 class CMD_SickGearShowsBrowseTrakt(ApiCall):
     _help = {'desc': 'browse trakt shows in sickgear',
              'requiredParameters': {'type': {'desc': 'type to browse: anticipated, newshows, newseasons, popular, '
-                                                     'trending, recommended, watchlist'},
+                                                     'trending'},
                                     },
-             'optionalParameters': {'account_id': {'desc': 'account_id for recommended, watchlist - '
-                                                           'see sg.listtraktaccounts'}},
              }
 
     def __init__(self, handler, args, kwargs):
         # required
         self.type, args = self.check_params(args, kwargs, 'type', 'anticipated', True, 'string',
-                                            ['anticipated', 'newshows', 'newseasons', 'popular', 'trending',
-                                             'recommended', 'watchlist'])
-        # optional
-        self.account, args = self.check_params(args, kwargs, 'account_id', None, False, 'int',
-                                               [s for s in sickgear.TRAKT_ACCOUNTS])
+                                            ['anticipated', 'newshows', 'newseasons', 'popular', 'trending'])
         # super, missing, help
         ApiCall.__init__(self, handler, args, kwargs)
 
@@ -4647,34 +4641,11 @@ class CMD_SickGearShowsBrowseTrakt(ApiCall):
                     popular='get_popular',
                     trending='get_trending')
         kwargs = {}
-        if self.type in ('recommended', 'watchlist'):
-            if not self.account:
-                return _responds(RESULT_FAILURE, msg='Need Trakt account')
-            func.update(dict(recommended='get_recommended_for_account',
-                             watchlist='get_watchlisted_for_account'))
-            kwargs.update(dict(account=self.account, ignore_collected=True))
-            if self.type in ('recommended',):
-                kwargs.update(dict(ignore_watchlisted=True))
         try:
             data, oldest, newest = AddShows.get_trakt_data(func[self.type], **kwargs)
         except Exception as e:
             return _responds(RESULT_FAILURE, msg=ex(e))
         return _responds(RESULT_SUCCESS, data)
-
-
-class CMD_SickGearListTraktAccounts(ApiCall):
-    _help = {'desc': 'list Trakt accounts in sickgear'}
-
-    def __init__(self, handler, args, kwargs):
-        # required
-        # optional
-        # super, missing, help
-        ApiCall.__init__(self, handler, args, kwargs)
-
-    def run(self):
-        """ list Trakt accounts in sickgear """
-        accounts = [{'name': v.name, 'account_id': v.account_id} for a, v in sickgear.TRAKT_ACCOUNTS.items()]
-        return _responds(RESULT_SUCCESS, accounts)
 
 
 class CMD_SickGearShowsForceUpdate(ApiCall):
@@ -4879,7 +4850,6 @@ _functionMaper = {'help': CMD_Help,
                   'shows': CMD_Shows,
                   'sg.shows': CMD_SickGearShows,
                   'sg.shows.browsetrakt': CMD_SickGearShowsBrowseTrakt,
-                  'sg.listtraktaccounts': CMD_SickGearListTraktAccounts,
                   'shows.stats': CMD_ShowsStats,
                   'sg.shows.stats': CMD_SickGearShowsStats,
                   'sg.shows.forceupdate': CMD_SickGearShowsForceUpdate,

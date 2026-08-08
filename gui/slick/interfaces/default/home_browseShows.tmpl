@@ -489,30 +489,6 @@ $(function() {
 			<option value="trakt_played?period=year"#echo ('', selected)['played-year' == $mode]#>Most Played</option>
 			<option value="trakt_collected?period=year"#echo ('', selected)['collected-year' == $mode]#>Most Collected</option>
 		</optgroup>
-            #if any($sg_var('TRAKT_ACCOUNTS', []))
-		<optgroup label="Trakt recommended">
-                #for $account in $sg_var('TRAKT_ACCOUNTS')
-                    #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
-			<option value="trakt_recommended?account=$account"#echo ('', selected)[('recommended-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
-                    #end if
-                #end for
-            #else
-		<optgroup label="To get recommended">
-			<option value="trakt_recommended?action=add">Enable Trakt here</option>
-            #end if
-		</optgroup>
-            #if any($sg_var('TRAKT_ACCOUNTS', []))
-		<optgroup label="Trakt watchlisted">
-                #for $account in $sg_var('TRAKT_ACCOUNTS')
-                    #if $sg_var('TRAKT_ACCOUNTS').get($account).active and $sg_var('TRAKT_ACCOUNTS').get($account).name
-			<option value="trakt_watchlist?account=$account"#echo ('', selected)[('watchlist-%s' % $account) == $mode]#>for $sg_var('TRAKT_ACCOUNTS').get($account).name</option>
-                    #end if
-                #end for
-            #else
-		<optgroup label="To get watchlisted">
-			<option value="trakt_watchlist?action=add">Enable Trakt here</option>
-            #end if
-		</optgroup>
         #elif 'IMDb' == $browse_type
             #set $periods = $kwargs and $kwargs.get('periods')
             #if $periods

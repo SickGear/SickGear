@@ -163,7 +163,6 @@ addList("Command", "SickGear.Show.Update", "?cmd=sg.show.update", "sg.indexerid"
 addList("Command", "Shows", "?cmd=shows", "shows");
 addList("Command", "SickGear.Shows", "?cmd=sg.shows", "shows");
 addList("Command", "SickGear.Shows.BrowseTrakt", "?cmd=sg.shows.browsetrakt", "sg.shows.browsetrakt");
-addOption("Command", "SickGear.ListTraktAccounts", "?cmd=sg.listtraktaccounts");
 addOption("Command", "Shows.Stats", "?cmd=shows.stats");
 addOption("Command", "SickGear.Shows.Stats", "?cmd=sg.shows.stats");
 addOption("Command", "SickGear.Shows.ForceUpdate", "?cmd=sg.shows.forceupdate");
@@ -174,13 +173,6 @@ addOption("sg.shows.browsetrakt", "New Shows", "&type=newshows");
 addOption("sg.shows.browsetrakt", "New Seasons", "&type=newseasons");
 addOption("sg.shows.browsetrakt", "Popular", "&type=popular");
 addOption("sg.shows.browsetrakt", "Trending", "&type=trending");
-addList("sg.shows.browsetrakt", "Recommended", "&type=recommended", "sg.traktaccounts");
-addList("sg.shows.browsetrakt", "Watchlist", "&type=watchlist", "sg.traktaccounts");
-
-#from sickgear import TRAKT_ACCOUNTS
-#for $a in $TRAKT_ACCOUNTS
-addOption("sg.traktaccounts", "$TRAKT_ACCOUNTS[$a].name", "&account_id=$a");
-#end for
 
 addOption("sg.forcesearch", "Recent Search", "&searchtype=recent", 1);
 addOption("sg.forcesearch", "Backlog Search", "&searchtype=backlog");

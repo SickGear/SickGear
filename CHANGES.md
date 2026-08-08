@@ -88,6 +88,7 @@
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
 * Fix display of browse TVC filter "returning"
 * Add alternative newznab category naming (nzbnest)
+* Change remove Trakt recommended/watchlist
 
 
 [develop]
