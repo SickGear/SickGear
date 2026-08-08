@@ -33,10 +33,10 @@ __all__ = [
     'filesharingtalk',
     'omgwtfnzbs',
     # torrent
-    'alpharatio', 'bithdtv', 'blutopia', 'btn',
+    'alpharatio', 'bithdtv', 'btn',
     'custom01', 'custom11', 'eztv', 'fano', 'filelist', 'funfile',
     'hdbits', 'hdspace', 'hdtorrents',
-    'immortalseed', 'iptorrents', 'limetorrents', 'milkie', 'morethan', 'nebulance', 'ncore', 'nyaa',
+    'immortalseed', 'iptorrents', 'limetorrents', 'milkie', 'nebulance', 'nyaa',
     'pretome', 'privatehd', 'ptf',
     'scenehd', 'scenetime', 'shazbat', 'showrss', 'snowfl', 'speedapp', 'speedcd',
     'thepiratebay', 'torlock', 'torrentday', 'torrenting', 'torrentleech',  'tvchaosuk',
