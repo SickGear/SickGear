@@ -470,27 +470,6 @@ $(document).ready(function(){
 		}
 	});
 
-	$('#test-gitter').click(function () {
-		var gitterRoom = $('#gitter-room').val(),
-			accessToken = '#gitter-access-token', gitterAccessToken = $(accessToken).val();
-
-		$(accessToken).removeClass('warning');
-		if (!gitterAccessToken) {
-			$('#test-gitter-result').html('Please fill out the necessary fields above.');
-			if (!gitterAccessToken)
-				$(accessToken).addClass('warning');
-		} else {
-			$(this).prop('disabled', !0);
-			$('#test-gitter-result').html(loading);
-			$.get(sbRoot + '/home/test-gitter',
-				{room_name: gitterRoom, access_token: gitterAccessToken})
-				.done(function (data) {
-					$('#test-gitter-result').html(data);
-					$('#test-gitter').prop('disabled', !1);
-				});
-		}
-	});
-
 	$('#test-telegram').click(function () {
 		var telegramSendImage = $('#telegram-send-image').prop('checked'),
 			telegramQuiet = $('#telegram-quiet').prop('checked'),

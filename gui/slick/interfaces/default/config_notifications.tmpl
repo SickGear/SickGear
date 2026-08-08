@@ -1320,7 +1320,6 @@
 						<span class="list"><div class="item text">Bubble links:</div>
 							<div class="item"><a href="#slack" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/slack.png">Slack</a></div>
 							<div class="item"><a href="#discord" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/discord.png">Discord</a></div>
-							<div class="item"><a href="#gitter" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/gitter.png">Gitter</a></div>
 							<div class="item"><a href="#telegram" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/telegram.png">Telegram</a></div>
 							<div class="item"><a href="#email" rel="noreferrer"><img height="16px" src="$sbRoot/images/notifiers/email.png">Email</a></div>
 						</span>
@@ -1536,76 +1535,6 @@
 						</div><!-- /content_use-discord //-->
 					</fieldset>
 				</div><!-- /discord component-group //-->
-
-
-				<div class="component-group">
-					<div class="component-group-desc">
-						<img class="notifier-icon" src="$sbRoot/images/notifiers/gitter.png" alt="" title="Gitter">
-						<h3><a name="gitter" href="<%= anon_url('https://gitter.im/') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">Gitter</a></h3>
-						<p>Gitter chat and networking platform.</p>
-					</div>
-					<fieldset class="component-group-list">
-						<div class="field-pair">
-							<label for="use-gitter">
-								<span class="component-title">Enable</span>
-								<span class="component-desc">
-									<input type="checkbox" class="enabler" name="use_gitter" id="use-gitter" #if $sickgear.USE_GITTER then 'checked="checked"' else ''#>
-									<p>should SickGear send Gitter notifications ?</p>
-								</span>
-							</label>
-						</div>
-
-						<div id="content_use-gitter">
-							<div class="field-pair">
-								<label for="gitter-notify-onsnatch">
-									<span class="component-title">Notify on snatch</span>
-									<span class="component-desc">
-										<input type="checkbox" name="gitter_notify_onsnatch" id="gitter-notify-onsnatch" #if $sickgear.GITTER_NOTIFY_ONSNATCH then 'checked="checked"' else ''#>
-										<p>send a notification when a download starts ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-notify-ondownload">
-									<span class="component-title">Notify on download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="gitter_notify_ondownload" id="gitter-notify-ondownload" #if $sickgear.GITTER_NOTIFY_ONDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when a download finishes ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-notify-onsubtitledownload">
-									<span class="component-title">Notify on subtitle download</span>
-									<span class="component-desc">
-										<input type="checkbox" name="gitter_notify_onsubtitledownload" id="gitter-notify-onsubtitledownload" #if $sickgear.GITTER_NOTIFY_ONSUBTITLEDOWNLOAD then 'checked="checked"' else ''#>
-										<p>send a notification when subtitles are downloaded ?</p>
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-room">
-									<span class="component-title">Gitter room name</span>
-									<span class="component-desc">
-										<input type="text" name="gitter_room" id="gitter-room" value="$sickgear.GITTER_ROOM" class="form-control input-sm input250">
-									</span>
-								</label>
-							</div>
-							<div class="field-pair">
-								<label for="gitter-access-token">
-									<span class="component-title">Gitter oauth access token</span>
-									<span class="component-desc">
-										<input type="text" name="gitter_access_token" id="gitter-access-token" value="$sickgear.GITTER_ACCESS_TOKEN" class="form-control input-sm input350">
-										<div class="clear-left"><p>sign in, copy the access token from <a href="<%= anon_url('https://developer.gitter.im/apps') %>" rel="noreferrer" onclick="window.open(this.href, '_blank'); return false;">here</a>, paste it to the above field</p></div>
-									</span>
-								</label>
-							</div>
-							<div class="test-notification" id="test-gitter-result">Click below to test</div>
-							<input type="button" class="btn" value="Test Gitter" id="test-gitter">
-							<input type="submit" class="btn config_submitter" value="Save Changes">
-						</div><!-- /content_use-gitter //-->
-					</fieldset>
-				</div><!-- /gitter component-group //-->
 
 
 				<div class="component-group">

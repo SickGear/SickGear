@@ -89,6 +89,7 @@
 * Fix display of browse TVC filter "returning"
 * Add alternative newznab category naming (nzbnest)
 * Change remove Trakt recommended/watchlist
+* Change remove deprecated Gitter notifier
 
 
 [develop]
