@@ -187,6 +187,8 @@ RE_WS_END = re.compile(fr'^(?:[ \t]|(?:\n\r|(?!\n\r)[\n\f\r])|{COMMENTS})*')
 RE_CUSTOM = re.compile(fr'^{PAT_PSEUDO_CLASS_CUSTOM}$', re.X)
 RE_PSEUDO_CLASS_SPECIAL = re.compile(PAT_PSEUDO_CLASS_SPECIAL, re.I | re.X | re.U)
 
+QUOTED = ("'", '"')
+
 # Constants
 # List split token
 COMMA_COMBINATOR = ','
@@ -254,7 +256,7 @@ def process_custom(custom: ct.CustomSelectors | None) -> dict[str, str | ct.Sele
     return custom_selectors
 
 
-def css_unescape(content: str, string: bool = False) -> str:
+def css_unescape(content: str) -> str:
     """
     Unescape CSS value.
 
@@ -278,7 +280,11 @@ def css_unescape(content: str, string: bool = False) -> str:
 
         return value
 
-    return (RE_CSS_ESC if not string else RE_CSS_STR_ESC).sub(replace, content)
+    quoted = content.startswith(QUOTED)
+    return (RE_CSS_STR_ESC if quoted else RE_CSS_ESC).sub(
+        replace,
+        content[1:-1] if quoted else content
+    )
 
 
 def escape(ident: str) -> str:
@@ -688,9 +694,10 @@ class CSSParser:
         self.custom = {} if custom is None else custom
         self.count = 0
 
-    def check_count(self) -> None:
+    def increment_count(self, increment: int = 1) -> None:
         """Check the current selector count."""
 
+        self.count += increment
         if self.count > SELECTOR_LIMIT:
             raise ValueError(f'Selector exceeds pseudo-class nesting limit of {SELECTOR_LIMIT}')
 
@@ -715,10 +722,7 @@ class CSSParser:
             flags = re.DOTALL
 
         if op:
-            if m.group('value').startswith(('"', "'")):
-                value = css_unescape(m.group('value')[1:-1], True)
-            else:
-                value = css_unescape(m.group('value'))
+            value = css_unescape(m.group('value'))
 
         if not op:
             # Attribute name
@@ -802,9 +806,7 @@ class CSSParser:
             ).process_selectors(flags=FLG_PSEUDO)
             self.custom[pseudo] = selector
 
-        self.count += selector.count
-        self.check_count()
-
+        self.increment_count(selector.count)
         sel.selectors.append(selector)
         has_selector = True
         return has_selector
@@ -837,8 +839,7 @@ class CSSParser:
                 sel.flags |= ct.SEL_EMPTY
             elif pseudo in self.PSEUDO_SELECTORS:
                 pseudo_selector = self.PSEUDO_SELECTORS[pseudo]
-                self.count += pseudo_selector.count
-                self.check_count()
+                self.increment_count(pseudo_selector.count)
                 sel.selectors.append(pseudo_selector)
             elif pseudo == ':first-child':
                 sel.nth.append(ct.SelectorNth(1, False, 0, False, False, ct.SelectorList()))
@@ -939,8 +940,7 @@ class CSSParser:
             else:
                 # Use default `*|*` for `of S`.
                 nth_sel = self.PSEUDO_SELECTORS['<nth-of-s>']
-                self.count += nth_sel.count
-                self.check_count()
+                self.increment_count(nth_sel.count)
             if pseudo_sel == ':nth-child':
                 sel.nth.append(ct.SelectorNth(s1, var, s2, False, False, nth_sel))
             elif pseudo_sel == ':nth-last-child':
@@ -991,6 +991,12 @@ class CSSParser:
         if not combinator:
             combinator = WS_COMBINATOR
         if combinator == COMMA_COMBINATOR:
+            if not has_selector:
+                raise SelectorSyntaxError(
+                    f"The combinator '{combinator}' at position {index}, must have a selector before it",
+                    self.pattern,
+                    index
+                )
             sel.rel_type = rel_type
             selectors[-1].relations.append(sel)
             rel_type = ":" + WS_COMBINATOR
@@ -1045,9 +1051,8 @@ class CSSParser:
 
             # If we are in a forgiving pseudo class, just make the selector a "no match"
             if combinator == COMMA_COMBINATOR:
-                sel.no_match = True
+                self.increment_count()
                 del relations[:]
-                selectors.append(sel)
         else:
             if combinator == COMMA_COMBINATOR:
                 if not sel.tag and not is_pseudo:
@@ -1088,17 +1093,11 @@ class CSSParser:
                 FutureWarning
             )
         contains_own = pseudo == ":-soup-contains-own"
-        values = css_unescape(m.group('values'))
-        patterns = []
-        for token in RE_VALUES.finditer(values):
-            if token.group('split'):
-                continue
-            value = token.group('value')
-            if value.startswith(("'", '"')):
-                value = css_unescape(value[1:-1], True)
-            else:
-                value = css_unescape(value)
-            patterns.append(value)
+        patterns = [
+            css_unescape(token.group('value'))
+            for token in RE_VALUES.finditer(m.group('values'))
+            if not token.group('split')
+        ]
         sel.contains.append(ct.SelectorContains(patterns, contains_own))
         has_selector = True
         return has_selector
@@ -1106,19 +1105,11 @@ class CSSParser:
     def parse_pseudo_lang(self, sel: _Selector, m: Match[str], has_selector: bool) -> bool:
         """Parse pseudo language."""
 
-        values = m.group('values')
-        patterns = []
-        for token in RE_VALUES.finditer(values):
-            if token.group('split'):
-                continue
-            value = token.group('value')
-            if value.startswith(('"', "'")):
-                value = css_unescape(value[1:-1], True)
-            else:
-                value = css_unescape(value)
-
-            patterns.append(value)
-
+        patterns = [
+            css_unescape(token.group('value'))
+            for token in RE_VALUES.finditer(m.group('values'))
+            if not token.group('split')
+        ]
         sel.lang.append(ct.SelectorLang(patterns))
         has_selector = True
 
@@ -1196,8 +1187,7 @@ class CSSParser:
                 key, m = next(iselector)
 
                 if key not in ('combine', 'pseudo_close'):
-                    self.count += 1
-                    self.check_count()
+                    self.increment_count()
 
                 # Handle parts
                 if key == "at_rule":
@@ -1289,6 +1279,7 @@ class CSSParser:
         # Forgive empty slots in pseudo-classes that have lists (and are forgiving)
         elif is_forgive and (not selectors or not relations):
             # Handle normal pseudo-classes with empty slots like `:is()` etc.
+            self.increment_count()
             sel.no_match = True
             del relations[:]
             selectors.append(sel)
