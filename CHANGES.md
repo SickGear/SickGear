@@ -90,6 +90,7 @@
 * Add alternative newznab category naming (nzbnest)
 * Change remove Trakt recommended/watchlist
 * Change remove deprecated Gitter notifier
+* Remove Blutopia, MoreThan, and nCore torrent provider
 
 
 [develop]
