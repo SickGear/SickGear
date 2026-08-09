@@ -28,7 +28,6 @@ from lib.tvinfo_base import (
 from sg_helpers import clean_data, enforce_type, get_url, try_int, ConnectionSkipException
 from json_helper import json_loads, json_dumps, is_orjson, JSONEncoder, JSON_INDENT
 
-from six import iteritems
 from six.moves import http_client as httplib
 from six.moves.urllib.parse import urlencode, urljoin, quote, unquote
 
@@ -160,7 +159,7 @@ class IMDbIndexer(TVInfoBase):
 
         results = []
         if ids:
-            for t, p in iteritems(ids):
+            for t, p in ids.items():
                 if t in self.supported_id_searches:
                     if t == TVINFO_IMDB:
                         cache_id_key = 's-id-%s-%s' % (TVINFO_IMDB, p)

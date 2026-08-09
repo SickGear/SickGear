@@ -1,4 +1,9 @@
-﻿### 3.36.0 (2026-08-08 23:40:00 UTC)
+﻿### 3.37.x (2026-xx-xx xx:xx:00 UTC)
+
+* Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
+
+
+### 3.36.0 (2026-08-08 23:40:00 UTC)
 
 * Change update actions and optimise unittest
 * Update actions/checkout@v6.0.2 to actions/checkout@v7

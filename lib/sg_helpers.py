@@ -40,7 +40,7 @@ import requests
 
 from _23 import decode_bytes, html_unescape, list_range, \
     Popen, scandir, urlparse, urlsplit, urlunparse
-from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
+from six import integer_types, moves, PY2, string_types, text_type
 
 ACCEPT_ENCODING = "gzip,deflate"
 try:
@@ -475,7 +475,7 @@ class ConnectionFailList(object):
             if ConnectionFailTypes.names[e.fail_type] not in fail_dict.get(date_time, {}):
                 default = {'date': str(fail_date), 'date_time': date_time,
                            'timestamp': try_int(_totimestamp(e.fail_time)), 'multirow': False}
-                for et in itervalues(ConnectionFailTypes.names):
+                for et in ConnectionFailTypes.names.values():
                     default[et] = b_d.copy()
                 fail_dict.setdefault(date_time, default)[ConnectionFailTypes.names[e.fail_type]]['count'] = 1
             else:
@@ -488,28 +488,28 @@ class ConnectionFailList(object):
                     fail_dict[date_time][ConnectionFailTypes.names[e.fail_type]].setdefault('code', {})[e.code] = 1
 
         row_count = {}
-        for (k, v) in iteritems(fail_dict):
+        for (k, v) in fail_dict.items():
             row_count.setdefault(v.get('date'), 0)
             if v.get('date') in row_count:
                 row_count[v.get('date')] += 1
-        for (k, v) in iteritems(fail_dict):
+        for (k, v) in fail_dict.items():
             if 1 < row_count.get(v.get('date')):
                 fail_dict[k]['multirow'] = True
 
-        fail_list = sorted([fail_dict[k] for k in iterkeys(fail_dict)], key=lambda y: y.get('date_time'), reverse=True)
+        fail_list = sorted([fail_dict[k] for k in fail_dict.keys()], key=lambda y: y.get('date_time'), reverse=True)
 
         totals = {}
         for fail_date in set([fail.get('date') for fail in fail_list]):
             daytotals = {}
-            for et in itervalues(ConnectionFailTypes.names):
+            for et in ConnectionFailTypes.names.values():
                 daytotals.update({et: sum([x.get(et).get('count') for x in fail_list if fail_date == x.get('date')])})
             totals.update({fail_date: daytotals})
-        for (fail_date, total) in iteritems(totals):
+        for (fail_date, total) in totals.items():
             for i, item in enumerate(fail_list):
                 if fail_date == item.get('date'):
                     if item.get('multirow'):
                         fail_list[i:i] = [item.copy()]
-                        for et in itervalues(ConnectionFailTypes.names):
+                        for et in ConnectionFailTypes.names.values():
                             fail_list[i][et] = {'count': total[et]}
                             if et == ConnectionFailTypes.names[ConnectionFailTypes.http]:
                                 fail_list[i][et]['code'] = {}
@@ -691,7 +691,7 @@ def clean_data(data):
     if isinstance(data, set):
         return set(clean_data(d) for d in data)
     if isinstance(data, dict):
-        return {k: clean_data(v) for k, v in iteritems(data)}
+        return {k: clean_data(v) for k, v in data.items()}
     if isinstance(data, string_types):
         return unicodedata.normalize('NFKD', re.sub(r' {2,}', ' ', html_unescape(data).strip().replace('&amp;', '&')))
     return data

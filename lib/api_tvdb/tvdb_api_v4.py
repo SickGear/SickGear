@@ -30,7 +30,7 @@ from lib.tvinfo_base import (
     TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_X, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE, TVINFO_CAST_LIMIT)
 from sg_helpers import clean_data, clean_str, enforce_type, get_url, try_date, try_int
 
-from six import integer_types, iteritems, PY3, string_types
+from six import integer_types, PY3, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
@@ -219,7 +219,7 @@ source_types = {
     29: TVINFO_TMDB,  # collection
 }
 
-people_types_reverse = {_v: _k for _k, _v in iteritems(people_types)}
+people_types_reverse = {_v: _k for _k, _v in people_types.items()}
 
 empty_ep = TVInfoEpisode()
 tz_p = parser()
@@ -630,7 +630,7 @@ class TvdbAPIv4(TVInfoBase):
             ti_show.runtime = show_data.get('averageRuntime')
             ti_show.airs_time = clean_data(show_data.get('airsTime'))
             ti_show.airs_dayofweek = ', '.join([_k.capitalize()
-                                                for _k, _v in iteritems(show_data.get('airsDays')) if _v])
+                                                for _k, _v in show_data.get('airsDays').items() if _v])
             ti_show.genre_list = ('genres' in show_data and show_data['genres']
                                   and [clean_data(_g['name']) for _g in show_data['genres']]) or []
             ti_show.genre = '|'.join(ti_show.genre_list)
