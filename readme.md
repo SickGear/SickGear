@@ -1,5 +1,5 @@
 <hr>
-<div><a id="top"><img alt="SickGear" width="200" src="https://raw.githubusercontent.com/wiki/SickGear/SickGear.Wiki/images/SickGearLogo.png"></a></div>
+<div><a id="top"><img alt="SickGear" width="200" src="https://raw.githubusercontent.com/wiki/SickGear/SickGear/images/SickGearLogo.png"></a></div>
 *SickGear*, a usenet and bittorrent PVR
 <hr>
 
