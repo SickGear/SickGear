@@ -3,7 +3,6 @@ import logging
 import re
 from .exceptions import TraktException, TraktAuthException, TraktMethodNotExisting, TraktPersonNotFound
 from exceptions_helper import ConnectionSkipException, ex
-from six import iteritems
 from .trakt import TraktAPI
 from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
 from lib.tvinfo_base import PersonGenders, TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
@@ -26,7 +25,7 @@ id_map = {
     'tvrage': TVINFO_TVRAGE
 }
 
-id_map_reverse = {v: k for k, v in iteritems(id_map)}
+id_map_reverse = {v: k for k, v in id_map.items()}
 
 tz_p = parser()
 log = logging.getLogger('api_trakt.api')
@@ -135,7 +134,7 @@ class TraktIndexer(TVInfoBase):
         """
         results = []  # type: List[TVInfoShow]
         if ids:
-            for t, p in iteritems(ids):
+            for t, p in ids.items():
                 if t in self.supported_id_searches:
                     if t in (TVINFO_TVDB, TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TRAKT_SLUG):
                         cache_id_key = 's-id-%s-%s' % (t, p)
@@ -226,7 +225,7 @@ class TraktIndexer(TVInfoBase):
                     resp = [{'type': 'show', 'score': 1, 'show': resp}]
                 for d in resp:
                     if isinstance(d, dict) and 'type' in d and d['type'] in self.config['result_types']:
-                        for k, v in iteritems(d):
+                        for k, v in d.items():
                             d[k] = clean_data(v)
                         if 'show' in d and TraktResultTypes.show == d['type']:
                             d.update(d['show'])
@@ -313,7 +312,7 @@ class TraktIndexer(TVInfoBase):
                             ti_show.id = c['show']['ids'].get('trakt')
                             ti_show.seriesname = c['show']['title']
                             ti_show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
-                                                         for src, sid in iteritems(c['show']['ids']) if src in id_map})
+                                                         for src, sid in c['show']['ids'].items() if src in id_map})
                             ti_show.network = c['show']['network']
                             ti_show.firstaired = c['show']['first_aired']
                             ti_show.overview = enforce_type(clean_data(c['show']['overview']), str, '')
@@ -403,7 +402,7 @@ class TraktIndexer(TVInfoBase):
         if episode_data.get('available_translations'):
             ti_episode.language = clean_data(episode_data['available_translations'][0])
         ti_episode.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
-                                   for src, sid in iteritems(episode_data['ids']) if src in id_map})
+                                   for src, sid in episode_data['ids'].items() if src in id_map})
         return ti_episode
 
     @staticmethod
@@ -425,7 +424,7 @@ class TraktIndexer(TVInfoBase):
                 _s_d.get('votes'), _s_d.get('rating'), _s_d.get('rating'), _s_d.get('certification'), \
                 _s_d.get('homepage'), _s_d['ids'].get('slug')
         ti_show.ids = TVInfoIDs(ids={id_map[src]: _convert_imdb_id(id_map[src], sid)
-                                for src, sid in iteritems(_s_d['ids']) if src in id_map})
+                                for src, sid in _s_d['ids'].items() if src in id_map})
         ti_show.genre = '|'.join(ti_show.genre_list or [])
         if _s_d.get('trailer'):
             ti_show.trailers = {'any': _s_d['trailer']}

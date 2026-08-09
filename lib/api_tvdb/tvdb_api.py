@@ -36,7 +36,7 @@ from lib.tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, R
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
 from .tvdb_ui import BaseUI, ConsoleUI
 
-from six import integer_types, iteritems, PY2, string_types
+from six import integer_types, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:
@@ -139,7 +139,7 @@ class Tvdb(TVInfoBase):
     'My Last Day'
     """
     map_languages = {}
-    reverse_map_languages = {v: k for k, v in iteritems(map_languages)}
+    reverse_map_languages = {v: k for k, v in map_languages.items()}
     supported_id_searches = [TVINFO_TVDB, TVINFO_TVDB_SLUG]
 
     # noinspection PyUnusedLocal
@@ -512,7 +512,7 @@ class Tvdb(TVInfoBase):
             keep_data = {}
             del_keys = []
             new_data = {}
-            for k, v in iteritems(data):
+            for k, v in data.items():
                 k_org = k
                 k = k.lower()
                 if None is not v:
@@ -619,9 +619,9 @@ class Tvdb(TVInfoBase):
                 result[0]['overview'] = self.clean_overview(
                     result[0]['overviews'][self.config['langabbv_23'].get(language) or 'eng'])
                 # remap
-                for from_key, to_key in iteritems({
+                for from_key, to_key in {
                     'name': 'seriesname', 'first_air_date': 'firstaired'
-                }):
+                }.items():
                     result[0][to_key] = result[0][from_key]
                     del result[0][from_key]  # delete also prevents false +ve with the following new key notifier
 
@@ -834,7 +834,7 @@ class Tvdb(TVInfoBase):
                 if None is btype or None is btype2:
                     continue
 
-                for k, v in iteritems(cur_banner):
+                for k, v in cur_banner.items():
                     if None is k or None is v:
                         continue
 
@@ -934,7 +934,7 @@ class Tvdb(TVInfoBase):
                         except(BaseException, Exception):
                             pass
                     if not self.is_apikey():  # for the future when apikey == ''
-                        actor_list = sorted([d for _, d in iteritems(alts)], key=lambda x: x.get('sortorder'))
+                        actor_list = sorted([d for _, d in alts.items()], key=lambda x: x.get('sortorder'))
 
             unique_c_p, c_p_list, new_actor_list = set(), [], []
             for actor in sorted(actor_list, key=lambda x: x.get('lastupdated'), reverse=True):
@@ -987,7 +987,7 @@ class Tvdb(TVInfoBase):
         if episode_data and 'data' in episode_data:
             data = episode_data['data']
             if isinstance(data, dict):
-                for k, v in iteritems(data):
+                for k, v in data.items():
                     k = k.lower()
 
                     if None is not v:
@@ -1249,7 +1249,7 @@ class Tvdb(TVInfoBase):
 
                 if not cur_ep.get('network'):
                     cur_ep['network'] = self.ti_shows[sid].network
-                for k, v in iteritems(cur_ep):
+                for k, v in cur_ep.items():
                     k = k.lower()
 
                     if None is not v:

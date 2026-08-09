@@ -22,8 +22,6 @@ from json_helper import json_dumps
 from sg_helpers import clean_data, enforce_type, get_url, iterate_chunk, try_int
 from .tmdb_exceptions import *
 
-from six import iteritems
-
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Union
@@ -169,7 +167,7 @@ class TmdbIndexer(TVInfoBase):
     supported_person_id_searches = [TVINFO_FACEBOOK, TVINFO_IMDB, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_X]
     supported_id_searches = [TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB]
     map_languages = {}
-    reverse_map_languages = {v: k for k, v in iteritems(map_languages)}
+    reverse_map_languages = {v: k for k, v in map_languages.items()}
     _tmdb_lang_list = None
 
     # noinspection PyUnusedLocal
@@ -206,7 +204,7 @@ class TmdbIndexer(TVInfoBase):
 
         results = []
         if ids:
-            for t, p in iteritems(ids):
+            for t, p in ids.items():
                 if t in self.supported_id_searches:
                     if t == TVINFO_TMDB:
                         cache_id_key = 's-id-%s-%s' % (TVINFO_TMDB, p)
@@ -720,7 +718,7 @@ class TmdbIndexer(TVInfoBase):
             show_obj.poster_loaded = True
             show_obj.banner_loaded = True
             show_obj.fanart_loaded = True
-            for img_type, img_list in iteritems(show_data['images']):
+            for img_type, img_list in show_data['images'].items():
                 map_img_type = {'backdrops': TVInfoImageType.fanart, 'posters': TVInfoImageType.poster}.get(img_type)
                 if None is not map_img_type:
                     for img in img_list:
@@ -797,7 +795,7 @@ class TmdbIndexer(TVInfoBase):
                                     gender=PersonGenders.tmdb_map.get(person_obj.get('gender'), PersonGenders.unknown)
                                 )])
                         cast[RoleTypes.ActorMain].append(character_obj)
-                        for _s, _c in iteritems(season_cast_ids):
+                        for _s, _c in season_cast_ids.items():
                             if person_obj['id'] in _c:
                                 season_cast_objs.setdefault(_s, []).append(character_obj)
             show_obj.cast = cast
