@@ -101,7 +101,7 @@ start_sickgear() {
 
 stop_sickgear() {
     echo "Stopping $DESC"
-    start-stop-daemon --stop --pidfile $PID_FILE --retry 15
+    start-stop-daemon --stop --pidfile $PID_FILE --exec $DAEMON --retry 15
 }
 
 case "$1" in
