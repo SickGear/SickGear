@@ -299,7 +299,7 @@ class ReleaseMap(Job):
                 rar_handle = rarfile.RarFile(file_rar)
                 rar_handle.extractall(path=dirpath, pwd='sickgear_alt')
             except(BaseException, Exception) as e:
-                logger.error(f'Failed to unpack archive: {file_rar} with error: {ex(e)}')
+                logger.warning(f'Failed to unpack archive: {file_rar} with response: {ex(e)}')
 
             if rar_handle:
                 rar_handle.close()
