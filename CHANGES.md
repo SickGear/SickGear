@@ -1,6 +1,7 @@
 ﻿### 3.37.x (2026-xx-xx xx:xx:00 UTC)
 
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
+* Change output warning instead of error when Github fails to return alt.rar file
 
 
 ### 3.36.0 (2026-08-08 23:40:00 UTC)
