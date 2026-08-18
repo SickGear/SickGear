@@ -1,5 +1,6 @@
 ﻿### 3.37.x (2026-xx-xx xx:xx:00 UTC)
 
+* Update idna library 3.18 (f39ea90) to 3.19 (03a9a11)
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
 * Change output warning instead of error when Github fails to return alt.rar file
 
