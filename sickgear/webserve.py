@@ -8394,12 +8394,13 @@ class History(MainHandler):
         :return: two data sets, detailed and compact
         """
 
+        limit = helpers.try_int(limit)
         sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
               ' FROM history h, tv_shows s' \
               ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
               ' AND h.hide = 0' \
               ' ORDER BY date DESC' \
-              '%s' % (' LIMIT %s' % limit, '')['0' == limit]
+              '%s' % (' LIMIT %s' % limit, '')[not limit]
         sql_result = sg_db.select(sql, [TVidProdid.glue])
 
         compact = []
@@ -8443,6 +8444,7 @@ class History(MainHandler):
     def index(self, limit=100, layout=None):
 
         t = PageTemplate(web_handler=self, file='history.tmpl')
+        limit = sg_helpers.try_int(limit, 100)
         t.limit = limit
 
         if 'provider_failures' == layout:  # layout renamed
@@ -8481,7 +8483,7 @@ class History(MainHandler):
                     ' INNER JOIN [tv_episodes_watched] AS tvew ON (tve.episode_id = tvew.tvep_id)'
                     ' WHERE 0 = hide'
                     ' ORDER BY tvew.date_watched DESC'
-                    '%s' % (' LIMIT %s' % limit, '')['0' == limit],
+                    '%s' % (' LIMIT %s' % limit, '')[not limit],
                     [TVidProdid.glue])
 
                 mru_count = {}
@@ -8526,7 +8528,7 @@ class History(MainHandler):
                       ' AND h.provider in ("%s")' % '","'.join(prov_list) + \
                       ' AND h.action in ("%s")' % '","'.join([str(x) for x in Quality.SNATCHED_ANY]) + \
                       ' AND h.hide = 0' \
-                      ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')['0' == limit] + \
+                      ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')[not limit] + \
                       ' GROUP BY provider' \
                       ' ORDER BY count DESC'
                 t.stat_results = sg_db.select(sql)
