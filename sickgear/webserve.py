@@ -56,8 +56,8 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
     SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, real_path, remove_article, remove_file_perm,
-                      starify)
+from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, is_sickgear_images_cache_dir, real_path,
+                      remove_article, remove_file_perm, starify)
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
     TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
@@ -10589,6 +10589,8 @@ class CachedImages(MainHandler):
     @staticmethod
     def create_dummy_image(filename, source):
         dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
+        if not is_sickgear_images_cache_dir(dummy_file):
+            return
         CachedImages.delete_dummy_image(dummy_file)
         try:
             with open(dummy_file, 'w'):

@@ -198,6 +198,19 @@ def is_sickgear_dir(path):
     return False
 
 
+def is_sickgear_images_cache_dir(path):
+    # type: (str) -> bool
+    """
+    validate that a path is a sickgear images cache subpath
+    :param path: path to check
+    """
+    path = Path(os.path.realpath(os.path.abspath(path)))
+    sickgear_images_cache_path = Path(os.path.join(sickgear.CACHE_DIR, 'images'))
+    if sickgear_images_cache_path in path.parents:
+        return True
+    return False
+
+
 def is_first_rar_volume(filename):
     """
     checks if file is part of rar set

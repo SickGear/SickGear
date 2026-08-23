@@ -1,6 +1,7 @@
 ﻿### 3.36.1 (2026-08-23 19:55:00 UTC)
 
 * Fix improve db query for request limits (from history and tv_shows)
+* Change verify that create_dummy_image only creates dummy files in image cache dir
 
 
 ### 3.36.0 (2026-08-08 23:40:00 UTC)
