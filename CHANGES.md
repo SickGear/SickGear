@@ -1,4 +1,11 @@
-﻿### 3.36.0 (2026-08-08 23:40:00 UTC)
+﻿### 3.36.1 (2026-08-24 19:45:00 UTC)
+
+* Fix improve db query for request limits (from history and tv_shows)
+* Change verify that create_dummy_image only creates dummy files in image cache dir
+* Fix Github broke issue_template
+
+
+### 3.36.0 (2026-08-08 23:40:00 UTC)
 
 * Change update actions and optimise unittest
 * Update actions/checkout@v6.0.2 to actions/checkout@v7

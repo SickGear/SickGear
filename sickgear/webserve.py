@@ -56,8 +56,8 @@ from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
     SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
-from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, real_path, remove_article, remove_file_perm,
-                      starify)
+from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, is_sickgear_images_cache_dir, real_path,
+                      remove_article, remove_file_perm, starify)
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, \
     TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG
@@ -8394,12 +8394,13 @@ class History(MainHandler):
         :return: two data sets, detailed and compact
         """
 
+        limit = helpers.try_int(limit)
         sql = 'SELECT h.*, show_name, s.indexer || ? || s.indexer_id AS tvid_prodid' \
               ' FROM history h, tv_shows s' \
               ' WHERE h.indexer=s.indexer AND h.showid=s.indexer_id' \
               ' AND h.hide = 0' \
               ' ORDER BY date DESC' \
-              '%s' % (' LIMIT %s' % limit, '')['0' == limit]
+              '%s' % (' LIMIT %s' % limit, '')[not limit]
         sql_result = sg_db.select(sql, [TVidProdid.glue])
 
         compact = []
@@ -8443,6 +8444,7 @@ class History(MainHandler):
     def index(self, limit=100, layout=None):
 
         t = PageTemplate(web_handler=self, file='history.tmpl')
+        limit = sg_helpers.try_int(limit, 100)
         t.limit = limit
 
         if 'provider_failures' == layout:  # layout renamed
@@ -8481,7 +8483,7 @@ class History(MainHandler):
                     ' INNER JOIN [tv_episodes_watched] AS tvew ON (tve.episode_id = tvew.tvep_id)'
                     ' WHERE 0 = hide'
                     ' ORDER BY tvew.date_watched DESC'
-                    '%s' % (' LIMIT %s' % limit, '')['0' == limit],
+                    '%s' % (' LIMIT %s' % limit, '')[not limit],
                     [TVidProdid.glue])
 
                 mru_count = {}
@@ -8526,7 +8528,7 @@ class History(MainHandler):
                       ' AND h.provider in ("%s")' % '","'.join(prov_list) + \
                       ' AND h.action in ("%s")' % '","'.join([str(x) for x in Quality.SNATCHED_ANY]) + \
                       ' AND h.hide = 0' \
-                      ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')['0' == limit] + \
+                      ' ORDER BY date DESC%s)' % (' LIMIT %s' % limit, '')[not limit] + \
                       ' GROUP BY provider' \
                       ' ORDER BY count DESC'
                 t.stat_results = sg_db.select(sql)
@@ -10587,6 +10589,8 @@ class CachedImages(MainHandler):
     @staticmethod
     def create_dummy_image(filename, source):
         dummy_file = '%s.%s.dummy' % (os.path.splitext(filename)[0], source)
+        if not is_sickgear_images_cache_dir(dummy_file):
+            return
         CachedImages.delete_dummy_image(dummy_file)
         try:
             with open(dummy_file, 'w'):
