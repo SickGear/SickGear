@@ -1,13 +1,14 @@
 ---
-name: Bug Report
-about: Report a bug
+name: New issue report
+about: Report a finding
 title: ""
 labels: ""
 assignees: ""
 ---
   
-#### Branch: Insert the name of the branch (e.g. main or dev)
-#### Branch version commit hash: (See the About page)
+#### Branch: Insert the name of the branch (e.g. main or dev)  
+  
+#### Branch version commit hash: (See the About page)  
 
 
 Expectation | Result
@@ -30,4 +31,4 @@ Additional notes:
 
 For example, any relevant config settings that may be help us replicate the reported issue
 
-Good info helps replicate the issue and is the fastest way to get it resolved
+Good info helps replicate the issue and is the quickest way to get it resolved
