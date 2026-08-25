@@ -6,6 +6,3 @@ contact_links:
   - name: Installation Instructions
     url: https://github.com/SickGear/SickGear/wiki/Installation-Instructions
     about: Please check the wiki before opening an issue    
-  - name: Discussions
-    url: irc.libera.chat
-    about: join #sickgear and ask questions here (can private chat too)
