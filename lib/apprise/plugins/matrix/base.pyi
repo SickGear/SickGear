@@ -1,4 +1,5 @@
 from ...common import NotifyFormat as NotifyFormat, NotifyImageSize as NotifyImageSize, NotifyType as NotifyType, PersistentStoreMode as PersistentStoreMode
+from ...conversion import html_to_text as html_to_text
 from ...exception import AppriseException as AppriseException
 from ...url import PrivacyMode as PrivacyMode
 from ...utils.parse import is_hostname as is_hostname, parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
@@ -42,6 +43,9 @@ class MatrixWebhookMode:
     HOOKSHOT: str
 
 MATRIX_WEBHOOK_MODES: Incomplete
+MATRIX_EVENT_BYTE_LIMIT: int
+MATRIX_EVENT_SAFETY_MARGIN: int
+MATRIX_CONTENT_BYTE_LIMIT: Incomplete
 
 class NotifyMatrix(NotifyBase):
     """A wrapper for Matrix Notifications."""
@@ -52,7 +56,11 @@ class NotifyMatrix(NotifyBase):
     attachment_support: bool
     setup_url: str
     image_size: Incomplete
-    body_maxlen: int
+    body_maxlen_default: int
+    body_maxlen_formatted: int
+    body_maxlen_e2ee: int
+    body_maxlen_e2ee_formatted: int
+    body_maxlen_webhook: int
     request_rate_per_sec: float
     default_retries: int
     default_wait_ms: int
@@ -84,9 +92,15 @@ class NotifyMatrix(NotifyBase):
     msgtype: Incomplete
     def __init__(self, targets=None, mode=None, msgtype=None, version=None, include_image=None, discovery=None, hsreq=None, webhook_path=None, e2ee=None, **kwargs) -> None:
         """Initialize Matrix Object."""
-    def send(self, body, title: str = '', notify_type=..., **kwargs):
+    def send(self, body, title: str = '', notify_type=..., body_format=None, **kwargs):
         """Perform Matrix Notification."""
-    def _send_webhook_notification(self, body, title: str = '', notify_type=..., **kwargs):
+    def _matrix_plain_fallback(self, body, body_format=None):
+        """Build the fallback shown by clients without rich-text support."""
+    @staticmethod
+    def _matrix_enforce_byte_budget(payload, byte_budget, keys):
+        """Shrink selected fields until the JSON payload fits its byte
+        budget."""
+    def _send_webhook_notification(self, body, title: str = '', notify_type=..., body_format=None, **kwargs):
         """Perform Matrix Notification as a webhook."""
     _re_slack_formatting_map: Incomplete
     _re_slack_formatting_rules: Incomplete
@@ -98,7 +112,7 @@ class NotifyMatrix(NotifyBase):
         """Format the payload for a T2Bot Matrix based messages."""
     def _hookshot_webhook_payload(self, body, title: str = '', notify_type=..., **kwargs):
         """Format the payload for a matrix-hookshot webhook."""
-    def _send_server_notification(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
+    def _send_server_notification(self, body, title: str = '', notify_type=..., attach=None, body_format=None, **kwargs):
         """Perform Direct Matrix Server Notification (no webhook)"""
     def _send_attachments(self, attach):
         """Posts all of the provided attachments."""
@@ -232,7 +246,7 @@ class NotifyMatrix(NotifyBase):
         Returns ``True`` on success (partial device failures are
         tolerated), ``False`` only when a critical step fails.
         """
-    def _e2ee_send_to_room(self, room_id, body, title, notify_type):
+    def _e2ee_send_to_room(self, room_id, body, title, notify_type, body_format=None):
         """Encrypt and send one message to *room_id* via MegOLM.
 
         Shares the MegOLM session key with room members when the
@@ -267,6 +281,9 @@ class NotifyMatrix(NotifyBase):
         """
     def __del__(self) -> None:
         """Ensure we relinquish our token."""
+    @property
+    def body_maxlen(self):
+        """Return a conservative limit for the configured Matrix format."""
     @property
     def url_identifier(self):
         """Returns all of the identifiers that make this URL unique from

@@ -1,5 +1,6 @@
 from ..common import NotifyImageSize as NotifyImageSize, NotifyType as NotifyType
 from ..url import PrivacyMode as PrivacyMode
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 

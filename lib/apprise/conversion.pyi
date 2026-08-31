@@ -1,8 +1,30 @@
 from .common import NotifyFormat as NotifyFormat
 from .url import URLBase as URLBase
 from _typeshed import Incomplete
+from bisect import bisect_left as bisect_left
 from collections.abc import Generator
 from html.parser import HTMLParser
+
+LIST_DEPTH_MAX: int
+BLOCKQUOTE_DEPTH_MAX: int
+MAX_FRAME_DEPTH: int
+
+class _Marker(str):
+    """Identify converter-generated structure."""
+class _ListMarker(_Marker):
+    """Identify a generated list marker."""
+class _QuoteMarker(_Marker):
+    """Identify a generated quote prefix."""
+class _ListIndent(_Marker):
+    """Identify list continuation indentation."""
+
+class _ParaBreak:
+    """Represent a paragraph boundary and its prefix."""
+    __slots__: Incomplete
+    prefix: Incomplete
+    in_quote: Incomplete
+    def __init__(self, prefix: str = '', in_quote: bool = False) -> None:
+        """Initialize a paragraph boundary."""
 
 def convert_between(from_format, to_format, content):
     """Converts between different suported formats. If no conversion exists, or
@@ -24,8 +46,10 @@ class HTMLConverter(HTMLParser):
     _do_store: bool
     _result: Incomplete
     converted: str
-    def __init__(self, **kwargs) -> None: ...
-    def close(self) -> None: ...
+    def __init__(self, **kwargs) -> None:
+        """Initialize the HTML converter."""
+    def close(self) -> None:
+        """Finalize the converted content."""
     def _finalize(self, result) -> Generator[Incomplete]:
         '''Combines and strips consecutive strings, then converts consecutive
         block ends into singleton newlines.

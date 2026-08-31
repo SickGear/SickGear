@@ -7,40 +7,39 @@ from collections.abc import Generator
 
 IS_VALID_ID_RE: Incomplete
 
-class NotificationAPIRegion:
+class PingramRegion:
     """Regions."""
     CA: str
     US: str
     EU: str
 
-NOTIFICATIONAPI_API_LOOKUP: Incomplete
-NOTIFICATIONAPI_REGIONS: Incomplete
+PINGRAM_API_LOOKUP: Incomplete
+PINGRAM_REGIONS: Incomplete
 
-class NotificationAPIChannel:
-    """Channels"""
+class PingramChannel:
+    """Channels."""
     EMAIL: str
     SMS: str
     INAPP: str
     WEB_PUSH: str
     MOBILE_PUSH: str
     SLACK: str
+    CALL: str
 
-NOTIFICATIONAPI_CHANNELS: frozenset[str]
+PINGRAM_CHANNELS: frozenset[str]
 
-class NotificationAPIMode:
-    """Modes"""
+class PingramMode:
+    """Modes."""
     TEMPLATE: str
     MESSAGE: str
 
-NOTIFICATIONAPI_MODES: frozenset[str]
+PINGRAM_MODES: frozenset[str]
 
-class NotifyNotificationAPI(NotifyBase):
-    """
-    A wrapper for NotificationAPI Notifications
-    """
+class NotifyPingram(NotifyBase):
+    """A wrapper for Pingram Notifications."""
     service_name: str
     service_url: str
-    secure_protocol: Incomplete
+    secure_protocol: str
     setup_url: str
     default_message_type: str
     request_rate_per_sec: float
@@ -49,52 +48,39 @@ class NotifyNotificationAPI(NotifyBase):
     template_tokens: Incomplete
     template_args: Incomplete
     template_kwargs: Incomplete
-    client_id: Incomplete
-    client_secret: Incomplete
+    apikey: Incomplete
     names: Incomplete
     from_addr: Incomplete
     reply_to: Incomplete
-    targets: Incomplete
     mode: Incomplete
     message_type: Incomplete
-    auth_header: Incomplete
     cc: Incomplete
     bcc: Incomplete
     region: Incomplete
     channels: Incomplete
     _invalid_targets: Incomplete
+    targets: Incomplete
     tokens: Incomplete
-    def __init__(self, client_id, client_secret, message_type=None, targets=None, cc=None, bcc=None, reply_to=None, channels=None, region=None, mode=None, from_addr=None, tokens=None, **kwargs) -> None:
-        """
-        Initialize Notify NotificationAPI Object
-        """
+    def __init__(self, apikey=None, message_type=None, targets=None, cc=None, bcc=None, reply_to=None, channels=None, region=None, mode=None, from_addr=None, tokens=None, **kwargs) -> None:
+        """Initialize Notify Pingram Object."""
     @property
     def url_identifier(self):
-        """
-        Returns all of the identifiers that make this URL unique from
-        another similar one. Targets or end points should never be identified
-        here.
+        """Returns all of the identifiers that make this URL unique from
+        another similar one.
+
+        Targets or end points should never be identified here.
         """
     def url(self, privacy: bool = False, *args, **kwargs):
-        """
-        Returns the URL built dynamically based on specified arguments.
-        """
+        """Returns the URL built dynamically based on specified
+        arguments."""
     def __len__(self) -> int:
-        """
-        Returns the number of targets associated with this notification
-        """
+        """Returns the number of targets associated with this
+        notification."""
     def gen_payload(self, body, title: str = '', notify_type=..., **kwargs) -> Generator[Incomplete]:
-        """
-        generates our NotificationAPI payload
-        """
+        """Generates our Pingram payload."""
     def send(self, body, title: str = '', notify_type=..., **kwargs):
-        """
-        Perform NotificationAPI Notification
-        """
+        """Perform Pingram Notification."""
     @staticmethod
     def parse_url(url):
-        """
-        Parses the URL and returns enough arguments that can allow
-        us to re-instantiate this object.
-
-        """
+        """Parses the URL and returns enough arguments that can allow us
+        to re-instantiate this object."""
