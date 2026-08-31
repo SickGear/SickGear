@@ -1,5 +1,5 @@
 from ..common import NotifyImageSize as NotifyImageSize, NotifyType as NotifyType, PersistentStoreMode as PersistentStoreMode
-from ..utils.parse import parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS, parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 from typing import Any

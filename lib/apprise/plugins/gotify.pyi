@@ -1,5 +1,5 @@
 from ..common import NotifyFormat as NotifyFormat, NotifyType as NotifyType
-from ..utils.parse import validate_regex as validate_regex
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 

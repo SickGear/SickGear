@@ -4,14 +4,15 @@ from ..logger import logging as logging
 from ..manager_config import ConfigurationManager as ConfigurationManager
 from ..manager_plugins import NotificationManager as NotificationManager
 from ..tag import AppriseTag as AppriseTag
-from ..url import URLBase as URLBase
+from ..url import URLBase as URLBase, URL_TOKEN_ALIASES as URL_TOKEN_ALIASES
 from ..utils.cwe312 import cwe312_url as cwe312_url
-from ..utils.parse import GET_SCHEMA_RE as GET_SCHEMA_RE, parse_bool as parse_bool, parse_list as parse_list, parse_urls as parse_urls
+from ..utils.parse import GET_SCHEMA_RE as GET_SCHEMA_RE, QSD_FULL_MODE_KEYS as QSD_FULL_MODE_KEYS, parse_bool as parse_bool, parse_list as parse_list, parse_urls as parse_urls
 from ..utils.time import zoneinfo as zoneinfo
 from _typeshed import Incomplete
 from collections import deque as deque
 
 VALID_TOKEN: Incomplete
+_YAML_REAPPLY_SKIP: Incomplete
 N_MGR: Incomplete
 C_MGR: Incomplete
 

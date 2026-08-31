@@ -1,7 +1,7 @@
 from .. import exception as exception
 from ..common import NotifyType as NotifyType
 from ..url import PrivacyMode as PrivacyMode
-from ..utils.parse import parse_list as parse_list, validate_regex as validate_regex
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS, parse_list as parse_list, validate_regex as validate_regex
 from ..utils.sanitize import sanitize_payload as sanitize_payload
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete

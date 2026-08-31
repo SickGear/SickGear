@@ -14,7 +14,7 @@ class AttachMemory(AttachBase):
     def url(self, privacy: bool = False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
     def open(self, *args, **kwargs):
-        """Return our memory object."""
+        """Return an independent handle to our memory object."""
     def __enter__(self):
         """Support with clause."""
     def download(self, **kwargs):

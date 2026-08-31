@@ -1,6 +1,6 @@
 from ..common import NotifyType as NotifyType
 from ..url import PrivacyMode as PrivacyMode
-from ..utils.parse import is_domain_service_target as is_domain_service_target, parse_bool as parse_bool, parse_domain_service_targets as parse_domain_service_targets, validate_regex as validate_regex
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS, is_domain_service_target as is_domain_service_target, parse_bool as parse_bool, parse_domain_service_targets as parse_domain_service_targets, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 

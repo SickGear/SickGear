@@ -1,26 +1,27 @@
 from ..common import NotifyType as NotifyType
-from ..utils.parse import is_email as is_email, is_phone_no as is_phone_no, parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
+from ..url import PrivacyMode as PrivacyMode
+from ..utils.parse import validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 
-class NotifyPopcornNotify(NotifyBase):
-    """A wrapper for PopcornNotify Notifications."""
+class NotifyStackfield(NotifyBase):
+    """A wrapper for Stackfield Notifications."""
     service_name: str
     service_url: str
     secure_protocol: str
     setup_url: str
     notify_url: str
-    default_batch_size: int
+    request_rate_per_sec: int
+    title_maxlen: int
+    body_maxlen: int
     templates: Incomplete
     template_tokens: Incomplete
     template_args: Incomplete
-    apikey: Incomplete
-    batch: Incomplete
-    targets: Incomplete
-    def __init__(self, apikey, targets=None, batch: bool = False, **kwargs) -> None:
-        """Initialize PopcornNotify Object."""
+    token: Incomplete
+    def __init__(self, token, **kwargs) -> None:
+        """Initialize Stackfield Object."""
     def send(self, body, title: str = '', notify_type=..., **kwargs):
-        """Perform PopcornNotify Notification."""
+        """Perform Stackfield Notification."""
     @property
     def url_identifier(self):
         """Returns all of the identifiers that make this URL unique from
@@ -30,9 +31,10 @@ class NotifyPopcornNotify(NotifyBase):
         """
     def url(self, privacy: bool = False, *args, **kwargs):
         """Returns the URL built dynamically based on specified arguments."""
-    def __len__(self) -> int:
-        """Returns the number of targets associated with this notification."""
     @staticmethod
     def parse_url(url):
-        """Parses the URL and returns enough arguments that can allow us to re-
-        instantiate this object."""
+        """Parses the URL and returns enough arguments that can allow us to
+        re-instantiate this object."""
+    @staticmethod
+    def parse_native_url(url):
+        """Support https://www.stackfield.com/apiwh/TOKEN"""
