@@ -895,7 +895,7 @@ def get_url(url,  # type: AnyStr
     session.params = params
 
     # session ssl verify
-    session.verify = False
+    session.verify = bool(re.search(r'(//|[.@])(github\.(com|io)|githubusercontent\.com|gitlab\.com)/', url))
 
     # don't trust os environments (auth, proxies, ...)
     session.trust_env = False
