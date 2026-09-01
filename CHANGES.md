@@ -1,4 +1,9 @@
-﻿### 3.36.1 (2026-08-24 19:45:00 UTC)
+﻿### 3.36.2 (2026-09-01 14:55:00 UTC)
+
+* Change ensure ssl verify is enabled for trusted certification endpoints, that's GitHub and Gitlab
+
+
+### 3.36.1 (2026-08-24 19:45:00 UTC)
 
 * Fix improve db query for request limits (from history and tv_shows)
 * Change verify that create_dummy_image only creates dummy files in image cache dir
