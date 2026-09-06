@@ -8727,41 +8727,60 @@ class History(MainHandler):
                         if not folder or 'tvshows' != folder.get('CollectionType', ''):
                             continue
 
-                        items = helpers.get_url('%s/Items' % user_url, failure_monitor=False, headers=headers,
-                                                params=dict(SortBy='DatePlayed,SeriesSortName,SortName',
-                                                            SortOrder='Descending',
-                                                            IncludeItemTypes='Episode',
-                                                            Recursive='true',
-                                                            Fields='Path,UserData',
-                                                            IsMissing='false',
-                                                            IsVirtualUnaired='false',
-                                                            StartIndex='0', Limit='100',
-                                                            ParentId=folder_id,
-                                                            Filters='IsPlayed',
-                                                            format='json'), timeout=10, parse_json=True) or {}
-                        for d in filter(lambda item: 'Episode' == item.get('Type', ''), items.get('Items')):
+                        items = []
+                        num_items = 500
+                        while True:
+                            data = helpers.get_url(f'{user_url}/Items', failure_monitor=False, headers=headers,
+                                                   params=dict(SortBy='DatePlayed,SeriesSortName,SortName',
+                                                                SortOrder='Descending',
+                                                                IncludeItemTypes='Episode',
+                                                                Recursive='true',
+                                                                Fields='Path',
+                                                                IsMissing='false',
+                                                                IsVirtualUnaired='false',
+                                                                StartIndex=f'{idx:d}', Limit=f'{num_items:d}',
+                                                                ParentId=folder_id,
+                                                                Filters='IsPlayed',
+                                                                format='json'), timeout=10, parse_json=True) or {}
+                            items += data.get('Items', [])
+                            if num_items > len(data.get('Items', [])):
+                                idx = 0
+                                break
+                            idx += num_items
+
+                        for d in filter(lambda item: 'Episode' == item.get('Type', ''), items):
                             try:
                                 root_dir_found = False
                                 path_file = d.get('Path')
-                                if not path_file:
+                                media_id = d.get('Id')
+                                if not path_file or not media_id:
                                     continue
                                 for index, p in enumerate(rootpaths):
                                     if p in path_file:
                                         path_file = os.path.join(
-                                            rootdirs[index], re.sub('.*?%s' % re.escape(p), '', path_file))
+                                            rootdirs[index], re.sub(f'.*?{re.escape(p)}', '', path_file))
                                         root_dir_found = True
                                         break
                                 if not root_dir_found:
                                     continue
+
+                                ep = helpers.get_url(
+                                    f'{user_url}/Items/{media_id}', failure_monitor=False, headers=headers,
+                                    params=dict(ExcludeFields='VideoChapters,VideoMediaSources,MediaStreams',
+                                                format='json'),
+                                    timeout=10, parse_json=True) or {}
+                                if not ep:
+                                    continue
+
                                 states[idx] = dict(
                                     path_file=path_file,
-                                    media_id=d.get('Id', ''),
-                                    played=(d.get('UserData', {}).get('PlayedPercentage') or
-                                            (d.get('UserData', {}).get('Played') and
-                                             d.get('UserData', {}).get('PlayCount') * 100) or 0),
+                                    media_id=media_id,
+                                    played=(ep.get('UserData', {}).get('PlayedPercentage') or
+                                            (ep.get('UserData', {}).get('Played') and
+                                             ep.get('UserData', {}).get('PlayCount') * 100) or 0),
                                     label='%s%s{Emby}' % (user.get('Name', ''), bool(user.get('Name')) and ' ' or ''),
                                     date_watched=SGDatetime.timestamp_far(
-                                        dateutil.parser.parse(d.get('UserData', {}).get('LastPlayedDate'))))
+                                        dateutil.parser.parse(ep.get('UserData', {}).get('LastPlayedDate'))))
 
                                 for m in maps:
                                     result, change = helpers.path_mapper(m[0], m[1], states[idx]['path_file'])
