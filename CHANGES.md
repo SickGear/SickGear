@@ -7,6 +7,11 @@
 * Change output warning instead of error when Github fails to return alt.rar file
 
 
+### 3.36.3 (2026-09-07 14:55:00 UTC)
+
+* Fix Emby watched files
+
+
 ### 3.36.2 (2026-09-01 14:55:00 UTC)
 
 * Change ensure ssl verify is enabled for trusted certification endpoints, that's GitHub and Gitlab
