@@ -390,12 +390,12 @@
 ##
 #set $py_ver = sys.version_info[:3]
 #set $py_ver_str = '.'.join(map(str, $py_ver[:2]))
-#set $is_no_py = $py_ver[:2] in [(3, 9), (3, 8)]
+#set $is_no_py = $py_ver[:2] in [(3, 10), (3, 9), (3, 8)]
 #if $is_no_py or $py_ver in [(3, 8, 1)]:
 	<div class="alert alert-danger topbar-notification upgrade-py" role="alert">
     #if $is_no_py:
-		<p>Your installed Python $py_ver_str is not supported and will soon be deprecated.<br>
-			Please replace with newest of Python <b>3.13, 3.12, 3.11, or 3.10</b>: <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
+		<p style="line-height:2em">The installed Python $py_ver_str version is end-of-life October 2026 and will be deprecated<br>
+			To remove this warning, use a latest release of Python <b>3.15 - 3.11</b> <a href="<%= anon_url('https://www.python.org/downloads/') %>" onclick="window.open(this.href);return !1;">download here</a>
 		</p>
     #elif (3, 8, 1) == $py_ver:
 		<p>Your installed Python 3.8.1 has a <a href="<%= anon_url('https://github.com/python/cpython/commit/ea316fd21527dec53e704a5b04833ac462ce3863') %>" onclick="window.open(this.href);return !1;">critical issue</a> affecting the parsing of URLs<br>
