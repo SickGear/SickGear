@@ -401,10 +401,7 @@
             #end if
             ##
 			<tr>
-            #if 'lastdate' == $sg_str('POSTER_SORTBY') and $cur_airs_last
-                #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_last, $cur_show_obj.airs, $cur_show_obj.network))
-				<td class="text-nowrap"><div class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
-            #elif $cur_airs_next
+            #if $cur_airs_next
                 #set $ldatetime = $SGDatetime.convert_to_setting($network_timezones.parse_date_time($cur_airs_next, $cur_show_obj.airs, $cur_show_obj.network))
 				<td class="text-nowrap"><div class="$fuzzydate">$SGDatetime.sbfdate($ldatetime)</div><span class="sort-data">$ldatetime.strftime('%Y%m%d%H%M')</span></td>
             #else
