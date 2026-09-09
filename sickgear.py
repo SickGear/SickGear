@@ -49,16 +49,17 @@ sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(__file__), 'lib'
 is_win = 'win' == sys.platform[0:3]
 
 try:
-    try:
-        py_cache_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '__pycache__'))
-        for pf in ['_cleaner.pyc', '_cleaner.pyo']:
-            cleaner_file = os.path.normpath(os.path.join(os.path.normpath(os.path.dirname(__file__)), pf))
-            if os.path.isfile(cleaner_file):
-                os.remove(cleaner_file)
-        if os.path.isdir(py_cache_path):
-            shutil.rmtree(py_cache_path)
-    except (BaseException, Exception):
-        pass
+    for pf in ['_cleaner.pyc', '_cleaner.pyo']:
+        cleaner_file = os.path.normpath(os.path.join(os.path.normpath(os.path.dirname(__file__)), pf))
+        if os.path.isfile(cleaner_file):
+            os.remove(cleaner_file)
+    py_cache_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '__pycache__'))
+    if os.path.isdir(py_cache_path):
+        shutil.rmtree(py_cache_path)
+except (BaseException, Exception):
+    pass
+
+try:
     import _cleaner
     from sickgear import piper
 except (BaseException, Exception):
