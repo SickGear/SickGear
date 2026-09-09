@@ -7,6 +7,11 @@
 * Change output warning instead of error when Github fails to return alt.rar file
 
 
+### 3.36.4 (2026-09-09 10:40:00 UTC)
+
+* Fix sort by column "Next Ep" on the view from menu "Shows" -> "Show List" where Layout is set to "Simple"
+
+
 ### 3.36.3 (2026-09-07 14:55:00 UTC)
 
 * Fix Emby watched files
