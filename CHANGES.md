@@ -7,6 +7,11 @@
 * Change output warning instead of error when Github fails to return alt.rar file
 
 
+### 3.36.6 (2026-09-11 00:50:00 UTC)
+
+* Change revert remove no longer used tornado -> asyncio -> AnyThreadEventLoopPolicy
+
+
 ### 3.36.5 (2026-09-09 15:12:00 UTC)
 
 * Change start warning Python 3.10 is eol and will be deprecated, recommend upgrade to 3.15, 3.14, 3.13, 3.12, or 3.11

@@ -238,6 +238,8 @@ class WebServer(threading.Thread):
         # python 3 needs to start event loop first
         import asyncio
         asyncio.set_event_loop(asyncio.new_event_loop())
+        from tornado.platform.asyncio import AnyThreadEventLoopPolicy
+        asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
 
         try:
             self.server = self.app.listen(self.options['port'], self.options['host'], ssl_options=ssl_options,
