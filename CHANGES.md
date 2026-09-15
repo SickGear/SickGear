@@ -4,6 +4,7 @@
 * Update idna library 3.18 (f39ea90) to 3.19 (03a9a11)
 * Update SimpleJSON 4.0.0 (1608c05) to 4.1.2 (d1fe71a)
 * Update Tornado Web Server 6.5.8 (a55abe3) to 6.5.9 (75ef8b1)
+* Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
 * Change output warning instead of error when Github fails to return alt.rar file
 
