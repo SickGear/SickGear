@@ -12,6 +12,7 @@ from .intranges import intranges_contain
 _virama_combining_class = 9
 _alabel_prefix = b"xn--"
 _max_input_length = 1024
+_max_domain_length = 253  # RFC 1035 octets, excluding any trailing dot
 _STATUS_VALID, _STATUS_MAPPED, _STATUS_DEVIATION, _STATUS_IGNORED = b"VMDI"
 _unicode_dots_re = re.compile("[\u002e\u3002\uff0e\uff61]")
 _std3_disallowed_re = re.compile("[\x00-\x2c\x2f\x3a-\x40A-Z\x5b-\x60\x7b-\x7f]")
@@ -163,7 +164,7 @@ def valid_string_length(domain: bytes | str, trailing_dot: bool) -> bool:
     :returns: ``True`` if the domain is within the length limit, otherwise
         ``False``.
     """
-    return len(domain) <= (254 if trailing_dot else 253)
+    return len(domain) <= _max_domain_length + trailing_dot
 
 
 def check_bidi(label: str, check_ltr: bool = False) -> bool:
