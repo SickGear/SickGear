@@ -3,6 +3,7 @@
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
 * Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
 * Update SimpleJSON 4.0.0 (1608c05) to 4.1.2 (d1fe71a)
+* Update soupsieve 2.9.2 (78661a6) to 2.10.0 (fc195cd)
 * Update Tornado Web Server 6.5.8 (a55abe3) to 6.5.10 (143a06b)
 * Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items

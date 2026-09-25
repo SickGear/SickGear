@@ -7,7 +7,7 @@ from . import css_match as cm
 from . import css_types as ct
 from .util import SelectorSyntaxError
 import warnings
-from typing import Match, Any, Iterator, cast
+from typing import Match, Any, Iterator, Iterable, cast
 from dataclasses import dataclass
 from collections import UserDict
 import threading
@@ -117,16 +117,20 @@ COMMENTS = r'(?:/\*(?:[^*]|\*(?!/))*\*/)'
 WSC = fr'(?:{WS}|{COMMENTS})'
 # CSS escapes
 CSS_ESCAPES = fr'(?:\\(?:[a-f0-9]{{1,6}}{WS}?|[^\r\n\f]|$))'
-CSS_STRING_ESCAPES = fr'(?:\\(?:[a-f0-9]{{1,6}}{WS}?|[^\r\n\f]|$|{NEWLINE}))'
+CSS_STRING_ESCAPES = fr'(?:\\(?:[a-f0-9]{{1,6}}{WS}?|{NEWLINE}|[^\r\n\f]|$))'
 # CSS Identifier
 IDENTIFIER = fr'''
 (?:(?:--|-?(?:[^\x00-\x2f\x30-\x40\x5B-\x5E\x60\x7B-\x9f]|{CSS_ESCAPES}))
 (?:[^\x00-\x2c\x2e\x2f\x3A-\x40\x5B-\x5E\x60\x7B-\x9f]|{CSS_ESCAPES})*)
 '''
 # `nth` content
-NTH = fr'(?:[-+])?(?:[0-9]+n?|n)(?:(?<=n){WSC}*(?:[-+]){WSC}*(?:[0-9]+))?'
+NTH = fr'[-+]?(?:[0-9]+n?|n)(?:(?<=n){WSC}*[-+]{WSC}*[0-9]+)?'
 # Value: quoted string or identifier
-VALUE = fr'''(?:"(?:\\(?:.|{NEWLINE})|[^\\"\r\n\f])*?"|'(?:\\(?:.|{NEWLINE})|[^\\'\r\n\f])*?'|{IDENTIFIER})'''
+VALUE = fr'''
+(?:"(?:\\(?:{NEWLINE}|[^\r\n\f])|[^\\"\r\n\f])*"|
+'(?:\\(?:{NEWLINE}|[^\r\n\f])|[^\\'\r\n\f])*'|
+{IDENTIFIER})
+'''
 # Attribute value comparison. `!=` is handled special as it is non-standard.
 ATTR = fr'(?:{WSC}*(?P<cmp>[!~^|*$]?=){WSC}*(?P<value>{VALUE})(?:{WSC}*(?P<case>[is]))?)?{WSC}*'
 
@@ -138,7 +142,7 @@ PAT_CLASS = fr'\.{IDENTIFIER}'
 # Prefix:Tag (`prefix|tag`)
 PAT_TAG = fr'(?P<tag_ns>(?:{IDENTIFIER}|\*)?\|)?(?P<tag_name>{IDENTIFIER}|\*)'
 # Attributes (`[attr]`, `[attr=value]`, etc.)
-PAT_ATTR = fr'\[{WSC}*(?P<attr_ns>(?:{IDENTIFIER}|\*)?\|)?(?P<attr_name>{IDENTIFIER}){ATTR}\]'
+PAT_ATTR = fr'\[{WSC}*(?P<attr_ns>(?:{IDENTIFIER}|\*)?\|(?!=))?(?P<attr_name>{IDENTIFIER}){ATTR}{WSC}*\]'
 # Pseudo class (`:pseudo-class`, `:pseudo-class(`)
 PAT_PSEUDO_CLASS = fr'(?P<name>:{IDENTIFIER})(?P<open>\({WSC}*)?'
 # Pseudo class special patterns. Matches `:pseudo-class(` for special case pseudo classes.
@@ -168,7 +172,7 @@ PAT_PSEUDO_LANG = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<values>{VALUE}(?:{WSC}*,{WSC}
 # Pseudo class direction (`:dir(ltr)`)
 PAT_PSEUDO_DIR = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<dir>ltr|rtl){WSC}*\)'
 # Combining characters (`>`, `~`, ` `, `+`, `,`)
-PAT_COMBINE = fr'{WSC}*?(?P<relation>[,+>~]|{WS}(?![,+>~])){WSC}*'
+PAT_COMBINE = fr'{COMMENTS}*(?={WS}|[,+>~]){WSC}*(?P<relation>[,+>~])?{WSC}*'
 # Extra: Contains (`:contains(text)`)
 PAT_PSEUDO_CONTAINS = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<values>{VALUE}(?:{WSC}*,{WSC}*{VALUE})*){WSC}*\)'
 
@@ -186,6 +190,7 @@ RE_WS_BEGIN = re.compile(fr'^{WSC}*')
 RE_WS_END = re.compile(fr'^(?:[ \t]|(?:\n\r|(?!\n\r)[\n\f\r])|{COMMENTS})*')
 RE_CUSTOM = re.compile(fr'^{PAT_PSEUDO_CLASS_CUSTOM}$', re.X)
 RE_PSEUDO_CLASS_SPECIAL = re.compile(PAT_PSEUDO_CLASS_SPECIAL, re.I | re.X | re.U)
+RE_PSEUDO_IGNORE = re.compile(PAT_PSEUDO_CLASS, re.X | re.I | re.U)
 
 QUOTED = ("'", '"')
 
@@ -217,7 +222,8 @@ def _cached_css_compile(
     pattern: str,
     namespaces: ct.Namespaces | None,
     custom: ct.CustomSelectors | None,
-    flags: int
+    ignore: tuple[str] | None = None,
+    flags: int = 0
 ) -> cm.SoupSieve:
     """Cached CSS compile."""
 
@@ -227,6 +233,7 @@ def _cached_css_compile(
         CSSParser(
             pattern,
             custom=custom_selectors,
+            ignore=ignore,
             flags=flags
         ).process_selectors(),
         namespaces,
@@ -420,7 +427,7 @@ class _Selector:
         """Freeze self."""
 
         if self.no_match:
-            return ct.SelectorNull()
+            return ct.Null
         else:
             return ct.Selector(
                 self.tag,
@@ -683,7 +690,9 @@ class CSSParser:
     def __init__(
         self,
         selector: str,
+        *,
         custom: dict[str, str | ct.SelectorList] | None = None,
+        ignore: Iterable[str] | None = None,
         flags: int = 0
     ) -> None:
         """Initialize."""
@@ -692,6 +701,7 @@ class CSSParser:
         self.flags = flags
         self.debug = self.flags & util.DEBUG
         self.custom = {} if custom is None else custom
+        self.ignore = frozenset([] if ignore is None else ignore)
         self.count = 0
 
     def increment_count(self, increment: int = 1) -> None:
@@ -802,7 +812,7 @@ class CSSParser:
         if not isinstance(selector, ct.SelectorList):
             del self.custom[pseudo]
             selector = CSSParser(
-                selector, custom=self.custom, flags=self.flags
+                selector, custom=self.custom, flags=self.flags, ignore=self.ignore
             ).process_selectors(flags=FLG_PSEUDO)
             self.custom[pseudo] = selector
 
@@ -842,25 +852,25 @@ class CSSParser:
                 self.increment_count(pseudo_selector.count)
                 sel.selectors.append(pseudo_selector)
             elif pseudo == ':first-child':
-                sel.nth.append(ct.SelectorNth(1, False, 0, False, False, ct.SelectorList()))
+                sel.nth.append(ct.SelectorNth(0, False, 1, False, False, ct.SelectorList()))
             elif pseudo == ':last-child':
-                sel.nth.append(ct.SelectorNth(1, False, 0, False, True, ct.SelectorList()))
+                sel.nth.append(ct.SelectorNth(0, False, 1, False, True, ct.SelectorList()))
             elif pseudo == ':first-of-type':
-                sel.nth.append(ct.SelectorNth(1, False, 0, True, False, ct.SelectorList()))
+                sel.nth.append(ct.SelectorNth(0, False, 1, True, False, ct.SelectorList()))
             elif pseudo == ':last-of-type':
-                sel.nth.append(ct.SelectorNth(1, False, 0, True, True, ct.SelectorList()))
+                sel.nth.append(ct.SelectorNth(0, False, 1, True, True, ct.SelectorList()))
             elif pseudo == ':only-child':
                 sel.nth.extend(
                     [
-                        ct.SelectorNth(1, False, 0, False, False, ct.SelectorList()),
-                        ct.SelectorNth(1, False, 0, False, True, ct.SelectorList())
+                        ct.SelectorNth(0, False, 1, False, False, ct.SelectorList()),
+                        ct.SelectorNth(0, False, 1, False, True, ct.SelectorList())
                     ]
                 )
             elif pseudo == ':only-of-type':
                 sel.nth.extend(
                     [
-                        ct.SelectorNth(1, False, 0, True, False, ct.SelectorList()),
-                        ct.SelectorNth(1, False, 0, True, True, ct.SelectorList())
+                        ct.SelectorNth(0, False, 1, True, False, ct.SelectorList()),
+                        ct.SelectorNth(0, False, 1, True, True, ct.SelectorList())
                     ]
                 )
             has_selector = True
@@ -916,6 +926,7 @@ class CSSParser:
         else:
             nth_parts = cast(Match[str], RE_NTH.match(content))
             _s1 = '-' if nth_parts.group('s1') and nth_parts.group('s1') == '-' else ''
+            _s2 = ''
             a = nth_parts.group('a')
             var = a.endswith('n')
             if a.startswith('n'):
@@ -923,14 +934,14 @@ class CSSParser:
             elif var:
                 _s1 += a[:-1]
             else:
-                _s1 += a
-            _s2 = '-' if nth_parts.group('s2') and nth_parts.group('s2') == '-' else ''
+                _s2 = _s1 + a
+                _s1 = ''
+            if nth_parts.group('s2') and nth_parts.group('s2') == '-':
+                _s2 = '-'
             if nth_parts.group('b'):
                 _s2 += nth_parts.group('b')
-            else:
-                _s2 = '0'
-            s1 = int(_s1, 10)
-            s2 = int(_s2, 10)
+            s1 = int(_s1, 10) if _s1 else 0
+            s2 = int(_s2, 10) if _s2 else 0
 
         pseudo_sel = mdict['name']
         if postfix == '_child':
@@ -987,7 +998,7 @@ class CSSParser:
     ) -> tuple[bool, _Selector, str]:
         """Parse combinator tokens."""
 
-        combinator = m.group('relation').strip()
+        combinator = m.group('relation')
         if not combinator:
             combinator = WS_COMBINATOR
         if combinator == COMMA_COMBINATOR:
@@ -1038,7 +1049,7 @@ class CSSParser:
     ) -> tuple[bool, _Selector]:
         """Parse combinator tokens."""
 
-        combinator = m.group('relation').strip()
+        combinator = m.group('relation')
         if not combinator:
             combinator = WS_COMBINATOR
         if not has_selector:
@@ -1190,6 +1201,14 @@ class CSSParser:
                     self.increment_count()
 
                 # Handle parts
+                if self.ignore:
+                    mi = RE_PSEUDO_IGNORE.match(m.group(0))
+                    if mi is not None and mi.group('name').lower() in self.ignore:
+                        raise SelectorSyntaxError(
+                            f"The selector '{mi.group('name')}' at position {m.start(0)}, has been disallowed",
+                            self.pattern,
+                            m.start(0)
+                        )
                 if key == "at_rule":
                     raise NotImplementedError(f"At-rules found at position {m.start(0)}")
                 elif key == "amp":
