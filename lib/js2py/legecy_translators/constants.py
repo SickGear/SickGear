@@ -238,7 +238,7 @@ def recover_constants(py_source,
 
 def unify_string_literals(js_string):
     """this function parses the string just like javascript
-       for example literal '\d' in JavaScript would be interpreted
+       for example literal '\\d' in JavaScript would be interpreted
        as 'd' - backslash would be ignored and in Pyhon this
        would be interpreted as '\\d' This function fixes this problem."""
     n = 0
