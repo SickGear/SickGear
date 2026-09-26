@@ -48,7 +48,7 @@ class Subtitulos(ServiceBase):
     # and the 'ó' char directly. This is because now BS4 converts the html
     # code chars into their equivalent unicode char
     release_pattern = re.compile('Versi.+n (.+) ([0-9]+).([0-9])+ megabytes')
-    extra_keywords_pattern = re.compile("(?:con|para)\s(?:720p)?(?:\-|\s)?([A-Za-z]+)(?:\-|\s)?(?:720p)?(?:\s|\.)(?:y\s)?(?:720p)?(?:\-\s)?([A-Za-z]+)?(?:\-\s)?(?:720p)?(?:\.)?");
+    extra_keywords_pattern = re.compile(r"(?:con|para)\s(?:720p)?(?:\-|\s)?([A-Za-z]+)(?:\-|\s)?(?:720p)?(?:\s|\.)(?:y\s)?(?:720p)?(?:\-\s)?([A-Za-z]+)?(?:\-\s)?(?:720p)?(?:\.)?");
     
     def list_checked(self, video, languages):
         return self.query(video.path or video.release, languages, get_keywords(video.guess), video.series, video.season, video.episode)
