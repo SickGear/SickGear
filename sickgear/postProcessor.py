@@ -1167,8 +1167,6 @@ class PostProcessor(object):
         keepalive = keepalive_stop = None
         if self.webhandler:
             def keep_alive(webh, stop_event):
-                import asyncio
-                asyncio.set_event_loop(asyncio.new_event_loop())
                 while not stop_event.is_set():
                     stop_event.wait(60)
                     webh('.')

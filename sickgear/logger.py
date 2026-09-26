@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import codecs
 import datetime
 import logging
 import glob
@@ -250,7 +249,7 @@ class SBRotatingLogHandler(object):
         :param buf_size: buffer size
         :type buf_size: int or long
         """
-        with codecs.open(filename, 'r', encoding='utf-8', errors='replace') as fh:
+        with open(filename, 'r', encoding='utf-8', errors='replace', newline='') as fh:
             segment = None
             offset = 0
             fh.seek(0, os.SEEK_END)
@@ -343,7 +342,7 @@ class TimedCompressedRotatingFileHandler(TimedRotatingFileHandler):
         self.logger_instance.init_logging()
 
         if self.encoding:
-            self.stream = codecs.open(self.baseFilename, 'w', self.encoding)
+            self.stream = open(self.baseFilename, 'w', encoding=self.encoding, newline='')
         else:
             self.stream = open(self.baseFilename, 'w')
 
