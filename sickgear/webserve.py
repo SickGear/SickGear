@@ -84,6 +84,7 @@ from tornado import gen, iostream
 from tornado.escape import utf8
 from tornado.web import RequestHandler, StaticFileHandler, authenticated
 from tornado.concurrent import run_on_executor
+from tornado.ioloop import IOLoop
 
 # from lib import requests
 from lib.urllib3.util.retry import Retry
@@ -1097,6 +1098,7 @@ class WebHandler(BaseHandler):
     def __init__(self, *arg, **kwargs):
         super(BaseHandler, self).__init__(*arg, **kwargs)
         self.lock = threading.Lock()
+        self.io_loop = IOLoop.current()
 
     @authenticated
     @gen.coroutine
@@ -1104,9 +1106,15 @@ class WebHandler(BaseHandler):
         yield self.route_method(route, use_404=True)
 
     def send_message(self, message):
+        # called from worker threads (e.g. streamed process media) where tornado is not thread-safe and there is no
+        # asyncio event loop, so hand write and flush to the IOLoop thread, callbacks run in order before finish()
+        self.io_loop.add_callback(self._send_message, message)
+
+    def _send_message(self, message):
         with self.lock:
-            self.write(message)
-            self.flush()
+            if not self._finished:
+                self.write(message)
+                self.flush()
 
     post = get
 

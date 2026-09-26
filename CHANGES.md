@@ -15,6 +15,13 @@
 * Update Tornado Web Server 6.5.9 (75ef8b1) to 6.5.10 (143a06b)
 
 
+### 3.36.7 (2026-09-26 21:00:00 UTC)
+
+* Change remove tornado -> asyncio -> AnyThreadEventLoopPolicy (asyncio policy api is removed in Python 3.16)
+* Change replace deprecated codecs.open in logger
+* Change remove unneeded created event loop
+
+
 ### 3.36.6 (2026-09-11 00:50:00 UTC)
 
 * Change revert remove no longer used tornado -> asyncio -> AnyThreadEventLoopPolicy
