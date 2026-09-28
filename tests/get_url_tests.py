@@ -15,7 +15,7 @@ import sg_helpers
 class FakeSession(requests.Session):
     def __init__(self, content):
         super(FakeSession, self).__init__()
-        self.content = content
+        self.content = content if isinstance(content, bytes) else content.encode('utf-8')
 
     def request(self, method, url, *args, **kwargs):
         response = Response()
@@ -24,6 +24,12 @@ class FakeSession(requests.Session):
         response.encoding = 'utf-8'
         response._content = self.content
         return response
+
+
+class SignatureProvider(object):
+    @staticmethod
+    def _has_signature(data=None):
+        return data and 'example.org' in data
 
 
 def flaresolverr_reply(page):
@@ -35,6 +41,18 @@ class GetUrlProxyBrowserTests(unittest.TestCase):
     def get_url(self, content, **kwargs):
         return sg_helpers.get_url('https://example.org/', session=FakeSession(content), nocache=True, **kwargs)
 
+    def test_page(self):
+        page = '<html><body><table id="results"></table></body></html>'
+        self.assertEqual(page, self.get_url(page))
+
+    def test_provider_page(self):
+        page = '<html><body><table id="results"></table></body></html>'
+        self.assertEqual(page, self.get_url(page, provider=SignatureProvider))
+
+    def test_provider_page_with_signature(self):
+        page = '<html><head><title>Site</title></head><body><a href="https://example.org/"></a></body></html>'
+        self.assertEqual(page, self.get_url(page, provider=SignatureProvider))
+
     def test_proxy_browser_page(self):
         page = '<html><body><table id="results"></table></body></html>'
         self.assertEqual(page, self.get_url(flaresolverr_reply(page), proxy_browser=True))
@@ -45,6 +63,10 @@ class GetUrlProxyBrowserTests(unittest.TestCase):
                 '[{"name":"Show S01E01 &amp; more","seeders":"5"}]</pre></body></html>')
         self.assertEqual([{'name': 'Show S01E01 & more', 'seeders': '5'}],
                          self.get_url(flaresolverr_reply(page), proxy_browser=True, parse_json=True))
+
+    def test_proxy_browser_page_with_provider_signature(self):
+        page = '<html><head><title>Site</title></head><body><table class="table2"></table></body></html>'
+        self.assertEqual(page, self.get_url(flaresolverr_reply(page), proxy_browser=True, provider=SignatureProvider))
 
     def test_json_without_proxy_browser(self):
         self.assertEqual([{'name': 'Show S01E01'}],

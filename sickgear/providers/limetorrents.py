@@ -18,6 +18,7 @@
 import re
 import traceback
 
+import sickgear
 from . import generic
 from .. import logger
 from ..helpers import try_int
@@ -64,7 +65,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 search_url = self.urls['browse'] if 'Cache' == mode \
                     else self.urls['search'] % (quote_plus(search_string))
 
-                html = self.get_url(search_url, provider=self)
+                html = self.get_url(search_url, provider=self, proxy_browser=bool(sickgear.FLARESOLVERR_HOST))
                 if self.should_skip():
                     return results
 
@@ -124,7 +125,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
     def get_data(self, url):
         result = None
-        html = self.get_url(url)
+        html = self.get_url(url, proxy_browser=bool(sickgear.FLARESOLVERR_HOST))
         if self.should_skip():
             return result
 

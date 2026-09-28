@@ -960,7 +960,7 @@ def get_url(url,  # type: AnyStr
                 response.encoding = response.apparent_encoding
 
         # noinspection PyProtectedMember
-        if provider and provider._has_signature(response.text):
+        if provider and not proxy_browser and provider._has_signature(response.text):
             result = getattr(response, response_attr)
         else:
             if raise_status_code:
