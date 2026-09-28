@@ -960,7 +960,7 @@ def get_url(url,  # type: AnyStr
                 response.encoding = response.apparent_encoding
 
         # noinspection PyProtectedMember
-        if provider and provider._has_signature(response.text):
+        if provider and not proxy_browser and provider._has_signature(response.text):
             result = getattr(response, response_attr)
         else:
             if raise_status_code:
@@ -1041,6 +1041,11 @@ def get_url(url,  # type: AnyStr
                 data_json = json_loads(requests_response=response)
                 if proxy_browser:
                     result = ({}, data_json.get('solution', {}).get('response', {}))[isinstance(data_json, dict)]
+                    if parse_json and isinstance(result, str):
+                        # a browser renders a text document (e.g. a JSON api response) inside <pre>
+                        result = json_loads(html_unescape(
+                            re.sub(r'(?is)^.*?<pre[^>]*>(.*?)</pre>.*$', r'\1', result)))
+                        result = ({}, result)[isinstance(result, (dict, list))]
                 else:
                     result = ({}, data_json)[isinstance(data_json, (dict, list))]
                 if resp_sess:
