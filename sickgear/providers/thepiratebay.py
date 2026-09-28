@@ -90,11 +90,12 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
                 if 'Cache' != mode:
                     search_url = self.urls['api'] % search_string
-                    pages = [self.get_url(search_url, parse_json=True)]
+                    pages = [self.get_url(search_url, parse_json=True, proxy_browser=True)]
                 else:
                     urls = [self.urls['api'] % 'category:%s' % cur_cat for cur_cat in (205, 208)]
                     search_url = ', '.join(urls)
-                    pages = [self.get_url(cur_url, parse_json=True) for cur_url in urls]
+                    pages = [self.get_url(cur_url, parse_json=True, proxy_browser=True)
+                             for cur_url in urls]
 
                 seen_not_found = False
                 if any(pages):
@@ -124,7 +125,7 @@ class ThePirateBayProvider(generic.TorrentProvider):
                 if seen_not_found and not len(items[mode]):
                     continue
 
-                html = self.get_url(self.urls['config_provider_home_uri'])
+                html = self.get_url(self.urls['config_provider_home_uri'], proxy_browser=True)
                 if self.should_skip() or not html:
                     return results
 
@@ -143,15 +144,15 @@ class ThePirateBayProvider(generic.TorrentProvider):
                                 pass
                     else:
                         try:
-                            html = self.get_url(self._link(soup.find('a', title="Browse Torrents")['href']))
+                            html = self.get_url(self._link(soup.find('a', title="Browse Torrents")['href']), proxy_browser=True)
                             if html:
                                 js = re.findall(r'check\sthat\s+(\w+.js)\s', html)
                                 if js:
                                     js_file = re.findall(f'<script[^"]+?"([^"]*?{js[0]}[^"]*?).*?</script>', html)
                                     if js_file:
-                                        html = self.get_url(self._link(js_file[0]))
+                                        html = self.get_url(self._link(js_file[0]), proxy_browser=True)
                             if html:  # could be none from previous get_url for js
-                                # html or js can be source for parsing cat|browse links
+                                # html or js can be sourced for parsing cat|browse links
                                 urls = re.findall(
                                         '(?i)<a[^>]+?href="([^>]+?(?:cat|browse)[^>]+?)"[^>]+?>[^>]*?tv shows<', html)
                                 search_url = ', '.join([self._link(cur_url) for cur_url in urls])

@@ -52,7 +52,7 @@ class TokyoToshokanProvider(generic.TorrentProvider):
 
                 search_url = f'{self.url}search.php?{params}'
 
-                html = self.get_url(search_url)
+                html = self.get_url(search_url, proxy_browser=True)
                 if self.should_skip():
                     return self._sort_seeding(mode, results)
 
