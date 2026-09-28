@@ -1,0 +1,56 @@
+import json
+import os.path
+import sys
+import unittest
+
+sys.path.insert(1, os.path.abspath('..'))
+sys.path.insert(1, os.path.abspath('../lib'))
+
+import requests
+from requests.models import Response
+
+import sg_helpers
+
+
+class FakeSession(requests.Session):
+    def __init__(self, content):
+        super(FakeSession, self).__init__()
+        self.content = content
+
+    def request(self, method, url, *args, **kwargs):
+        response = Response()
+        response.status_code = 200
+        response.url = url
+        response.encoding = 'utf-8'
+        response._content = self.content
+        return response
+
+
+def flaresolverr_reply(page):
+    return json.dumps({'status': 'ok', 'message': 'Challenge not detected!',
+                       'solution': {'url': 'https://example.org/', 'status': 200, 'response': page}}).encode('utf-8')
+
+
+class GetUrlProxyBrowserTests(unittest.TestCase):
+    def get_url(self, content, **kwargs):
+        return sg_helpers.get_url('https://example.org/', session=FakeSession(content), nocache=True, **kwargs)
+
+    def test_proxy_browser_page(self):
+        page = '<html><body><table id="results"></table></body></html>'
+        self.assertEqual(page, self.get_url(flaresolverr_reply(page), proxy_browser=True))
+
+    def test_proxy_browser_json_document(self):
+        page = ('<html><head><meta name="color-scheme" content="light dark"></head><body>'
+                '<pre style="word-wrap: break-word; white-space: pre-wrap;">'
+                '[{"name":"Show S01E01 &amp; more","seeders":"5"}]</pre></body></html>')
+        self.assertEqual([{'name': 'Show S01E01 & more', 'seeders': '5'}],
+                         self.get_url(flaresolverr_reply(page), proxy_browser=True, parse_json=True))
+
+    def test_json_without_proxy_browser(self):
+        self.assertEqual([{'name': 'Show S01E01'}],
+                         self.get_url(b'[{"name":"Show S01E01"}]', parse_json=True))
+
+
+if '__main__' == __name__:
+    suite = unittest.TestLoader().loadTestsFromTestCase(GetUrlProxyBrowserTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)

@@ -18,6 +18,7 @@
 import re
 import traceback
 
+import sickgear
 from . import generic
 from .. import logger
 from ..helpers import try_int
@@ -90,11 +91,12 @@ class ThePirateBayProvider(generic.TorrentProvider):
 
                 if 'Cache' != mode:
                     search_url = self.urls['api'] % search_string
-                    pages = [self.get_url(search_url, parse_json=True)]
+                    pages = [self.get_url(search_url, parse_json=True, proxy_browser=bool(sickgear.FLARESOLVERR_HOST))]
                 else:
                     urls = [self.urls['api'] % 'category:%s' % cur_cat for cur_cat in (205, 208)]
                     search_url = ', '.join(urls)
-                    pages = [self.get_url(cur_url, parse_json=True) for cur_url in urls]
+                    pages = [self.get_url(cur_url, parse_json=True, proxy_browser=bool(sickgear.FLARESOLVERR_HOST))
+                             for cur_url in urls]
 
                 seen_not_found = False
                 if any(pages):
