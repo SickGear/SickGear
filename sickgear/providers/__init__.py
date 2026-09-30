@@ -31,7 +31,6 @@ if False:
 __all__ = [
     # usenet
     'filesharingtalk',
-    'omgwtfnzbs',
     # torrent
     'alpharatio', 'bithdtv', 'btn',
     'custom01', 'custom11', 'eztv', 'fano', 'filelist', 'funfile',

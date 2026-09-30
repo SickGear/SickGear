@@ -16,6 +16,11 @@
 * Update Tornado Web Server 6.5.9 (75ef8b1) to 6.5.10 (143a06b)
 
 
+### 3.36.8 (2026-09-30 14:30:00 UTC)
+
+* Remove omgwtfnzbs legacy API usenet provider
+
+
 ### 3.36.7 (2026-09-26 21:00:00 UTC)
 
 * Change remove tornado -> asyncio -> AnyThreadEventLoopPolicy (asyncio policy api is removed in Python 3.16)
