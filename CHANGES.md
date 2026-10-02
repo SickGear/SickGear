@@ -9,6 +9,7 @@
 * Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
 * Change output warning instead of error when Github fails to return alt.rar file
+* Change LimeTorrents, TBP, and TokyoToshokan to use proxy_browser for their requests
 
 
 [develop]
