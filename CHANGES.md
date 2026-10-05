@@ -3,7 +3,7 @@
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
 * Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
 * Update hachoir 3.3.0 (b1c8b57) to 3.4.0 (3880742)
-* Update SimpleJSON 4.0.0 (1608c05) to 4.1.2 (d1fe71a)
+* Update SimpleJSON 4.0.0 (1608c05) to 4.2.0 (0ace7d1)
 * Update soupsieve 2.9.2 (78661a6) to 2.10.0 (fc195cd)
 * Update Tornado Web Server 6.5.8 (a55abe3) to 6.5.10 (143a06b)
 * Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
@@ -14,6 +14,7 @@
 
 [develop]
 * Update idna library 3.19 (03a9a11) to 3.20 (d55e65e)
+* Update SimpleJSON 4.1.2 (d1fe71a) to 4.2.0 (0ace7d1)
 * Update Tornado Web Server 6.5.9 (75ef8b1) to 6.5.10 (143a06b)
 
 

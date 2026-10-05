@@ -5,7 +5,7 @@ interchange format.
 :mod:`simplejson` exposes an API familiar to users of the standard library
 :mod:`marshal` and :mod:`pickle` modules. It is the externally maintained
 version of the :mod:`json` library contained in Python 2.6+, supporting
-Python 2.7 and Python 3.8+, and has significant performance advantages,
+Python 2.7 and Python 3.9+, and has significant performance advantages,
 even without using the optional C extension for speedups.
 
 Encoding basic Python object hierarchies::
@@ -118,7 +118,7 @@ Serializing multiple objects to JSON lines (newline-delimited JSON)::
 
 """
 from __future__ import absolute_import
-__version__ = '4.1.2'
+__version__ = '4.2.0'
 __all__ = [
     'dump', 'dumps', 'load', 'loads',
     'JSONDecoder', 'JSONDecodeError', 'JSONEncoder',
