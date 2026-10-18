@@ -8,6 +8,7 @@ __api_version__ = '1.0.0'
 import datetime
 import hashlib
 import logging
+import os
 import re
 import requests
 import time
@@ -125,6 +126,7 @@ class IMDbIndexer(TVInfoBase):
     # noinspection PyDefaultArgument
     def __init__(self, *args, **kwargs):
         super(IMDbIndexer, self).__init__(*args, **kwargs)
+        self._imdb_pie_cache_dir = os.path.join(self._cachedir, 'imdb_pie')
 
     def search(self, series):
         # type: (AnyStr) -> List
@@ -136,7 +138,7 @@ class IMDbIndexer(TVInfoBase):
         is_none, shows = self._get_cache_entry(cache_name_key)
         if not self.config.get('cache_search') or (None is shows and not is_none):
             try:
-                result = imdbpie.Imdb().search_for_title(series)
+                result = imdbpie.Imdb(cachedir=self._imdb_pie_cache_dir).search_for_title(series)
             except (BaseException, Exception):
                 pass
             self._set_cache_entry(cache_name_key, result, expire=self.search_cache_expire)
@@ -167,7 +169,7 @@ class IMDbIndexer(TVInfoBase):
                         is_none, shows = self._get_cache_entry(cache_id_key)
                         if not self.config.get('cache_search') or (None is shows and not is_none):
                             try:
-                                show = imdbpie.Imdb().get_title_auxiliary('tt%07d' % p)
+                                show = imdbpie.Imdb(cachedir=self._imdb_pie_cache_dir).get_title_auxiliary('tt%07d' % p)
                             except (BaseException, Exception):
                                 continue
                             self._set_cache_entry(cache_id_key, show, expire=self.search_cache_expire)
@@ -249,7 +251,7 @@ class IMDbIndexer(TVInfoBase):
             is_none, ps = self._get_cache_entry(cache_name_key)
             if None is ps and not is_none:
                 try:
-                    ps = imdbpie.Imdb().search_for_name(name)
+                    ps = imdbpie.Imdb(cachedir=self._imdb_pie_cache_dir).search_for_name(name)
                 except (BaseException, Exception):
                     ps = None
                 self._set_cache_entry(cache_name_key, ps)
@@ -262,7 +264,7 @@ class IMDbIndexer(TVInfoBase):
     @staticmethod
     def _get_bio(p_id):
         try:
-            return imdbpie.Imdb().get_name_biography(f'nm{p_id:07d}')
+            return imdbpie.Imdb(cachedir=self._imdb_pie_cache_dir).get_name_biography(f'nm{p_id:07d}')
             # bio = get_url('https://www.imdb.com/name/nm%07d/bio' % p_id, headers={'Accept-Language': 'en'})
             # bio = get_url(f'https://realimdb.netlify.app/api/',
             #               post_json={"query":"query GetPersonDetails($id: ID!) {\nname(id: $id) {\nid\nnameText "
@@ -300,7 +302,7 @@ class IMDbIndexer(TVInfoBase):
         is_none, p = self._get_cache_entry(cache_main_key)
         if None is p and not is_none:
             try:
-                p = imdbpie.Imdb().get_name(imdb_id='nm%07d' % p_id)
+                p = imdbpie.Imdb(cachedir=self._imdb_pie_cache_dir).get_name(imdb_id='nm%07d' % p_id)
             except (BaseException, Exception):
                 p = None
             self._set_cache_entry(cache_main_key, p)
@@ -313,7 +315,7 @@ class IMDbIndexer(TVInfoBase):
             is_none, fg = self._get_cache_entry(cache_credits_key)
             if None is fg and not is_none:
                 try:
-                    fg = imdbpie.Imdb().get_name_filmography(imdb_id='nm%07d' % p_id)
+                    fg = imdbpie.Imdb(cachedir=self._imdb_pie_cache_dir).get_name_filmography(imdb_id='nm%07d' % p_id)
                 except (BaseException, Exception):
                     fg = None
                 self._set_cache_entry(cache_credits_key, fg)
