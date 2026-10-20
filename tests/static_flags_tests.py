@@ -27,17 +27,18 @@ root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gui', 'sli
 
 
 def resolve(url_path):
-    # the path tornado hands to validate_absolute_path, using the native separator of this OS
     handler = BaseStaticFileHandler.__new__(BaseStaticFileHandler)
-    with mock.patch.object(StaticFileHandler, 'validate_absolute_path', lambda _self, _root, path: path):
-        return handler.validate_absolute_path(root, os.path.join(root, *url_path.split('/')))
+    with mock.patch.object(StaticFileHandler, 'validate_absolute_path', lambda _self, _root, path: path), \
+            mock.patch.object(os, 'sep', '/'):
+        return handler.validate_absolute_path(root, native(url_path))
 
 
 def native(url_path):
-    return os.path.join(root, *url_path.split('/'))
+    # shortcut: always '/' so the fix is exercised on Windows too
+    return root.replace('\\', '/') + '/' + url_path
 
 
-class StaticFlagsTests(test.SickbeardTestDBCase):
+class StaticFlagsTests(unittest.TestCase):
 
     def test_lang_png_maps_to_country_svg(self):
         self.assertEqual(native('images/flags/svg/gb.svg'), resolve('images/flags/svg/lang/en.png'))
