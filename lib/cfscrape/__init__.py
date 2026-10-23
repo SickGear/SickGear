@@ -106,19 +106,25 @@ class CloudflareScraper(Session):
         if not self.test_flaresolverr(url_solver):
             raise ValueError('No FlareSolverr software running %sat %s' % (('to solve Cloudflare challenge ',
                                                                             '')[proxy_browser], url_solver))
-        try:
-            params = {} if 'v1' not in self.test_flaresolverr(url_solver) else dict(userAgent=user_agent)
-            params.update(dict(
-                cmd='request.%s' % method.lower(), url=url, maxTimeout=120000,
-                cookies=[{'name': cur_ckee.name, 'value': cur_ckee.value,
-                          'domain': cur_ckee.domain, 'path': cur_ckee.path} for cur_ckee in self.cookies]))
-            response = super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
-        except(BaseException, Exception) as e:
-            raise ValueError('FlareSolverr software unable to %s: %r' % (('solve Cloudflare anti-bot IUAM challenge',
-                                                                          'fetch content')[proxy_browser], e))
+        # FlareSolverr's browser refuses (and fails the whole request on) a cookie for any domain other than the
+        # page it is on, so only send cookies for the requested host; e.g. a solved page can leave the jar holding
+        # cookies of a domain the site redirected to
+        host = urlparse(url).hostname or ''
+        params = {} if 'v1' not in self.test_flaresolverr(url_solver) else dict(userAgent=user_agent)
+        params.update(dict(
+            cmd='request.%s' % method.lower(), url=url, maxTimeout=120000,
+            cookies=[{'name': cur_ckee.name, 'value': cur_ckee.value,
+                      'domain': cur_ckee.domain, 'path': cur_ckee.path} for cur_ckee in self.cookies
+                     if host.endswith((cur_ckee.domain or '').lstrip('.'))]))
+        response = self._flaresolverr_post(url_solver, params, proxy_browser)
+        if None is not response and params['cookies'] and not response.ok \
+                and 'invalid cookie domain' in str(self._fs_json(response).get('message')):
+            # the site moved the browser to another host before cookies were set (e.g. an ad redirect), retry once
+            logging.warning('FlareSolverr cookie domain mismatch fetching %s, retrying without cookies' % url)
+            params['cookies'] = []
+            response = self._flaresolverr_post(url_solver, params, proxy_browser)
         if None is not response:
-            data_json = response.json()
-            result = ({}, data_json)[isinstance(data_json, (dict, list))]
+            result = self._fs_json(response)
             if response.ok:
                 if 'ok' == result.get('status'):
                     self.cookies.clear()
@@ -134,6 +140,18 @@ class CloudflareScraper(Session):
                 raise ValueError('Failure with FlareSolverr: %s' % result.get('message', 'See the FlareSolver output'))
 
         return response
+
+    def _flaresolverr_post(self, url_solver, params, proxy_browser):
+        try:
+            return super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
+        except(BaseException, Exception) as e:
+            raise ValueError('FlareSolverr software unable to %s: %r' % (('solve Cloudflare anti-bot IUAM challenge',
+                                                                          'fetch content')[proxy_browser], e))
+
+    @staticmethod
+    def _fs_json(response):
+        data_json = response.json()
+        return ({}, data_json)[isinstance(data_json, (dict, list))]
 
     def solve_cf_challenge(self, resp, url_solver, **original_kwargs):
         body = resp.text
