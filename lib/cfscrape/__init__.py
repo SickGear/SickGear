@@ -1,7 +1,9 @@
 from requests.exceptions import RequestException
 from requests.models import Response
 from requests.sessions import Session
+from requests.structures import CaseInsensitiveDict
 
+from html import unescape
 import logging
 import random
 import re
@@ -22,6 +24,11 @@ DEFAULT_USER_AGENTS = [
     'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:41.0)'
     ' Gecko/20100101 Firefox/41.0'
 ]
+
+
+# Chromium renders a plain text document, such as a JSON API response, inside this viewer markup
+CHROMIUM_TEXT_DOC = re.compile(r'(?is)^\s*<html><head>(?:<meta[^>]*>)*</head><body><pre[^>]*>(.*)</pre>'
+                               r'(?:<div class="json-formatter-container"></div>)?</body></html>\s*$')
 
 
 class CloudflareError(RequestException):
@@ -106,19 +113,25 @@ class CloudflareScraper(Session):
         if not self.test_flaresolverr(url_solver):
             raise ValueError('No FlareSolverr software running %sat %s' % (('to solve Cloudflare challenge ',
                                                                             '')[proxy_browser], url_solver))
-        try:
-            params = {} if 'v1' not in self.test_flaresolverr(url_solver) else dict(userAgent=user_agent)
-            params.update(dict(
-                cmd='request.%s' % method.lower(), url=url, maxTimeout=120000,
-                cookies=[{'name': cur_ckee.name, 'value': cur_ckee.value,
-                          'domain': cur_ckee.domain, 'path': cur_ckee.path} for cur_ckee in self.cookies]))
-            response = super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
-        except(BaseException, Exception) as e:
-            raise ValueError('FlareSolverr software unable to %s: %r' % (('solve Cloudflare anti-bot IUAM challenge',
-                                                                          'fetch content')[proxy_browser], e))
+        # FlareSolverr's browser refuses (and fails the whole request on) a cookie for any domain other than the
+        # page it is on, so only send cookies for the requested host; e.g. a solved page can leave the jar holding
+        # cookies of a domain the site redirected to
+        host = urlparse(url).hostname or ''
+        params = {} if 'v1' not in self.test_flaresolverr(url_solver) else dict(userAgent=user_agent)
+        params.update(dict(
+            cmd='request.%s' % method.lower(), url=url, maxTimeout=120000,
+            cookies=[{'name': cur_ckee.name, 'value': cur_ckee.value,
+                      'domain': cur_ckee.domain, 'path': cur_ckee.path} for cur_ckee in self.cookies
+                     if host.endswith((cur_ckee.domain or '').lstrip('.'))]))
+        response = self._flaresolverr_post(url_solver, params, proxy_browser)
+        if None is not response and params['cookies'] and not response.ok \
+                and 'invalid cookie domain' in str(self._fs_json(response).get('message')):
+            # the site moved the browser to another host before cookies were set (e.g. an ad redirect), retry once
+            logging.warning('FlareSolverr cookie domain mismatch fetching %s, retrying without cookies' % url)
+            params['cookies'] = []
+            response = self._flaresolverr_post(url_solver, params, proxy_browser)
         if None is not response:
-            data_json = response.json()
-            result = ({}, data_json)[isinstance(data_json, (dict, list))]
+            result = self._fs_json(response)
             if response.ok:
                 if 'ok' == result.get('status'):
                     self.cookies.clear()
@@ -134,6 +147,18 @@ class CloudflareScraper(Session):
                 raise ValueError('Failure with FlareSolverr: %s' % result.get('message', 'See the FlareSolver output'))
 
         return response
+
+    def _flaresolverr_post(self, url_solver, params, proxy_browser):
+        try:
+            return super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
+        except(BaseException, Exception) as e:
+            raise ValueError('FlareSolverr software unable to %s: %r' % (('solve Cloudflare anti-bot IUAM challenge',
+                                                                          'fetch content')[proxy_browser], e))
+
+    @staticmethod
+    def _fs_json(response):
+        data_json = response.json()
+        return ({}, data_json)[isinstance(data_json, (dict, list))]
 
     def solve_cf_challenge(self, resp, url_solver, **original_kwargs):
         body = resp.text
@@ -151,7 +176,42 @@ class CloudflareScraper(Session):
         if None is final_response:
             raise ValueError('Failed to validate Cloudflare anti-bot IUAM challenge')
 
-        return final_response
+        return self.solution_response(final_response, resp)
+
+    @staticmethod
+    def solution_response(solver_response, challenge_response):
+        """
+        Return the page fetched by FlareSolverr as a response to the originally requested url
+
+        The FlareSolverr reply is an envelope of {status, message, solution: {url, status, headers, response, ...}}.
+        Returned as is, a caller receives the envelope in place of the page, so a JSON API caller iterates over
+        the envelope keys, and an HTML caller parses nothing.
+
+        :param solver_response: FlareSolverr reply
+        :param challenge_response: response that presented the challenge
+        :return: response with the solved page, or solver_response if it holds no solution
+        """
+        try:
+            solution = solver_response.json().get('solution') or {}
+        except (BaseException, Exception):
+            return solver_response
+        content = solution.get('response')
+        if not isinstance(content, str):
+            return solver_response
+
+        text_doc = CHROMIUM_TEXT_DOC.match(content)
+        if text_doc:
+            content = unescape(text_doc.group(1))
+
+        response = Response()
+        response.status_code = int(solution.get('status') or 200)
+        response.url = solution.get('url') or challenge_response.url
+        response.headers = CaseInsensitiveDict(solution.get('headers') or {})
+        response.encoding = 'utf-8'
+        response._content = content.encode('utf-8')
+        response.request = challenge_response.request
+        response.reason = ('', 'OK')[200 == response.status_code]
+        return response
 
     @classmethod
     def create_scraper(cls, sess=None, **kwargs):

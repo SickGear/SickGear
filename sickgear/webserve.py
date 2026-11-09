@@ -260,7 +260,11 @@ class BaseStaticFileHandler(StaticFileHandler):
         return super(BaseStaticFileHandler, self).write_error(status_code, **kwargs)
 
     def validate_absolute_path(self, root, absolute_path):
-        if '\\images\\flags\\' in absolute_path:
+        # the flag rewrites below use Windows separators, so match against a '\\' form of the path and
+        # use the native form for file checks, else none of them apply where os.sep is '/'
+        win_path = absolute_path.replace(os.sep, '\\')
+        if '\\images\\flags\\' in win_path:
+            absolute_path = win_path
             lang_match_regex = re.compile(r'^(.+\\)([^\\]+)(\.(?:png|svg))$', flags=re.I)
             lang_match = lang_match_regex.search(absolute_path)
             if lang_match:
@@ -273,11 +277,12 @@ class BaseStaticFileHandler(StaticFileHandler):
                     absolute_path = re.sub(r'(\\[^\\]+)\.png$', r'\\svg\1.svg', absolute_path)
                 if (new_lang := alpha3_to_alpha2.get(cur_lang, cur_lang)):
                     absolute_path = lang_match_regex.sub(f'\\1{new_lang}\\3', absolute_path)
-                if not os.path.isfile(absolute_path) and absolute_path.endswith('.svg'):
+                if not os.path.isfile(absolute_path.replace('\\', os.sep)) and absolute_path.endswith('.svg'):
                     absolute_path = re.sub(r'svg\\([^\\]+)\.svg', '\\1.png', absolute_path)
-            if not os.path.isfile(absolute_path):
+            if not os.path.isfile(absolute_path.replace('\\', os.sep)):
                 absolute_path = re.sub(r'\\images\\flags.+\.(?:png|svg)$',
                                        r'\\images\\flags\\svg\\unknown.svg', absolute_path)
+            absolute_path = absolute_path.replace('\\', os.sep)
         return super(BaseStaticFileHandler, self).validate_absolute_path(root, absolute_path)
 
     def data_received(self, *args):

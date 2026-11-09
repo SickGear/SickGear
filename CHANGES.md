@@ -1,4 +1,16 @@
-﻿### 3.36.8 (2026-09-30 14:30:00 UTC)
+﻿### 3.36.9 (2026-11-09 17:10:00 UTC)
+
+* Fix flag images in certain environments, e.g. docker builds
+* Change update fallback zoneinfo to 2026f
+* Change support for Python is now 3.15.2 - 3.11.0
+* Change update actions/setup-python@v6.2.0 to actions/setup-python@v7
+* Change add cache dir to imdb_api to address user shared /tmp on Linux
+* Fix providers behind Cloudflare returning no results
+* Fix proxied requests failing on cookies of another domain
+* Update certifi 2026.07.22 to 2026.10.23
+
+
+### 3.36.8 (2026-09-30 14:30:00 UTC)
 
 * Remove omgwtfnzbs legacy API usenet provider
 
