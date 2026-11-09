@@ -7,6 +7,7 @@ from typing import Callable, Any
 
 DEBUG = 0x00001
 NOCACHE = 0x00002
+NOSTRICT = 0x00004
 
 RE_PATTERN_LINE_SPLIT = re.compile(r'(?:\r\n|(?!\r\n)[\n\r])|$')
 
@@ -83,9 +84,9 @@ def get_pattern_context(pattern: str, index: int) -> tuple[str, int, int]:
     last = 0
     current_line = 1
     col = 1
-    text = []  # type: list[str]
+    text: list[str] = []
     line = 1
-    offset = None  # type: int | None
+    offset: int | None = None
 
     # Split pattern by newline and handle the text before the newline
     for m in RE_PATTERN_LINE_SPLIT.finditer(pattern):

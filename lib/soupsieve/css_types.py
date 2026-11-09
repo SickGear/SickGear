@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 import copyreg
 from .pretty import pretty
-from typing import Any, Iterator, Pattern, Iterable, Mapping
+from typing import Any, Iterator, Pattern, Iterable, Mapping, TypeVar, overload
 
 __all__ = (
     'Selector',
@@ -18,7 +18,6 @@ __all__ = (
     'CustomSelectors'
 )
 
-
 SEL_EMPTY = 0x1
 SEL_ROOT = 0x2
 SEL_DEFAULT = 0x4
@@ -30,6 +29,24 @@ SEL_IN_RANGE = 0x80
 SEL_OUT_OF_RANGE = 0x100
 SEL_DEFINED = 0x200
 SEL_PLACEHOLDER_SHOWN = 0x400
+
+
+def _repr_expand(value: Any) -> bool:  # pragma: no cover
+    """Check if the value is an immutable object that uses the default representation."""
+
+    return isinstance(value, Immutable) and type(value).__repr__ is Immutable.__repr__
+
+
+def _repr_value(value: Any) -> Any:  # pragma: no cover
+    """
+    Return the representation of a leaf value, or the value itself if it must be expanded.
+
+    Immutable objects using the default representation are expanded, as are tuples containing them.
+    """
+
+    if _repr_expand(value) or (value.__class__ is tuple and any(_repr_expand(v) for v in value)):
+        return value
+    return repr(value)
 
 
 class Immutable:
@@ -56,20 +73,40 @@ class Immutable:
         return cls
 
     def __eq__(self, other: Any) -> bool:
-        """Equal."""
+        """Check equaling in a non-recursive manner."""
 
-        return (
-            isinstance(other, self.__base__()) and
-            all(getattr(other, key) == getattr(self, key) for key in self.__slots__ if key != '_hash')
-        )
+        stack: list[tuple[Immutable, Any]] = [(self, other)]
+        while stack:
+            a, b = stack.pop()
+            if a is b:
+                continue
+
+            # The hash is derived from the content, so differing hashes cannot be equal.
+            if not isinstance(b, a.__base__()) or a._hash != b._hash:
+                return False
+
+            # Compare the attributes in the slot
+            for key in a.__slots__[:-1]:
+                x = getattr(a, key)
+                y = getattr(b, key)
+                if isinstance(x, Immutable):
+                    stack.append((x, y))
+                elif x.__class__ is tuple and y.__class__ is tuple:
+                    if len(x) != len(y):  # pragma: no cover
+                        return False
+                    for i, j in zip(x, y, strict=True):
+                        if isinstance(i, Immutable):
+                            stack.append((i, j))
+                        elif i != j:  # pragma: no cover
+                            return False
+                elif x != y:
+                    return False
+        return True
 
     def __ne__(self, other: Any) -> bool:
-        """Equal."""
+        """Not equal."""
 
-        return (
-            not isinstance(other, self.__base__()) or
-            any(getattr(other, key) != getattr(self, key) for key in self.__slots__ if key != '_hash')
-        )
+        return not self.__eq__(other)
 
     def __hash__(self) -> int:
         """Hash."""
@@ -82,10 +119,37 @@ class Immutable:
         raise AttributeError(f"'{self.__class__.__name__}' is immutable")
 
     def __repr__(self) -> str:  # pragma: no cover
-        """Representation."""
+        """
+        Build a representation without using recursion.
 
-        r = ', '.join([f"{k}={getattr(self, k)!r}" for k in self.__slots__[:-1]])
-        return f"{self.__class__.__name__}({r})"
+        Selectors can be nested very deeply, so build the representation of nested
+        immutable objects with an explicit stack instead of recursing into their `__repr__`.
+        Strings on the stack are output as is, other items are expanded into more items.
+        """
+
+        output: list[str] = []
+        stack: list[Any] = [self]
+        while stack:
+            item = stack.pop()
+            if item.__class__ is str:
+                output.append(item)
+            elif isinstance(item, Immutable):
+                # Push parts in reverse so they are popped in order: `Name(key=value, ...)`
+                stack.append(')')
+                keys = item.__slots__[:-1]
+                for index in range(len(keys) - 1, -1, -1):
+                    stack.append(_repr_value(getattr(item, keys[index])))
+                    stack.append(f'{keys[index]}=' if index == 0 else f', {keys[index]}=')
+                stack.append(f'{item.__class__.__name__}(')
+            else:
+                # A tuple containing immutable objects: `(a,)` or `(a, b, ...)`
+                stack.append(',)' if len(item) == 1 else ')')
+                for index in range(len(item) - 1, -1, -1):
+                    stack.append(_repr_value(item[index]))
+                    if index:
+                        stack.append(', ')
+                stack.append('(')
+        return ''.join(output)
 
     __str__ = __repr__
 
@@ -93,78 +157,6 @@ class Immutable:
         """Pretty print."""
 
         print(pretty(self))
-
-
-class ImmutableDict(Mapping[Any, Any]):
-    """Hashable, immutable dictionary."""
-
-    def __init__(
-        self,
-        arg: Mapping[Any, Any]
-    ) -> None:
-        """Initialize."""
-
-        self._d = dict(arg)
-        self._hash = hash(tuple([(type(x), x, type(y), y) for x, y in sorted(self._d.items())]))
-
-    def __iter__(self) -> Iterator[Any]:
-        """Iterator."""
-
-        return iter(self._d)
-
-    def __len__(self) -> int:
-        """Length."""
-
-        return len(self._d)
-
-    def __getitem__(self, key: Any) -> Any:
-        """Get item: `namespace['key']`."""
-
-        return self._d[key]
-
-    def __hash__(self) -> int:
-        """Hash."""
-
-        return self._hash
-
-    def __repr__(self) -> str:  # pragma: no cover
-        """Representation."""
-
-        return f"{self._d!r}"
-
-    __str__ = __repr__
-
-
-class Namespaces(ImmutableDict):
-    """Namespaces."""
-
-    def __init__(self, arg: Mapping[str, str]) -> None:
-        """Initialize."""
-
-        self._validate(arg)
-        super().__init__(arg)
-
-    def _validate(self, arg: Mapping[str, str]) -> None:
-        """Validate arguments."""
-
-        if not all(isinstance(k, str) and isinstance(v, str) for k, v in arg.items()):
-            raise TypeError(f'{self.__class__.__name__} values must be hashable')
-
-
-class CustomSelectors(ImmutableDict):
-    """Custom selectors."""
-
-    def __init__(self, arg: Mapping[str, str]) -> None:
-        """Initialize."""
-
-        self._validate(arg)
-        super().__init__(arg)
-
-    def _validate(self, arg: Mapping[str, str]) -> None:
-        """Validate arguments."""
-
-        if not all(isinstance(k, str) and isinstance(v, str) for k, v in arg.items()):
-            raise TypeError(f'{self.__class__.__name__} values must be hashable')
 
 
 class Selector(Immutable):
@@ -244,19 +236,21 @@ class SelectorTag(Immutable):
 class SelectorAttribute(Immutable):
     """Selector attribute rule."""
 
-    __slots__ = ("attribute", "prefix", "pattern", "xml_type_pattern", "_hash")
+    __slots__ = ("attribute", "prefix", "pattern", "xml_type_pattern", "inverse", "_hash")
 
     attribute: str
     prefix: str
     pattern: Pattern[str] | None
     xml_type_pattern: Pattern[str] | None
+    inverse: bool
 
     def __init__(
         self,
         attribute: str,
         prefix: str,
         pattern: Pattern[str] | None,
-        xml_type_pattern: Pattern[str] | None
+        xml_type_pattern: Pattern[str] | None,
+        inverse: bool
     ) -> None:
         """Initialize."""
 
@@ -264,7 +258,8 @@ class SelectorAttribute(Immutable):
             attribute=attribute,
             prefix=prefix,
             pattern=pattern,
-            xml_type_pattern=xml_type_pattern
+            xml_type_pattern=xml_type_pattern,
+            inverse=inverse
         )
 
 
@@ -377,8 +372,189 @@ class SelectorList(Immutable):
         return self.selectors[index]
 
 
-def _pickle(p: Any) -> Any:
-    return p.__base__(), tuple([getattr(p, s) for s in p.__slots__[:-1]])
+KT = TypeVar('KT')
+VT = TypeVar('VT')
+RT = TypeVar('RT')
+
+
+class ImmutableDict(Mapping[KT, VT]):
+    """Hashable, immutable dictionary."""
+
+    def __init__(
+        self,
+        arg: Mapping[KT, VT]
+    ) -> None:
+        """Initialize."""
+
+        self._d = dict(arg)
+        self._hash = hash(tuple([(type(x), x, type(y), y) for x, y in sorted(self._d.items())]))
+
+    @overload
+    def get(self, key: KT, /) -> VT | None:
+        ...
+
+    @overload
+    def get(self, key: KT, /, default: VT) -> VT:
+        ...
+
+    @overload
+    def get(self, key: KT, /, default: RT) -> VT | RT:
+        ...
+
+    def get(self, key: KT, /, default: RT | VT | None = None) -> VT | RT | None:
+        """Get value."""
+
+        return self._d.get(key, default)
+
+    def __iter__(self) -> Iterator[KT]:
+        """Iterator."""
+
+        return iter(self._d)
+
+    def __len__(self) -> int:
+        """Length."""
+
+        return len(self._d)
+
+    def __getitem__(self, key: KT) -> VT:
+        """Get item: `namespace['key']`."""
+
+        return self._d[key]
+
+    def __hash__(self) -> int:
+        """Hash."""
+
+        return self._hash
+
+    def __repr__(self) -> str:  # pragma: no cover
+        """Representation."""
+
+        return f"{self._d!r}"
+
+    __str__ = __repr__
+
+
+class Namespaces(ImmutableDict[str, str]):
+    """Namespaces."""
+
+    def __init__(self, arg: Mapping[str, str]) -> None:
+        """Initialize."""
+
+        self._validate(arg)
+        super().__init__(arg)
+
+    def _validate(self, arg: Mapping[str, str]) -> None:
+        """Validate arguments."""
+
+        if not all(isinstance(k, str) and isinstance(v, str) for k, v in arg.items()):
+            raise TypeError(f'{self.__class__.__name__} keys and values must be strings')
+
+
+class CustomSelectors(ImmutableDict[str, SelectorList]):
+    """Custom selectors."""
+
+    def __init__(self, arg: Mapping[str, str | SelectorList], max_selectors: int | None = None) -> None:
+        """Initialize."""
+
+        from . import css_parser as cp
+
+        if max_selectors is None:
+            max_selectors = cp.SELECTOR_LIMIT
+
+        self._d = {}
+        for k, v in arg.items():
+            if not isinstance(k, str):
+                raise TypeError(f'{self.__class__.__name__} keys must be strings')
+            # Validate key
+            k = cp.css_unescape(k).lower()
+            if k in self._d:
+                raise KeyError(f'Custom selector {k} was defined twice')
+            if cp.RE_CUSTOM.match(k) is None:
+                raise cp.SelectorSyntaxError(f"The name '{k}' is not a valid custom pseudo-class name")
+            # Compile value
+            if isinstance(v, str):
+                v = cp.CSSParser(v, max_selectors=max_selectors, custom=self._d).process_selectors(flags=cp.FLG_PSEUDO)
+            elif not isinstance(v, SelectorList):
+                raise TypeError(f"Custom selector values must be either 'str' or 'SelectorList', not {type(v)}")
+            # Monitor count
+            max_selectors -= v.count
+            self._d[k] = v
+        self._hash = hash(tuple([(x, y) for x, y in sorted(self._d.items())] + [max_selectors]))
+
+
+def _pickle(p: Immutable) -> Any:
+    """
+    Reduce an immutable object for pickling.
+
+    Selectors can be nested very deeply, and pickling them object by object would
+    recurse for each level. Instead, flatten the entire structure into a table of
+    nodes, children before parents, where nested immutable objects are replaced by
+    their index in the table. As the table only contains leaf values, neither
+    pickling nor unpickling needs to recurse.
+
+    Each node is `(class, args, refs)`. A ref is either the index of an argument that
+    is an immutable object, or `(index, positions)` for an argument that is a tuple
+    containing immutable objects at the given positions.
+    """
+
+    indexes: dict[int, int] = {}
+    nodes: list[tuple[type[Immutable], tuple[Any, ...], tuple[Any, ...]]] = []
+    stack: list[tuple[Immutable, list[Any] | None]] = [(p, None)]
+
+    while stack:
+        obj, values = stack.pop()
+        if id(obj) in indexes:
+            continue
+
+        # Queue up children to be processed before the parent.
+        if values is None:
+            values = [getattr(obj, s) for s in obj.__slots__[:-1]]
+            stack.append((obj, values))
+            for value in values:
+                if isinstance(value, Immutable):
+                    stack.append((value, None))
+                elif value.__class__ is tuple:
+                    stack.extend((v, None) for v in value if isinstance(v, Immutable))
+            continue
+
+        # All children have been processed, replace them with their index.
+        refs: list[Any] = []
+        for i, value in enumerate(values):
+            if isinstance(value, Immutable):
+                values[i] = indexes[id(value)]
+                refs.append(i)
+            elif value.__class__ is tuple:
+                positions = [j for j, v in enumerate(value) if isinstance(v, Immutable)]
+                if positions:
+                    items = list(value)
+                    for j in positions:
+                        items[j] = indexes[id(items[j])]
+                    values[i] = tuple(items)
+                    refs.append((i, tuple(positions)))
+
+        indexes[id(obj)] = len(nodes)
+        nodes.append((obj.__base__(), tuple(values), tuple(refs)))
+
+    return _unpickle, (tuple(nodes),)
+
+
+def _unpickle(nodes: tuple[tuple[type[Immutable], tuple[Any, ...], tuple[Any, ...]], ...]) -> Immutable:
+    """Rebuild an immutable object from the flattened node table created by `_pickle`."""
+
+    objs: list[Immutable] = []
+    for cls, args, refs in nodes:
+        values = list(args)
+        for ref in refs:
+            if isinstance(ref, int):
+                values[ref] = objs[values[ref]]
+            else:
+                i, positions = ref
+                items = list(values[i])
+                for j in positions:
+                    items[j] = objs[items[j]]
+                values[i] = tuple(items)
+        objs.append(cls(*values))
+    return objs[-1]
 
 
 def pickle_register(obj: Any) -> None:
