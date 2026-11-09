@@ -3087,7 +3087,8 @@ class TVShow(TVShowBase):
         :param imdb_id: imdb id
         """
         try:
-            if (actual_id := imdbpie.Imdb().get_real_title_id(imdb_id)) != imdb_id and actual_id:
+            if (actual_id := imdbpie.Imdb(cachedir=os.path.join(sickgear.CACHE_DIR, 'imdb-pie')).get_real_title_id(
+                    imdb_id)) != imdb_id and actual_id:
                 return actual_id
         except (BaseException, Exception):
             pass
