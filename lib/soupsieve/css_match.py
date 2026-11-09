@@ -1,13 +1,25 @@
 """CSS matcher."""
 from __future__ import annotations
 from datetime import datetime
+from math import isfinite
 from collections.abc import Hashable
 from . import util
 import re
 from . import css_types as ct
 import unicodedata
 import bs4
-from typing import Iterator, Iterable, Any, Callable, Sequence, Any, overload, Literal, cast  # noqa: F401, F811
+from typing import (
+    Generator,
+    Iterator,
+    Iterable,
+    Any,
+    Callable,
+    Sequence,
+    overload,
+    Literal,
+    cast,
+    TYPE_CHECKING
+)  # noqa: F401, F811
 
 # Empty tag pattern (whitespace okay)
 RE_NOT_EMPTY = re.compile('[^ \t\r\n\f]')
@@ -26,6 +38,12 @@ REL_HAS_CLOSE_PARENT = ':>'
 REL_HAS_SIBLING = ':~'
 REL_HAS_CLOSE_SIBLING = ':+'
 
+# `bs4` imports this module while it is still initializing,
+# so these must only be evaluated when type checking.
+if TYPE_CHECKING:  # pragma: no cover
+    MatchRequest = tuple[bs4.Tag, ct.SelectorList]
+    MatchGenerator = Generator[MatchRequest, bool, bool]
+
 NS_XHTML = 'http://www.w3.org/1999/xhtml'
 NS_XML = 'http://www.w3.org/XML/1998/namespace'
 
@@ -38,13 +56,14 @@ DIR_MAP = {
     'auto': 0
 }
 
-RE_NUM = re.compile(r"^(?P<value>-?(?:[0-9]{1,}(\.[0-9]+)?|\.[0-9]+))$")
-RE_TIME = re.compile(r'^(?P<hour>[0-9]{2}):(?P<minutes>[0-9]{2})$')
+RE_NUM = re.compile(r"^(?P<value>-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)$")
+RE_TIME = re.compile(r'^(?P<hour>[0-9]{2}):(?P<minutes>[0-9]{2})(?::(?P<seconds>[0-9]{2}(?:\.[0-9]{1,3})?))?$')
 RE_MONTH = re.compile(r'^(?P<year>[0-9]{4,})-(?P<month>[0-9]{2})$')
 RE_WEEK = re.compile(r'^(?P<year>[0-9]{4,})-W(?P<week>[0-9]{2})$')
 RE_DATE = re.compile(r'^(?P<year>[0-9]{4,})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})$')
 RE_DATETIME = re.compile(
-    r'^(?P<year>[0-9]{4,})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})T(?P<hour>[0-9]{2}):(?P<minutes>[0-9]{2})$'
+    r'^(?P<year>[0-9]{4,})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})T(?P<hour>[0-9]{2}):(?P<minutes>[0-9]{2})'
+    r'(?::(?P<seconds>[0-9]{2}(?:\.[0-9]{1,3})?))?$'
 )
 RE_WILD_STRIP = re.compile(r'(?:(?:-\*-)(?:\*(?:-|$))*|-\*$)')
 
@@ -243,7 +262,7 @@ class _DocumentNav:
                         if child.next_sibling is not None:
                             next_good = child.next_sibling
                         else:
-                            last_child = child  # type: bs4.element.PageElement
+                            last_child: bs4.element.PageElement = child
                             while isinstance(last_child, bs4.Tag) and last_child.contents:
                                 last_child = last_child.contents[-1]
                             next_good = last_child.next_element
@@ -257,11 +276,13 @@ class _DocumentNav:
                 elif not tags:
                     yield child
 
-    def get_parent(self, el: bs4.Tag | None, no_iframe: bool = False) -> bs4.Tag | None:
+    def get_parent(self, el: bs4.Tag | None, no_iframe: bool = False, no_doc: bool = True) -> bs4.Tag | None:
         """Get parent."""
 
         parent = el.parent if el is not None else None
         if no_iframe and parent is not None and self.is_iframe(parent):  # pragma: no cover
+            parent = None
+        if no_doc and self.is_doc(parent):
             parent = None
         return parent
 
@@ -427,7 +448,11 @@ class Inputs:
         # be week 53; if Dec 31 is a Monday and that week is counted as
         # week 1 of the next year, Dec 28 still belongs to the final
         # week of the current ISO year and yields the correct max week.
-        max_week = datetime(year, 12, 28).isocalendar()[1]
+        #
+        # `datetime` stops at year 9999, but the calendar repeats every 400
+        # years (a whole number of weeks), so use the matching year from 2000
+        # to 2399, as `calendar.weekday()` does.
+        max_week = datetime(2000 + year % 400, 12, 28).isocalendar()[1]
         return 1 <= week <= max_week
 
     @staticmethod
@@ -454,11 +479,17 @@ class Inputs:
 
         return 0 <= minutes <= 59
 
+    @staticmethod
+    def validate_seconds(seconds: float) -> bool:
+        """Validate seconds."""
+
+        return 0 <= seconds < 60
+
     @classmethod
     def parse_value(cls, itype: str, value: str | None) -> tuple[float, ...] | None:
         """Parse the input value."""
 
-        parsed = None  # type: tuple[float, ...] | None
+        parsed: tuple[float, ...] | None = None
         if value is None:
             return value
         if itype == "date":
@@ -488,8 +519,9 @@ class Inputs:
             if m:
                 hour = int(m.group('hour'), 10)
                 minutes = int(m.group('minutes'), 10)
-                if cls.validate_hour(hour) and cls.validate_minutes(minutes):
-                    parsed = (hour, minutes)
+                seconds = float(m.group('seconds') or 0)
+                if cls.validate_hour(hour) and cls.validate_minutes(minutes) and cls.validate_seconds(seconds):
+                    parsed = (hour, minutes, seconds)
         elif itype == "datetime-local":
             m = RE_DATETIME.match(value)
             if m:
@@ -498,15 +530,18 @@ class Inputs:
                 day = int(m.group('day'), 10)
                 hour = int(m.group('hour'), 10)
                 minutes = int(m.group('minutes'), 10)
+                seconds = float(m.group('seconds') or 0)
                 if (
                     cls.validate_year(year) and cls.validate_month(month) and cls.validate_day(year, month, day) and
-                    cls.validate_hour(hour) and cls.validate_minutes(minutes)
+                    cls.validate_hour(hour) and cls.validate_minutes(minutes) and cls.validate_seconds(seconds)
                 ):
-                    parsed = (year, month, day, hour, minutes)
+                    parsed = (year, month, day, hour, minutes, seconds)
         elif itype in ("number", "range"):
             m = RE_NUM.match(value)
             if m:
-                parsed = (float(m.group('value')),)
+                number = float(m.group('value'))
+                if isfinite(number):
+                    parsed = (number,)
         return parsed
 
 
@@ -524,16 +559,17 @@ class CSSMatch(_DocumentNav):
 
         self.assert_valid_input(scope)
         self.tag = scope
-        self.cached_meta_lang = []  # type: list[tuple[str, str]]
-        self.cached_default_forms = []  # type: list[tuple[bs4.Tag, bs4.Tag]]
-        self.cached_indeterminate_forms = []  # type: list[tuple[bs4.Tag, str, bool]]
+        self.cached_meta_lang: list[tuple[str, str]] = []
+        self.cached_default_forms: list[tuple[bs4.Tag, bs4.Tag]] = []
+        self.cached_indeterminate_forms: list[tuple[bs4.Tag, str, bool]] = []
         self.selectors = selectors
-        self.namespaces = {} if namespaces is None else namespaces  # type: ct.Namespaces | dict[str, str]
+        self.namespaces: ct.Namespaces | dict[str, str] = {} if namespaces is None else namespaces
         self.flags = flags
         self.enable_cache = not bool(self.flags & util.NOCACHE)
         self.iframe_restrict = False
-        self.nth_cache: dict[Hashable, dict[Hashable, list[int]]] = {}
-        self.sib_cache: dict[Hashable, dict[Hashable, int]] = {}
+        self.nth_cache: dict[Hashable, list[int]] = {}
+        self.sib_cache: dict[Hashable, int] = {}
+        self.dir_cache: dict[int, int] = {}
 
         # Find the root element for the whole tree
         doc = scope
@@ -541,7 +577,7 @@ class CSSMatch(_DocumentNav):
         while parent:
             doc = parent
             parent = self.get_parent(doc)
-        root = None  # type: bs4.Tag | None
+        root: bs4.Tag | None = None
         if not self.is_doc(doc):
             root = doc
         else:
@@ -562,6 +598,7 @@ class CSSMatch(_DocumentNav):
 
         self.nth_cache.clear()
         self.sib_cache.clear()
+        self.dir_cache.clear()
 
     def supports_namespaces(self) -> bool:
         """Check if namespaces are supported in the HTML type."""
@@ -603,38 +640,39 @@ class CSSMatch(_DocumentNav):
     def find_bidi(self, el: bs4.Tag) -> int | None:
         """Get directionality from element text."""
 
-        for node in self.get_children(el):
+        stack = [self.get_children(el)]
+        while stack:
+            for node in stack[-1]:
 
-            # Analyze child text nodes
-            if self.is_tag(node):
+                # Analyze child text nodes
+                if self.is_tag(node):
 
-                # Avoid analyzing certain elements specified in the specification.
-                direction = DIR_MAP.get(util.lower(self.get_attribute_by_name(node, 'dir', '')), None)
-                name = self.get_tag(node)
-                if (
-                    (name and name in ('bdi', 'script', 'style', 'textarea', 'iframe')) or
-                    not self.is_html_tag(node) or
-                    direction is not None
-                ):
-                    continue  # pragma: no cover
+                    # Avoid analyzing certain elements specified in the specification.
+                    direction = DIR_MAP.get(util.lower(self.get_attribute_by_name(node, 'dir', '')), None)
+                    name = self.get_tag(node)
+                    if (
+                        (name and name in ('bdi', 'script', 'style', 'textarea', 'iframe')) or
+                        not self.is_html_tag(node) or
+                        direction is not None
+                    ):
+                        continue  # pragma: no cover
 
-                # Check directionality of this node's text
-                value = self.find_bidi(node)
-                if value is not None:
-                    return value
+                    # Check directionality of this node's text, then resume with the remaining siblings.
+                    stack.append(self.get_children(node))
+                    break
 
-                # Direction could not be determined
-                continue  # pragma: no cover
+                # Skip `doctype` comments, etc.
+                if self.is_special_string(node):
+                    continue
 
-            # Skip `doctype` comments, etc.
-            if self.is_special_string(node):
-                continue
-
-            # Analyze text nodes for directionality.
-            for c in cast('bs4.element.NavigableString', node):
-                bidi = unicodedata.bidirectional(c)
-                if bidi in ('AL', 'R', 'L'):
-                    return ct.SEL_DIR_LTR if bidi == 'L' else ct.SEL_DIR_RTL
+                # Analyze text nodes for directionality.
+                for c in cast('bs4.element.NavigableString', node):
+                    bidi = unicodedata.bidirectional(c)
+                    if bidi in ('AL', 'R', 'L'):
+                        return ct.SEL_DIR_LTR if bidi == 'L' else ct.SEL_DIR_RTL
+            else:
+                # All children have been analyzed and direction could not be determined.
+                stack.pop()
         return None
 
     def extended_language_filter(self, lang_range: str, lang_tag: str) -> bool:
@@ -775,6 +813,8 @@ class CSSMatch(_DocumentNav):
             for a in attributes:
                 temp = self.match_attribute_name(el, a.attribute, a.prefix)
                 pattern = a.xml_type_pattern if self.is_xml and a.xml_type_pattern else a.pattern
+                if temp is None and a.inverse:
+                    continue
                 if temp is None:
                     match = False
                     break
@@ -807,7 +847,7 @@ class CSSMatch(_DocumentNav):
                 match = False
         return match
 
-    def match_general_sibling(self, el: bs4.Tag, relation: ct.SelectorList) -> bool:
+    def match_general_sibling(self, el: bs4.Tag, relation: ct.SelectorList) -> MatchGenerator:
         """Match general sibling combinator."""
 
         found = False
@@ -815,20 +855,14 @@ class CSSMatch(_DocumentNav):
         if relation[0] is ct.Null:  # pragma: no cover
             return found
 
-        pkey: tuple[str | None, int] | None = None
-        key: tuple[ct.SelectorList, int] | None = None
+        pkey: int | None = None
+        key: tuple[int, int] | None = None
 
-        # Setup the cache by the parent if present
+        # Get the parent and use the ID for the cache key
         parent = self.get_parent(el)
         if parent is None:  # pragma: no cover
             return found
-
-        if parent:
-            pkey = (parent.name, id(parent))
-
-            # Initialize the cache if necessary
-            if pkey not in self.sib_cache:
-                self.sib_cache[pkey] = {}
+        pkey = id(parent)
 
         # Check the cache to see if we already know where the first sibling is,
         # and if we do, check if we are on the correct side of it.
@@ -836,16 +870,16 @@ class CSSMatch(_DocumentNav):
         # Lastly, if this is our first time, setup the cache.
         reverse = relation[0].rel_type == REL_HAS_SIBLING
         start = len(parent) - 1 if reverse else 0
-        if pkey:
-            key = (relation, id(relation))
-            if key in self.sib_cache[pkey]:
-                index = self.sib_cache[pkey][key]
+        if pkey is not None:
+            key = (pkey, id(relation))
+            if key in self.sib_cache:
+                index = self.sib_cache[key]
                 if index >= 0:
-                    a, b = (index, start) if reverse else (start, index)
+                    a, b = (index + 1, start + 1) if reverse else (start, index)
                     return not within(el, parent, a, b)
                 else:
                     return False
-            self.sib_cache[pkey][key] = start
+            self.sib_cache[key] = start
 
         # Start at the furthest endpoint and walk back towards the element looking for siblings.
         # The current element counts as a sibling, but will not cause a match.
@@ -862,13 +896,13 @@ class CSSMatch(_DocumentNav):
                 passed = True
 
             # We found the furthest sibling.
-            if self.match_selectors(child, relation):
+            if (yield child, relation):
                 found = True
                 break
 
         # Cache the index of the sibling or mark as there being no siblings.
         if pkey and key:
-            self.sib_cache[pkey][key] = start if found else -1
+            self.sib_cache[key] = start if found else -1
 
         # If we passed the current element and then found a sibling, it doesn't count as a match.
         if passed:
@@ -876,7 +910,7 @@ class CSSMatch(_DocumentNav):
 
         return found
 
-    def match_past_relations(self, el: bs4.Tag, relation: ct.SelectorList) -> bool:
+    def match_past_relations(self, el: bs4.Tag, relation: ct.SelectorList) -> MatchGenerator:
         """Match past relationship."""
 
         found = False
@@ -887,37 +921,42 @@ class CSSMatch(_DocumentNav):
         if relation[0].rel_type == REL_PARENT:
             parent: bs4.Tag | None = el
             while not found and parent and (parent := self.get_parent(parent, no_iframe=self.iframe_restrict)):
-                found = parent is not None and self.match_selectors(parent, relation)
+                found = parent is not None and (yield parent, relation)
         elif relation[0].rel_type == REL_CLOSE_PARENT:
             parent = self.get_parent(el, no_iframe=self.iframe_restrict)
-            found = parent is not None and self.match_selectors(parent, relation)
+            found = parent is not None and (yield parent, relation)
         elif relation[0].rel_type == REL_SIBLING:
             if self.enable_cache:
-                found = self.match_general_sibling(el, relation)
+                found = yield from self.match_general_sibling(el, relation)
             else:
                 sibling: bs4.Tag | None = el
                 while not found and sibling and (sibling := self.get_previous_tag(sibling)):
-                    found = sibling is not None and self.match_selectors(sibling, relation)
+                    found = sibling is not None and (yield sibling, relation)
         elif relation[0].rel_type == REL_CLOSE_SIBLING:
             sibling = self.get_previous_tag(el)
-            found = sibling is not None and self.match_selectors(sibling, relation)
+            found = sibling is not None and (yield sibling, relation)
         return found
 
-    def match_future_child(self, parent: bs4.Tag, relation: ct.SelectorList, recursive: bool = False) -> bool:
+    def match_future_child(
+        self,
+        parent: bs4.Tag,
+        relation: ct.SelectorList,
+        recursive: bool = False
+    ) -> MatchGenerator:
         """Match future child."""
 
         match = False
         if recursive:
-            children = self.get_tag_descendants  # type: Callable[..., Iterator[bs4.Tag]]
+            children: Callable[..., Iterator[bs4.Tag]] = self.get_tag_descendants
         else:
             children = self.get_tag_children
         for child in children(parent, no_iframe=self.iframe_restrict):
-            if self.match_selectors(child, relation):
+            if (yield child, relation):
                 match = True
                 break
         return match
 
-    def match_future_relations(self, el: bs4.Tag, relation: ct.SelectorList) -> bool:
+    def match_future_relations(self, el: bs4.Tag, relation: ct.SelectorList) -> MatchGenerator:
         """Match future relationship."""
 
         found = False
@@ -926,35 +965,28 @@ class CSSMatch(_DocumentNav):
             return found
 
         if relation[0].rel_type == REL_HAS_PARENT:
-            found = self.match_future_child(el, relation, True)
+            found = yield from self.match_future_child(el, relation, True)
         elif relation[0].rel_type == REL_HAS_CLOSE_PARENT:
-            found = self.match_future_child(el, relation)
+            found = yield from self.match_future_child(el, relation)
         elif relation[0].rel_type == REL_HAS_SIBLING:
             if self.enable_cache:
-                found = self.match_general_sibling(el, relation)
+                found = yield from self.match_general_sibling(el, relation)
             else:
                 sibling: bs4.Tag | None = el
                 while not found and sibling and (sibling := self.get_next_tag(sibling)):
-                    found = self.match_selectors(sibling, relation)
+                    found = yield sibling, relation
         elif relation[0].rel_type == REL_HAS_CLOSE_SIBLING:
             sibling = self.get_next_tag(el)
-            found = sibling is not None and self.match_selectors(sibling, relation)
+            found = sibling is not None and (yield sibling, relation)
         return found
 
-    def match_relations(self, el: bs4.Tag, relation: ct.SelectorList) -> bool:
+    def match_relations(self, el: bs4.Tag, relation: ct.SelectorList) -> MatchGenerator:
         """Match relationship to other elements."""
 
-        found = False
-
-        if relation[0] is ct.Null or relation[0].rel_type is None:
-            return found
-
-        if relation[0].rel_type.startswith(':'):
-            found = self.match_future_relations(el, relation)
-        else:
-            found = self.match_past_relations(el, relation)
-
-        return found
+        sel = relation[0]
+        if sel is not ct.Null and sel.rel_type is not None and sel.rel_type.startswith(':'):
+            return self.match_future_relations(el, relation)
+        return self.match_past_relations(el, relation)
 
     def match_id(self, el: bs4.Tag, ids: tuple[str, ...]) -> bool:
         """Match element's ID."""
@@ -982,7 +1014,7 @@ class CSSMatch(_DocumentNav):
 
         is_root = self.is_root(el)
         if is_root:
-            sibling = self.get_previous(el)  # type: Any
+            sibling: Any = self.get_previous(el)
             while is_root and sibling is not None:
                 if (
                     self.is_tag(sibling) or (self.is_content_string(sibling) and sibling.strip()) or
@@ -1016,23 +1048,16 @@ class CSSMatch(_DocumentNav):
             (self.get_tag_ns(child) == self.get_tag_ns(el))
         )
 
-    def match_nth(self, el: bs4.Tag, nth: tuple[ct.SelectorNth, ...]) -> bool:
+    def match_nth(self, el: bs4.Tag, nth: tuple[ct.SelectorNth, ...]) -> MatchGenerator:
         """Match `nth` elements."""
 
-        # `nth` selectors are evaluated against siblings under the same parent.
-        parent = self.get_parent(el)  # type: bs4.Tag | None
-        pkey: tuple[str | None, int] | None = None
-        key: tuple[ct.SelectorNth, int, str | None, str | None] | None = None
+        key: tuple[int, int, str | None, str | None] | None = None
         start = rindex = 0
         incr = rincr = 0
 
-        # Setup the cache by the parent, if parent a parent is present
-        if self.enable_cache and parent:
-            pkey = (parent.name, id(parent))
-
-            # Initialize the cache if necessary
-            if pkey not in self.nth_cache:
-                self.nth_cache[pkey] = {}
+        # Get the parent and use the ID for the cache key
+        parent = self.get_parent(el, no_doc=False)
+        pkey = id(parent) if self.enable_cache and parent else None
 
         # Test element against the `nth` selectors.
         matched = True
@@ -1042,12 +1067,18 @@ class CSSMatch(_DocumentNav):
             key = None
 
             # Prepare the child iterator and get the starting, real index and the relative index
-            if pkey and parent:
+            if pkey is not None and parent:
                 # Get last info from the cache
-                key = (n, id(n), self.get_tag(el), self.get_tag_ns(el)) if n.of_type else (n, id(n), None, None)
+                if pkey:
+                    key = (
+                        (pkey, id(n), self.get_tag(el), self.get_tag_ns(el))
+                        if n.of_type
+                        else (pkey, id(n), None, None)
+                    )
+
                 valid = False
-                if key in self.nth_cache[pkey]:
-                    start, rindex = self.nth_cache[pkey][key]
+                if key and key in self.nth_cache:
+                    start, rindex = self.nth_cache[key]
                     if within(el, parent, start):
                         last = False
                         rincr = -1 if n.last else 1
@@ -1056,7 +1087,7 @@ class CSSMatch(_DocumentNav):
                 # Start/overwrite the cache if the cache was empty or invalid
                 if not valid:
                     start, rindex = len(parent) - 1 if last else 0, 0
-                    self.nth_cache[pkey][key] = [start, rindex]
+                    self.nth_cache[key] = [start, rindex]
                     rincr = 1
 
                 incr = 1 if not last else -1
@@ -1086,10 +1117,14 @@ class CSSMatch(_DocumentNav):
 
                 # Handle `of S` in `nth-child` and handle `of-type`
                 if (
-                    (n.selectors and not self.match_selectors(child, n.selectors)) or
+                    (n.selectors and not (yield child, n.selectors)) or
                     (n.of_type and not self.match_nth_tag_type(el, child))
                 ):
                     if child is el:
+                        # Cached "last" lookups count down from `rindex`, so it must be the
+                        # position `el` would have had, even though `el` did not match.
+                        if last:
+                            rindex += 1
                         break
                     continue
 
@@ -1110,8 +1145,8 @@ class CSSMatch(_DocumentNav):
                 start += 2
 
             # Update the cache
-            if pkey and key:
-                self.nth_cache[pkey][key] = [start, rindex]
+            if key:
+                self.nth_cache[key] = [start, rindex]
 
             # If we failed to match any `nth` selectors, quit.
             if not matched:
@@ -1123,21 +1158,22 @@ class CSSMatch(_DocumentNav):
         """Check if element is empty (if requested)."""
 
         is_empty = True
+        child: Any
         for child in self.get_children(el):
             if self.is_tag(child):
                 is_empty = False
                 break
-            elif self.is_content_string(child) and RE_NOT_EMPTY.search(child):  # type: ignore[call-overload]
+            elif self.is_content_string(child) and RE_NOT_EMPTY.search(child):
                 is_empty = False
                 break
         return is_empty
 
-    def match_subselectors(self, el: bs4.Tag, selectors: tuple[ct.SelectorList, ...]) -> bool:
+    def match_subselectors(self, el: bs4.Tag, selectors: tuple[ct.SelectorList, ...]) -> MatchGenerator:
         """Match selectors."""
 
         match = True
         for sel in selectors:
-            if not self.match_selectors(el, sel):
+            if not (yield el, sel):
                 match = False
         return match
 
@@ -1145,23 +1181,23 @@ class CSSMatch(_DocumentNav):
         """Match element if it contains text."""
 
         match = True
-        content = None  # type: str | Sequence[str] | None
+        content: str | None = None
+        own_content: Sequence[str] | None = None
         for contain_list in contains:
-            if content is None:
-                if contain_list.own:
-                    content = self.get_own_text(el, no_iframe=self.is_html)
-                else:
-                    content = self.get_text(el, no_iframe=self.is_html)
             found = False
             for text in contain_list.text:
                 if contain_list.own:
-                    for c in content:
+                    if own_content is None:
+                        own_content = self.get_own_text(el, no_iframe=self.is_html)
+                    for c in own_content:
                         if text in c:
                             found = True
                             break
                     if found:
                         break
                 else:
+                    if content is None:
+                        content = self.get_text(el, no_iframe=self.is_html)
                     if text in content:
                         found = True
                         break
@@ -1175,7 +1211,7 @@ class CSSMatch(_DocumentNav):
         match = False
 
         # Find this input's form
-        form = None  # type: bs4.Tag | None
+        form: bs4.Tag | None = None
         parent = self.get_parent(el, no_iframe=True)
         while parent and form is None:
             if self.get_tag(parent) == 'form' and self.is_html_tag(parent):
@@ -1280,7 +1316,7 @@ class CSSMatch(_DocumentNav):
         has_html_namespace = self.has_html_namespace
 
         # Walk parents looking for `lang` (HTML) or `xml:lang` XML property.
-        parent = el  # type: bs4.Tag | None
+        parent: bs4.Tag | None = el
         found_lang = None
         last = None
         while not found_lang:
@@ -1322,7 +1358,7 @@ class CSSMatch(_DocumentNav):
                         found = True
                         parent = child
                         break
-                if not found:  # pragma: no cover
+                if found:  # pragma: no cover
                     break
 
             # Search meta tags
@@ -1364,57 +1400,73 @@ class CSSMatch(_DocumentNav):
         if directionality & ct.SEL_DIR_LTR and directionality & ct.SEL_DIR_RTL:
             return False
 
-        if el is None or not self.is_html_tag(el):
-            return False
+        # Every element visited while resolving shares the resolved direction,
+        # so cache it to avoid walking the same ancestors again for each element.
+        visited: list[int] = []
+        direction = self.resolve_dir(el, visited)
+        if self.enable_cache:
+            for key in visited:
+                self.dir_cache[key] = direction
+        return direction == directionality
 
-        # Element has defined direction of left to right or right to left
-        direction = DIR_MAP.get(util.lower(self.get_attribute_by_name(el, 'dir', '')), None)
-        if direction not in (None, 0):
-            return direction == directionality
+    def resolve_dir(self, el: bs4.Tag | None, visited: list[int]) -> int:
+        """Resolve the direction of an element, returning `0` if it cannot be resolved."""
 
-        # Element is the document element (the root) and no direction assigned, assume left to right.
-        is_root = self.is_root(el)
-        if is_root and direction is None:
-            return ct.SEL_DIR_LTR == directionality
+        while True:
+            if el is None or not self.is_html_tag(el):
+                return 0
 
-        # If `input[type=telephone]` and no direction is assigned, assume left to right.
-        name = self.get_tag(el)
-        is_input = name == 'input'
-        is_textarea = name == 'textarea'
-        is_bdi = name == 'bdi'
-        itype = util.lower(self.get_attribute_by_name(el, 'type', '')) if is_input else ''
-        if is_input and itype == 'tel' and direction is None:
-            return ct.SEL_DIR_LTR == directionality
+            key = id(el)
+            if key in self.dir_cache:
+                return self.dir_cache[key]
+            visited.append(key)
 
-        # Auto handling for text inputs
-        if ((is_input and itype in ('text', 'search', 'tel', 'url', 'email')) or is_textarea) and direction == 0:
-            if is_textarea:
-                value = ''.join(node for node in self.get_contents(el, no_iframe=True) if self.is_content_string(node))  # type: ignore[misc]
-            else:
-                value = cast(str, self.get_attribute_by_name(el, 'value', ''))
-            if value:
+            # Element has defined direction of left to right or right to left
+            direction = DIR_MAP.get(util.lower(self.get_attribute_by_name(el, 'dir', '')), None)
+            if direction not in (None, 0):
+                return direction
+
+            # Element is the document element (the root) and no direction assigned, assume left to right.
+            is_root = self.is_root(el)
+            if is_root and direction is None:
+                return ct.SEL_DIR_LTR
+
+            # If `input[type=telephone]` and no direction is assigned, assume left to right.
+            name = self.get_tag(el)
+            is_input = name == 'input'
+            is_textarea = name == 'textarea'
+            is_bdi = name == 'bdi'
+            itype = util.lower(self.get_attribute_by_name(el, 'type', '')) if is_input else ''
+            if is_input and itype == 'tel' and direction is None:
+                return ct.SEL_DIR_LTR
+
+            # Auto handling for text inputs
+            if ((is_input and itype in ('text', 'search', 'tel', 'url', 'email')) or is_textarea) and direction == 0:
+                if is_textarea:
+                    value = ''.join(
+                        node for node in self.get_contents(el, no_iframe=True)  # type: ignore[misc]
+                        if self.is_content_string(node)
+                    )
+                else:
+                    value = cast(str, self.get_attribute_by_name(el, 'value', ''))
                 for c in value:
                     bidi = unicodedata.bidirectional(c)
                     if bidi in ('AL', 'R', 'L'):
                         direction = ct.SEL_DIR_LTR if bidi == 'L' else ct.SEL_DIR_RTL
-                        return direction == directionality
-                # Assume left to right
-                return ct.SEL_DIR_LTR == directionality
-            elif is_root:
-                return ct.SEL_DIR_LTR == directionality
-            return self.match_dir(self.get_parent(el, no_iframe=True), directionality)
+                        return ct.SEL_DIR_LTR if bidi == 'L' else ct.SEL_DIR_RTL
+                # No strong directional characters (or no value), assume left to right
+                return ct.SEL_DIR_LTR
 
-        # Auto handling for `bdi` and other non text inputs.
-        if (is_bdi and direction is None) or direction == 0:
-            direction = self.find_bidi(el)
-            if direction is not None:
-                return direction == directionality
-            elif is_root:
-                return ct.SEL_DIR_LTR == directionality
-            return self.match_dir(self.get_parent(el, no_iframe=True), directionality)
+            # Auto handling for `bdi` and other non text inputs.
+            if (is_bdi and direction is None) or direction == 0:
+                direction = self.find_bidi(el)
+                if direction is not None:
+                    return direction
+                # Auto directionality could not be determined, assume left to right
+                return ct.SEL_DIR_LTR
 
-        # Match parents direction
-        return self.match_dir(self.get_parent(el, no_iframe=True), directionality)
+            # Match parents direction
+            el = self.get_parent(el, no_iframe=True)
 
     def match_range(self, el: bs4.Tag, condition: int) -> bool:
         """
@@ -1495,7 +1547,44 @@ class CSSMatch(_DocumentNav):
         return match
 
     def match_selectors(self, el: bs4.Tag, selectors: ct.SelectorList) -> bool:
-        """Check if element matches one of the selectors."""
+        """
+        Check if element matches one of the selectors.
+
+        Since some selectors can have complex relationships, they may need to recursively
+        check if another relative element matches specific selectors. To avoid recursion,
+        generators are yielded instead whenever it needs to check if a relative element
+        satisfies specific selectors. These can be compared and the result sent back.
+        We can check the end result of the generator once it is satisfied.
+        """
+
+        # Most matches never need a nested match, so avoid setting up the stack unless needed.
+        # `frame` yields a `bool` when it is done.
+        frame = self._match_selectors(el, selectors)
+        item = next(frame)
+        if item.__class__ is bool:
+            return item
+
+        # We need to setup a stack as a selector has sent back a match request.
+        stack = [frame, self._match_selectors(*cast('MatchRequest', item))]
+        result: bool | None = None
+        while True:
+            item = stack[-1].send(result)  # type: ignore[arg-type]
+            if item.__class__ is bool:
+                stack.pop()
+                if not stack:
+                    return item
+                result = item
+            else:
+                stack.append(self._match_selectors(*cast('MatchRequest', item)))
+                result = None
+
+    def _match_selectors(self, el: bs4.Tag, selectors: ct.SelectorList) -> Generator[MatchRequest | bool, bool, None]:
+        """
+        Check if element matches one of the selectors, yielding requests to match nested selectors.
+
+        Yields `MatchRequests` or affirmation as to whether a selector was matched. The match request
+        requires a boolean to be sent back to communicate whether the match was successful.
+        """
 
         match = False
         is_not = selectors.is_not
@@ -1530,7 +1619,7 @@ class CSSMatch(_DocumentNav):
                 if selector.flags & ct.SEL_PLACEHOLDER_SHOWN and not self.match_placeholder_shown(el):
                     continue
                 # Verify `nth` matches
-                if selector.nth and not self.match_nth(el, selector.nth):
+                if selector.nth and not (yield from self.match_nth(el, selector.nth)):
                     continue
                 if selector.flags & ct.SEL_EMPTY and not self.match_empty(el):
                     continue
@@ -1550,10 +1639,10 @@ class CSSMatch(_DocumentNav):
                 if selector.lang and not self.match_lang(el, selector.lang):
                     continue
                 # Verify pseudo selector patterns
-                if selector.selectors and not self.match_subselectors(el, selector.selectors):
+                if selector.selectors and not (yield from self.match_subselectors(el, selector.selectors)):
                     continue
                 # Verify relationship selectors
-                if selector.relation and not self.match_relations(el, selector.relation):
+                if selector.relation and not (yield from self.match_relations(el, selector.relation)):
                     continue
                 # Validate that the current default selector match corresponds to the first submit button in the form
                 if selector.flags & ct.SEL_DEFAULT and not self.match_default(el):
@@ -1576,7 +1665,7 @@ class CSSMatch(_DocumentNav):
             self.namespaces = namespaces
             self.iframe_restrict = iframe_restrict
 
-        return match
+        yield match
 
     def select(self, limit: int = 0) -> Iterator[bs4.Tag]:
         """Match all tags under the targeted tag."""
@@ -1594,7 +1683,7 @@ class CSSMatch(_DocumentNav):
     def closest(self) -> bs4.Tag | None:
         """Match closest ancestor."""
 
-        current = self.tag  # type: bs4.Tag | None
+        current: bs4.Tag | None = self.tag
         closest = None
         while closest is None and current is not None:
             if self.match(current):
