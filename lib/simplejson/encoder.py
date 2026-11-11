@@ -11,6 +11,16 @@ from .compat import binary_type, text_type, string_types, integer_types, PY3
 # PEP 678 add_note() is available on Python 3.11+
 _HAS_ADD_NOTE = sys.version_info >= (3, 11)
 
+
+def _annotate_exception(exc, note_format, obj, *args):
+    if _HAS_ADD_NOTE:
+        try:
+            exc.add_note(note_format % ((type(obj).__name__,) + args))
+        except BaseException:
+            # Diagnostic failures must not replace the serialization error.
+            pass
+
+
 def _import_speedups():
     try:
         from . import _speedups
@@ -200,9 +210,10 @@ class JSONEncoder(object):
         objects with all incoming unicode characters escaped.  If
         ensure_ascii is false, the output will be unicode object.
 
-        If check_circular is true, then lists, dicts, and custom encoded
-        objects will be checked for circular references during encoding to
-        prevent an infinite recursion (which would cause an OverflowError).
+        If check_circular is true, then lists, dicts, iterables encoded with
+        iterable_as_array, and custom encoded objects will be checked for
+        circular references during encoding to prevent an infinite recursion
+        (which would cause a RecursionError, or RuntimeError on Python 2).
         Otherwise, no such check takes place.
 
         If allow_nan is true (default: False), then out of range float
@@ -486,9 +497,9 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
     ):
     if _use_decimal and Decimal is None:
         Decimal = decimal.Decimal
-    if _item_sort_key and not callable(_item_sort_key):
+    if _item_sort_key is not None and not callable(_item_sort_key):
         raise TypeError("item_sort_key must be None or callable")
-    elif _sort_keys and not _item_sort_key:
+    elif _sort_keys and _item_sort_key is None:
         _item_sort_key = itemgetter(0)
 
     if (_int_as_string_bitcount is not None and
@@ -530,91 +541,111 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         try:
             for chunk in encode(result, _current_indent_level):
                 yield chunk
-        finally:
+        except BaseException:
+            # Like the C encoder's encoder_markers_discard: release the
+            # marker so a reused markers dict reports no false cycle,
+            # without letting a marker that has already gone replace
+            # the in-flight exception.
             if markers is not None:
-                del markers[markerid]
-
-    def _iterencode_list(lst, _current_indent_level):
-        if not lst:
-            yield '[]'
-            return
+                markers.pop(markerid, None)
+            raise
         if markers is not None:
-            markerid = id(lst)
+            del markers[markerid]
+
+    def _iterencode_list(lst, _current_indent_level, _origin=None):
+        # _origin is the object being encoded: lst itself, or under
+        # iterable_as_array the iterable that produced the iterator lst.
+        # It is the circular reference marker (a fresh iterator would
+        # never match) and is named in error notes. An iterator's truth
+        # value says nothing about emptiness, so only lists and tuples
+        # take the fast path.
+        if _origin is None:
+            if not lst:
+                yield '[]'
+                return
+            _origin = lst
+        if markers is not None:
+            markerid = id(_origin)
             if markerid in markers:
                 raise ValueError("Circular reference detected")
-            markers[markerid] = lst
-        buf = '['
-        if _indent is not None:
-            _current_indent_level += 1
-            newline_indent = '\n' + (_indent * _current_indent_level)
-            separator = _item_separator + newline_indent
-            buf += newline_indent
-        else:
-            newline_indent = None
-            separator = _item_separator
-        first = True
-        for i, value in enumerate(lst):
-            if first:
-                first = False
+            markers[markerid] = _origin
+        try:
+            buf = '['
+            if _indent is not None:
+                _current_indent_level += 1
+                newline_indent = '\n' + (_indent * _current_indent_level)
+                separator = _item_separator + newline_indent
+                buf += newline_indent
             else:
-                buf = separator
-            try:
-                if isinstance(value, string_types):
-                    yield buf + _encoder(value)
-                elif _PY3 and isinstance(value, bytes) and _encoding is not None:
-                    yield buf + _encoder(value)
-                elif isinstance(value, RawJSON):
-                    yield buf + value.encoded_json
-                elif value is None:
-                    yield buf + 'null'
-                elif value is True:
-                    yield buf + 'true'
-                elif value is False:
-                    yield buf + 'false'
-                elif isinstance(value, integer_types):
-                    yield buf + _encode_int(value)
-                elif isinstance(value, float):
-                    yield buf + _floatstr(value)
-                elif _use_decimal and isinstance(value, Decimal):
-                    yield buf + _encode_decimal(value, _floatstr)
+                newline_indent = None
+                separator = _item_separator
+            first = True
+            for i, value in enumerate(lst):
+                if first:
+                    first = False
                 else:
-                    yield buf
-                    for_json = _for_json and call_method(value, 'for_json')
-                    if for_json:
-                        chunks = _iterencode_method(value, for_json[0],
-                                                    _current_indent_level, _iterencode)
+                    buf = separator
+                try:
+                    if isinstance(value, string_types):
+                        yield buf + _encoder(value)
+                    elif _PY3 and isinstance(value, bytes) and _encoding is not None:
+                        yield buf + _encoder(value)
+                    elif isinstance(value, RawJSON):
+                        yield buf + value.encoded_json
+                    elif value is None:
+                        yield buf + 'null'
+                    elif value is True:
+                        yield buf + 'true'
+                    elif value is False:
+                        yield buf + 'false'
+                    elif isinstance(value, integer_types):
+                        yield buf + _encode_int(value)
+                    elif isinstance(value, float):
+                        yield buf + _floatstr(value)
+                    elif _use_decimal and isinstance(value, Decimal):
+                        yield buf + _encode_decimal(value, _floatstr)
                     else:
-                        _asdict = _namedtuple_as_object and call_method(value, '_asdict')
-                        if _asdict:
-                            dct = _asdict[0]
-                            if not isinstance(dct, dict):
-                                raise TypeError("_asdict() must return a dict, not %s" % (type(dct).__name__,))
-                            chunks = _iterencode_method(value, dct,
-                                                        _current_indent_level, _iterencode_dict)
-                        elif isinstance(value, list):
-                            chunks = _iterencode_list(value, _current_indent_level)
-                        elif _tuple_as_array and isinstance(value, tuple):
-                            chunks = _iterencode_list(value, _current_indent_level)
-                        elif isinstance(value, _dict_types):
-                            chunks = _iterencode_dict(value, _current_indent_level)
+                        yield buf
+                        for_json = _for_json and call_method(value, 'for_json')
+                        if for_json:
+                            chunks = _iterencode_method(value, for_json[0],
+                                                        _current_indent_level, _iterencode)
                         else:
-                            chunks = _iterencode(value, _current_indent_level)
-                    for chunk in chunks:
-                        yield chunk
-            except BaseException as exc:
-                if _HAS_ADD_NOTE:
-                    exc.add_note(
-                        'when serializing %s item %d'
-                        % (type(lst).__name__, i))
-                raise
-        if first:
-            # iterable_as_array misses the fast path at the top
-            yield '[]'
-        else:
-            if newline_indent is not None:
-                _current_indent_level -= 1
-                yield '\n' + (_indent * _current_indent_level)
-            yield ']'
+                            _asdict = _namedtuple_as_object and call_method(value, '_asdict')
+                            if _asdict:
+                                dct = _asdict[0]
+                                if not isinstance(dct, dict):
+                                    raise TypeError("_asdict() must return a dict, not %s" % (type(dct).__name__,))
+                                chunks = _iterencode_method(value, dct,
+                                                            _current_indent_level, _iterencode_dict)
+                            elif isinstance(value, list):
+                                chunks = _iterencode_list(value, _current_indent_level)
+                            elif _tuple_as_array and isinstance(value, tuple):
+                                chunks = _iterencode_list(value, _current_indent_level)
+                            elif isinstance(value, _dict_types):
+                                chunks = _iterencode_dict(value, _current_indent_level)
+                            else:
+                                # for_json and _asdict were already tried
+                                chunks = _iterencode(value, _current_indent_level, True)
+                        for chunk in chunks:
+                            yield chunk
+                except BaseException as exc:
+                    _annotate_exception(
+                        exc, 'when serializing %s item %d',
+                        _origin, i)
+                    raise
+            if first:
+                # iterable_as_array misses the fast path at the top
+                yield '[]'
+            else:
+                if newline_indent is not None:
+                    _current_indent_level -= 1
+                    yield '\n' + (_indent * _current_indent_level)
+                yield ']'
+        except BaseException:
+            if markers is not None:
+                markers.pop(markerid, None)
+            raise
         if markers is not None:
             del markers[markerid]
 
@@ -654,99 +685,108 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
             if markerid in markers:
                 raise ValueError("Circular reference detected")
             markers[markerid] = dct
-        yield '{'
-        if _indent is not None:
-            _current_indent_level += 1
-            newline_indent = '\n' + (_indent * _current_indent_level)
-            item_separator = _item_separator + newline_indent
-            yield newline_indent
-        else:
-            newline_indent = None
-            item_separator = _item_separator
-        first = True
-        if _PY3:
-            iteritems = dct.items()
-        else:
-            iteritems = dct.iteritems()
-        if _item_sort_key:
-            items = []
-            for k, v in dct.items():
-                if not isinstance(k, string_types):
-                    k = _stringify_key(k)
-                    if k is None:
-                        continue
-                items.append((k, v))
-            items.sort(key=_item_sort_key)
-        else:
-            items = iteritems
-        for key, value in items:
-            if not (_item_sort_key or isinstance(key, string_types)):
-                key = _stringify_key(key)
-                if key is None:
-                    # _skipkeys must be True
-                    continue
-            if first:
-                first = False
+        try:
+            yield '{'
+            if _indent is not None:
+                _current_indent_level += 1
+                newline_indent = '\n' + (_indent * _current_indent_level)
+                item_separator = _item_separator + newline_indent
+                yield newline_indent
             else:
-                yield item_separator
-            yield _encoder(key)
-            yield _key_separator
-            try:
-                if isinstance(value, string_types):
-                    yield _encoder(value)
-                elif _PY3 and isinstance(value, bytes) and _encoding is not None:
-                    yield _encoder(value)
-                elif isinstance(value, RawJSON):
-                    yield value.encoded_json
-                elif value is None:
-                    yield 'null'
-                elif value is True:
-                    yield 'true'
-                elif value is False:
-                    yield 'false'
-                elif isinstance(value, integer_types):
-                    yield _encode_int(value)
-                elif isinstance(value, float):
-                    yield _floatstr(value)
-                elif _use_decimal and isinstance(value, Decimal):
-                    yield _encode_decimal(value, _floatstr)
+                newline_indent = None
+                item_separator = _item_separator
+            first = True
+            if _PY3:
+                iteritems = dct.items()
+            else:
+                iteritems = dct.iteritems()
+            if _item_sort_key is not None:
+                items = []
+                for k, v in dct.items():
+                    if not isinstance(k, string_types):
+                        k = _stringify_key(k)
+                        if k is None:
+                            continue
+                    items.append((k, v))
+                items.sort(key=_item_sort_key)
+            else:
+                items = iteritems
+            for key, value in items:
+                if _item_sort_key is None and not isinstance(key, string_types):
+                    key = _stringify_key(key)
+                    if key is None:
+                        # _skipkeys must be True
+                        continue
+                if first:
+                    first = False
                 else:
-                    for_json = _for_json and call_method(value, 'for_json')
-                    if for_json:
-                        chunks = _iterencode_method(value, for_json[0],
-                                                    _current_indent_level, _iterencode)
+                    yield item_separator
+                yield _encoder(key)
+                yield _key_separator
+                try:
+                    if isinstance(value, string_types):
+                        yield _encoder(value)
+                    elif _PY3 and isinstance(value, bytes) and _encoding is not None:
+                        yield _encoder(value)
+                    elif isinstance(value, RawJSON):
+                        yield value.encoded_json
+                    elif value is None:
+                        yield 'null'
+                    elif value is True:
+                        yield 'true'
+                    elif value is False:
+                        yield 'false'
+                    elif isinstance(value, integer_types):
+                        yield _encode_int(value)
+                    elif isinstance(value, float):
+                        yield _floatstr(value)
+                    elif _use_decimal and isinstance(value, Decimal):
+                        yield _encode_decimal(value, _floatstr)
                     else:
-                        _asdict = _namedtuple_as_object and call_method(value, '_asdict')
-                        if _asdict:
-                            dct = _asdict[0]
-                            if not isinstance(dct, dict):
-                                raise TypeError("_asdict() must return a dict, not %s" % (type(dct).__name__,))
-                            chunks = _iterencode_method(value, dct,
-                                                        _current_indent_level, _iterencode_dict)
-                        elif isinstance(value, list):
-                            chunks = _iterencode_list(value, _current_indent_level)
-                        elif _tuple_as_array and isinstance(value, tuple):
-                            chunks = _iterencode_list(value, _current_indent_level)
-                        elif isinstance(value, _dict_types):
-                            chunks = _iterencode_dict(value, _current_indent_level)
+                        for_json = _for_json and call_method(value, 'for_json')
+                        if for_json:
+                            chunks = _iterencode_method(value, for_json[0],
+                                                        _current_indent_level, _iterencode)
                         else:
-                            chunks = _iterencode(value, _current_indent_level)
-                    for chunk in chunks:
-                        yield chunk
-            except BaseException as exc:
-                if _HAS_ADD_NOTE:
-                    exc.add_note(
-                        'when serializing %s item %r'
-                        % (type(dct).__name__, key))
-                raise
-        if newline_indent is not None:
-            _current_indent_level -= 1
-            yield '\n' + (_indent * _current_indent_level)
-        yield '}'
+                            _asdict = _namedtuple_as_object and call_method(value, '_asdict')
+                            if _asdict:
+                                # Not `dct`: the note below names dct's type.
+                                asdict_dct = _asdict[0]
+                                if not isinstance(asdict_dct, dict):
+                                    raise TypeError("_asdict() must return a dict, not %s" % (type(asdict_dct).__name__,))
+                                chunks = _iterencode_method(value, asdict_dct,
+                                                            _current_indent_level, _iterencode_dict)
+                            elif isinstance(value, list):
+                                chunks = _iterencode_list(value, _current_indent_level)
+                            elif _tuple_as_array and isinstance(value, tuple):
+                                chunks = _iterencode_list(value, _current_indent_level)
+                            elif isinstance(value, _dict_types):
+                                chunks = _iterencode_dict(value, _current_indent_level)
+                            else:
+                                # for_json and _asdict were already tried
+                                chunks = _iterencode(value, _current_indent_level, True)
+                        for chunk in chunks:
+                            yield chunk
+                except BaseException as exc:
+                    _annotate_exception(
+                        exc, 'when serializing %s item %r',
+                        dct, key)
+                    raise
+            if newline_indent is not None:
+                _current_indent_level -= 1
+                yield '\n' + (_indent * _current_indent_level)
+            yield '}'
+        except BaseException:
+            if markers is not None:
+                markers.pop(markerid, None)
+            raise
         if markers is not None:
             del markers[markerid]
 
-    def _iterencode(o, _current_indent_level):
+    def _iterencode(o, _current_indent_level, _methods_tried=False):
+        # _methods_tried: the list and dict item paths already called
+        # for_json() and _asdict() on o, so calling them again would run
+        # them (and any side effects) twice, unlike the C encoder.
         if isinstance(o, string_types):
             yield _encoder(o)
         elif _PY3 and isinstance(o, bytes) and _encoding is not None:
@@ -764,13 +804,15 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
         elif isinstance(o, float):
             yield _floatstr(o)
         else:
-            for_json = _for_json and call_method(o, 'for_json')
+            for_json = (_for_json and not _methods_tried
+                        and call_method(o, 'for_json'))
             if for_json:
                 for chunk in _iterencode_method(o, for_json[0],
                                               _current_indent_level, _iterencode):
                     yield chunk
             else:
-                _asdict = _namedtuple_as_object and call_method(o, '_asdict')
+                _asdict = (_namedtuple_as_object and not _methods_tried
+                           and call_method(o, '_asdict'))
                 if _asdict:
                     dct = _asdict[0]
                     if not isinstance(dct, dict):
@@ -791,13 +833,17 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                     yield _encode_decimal(o, _floatstr)
                 else:
                     while _iterable_as_array:
-                        # Markers are not checked here because it is valid for
-                        # an iterable to return self.
+                        # Reject a revisited iterable before its __iter__
+                        # runs again; _iterencode_list marks o itself.
+                        if markers is not None and id(o) in markers:
+                            raise ValueError("Circular reference detected")
                         try:
-                            o = iter(o)
+                            iterator = iter(o)
                         except TypeError:
                             break
-                        for chunk in _iterencode_list(o, _current_indent_level):
+                        for chunk in _iterencode_list(iterator,
+                                                      _current_indent_level,
+                                                      o):
                             yield chunk
                         return
                     if markers is not None:
@@ -810,10 +856,10 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
                         for chunk in _iterencode(o, _current_indent_level):
                             yield chunk
                     except BaseException as exc:
-                        if _HAS_ADD_NOTE:
-                            exc.add_note(
-                                'when serializing %s object'
-                                % type(o).__name__)
+                        if markers is not None:
+                            markers.pop(markerid, None)
+                        _annotate_exception(
+                            exc, 'when serializing %s object', o)
                         raise
                     if markers is not None:
                         del markers[markerid]
