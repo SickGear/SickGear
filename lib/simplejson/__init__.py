@@ -118,7 +118,7 @@ Serializing multiple objects to JSON lines (newline-delimited JSON)::
 
 """
 from __future__ import absolute_import
-__version__ = '4.2.0'
+__version__ = '4.3.0'
 __all__ = [
     'dump', 'dumps', 'load', 'loads',
     'JSONDecoder', 'JSONDecodeError', 'JSONEncoder',
@@ -246,7 +246,7 @@ def dump(obj, fp, skipkeys=False, ensure_ascii=True, check_circular=True,
         encoding == 'utf-8' and default is None and use_decimal
         and namedtuple_as_object and tuple_as_array and not iterable_as_array
         and not bigint_as_string and not sort_keys
-        and not item_sort_key and not for_json
+        and item_sort_key is None and not for_json
         and not ignore_nan and int_as_string_bitcount is None
         and not kw
     ):
@@ -292,8 +292,9 @@ def dumps(obj, skipkeys=False, ensure_ascii=True, check_circular=True,
     by JSON. When it is true, all non-ASCII characters are escaped.
 
     If ``check_circular`` is false, then the circular reference check
-    for container types will be skipped and a circular reference will
-    result in an ``OverflowError`` (or worse).
+    for container types (including iterables encoded with
+    ``iterable_as_array``) will be skipped and a circular reference will
+    result in a ``RecursionError`` (``RuntimeError`` on Python 2) or worse.
 
     If *allow_nan* is true (default: ``False``), then out of range ``float``
     values (``nan``, ``inf``, ``-inf``) will be serialized to
@@ -372,7 +373,7 @@ def dumps(obj, skipkeys=False, ensure_ascii=True, check_circular=True,
         encoding == 'utf-8' and default is None and use_decimal
         and namedtuple_as_object and tuple_as_array and not iterable_as_array
         and not bigint_as_string and not sort_keys
-        and not item_sort_key and not for_json
+        and item_sort_key is None and not for_json
         and not ignore_nan and int_as_string_bitcount is None
         and not kw
     ):

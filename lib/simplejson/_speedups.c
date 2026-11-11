@@ -414,7 +414,8 @@ is_raw_json(_speedups_state *state, PyObject *obj);
 static PyObject *
 encoder_stringify_key(PyEncoderObject *s, PyObject *key);
 static int
-encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_ssize_t indent_level);
+encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq,
+                        PyObject *origin, Py_ssize_t indent_level);
 static int
 encoder_listencode_obj(PyEncoderObject *s, JSON_Accu *rval, PyObject *obj, Py_ssize_t indent_level);
 static int
@@ -489,6 +490,31 @@ json_PyDict_GetItemRef(PyObject *dict, PyObject *key, PyObject **result)
     *result = NULL;
     return 0;
 #endif
+}
+
+/* The type name used in error messages and exception notes, matching
+ * the pure-Python encoder's type(obj).__name__, which is what type's
+ * __name__ getter returns: ht_name for heap types, and tp_name after its
+ * module prefix ("collections.deque") for static types. Nothing here can
+ * fail, since a note is formatted while an exception is set. */
+static const char *
+json_type_name(PyObject *obj)
+{
+    PyTypeObject *tp = Py_TYPE(obj);
+    const char *dot;
+    if (PyType_HasFeature(tp, Py_TPFLAGS_HEAPTYPE)) {
+#if PY_MAJOR_VERSION >= 3
+        /* A spec-created type keeps its module prefix in tp_name only.
+         * For a class, tp_name is the UTF-8 of ht_name, which may itself
+         * contain dots, so it is the fallback for non-ASCII names. */
+        PyObject *ht_name = ((PyHeapTypeObject *)tp)->ht_name;
+        if (PyUnicode_IS_ASCII(ht_name))
+            return (const char *)PyUnicode_DATA(ht_name);
+#endif
+        return tp->tp_name;
+    }
+    dot = strrchr(tp->tp_name, '.');
+    return dot == NULL ? tp->tp_name : dot + 1;
 }
 
 static inline int
@@ -1098,7 +1124,7 @@ encoder_stringify_key(PyEncoderObject *s, PyObject *key)
     }
     PyErr_Format(PyExc_TypeError,
                  "keys must be str, int, float, bool or None, "
-                 "not %.100s", key->ob_type->tp_name);
+                 "not %.100s", json_type_name(key));
     return NULL;
 }
 
@@ -1151,6 +1177,18 @@ encoder_dict_iteritems(PyEncoderObject *s, PyObject *dct)
         items = PyMapping_Items(dct);
     if (items == NULL)
         return NULL;
+#if PY_MAJOR_VERSION < 3
+    /* Python 3's PyMapping_Items always makes a list, but Python 2's
+     * returns whatever items() returned, and the sort below reads it as
+     * a list. */
+    if (!PyList_CheckExact(items)) {
+        PyObject *items_list = PySequence_List(items);
+        Py_DECREF(items);
+        if (items_list == NULL)
+            return NULL;
+        items = items_list;
+    }
+#endif
 
     /* Unsorted path: return iter(items) directly. */
     if (s->item_sort_kw == Py_None) {
@@ -2606,6 +2644,15 @@ encoder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         &ignore_nan, &Decimal, &iterable_as_array))
         return NULL;
 
+    /* markers goes straight to PyDict_Contains, PyDict_SetItem and
+     * PyDict_DelItem, which do not check the type of their argument. */
+    if (markers != Py_None && !PyDict_Check(markers)) {
+        PyErr_Format(PyExc_TypeError,
+                     "make_encoder() argument 1 must be dict or None, not %.80s",
+                     json_type_name(markers));
+        return NULL;
+    }
+
     s = (PyEncoderObject *)type->tp_alloc(type, 0);
     if (s == NULL)
         return NULL;
@@ -2829,7 +2876,14 @@ encoder_encode_nonfinite(PyEncoderObject *s, int sign)
     _speedups_state *state = get_speedups_state(s->module_ref);
 
     if (!s->allow_or_ignore_nan) {
-        PyErr_SetString(PyExc_ValueError, "Out of range float values are not JSON compliant");
+        const char *msg;
+        if (sign > 0)
+            msg = "Out of range float values are not JSON compliant: inf";
+        else if (sign < 0)
+            msg = "Out of range float values are not JSON compliant: -inf";
+        else
+            msg = "Out of range float values are not JSON compliant: nan";
+        PyErr_SetString(PyExc_ValueError, msg);
         return NULL;
     }
     if (s->allow_or_ignore_nan & JSON_IGNORE_NAN) {
@@ -2965,9 +3019,10 @@ _steal_accumulate(_speedups_state *state, JSON_Accu *accu, PyObject *stolen)
 /* Push a reference to `obj` into the encoder's circular-reference marker
  * dict, keyed by the object's address. Allocates a fresh PyLong ident and
  * stores it in *ident_ptr (caller owns the reference, and must pass it to
- * encoder_markers_pop to remove the entry). If markers tracking is off
+ * encoder_markers_pop on success, or encoder_markers_discard on an error
+ * path, to remove the entry). If markers tracking is off
  * (s->markers == Py_None), stores NULL in *ident_ptr and returns 0 with
- * no side effects — that NULL is the sentinel markers_pop understands.
+ * no side effects — that NULL is the sentinel both of those understand.
  * On circular reference sets the ValueError; on any other failure sets
  * the corresponding exception. Returns 0 on success, -1 on error. */
 static int
@@ -3013,6 +3068,52 @@ encoder_markers_pop(PyEncoderObject *s, PyObject *ident)
     return rv;
 }
 
+/* Error-path counterpart to encoder_markers_pop. Removes the ident
+ * entry while an exception is propagating, so an encoder whose markers
+ * dict is reused after a failed call does not report a false circular
+ * reference, and drops the caller's reference. The in-flight exception
+ * is preserved; a failure to delete the entry is swallowed. Passing
+ * NULL is a no-op. */
+static void
+encoder_markers_discard(PyEncoderObject *s, PyObject *ident)
+{
+    PyObject *exc_type;
+    PyObject *exc_value;
+    PyObject *exc_tb;
+    if (ident == NULL)
+        return;
+    PyErr_Fetch(&exc_type, &exc_value, &exc_tb);
+    if (PyDict_DelItem(s->markers, ident) < 0)
+        PyErr_Clear();
+    PyErr_Restore(exc_type, exc_value, exc_tb);
+    Py_DECREF(ident);
+}
+
+/* Raise ValueError if obj is already in the markers dict, i.e. it is
+ * currently being encoded further up the stack. Used where a side-
+ * effecting call (such as __iter__) has to run before the marker can
+ * be pushed. Returns 0 when obj is not marked or tracking is off, -1
+ * with an exception set otherwise. */
+static int
+encoder_markers_check(PyEncoderObject *s, PyObject *obj)
+{
+    PyObject *ident;
+    int has_key;
+    if (s->markers == Py_None)
+        return 0;
+    ident = PyLong_FromVoidPtr(obj);
+    if (ident == NULL)
+        return -1;
+    has_key = PyDict_Contains(s->markers, ident);
+    Py_DECREF(ident);
+    if (has_key) {
+        if (has_key != -1)
+            PyErr_SetString(PyExc_ValueError, "Circular reference detected");
+        return -1;
+    }
+    return 0;
+}
+
 /* Helper for the for_json / _asdict paths in encoder_listencode_obj.
  * Steals the reference to `newobj` (returned by _call_json_method),
  * tracks the original object's circular-reference marker and recursion
@@ -3040,7 +3141,7 @@ encoder_steal_encode(PyEncoderObject *s, JSON_Accu *rval,
     }
     if (Py_EnterRecursiveCall(" while encoding a JSON object")) {
         Py_DECREF(newobj);
-        Py_XDECREF(ident);
+        encoder_markers_discard(s, ident);
         return -1;
     }
     if (as_dict) {
@@ -3049,7 +3150,7 @@ encoder_steal_encode(PyEncoderObject *s, JSON_Accu *rval,
         } else {
             PyErr_Format(PyExc_TypeError,
                          "_asdict() must return a dict, not %.80s",
-                         Py_TYPE(newobj)->tp_name);
+                         json_type_name(newobj));
             rv = -1;
         }
     } else {
@@ -3061,7 +3162,7 @@ encoder_steal_encode(PyEncoderObject *s, JSON_Accu *rval,
         if (encoder_markers_pop(s, ident) < 0)
             rv = -1;
     } else {
-        Py_XDECREF(ident);
+        encoder_markers_discard(s, ident);
     }
     return rv;
 }
@@ -3072,6 +3173,9 @@ encoder_steal_encode(PyEncoderObject *s, JSON_Accu *rval,
  * three sub-cases in order:
  *   1. RawJSON — emit the already-encoded string verbatim.
  *   2. iterable_as_array — treat any iterable object as a JSON array.
+ *      obj itself (not its iterator, which may be fresh on every
+ *      visit) is the circular-reference marker, and the recursion
+ *      depth is tracked.
  *   3. default(obj) — call the user-supplied default hook and recurse
  *      on its result, with circular-reference tracking via markers.
  * Returns 0 on success, -1 on error. */
@@ -3096,13 +3200,22 @@ encoder_listencode_default(PyEncoderObject *s, JSON_Accu *rval,
     }
 
     if (s->iterable_as_array) {
+        /* Reject a revisited iterable before its __iter__ runs again;
+         * encoder_listencode_list pushes the marker for obj. */
+        if (encoder_markers_check(s, obj))
+            return -1;
         newobj = PyObject_GetIter(obj);
         if (newobj == NULL) {
             if (!PyErr_ExceptionMatches(PyExc_TypeError))
                 return -1;
             PyErr_Clear();
         } else {
-            rv = encoder_listencode_list(s, rval, newobj, indent_level);
+            if (Py_EnterRecursiveCall(" while encoding a JSON object")) {
+                Py_DECREF(newobj);
+                return -1;
+            }
+            rv = encoder_listencode_list(s, rval, newobj, obj, indent_level);
+            Py_LeaveRecursiveCall();
             Py_DECREF(newobj);
             return rv;
         }
@@ -3111,7 +3224,7 @@ encoder_listencode_default(PyEncoderObject *s, JSON_Accu *rval,
     if (encoder_markers_push(s, obj, &ident))
         return -1;
     if (Py_EnterRecursiveCall(" while encoding a JSON object")) {
-        Py_XDECREF(ident);
+        encoder_markers_discard(s, ident);
         return -1;
     }
     newobj = PyObject_CallOneArg(s->defaultfn, obj);
@@ -3122,10 +3235,10 @@ encoder_listencode_default(PyEncoderObject *s, JSON_Accu *rval,
          * encoder which binds type(o).__name__ before `o = default(o)`
          * runs. */
         encoder_annotate_exception(state,
-            "when serializing %s object", Py_TYPE(obj)->tp_name);
+            "when serializing %s object", json_type_name(obj));
 #endif
         Py_LeaveRecursiveCall();
-        Py_XDECREF(ident);
+        encoder_markers_discard(s, ident);
         return -1;
     }
     rv = encoder_listencode_obj(s, rval, newobj, indent_level);
@@ -3136,7 +3249,7 @@ encoder_listencode_default(PyEncoderObject *s, JSON_Accu *rval,
          * the Python encoder `o` has been rebound to newobj at this
          * point, so the note reflects that type. */
         encoder_annotate_exception(state,
-            "when serializing %s object", Py_TYPE(newobj)->tp_name);
+            "when serializing %s object", json_type_name(newobj));
 #endif
     }
     Py_DECREF(newobj);
@@ -3144,7 +3257,7 @@ encoder_listencode_default(PyEncoderObject *s, JSON_Accu *rval,
         if (encoder_markers_pop(s, ident) < 0)
             rv = -1;
     } else {
-        Py_XDECREF(ident);
+        encoder_markers_discard(s, ident);
     }
     return rv;
 }
@@ -3218,7 +3331,7 @@ encoder_listencode_obj(PyEncoderObject *s, JSON_Accu *rval, PyObject *obj, Py_ss
     else if (PyList_Check(obj) || (s->tuple_as_array && PyTuple_Check(obj))) {
         if (Py_EnterRecursiveCall(" while encoding a JSON object"))
             return rv;
-        rv = encoder_listencode_list(s, rval, obj, indent_level);
+        rv = encoder_listencode_list(s, rval, obj, obj, indent_level);
         Py_LeaveRecursiveCall();
     }
     else if (JSON_AnyDict_Check(obj)) {
@@ -3396,6 +3509,7 @@ encoder_listencode_dict(PyEncoderObject *s, JSON_Accu *rval, PyObject *dct, Py_s
     int indented = (s->indent != Py_None);
     Py_ssize_t inner_indent_level = indented ? indent_level + 1 : indent_level;
     Py_ssize_t idx;
+    int popped;
 
     {
         Py_ssize_t dct_size = PyDict_Check(dct) ? PyDict_Size(dct)
@@ -3424,51 +3538,86 @@ encoder_listencode_dict(PyEncoderObject *s, JSON_Accu *rval, PyObject *dct, Py_s
     if (s->item_sort_kw == Py_None && PyDict_CheckExact(dct)) {
         Py_ssize_t pos = 0;
         PyObject *key, *value;
+        Py_ssize_t size;
+#if PY_MAJOR_VERSION >= 3
+        Py_ssize_t remaining;
+#endif
         int err = 0;
 
         idx = 0;
         Py_BEGIN_CRITICAL_SECTION(dct);
+        size = PyDict_Size(dct);
+#if PY_MAJOR_VERSION >= 3
+        remaining = size;
+#endif
         while (PyDict_Next(dct, &pos, &key, &value)) {
+#if PY_MAJOR_VERSION >= 3
+            /* User code that replaced keys without changing the size
+             * (pop and re-add a key) leaves entries past the original
+             * ones. Fail the way Python 3's dict iterator does rather
+             * than encode keys twice. */
+            if (remaining == 0) {
+                PyErr_SetString(PyExc_RuntimeError,
+                                "dictionary keys changed during iteration");
+                err = 1;
+                break;
+            }
+            remaining--;
+#endif
+            /* Hold key until the value is encoded: encoding the value
+             * can run user code (default, for_json, ...) that removes
+             * the entry, and the error note below still needs key. */
             Py_INCREF(key);
             Py_INCREF(value);
 
             encoded = encoder_encode_dict_key(s, key);
-            Py_DECREF(key);
             if (encoded == NULL) {
-                Py_DECREF(value); err = 1; break;
+                Py_DECREF(key); Py_DECREF(value); err = 1; break;
             }
             if (encoded == Py_None) {
                 /* skipkeys */
                 encoded = NULL;
+                Py_DECREF(key);
                 Py_DECREF(value);
                 continue;
             }
             if (idx) {
                 if (JSON_Accu_Accumulate(state, rval, s->item_separator)) {
-                    Py_DECREF(value); err = 1; break;
+                    Py_DECREF(key); Py_DECREF(value); err = 1; break;
                 }
                 if (indented && encoder_accumulate_newline_indent(
                                     s, state, rval, inner_indent_level)) {
-                    Py_DECREF(value); err = 1; break;
+                    Py_DECREF(key); Py_DECREF(value); err = 1; break;
                 }
             }
             if (JSON_Accu_Accumulate(state, rval, encoded)) {
-                Py_DECREF(value); err = 1; break;
+                Py_DECREF(key); Py_DECREF(value); err = 1; break;
             }
             Py_CLEAR(encoded);
             if (JSON_Accu_Accumulate(state, rval, s->key_separator)) {
-                Py_DECREF(value); err = 1; break;
+                Py_DECREF(key); Py_DECREF(value); err = 1; break;
             }
             if (encoder_listencode_obj(s, rval, value, inner_indent_level)) {
 #if PY_VERSION_HEX >= 0x030B0000
                 encoder_annotate_exception(state,
                     "when serializing %s item %R",
-                    Py_TYPE(dct)->tp_name, key);
+                    json_type_name(dct), key);
 #endif
-                Py_DECREF(value); err = 1; break;
+                Py_DECREF(key); Py_DECREF(value); err = 1; break;
             }
+            Py_DECREF(key);
             Py_DECREF(value);
             idx++;
+            /* PyDict_Next walks entry slots, so a dict resized by that
+             * user code would have entries skipped or repeated. Fail
+             * the way the pure-Python encoder's dict iteration does,
+             * which on Python 2 is only this check. */
+            if (PyDict_Size(dct) != size) {
+                PyErr_SetString(PyExc_RuntimeError,
+                                "dictionary changed size during iteration");
+                err = 1;
+                break;
+            }
         }
         Py_END_CRITICAL_SECTION();
 
@@ -3517,7 +3666,7 @@ encoder_listencode_dict(PyEncoderObject *s, JSON_Accu *rval, PyObject *dct, Py_s
 #if PY_VERSION_HEX >= 0x030B0000
                 encoder_annotate_exception(state,
                     "when serializing %s item %R",
-                    Py_TYPE(dct)->tp_name, key);
+                    json_type_name(dct), key);
 #endif
                 goto bail;
             }
@@ -3529,9 +3678,12 @@ encoder_listencode_dict(PyEncoderObject *s, JSON_Accu *rval, PyObject *dct, Py_s
             goto bail;
     }
 
-    if (encoder_markers_pop(s, ident))
-        goto bail;
+    /* encoder_markers_pop releases ident even when it fails, so clear
+     * it before bail can see it. */
+    popped = encoder_markers_pop(s, ident);
     ident = NULL;
+    if (popped)
+        goto bail;
     if (indented) {
         if (encoder_accumulate_newline_indent(s, state, rval, indent_level))
             goto bail;
@@ -3544,15 +3696,19 @@ bail:
     Py_XDECREF(encoded);
     Py_XDECREF(item);
     Py_XDECREF(iter);
-    Py_XDECREF(ident);
+    encoder_markers_discard(s, ident);
     return -1;
 }
 
 
 static int
-encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_ssize_t indent_level)
+encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq,
+                        PyObject *origin, Py_ssize_t indent_level)
 {
-    /* Encode Python list seq to a JSON term */
+    /* Encode the items of seq as a JSON array. origin is the object
+     * being encoded: seq itself for a list or tuple, or the iterable
+     * that produced the iterator seq under iterable_as_array. origin is
+     * the circular-reference marker and is named in error notes. */
     _speedups_state *state = get_speedups_state(s->module_ref);
     PyObject *ident = NULL;
     PyObject *iter = NULL;
@@ -3564,6 +3720,7 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
     Py_ssize_t inner_indent_level = indented ? indent_level + 1 : indent_level;
     Py_ssize_t i = 0;
     int is_exact_fast;
+    int popped;
 
     /* Emptiness check: use direct size for exact types to skip the
      * __bool__/__len__ method dispatch of PyObject_IsTrue. */
@@ -3580,14 +3737,14 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
     else {
         /* For non-exact types (list/tuple subclasses or other iterables)
          * we cannot short-circuit on emptiness without consuming the
-         * iterator. iterable_as_array in particular reaches us with a
-         * bare iterator whose PyObject_IsTrue always returns 1, so the
-         * emptiness is only discovered on the first PyIter_Next call
-         * inside the slow path below. */
+         * iterator. iterable_as_array in particular reaches us with an
+         * iterator, whose truth value says nothing about whether it
+         * will yield items, so the emptiness is only discovered on the
+         * first PyIter_Next call inside the slow path below. */
         is_exact_fast = 0;
     }
 
-    if (encoder_markers_push(s, seq, &ident))
+    if (encoder_markers_push(s, origin, &ident))
         goto bail;
 
     if (is_exact_fast) {
@@ -3603,7 +3760,6 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
          * the bail handler's Py_XDECREF(obj) stays a no-op for this
          * path. */
         PyObject *item;
-        Py_ssize_t size;
         int is_list = PyList_CheckExact(seq);
         int err = 0;
 
@@ -3616,8 +3772,12 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
         }
 
         Py_BEGIN_CRITICAL_SECTION(seq);
-        size = is_list ? PyList_GET_SIZE(seq) : PyTuple_GET_SIZE(seq);
-        for (i = 0; i < size; i++) {
+        /* Re-read the size on every iteration, as a list iterator does:
+         * encoding an item can run user code (default, for_json, ...)
+         * that resizes the list, and on free-threaded builds the
+         * critical section can be released while that code runs. */
+        for (i = 0; i < (is_list ? PyList_GET_SIZE(seq)
+                                 : PyTuple_GET_SIZE(seq)); i++) {
             item = is_list ? PyList_GET_ITEM(seq, i)
                            : PyTuple_GET_ITEM(seq, i);
             Py_INCREF(item);
@@ -3634,7 +3794,7 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
 #if PY_VERSION_HEX >= 0x030B0000
                 encoder_annotate_exception(state,
                     "when serializing %s item %zd",
-                    Py_TYPE(seq)->tp_name, i);
+                    json_type_name(origin), i);
 #endif
                 Py_DECREF(item); err = 1; break;
             }
@@ -3682,7 +3842,7 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
 #if PY_VERSION_HEX >= 0x030B0000
                 encoder_annotate_exception(state,
                     "when serializing %s item %zd",
-                    Py_TYPE(seq)->tp_name, i);
+                    json_type_name(origin), i);
 #endif
                 goto bail;
             }
@@ -3707,15 +3867,18 @@ encoder_listencode_list(PyEncoderObject *s, JSON_Accu *rval, PyObject *seq, Py_s
         }
     }
 
-    if (encoder_markers_pop(s, ident))
-        goto bail;
+    /* encoder_markers_pop releases ident even when it fails, so clear
+     * it before bail can see it. */
+    popped = encoder_markers_pop(s, ident);
     ident = NULL;
+    if (popped)
+        goto bail;
     return 0;
 
 bail:
     Py_XDECREF(obj);
     Py_XDECREF(iter);
-    Py_XDECREF(ident);
+    encoder_markers_discard(s, ident);
     return -1;
 }
 
