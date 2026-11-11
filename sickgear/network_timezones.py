@@ -16,16 +16,19 @@
 
 from itertools import chain
 import datetime
+import json
 import os
 import re
+import shutil
 import sys
+import tarfile
 import threading
 
 import sickgear
 from . import db, helpers, logger
 from sg_helpers import int_to_time
 
-from lib.dateutil import tz, zoneinfo
+from lib.dateutil import tz
 from lib.tzlocal import get_localzone
 
 from sg_helpers import remove_file_perm, scantree
@@ -62,6 +65,10 @@ EPOCH_START_WIN = None  # type: Optional[datetime.datetime]
 SG_TIMEZONE = None  # type: Optional[datetime.tzinfo]
 
 network_timezone_lock = threading.Lock()
+ZONEFILENAME = 'dateutil-zoneinfo.tar.gz'
+# used until a newer tarball is downloaded into sickgear.ZONEINFO_DIR
+FALLBACK_ZONEFILE = os.path.join(os.path.dirname(__file__), ZONEFILENAME)
+_tz_dir = None  # type: Optional[AnyStr]  # folder of extracted zoneinfo on the tz search path
 
 
 def reset_last_retry():
@@ -102,10 +109,9 @@ def get_tz():
         t = get_localzone()
     except (BaseException, Exception):
         pass
-    if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone and hasattr(sickgear, 'ZONEINFO_DIR'):
+    if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone:
         try:
-            # noinspection PyUnresolvedReferences
-            t = tz_fallback(tz.gettz(t.zone, zoneinfo_priority=True))
+            t = tz_fallback(tz.gettz(t.zone))
         except (BaseException, Exception):
             t = tz_fallback(t)
     else:
@@ -114,23 +120,87 @@ def get_tz():
 
 
 def get_utc():
-    # type: (...) -> Optional[datetime.tzinfo]
-    if hasattr(sickgear, 'ZONEINFO_DIR'):
-        utc = None
+    # type: (...) -> datetime.tzinfo
+    return tz.gettz('GMT') or tz.UTC
+
+
+def zonefile():
+    # type: (...) -> Tuple[AnyStr, bool]
+    """
+    :return: path of the zoneinfo tarball in use, and whether it is the one shipped with SickGear
+    """
+    if getattr(sickgear, 'ZONEINFO_DIR', None):
+        downloaded = helpers.real_path(os.path.join(sickgear.ZONEINFO_DIR, ZONEFILENAME))
+        # versions are year then letter, so string compare orders them
+        if os.path.isfile(downloaded)                 and (zoneinfo_version(downloaded) or '') >= (zoneinfo_version(FALLBACK_ZONEFILE) or ''):
+            return downloaded, False
+    return FALLBACK_ZONEFILE, True
+
+
+def zoneinfo_version(zonefile_path):
+    # type: (AnyStr) -> Optional[AnyStr]
+    """
+    :param zonefile_path: path of a zoneinfo tarball
+    :return: tz database version of the tarball, e.g. '2026f'
+    """
+    try:
+        with tarfile.open(zonefile_path) as tar:
+            return json.load(tar.extractfile('METADATA'))['tzversion']
+    except (BaseException, Exception):
+        return None
+
+
+def _setup_zoneinfo():
+    # type: (...) -> None
+    """
+    extract the zoneinfo tarball in use to a folder, and put that folder first on the tz search path
+    so that tz.gettz() finds SickGear zoneinfo before system or tzdata package zoneinfo
+    """
+    global _tz_dir
+    if not getattr(sickgear, 'ZONEINFO_DIR', None):
+        return
+    zonefile_path, _ = zonefile()
+    version = zoneinfo_version(zonefile_path)
+    if not version:
+        logger.error(f'Unable to read zoneinfo version from {zonefile_path}')
+        return
+    tz_dir = os.path.abspath(os.path.join(sickgear.ZONEINFO_DIR, f'tz-{version}'))
+    if tz_dir == _tz_dir:
+        # a folder replaced by an earlier call may still be in use by lookups that were underway at the switch,
+        # so folders of other versions are only removed on a later call
+        for entry in os.scandir(sickgear.ZONEINFO_DIR):
+            if entry.is_dir() and entry.name.startswith('tz-') and os.path.abspath(entry.path) != tz_dir:
+                shutil.rmtree(entry.path, ignore_errors=True)
+        return
+    if not os.path.isdir(tz_dir):
+        tz_dir_tmp = tz_dir + '.tmp'
         try:
-            utc = tz.gettz('GMT', zoneinfo_priority=True)
-        except (BaseException, Exception):
-            pass
-        if isinstance(utc, datetime.tzinfo):
-            return utc
-    tz_utc_file = os.path.join(os.path.dirname(zoneinfo.__file__), 'Greenwich')
-    if os.path.isfile(tz_utc_file):
-        return tz.tzfile(tz_utc_file)
+            shutil.rmtree(tz_dir_tmp, ignore_errors=True)
+            with tarfile.open(zonefile_path) as tar:
+                for member in tar.getmembers():
+                    if not (member.isfile() or member.islnk() or member.issym()):
+                        continue
+                    target = os.path.abspath(os.path.join(tz_dir_tmp, *member.name.split('/')))
+                    if not target.startswith(tz_dir_tmp + os.sep):
+                        # name escapes the folder
+                        continue
+                    helpers.make_path(os.path.dirname(target), quiet=True)
+                    with open(target, 'wb') as fh:
+                        # extractfile() of a link returns its target
+                        fh.write(tar.extractfile(member).read())
+            os.rename(tz_dir_tmp, tz_dir)
+        except (BaseException, Exception) as e:
+            logger.error(f'Unable to extract zoneinfo {zonefile_path} to {tz_dir}: {e}')
+            return
+    tz.reset_tzpath([tz_dir] + [_p for _p in tz.TZPATH if _p != _tz_dir])
+    tz.gettz.cache_clear()
+    _tz_dir = tz_dir
 
 
 def set_vars():
     # type: (...) -> None
     global EPOCH_START, EPOCH_START_WIN, SG_TIMEZONE
+    _setup_zoneinfo()
     SG_TIMEZONE = get_tz()
     params = dict(year=1970, month=1, day=1)
     EPOCH_START_WIN = EPOCH_START = datetime.datetime(tzinfo=get_utc(), **params)
@@ -149,16 +219,14 @@ def _remove_old_zoneinfo():
     """
     helper to remove old unneeded zoneinfo files
     """
-    if None is not zoneinfo.ZONEFILENAME:
-        current_file = helpers.real_path(
-            os.path.join(sickgear.ZONEINFO_DIR, os.path.basename(zoneinfo.ZONEFILENAME)))
-        for entry in chain.from_iterable([scantree(helpers.real_path(_dir), include=r'\.tar\.gz$', filter_kind=False)
-                                          for _dir in (sickgear.ZONEINFO_DIR, )]):  # type: DirEntry
-            if current_file != entry.path:
-                if remove_file_perm(entry.path, log_err=False):
-                    logger.log(f'Delete unneeded old zoneinfo File: {entry.path}')
-                else:
-                    logger.error(f'Unable to delete: {entry.path}')
+    current_file = helpers.real_path(os.path.join(sickgear.ZONEINFO_DIR, ZONEFILENAME))
+    for entry in chain.from_iterable([scantree(helpers.real_path(_dir), include=r'\.tar\.gz$', filter_kind=False)
+                                      for _dir in (sickgear.ZONEINFO_DIR, )]):  # type: DirEntry
+        if current_file != entry.path:
+            if remove_file_perm(entry.path, log_err=False):
+                logger.log(f'Delete unneeded old zoneinfo File: {entry.path}')
+            else:
+                logger.error(f'Unable to delete: {entry.path}')
 
 
 def _update_zoneinfo():
@@ -186,28 +254,21 @@ def _update_zoneinfo():
         logger.debug(f'Fetching zoneinfo.txt failed, update contains unparsable data: {url_data}')
         return
 
-    current_file = zoneinfo.ZONEFILENAME
-    if None is not current_file:
-        current_file = os.path.basename(current_file)
-    zonefile = helpers.real_path(os.path.join(sickgear.ZONEINFO_DIR, current_file))
-    zonemetadata = None if not os.path.isfile(zonefile) else \
-        zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata
+    zonefile_path = helpers.real_path(os.path.join(sickgear.ZONEINFO_DIR, ZONEFILENAME))
+    zoneversion = os.path.isfile(zonefile_path) and zoneinfo_version(zonefile_path)
 
     newtz_regex = re.search(r'(\d{4}[^.]+)', new_zoneinfo)
     if not newtz_regex or 1 != len(newtz_regex.groups()):
         return
     newtzversion = newtz_regex.group(1)
 
-    if None is not current_file \
-            and None is not zonemetadata \
-            and 'tzversion' in zonemetadata \
-            and zonemetadata['tzversion'] == newtzversion:
+    if zoneversion == newtzversion:
         return
 
     # load the new zoneinfo
     url_tar = f'https://raw.githubusercontent.com/Prinz23/sb_network_timezones/master/{new_zoneinfo}'
 
-    zonefile_tmp = re.sub(r'\.tar\.gz$', '.tmp', zonefile)
+    zonefile_tmp = re.sub(r'\.tar\.gz$', '.tmp', zonefile_path)
 
     if not remove_file_perm(zonefile_tmp, log_err=False):
         logger.error(f'Unable to delete: {zonefile_tmp}')
@@ -226,18 +287,9 @@ def _update_zoneinfo():
         logger.log(f'Updating timezone info with new one: {new_zoneinfo}', logger.MESSAGE)
         try:
             # remove the old zoneinfo file
-            if None is not current_file:
-                remove_file_perm(zonefile)
+            remove_file_perm(zonefile_path)
             # rename downloaded file
-            os.rename(zonefile_tmp, zonefile)
-            setattr(zoneinfo, '_CLASS_ZONE_INSTANCE', list())
-            tz.gettz.cache_clear()
-            from dateutil.zoneinfo import get_zonefile_instance
-            try:
-                delattr(get_zonefile_instance, '_cached_instance')
-            except AttributeError:
-                pass
-
+            os.rename(zonefile_tmp, zonefile_path)
             set_vars()
         except (BaseException, Exception):
             remove_file_perm(zonefile_tmp, log_err=False)
@@ -256,8 +308,12 @@ def update_network_dict():
     if not should_try_loading():
         return
 
-    _remove_old_zoneinfo()
-    _update_zoneinfo()
+    if sickgear.ZONEINFO_DIR:
+        _remove_old_zoneinfo()
+        _update_zoneinfo()
+    else:
+        # no cache folder to download into, use the bundled zoneinfo
+        set_vars()
     _load_network_conversions()
 
     network_tz_data = {}
@@ -369,24 +425,23 @@ def get_network_timezone(network, return_name=False):
     timezone_name = None
 
     try:
-        if None is not zoneinfo.ZONEFILENAME:
-            if not network_dict:
-                load_network_dict()
+        if not network_dict:
+            load_network_dict()
+        try:
+            timezone_name = network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower())
+            if isinstance(timezone_name, string_types):
+                timezone = tz.gettz(timezone_name)
+        except (BaseException, Exception):
+            pass
+
+        if None is timezone:
+            cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
             try:
-                timezone_name = network_dupes.get(network) or network_dict.get(network.replace(' ', '').lower())
+                timezone_name = country_timezones.get(cc.group(1).upper())
                 if isinstance(timezone_name, string_types):
-                    timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
+                    timezone = tz.gettz(timezone_name)
             except (BaseException, Exception):
                 pass
-
-            if None is timezone:
-                cc = re.search(r'\(([a-z]+)\)$', network, flags=re.I)
-                try:
-                    timezone_name = country_timezones.get(cc.group(1).upper())
-                    if isinstance(timezone_name, string_types):
-                        timezone = tz.gettz(timezone_name, zoneinfo_priority=True)
-                except (BaseException, Exception):
-                    pass
     except (BaseException, Exception):
         pass
 
@@ -583,7 +638,7 @@ def get_episode_time(d,  # type: int
         if isinstance(ep_timezone, datetime.tzinfo):
             tzinfo = ep_timezone
         elif isinstance(ep_timezone, string_types):
-            tzinfo = tz.gettz(ep_timezone, zoneinfo_priority=True)
+            tzinfo = tz.gettz(ep_timezone)
     if not tzinfo:
         if ep_network and isinstance(ep_network, string_types):
             tzinfo = get_network_timezone(ep_network)
@@ -593,7 +648,7 @@ def get_episode_time(d,  # type: int
                 if isinstance(show_timezone, datetime.tzinfo):
                     tzinfo = show_timezone
                 elif isinstance(show_timezone, string_types):
-                    tzinfo = tz.gettz(show_timezone, zoneinfo_priority=True)
+                    tzinfo = tz.gettz(show_timezone)
 
             if not tzinfo:
                 if show_network and isinstance(show_network, string_types):

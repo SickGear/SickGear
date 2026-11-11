@@ -1,6 +1,7 @@
 ﻿### 3.37.x (2026-xx-xx xx:xx:00 UTC)
 
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
+* Update dateutil 2.9.0.post0 (0353b78) to 4.0.0 (a78cbd8)
 * Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
 * Update hachoir 3.3.0 (b1c8b57) to 3.4.0 (3880742)
 * Update SimpleJSON 4.0.0 (1608c05) to 4.3.0 (d88746d)
@@ -10,6 +11,7 @@
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
 * Change output warning instead of error when Github fails to return alt.rar file
 * Change LimeTorrents, TBP, and TokyoToshokan to use proxy_browser for their requests
+* Change load SickGear zoneinfo via the dateutil tz search path instead of the deprecated dateutil.zoneinfo module
 
 
 [develop]

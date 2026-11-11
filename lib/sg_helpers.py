@@ -1322,21 +1322,23 @@ def touch_file(name, atime=None, dir_name=None):
     return False
 
 
-def make_path(name, syno=False):
-    # type: (AnyStr, bool) -> bool
+def make_path(name, syno=False, quiet=False):
+    # type: (AnyStr, bool, bool) -> bool
     """
     Create an entire directory path and
     assign each subdir the parent permission
 
     :param name: directory to create
     :param syno: whether to trigger a syno library update for path
+    :param quiet: whether to skip the debug log of each folder created
     :return: success or dir exists
     """
     if not os.path.isdir(name):
         # Windows, create all missing folders
         if os.name in ('nt', 'ce'):
             try:
-                logger.debug(f"Path {name} doesn't exist, creating it")
+                if not quiet:
+                    logger.debug(f"Path {name} doesn't exist, creating it")
                 os.makedirs(name)
             except (OSError, IOError) as e:
                 logger.error(f'Failed creating {name} : {ex(e)}')
@@ -1356,7 +1358,8 @@ def make_path(name, syno=False):
                     continue
 
                 try:
-                    logger.debug(f"Path {sofar} doesn't exist, creating it")
+                    if not quiet:
+                        logger.debug(f"Path {sofar} doesn't exist, creating it")
                     os.mkdir(sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmod_as_parent(os.path.normpath(sofar))
