@@ -2746,7 +2746,7 @@ class TVShow(TVShowBase):
 
     def _get_tz_info(self):
         if self.internal_timezone:
-            return tz.gettz(self.internal_timezone, zoneinfo_priority=True)
+            return tz.gettz(self.internal_timezone)
         elif self.internal_network:
             return network_timezones.get_network_timezone(self.internal_network)
 
@@ -4263,9 +4263,9 @@ class TVEpisode(TVEpisodeBase):
                 ep_time = datetime.time(hour=0, minute=0)
             tzinfo = None
             if isinstance(self._timezone, string_types) and self._timezone:
-                tzinfo = tz.gettz(self._timezone, zoneinfo_priority=True)
+                tzinfo = tz.gettz(self._timezone)
             elif isinstance(self._network, string_types) and self._network:
-                tzinfo = tz.gettz(self._network, zoneinfo_priority=True)
+                tzinfo = tz.gettz(self._network)
             elif isinstance(self._show_obj.timezone, string_types) and self._show_obj.timezone:
                 tzinfo = self._show_obj.timezone
             elif isinstance(self._show_obj.network, string_types) and self._show_obj.network:

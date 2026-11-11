@@ -42,12 +42,12 @@ class NetworkTimezoneTests(test.SickbeardTestDBCase):
 
     def test_timezone(self):
         network_timezones.update_network_dict()
-        network_timezones.SG_TIMEZONE = tz.gettz('CET', zoneinfo_priority=True)
+        network_timezones.SG_TIMEZONE = tz.gettz('CET')
         d = datetime.date(2018, 9, 2).toordinal()
         t = 'Monday 9:00 PM'
         network = 'NBC'
         r = network_timezones.parse_date_time(d, t, network)
-        local_date = datetime.datetime(2018, 9, 3, 3, 0, 0).replace(tzinfo=tz.gettz('CET', zoneinfo_priority=True))
+        local_date = datetime.datetime(2018, 9, 3, 3, 0, 0).replace(tzinfo=tz.gettz('CET'))
         self.assertEqual(r, local_date)
 
 

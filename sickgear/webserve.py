@@ -93,7 +93,7 @@ from lib.iso639 import Lang
 
 from lib import subliminal
 from lib.cfscrape import CloudflareScraper
-from lib.dateutil import tz, zoneinfo
+from lib.dateutil import tz
 from lib.dateutil.relativedelta import relativedelta
 try:
     from lib.thefuzz import fuzz
@@ -572,7 +572,7 @@ class CalendarHandler(BaseHandler):
         # Limit dates
         past_date = (dt_date.today() + timedelta(weeks=-52)).toordinal()
         future_date = (dt_date.today() + timedelta(weeks=52)).toordinal()
-        utc = tz.gettz('GMT', zoneinfo_priority=True)
+        utc = tz.gettz('GMT')
 
         # Get all the shows that are not paused and are currently on air
         with db.DBConnection() as sg_db:
@@ -1443,20 +1443,8 @@ class MainHandler(WebHandler):
         except (BaseException, Exception):
             t.version = ''
 
-        current_file = zoneinfo.ZONEFILENAME
-        t.tz_fallback = False
-        t.tz_version = None
-        try:
-            if None is not current_file:
-                current_file = os.path.basename(current_file)
-                zonefile = real_path(os.path.join(sickgear.ZONEINFO_DIR, current_file))
-                if not os.path.isfile(zonefile):
-                    t.tz_fallback = True
-                    zonefile = os.path.join(os.path.dirname(zoneinfo.__file__), current_file)
-                if os.path.isfile(zonefile):
-                    t.tz_version = zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata['tzversion']
-        except (BaseException, Exception):
-            pass
+        zonefile, t.tz_fallback = network_timezones.zonefile()
+        t.tz_version = network_timezones.zoneinfo_version(zonefile)
 
         t.backup_db_path = sickgear.BACKUP_DB_MAX_COUNT and \
             (sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup')) or 'Disabled'

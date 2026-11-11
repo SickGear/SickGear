@@ -10,12 +10,9 @@ sources as :py:mod:`zoneinfo`, this module is no longer necessary.
 
 """
 
-import importlib.resources
 import json
-import os
 import sys
 import warnings
-from io import BytesIO
 from tarfile import TarFile
 
 
@@ -24,13 +21,8 @@ from dateutil.tz import tzfile as _tzfile
 
 __all__ = ["get_zonefile_instance", "gettz", "gettz_db_metadata"]
 
-ZONEFILENAME = "dateutil-zoneinfo.tar.gz"
+ZONEFILENAME = None
 METADATA_FN = 'METADATA'
-
-#: Folder searched for :data:`ZONEFILENAME` before the copy bundled with this
-#: module. When unset, ``sickgear.ZONEINFO_DIR`` is used if ``sickgear`` has
-#: been imported.
-ZONEINFO_DIR = None
 
 
 def _importer_stacklevel():
@@ -68,39 +60,6 @@ warnings.warn(
 
 
 tzfile = _tzfile
-
-
-def _zoneinfo_dir():
-    # Read lazily so the folder can be set after this module is imported,
-    # and without making ``sickgear`` a dependency.
-    return ZONEINFO_DIR or getattr(sys.modules.get("sickgear"), "ZONEINFO_DIR", None)
-
-
-def getzoneinfofile_stream():
-    """
-    Return the zoneinfo tarball as a stream, or ``None`` if there is none.
-
-    The tarball named :data:`ZONEFILENAME` is read from :data:`ZONEINFO_DIR`,
-    falling back to the copy bundled with this module.
-    """
-    zonedir = _zoneinfo_dir()
-    if zonedir:
-        zonefile = os.path.join(zonedir, ZONEFILENAME)
-        if os.path.isfile(zonefile):
-            try:
-                with open(zonefile, "rb") as f:
-                    return BytesIO(f.read())
-            except OSError as e:
-                warnings.warn("I/O error({0}): {1}".format(e.errno, e.strerror))
-        warnings.warn("Falling back to included zoneinfo file")
-
-    try:
-        return BytesIO(
-            importlib.resources.files(__name__).joinpath(ZONEFILENAME).read_bytes()
-        )
-    except OSError:
-        return None
-
 
 class ZoneInfoFile:
     def __init__(self, zonefile_stream=None):
@@ -181,9 +140,8 @@ _CLASS_ZONE_INSTANCE = []
 def get_zonefile_instance(new_instance=False):
     """
     This is a convenience function which provides a :class:`ZoneInfoFile`
-    instance using the tarball from :func:`getzoneinfofile_stream`, or the
-    ``tzdata`` package if there is no tarball. By default, it caches a single
-    instance of the ZoneInfoFile object and returns that.
+    instance using the data provided by the ``dateutil`` package. By default, it
+    caches a single instance of the ZoneInfoFile object and returns that.
 
     :param new_instance:
         If ``True``, a new instance of :class:`ZoneInfoFile` is instantiated and
@@ -201,7 +159,7 @@ def get_zonefile_instance(new_instance=False):
         zif = getattr(get_zonefile_instance, '_cached_instance', None)
 
     if zif is None:
-        zif = ZoneInfoFile(getzoneinfofile_stream())
+        zif = ZoneInfoFile()
 
         get_zonefile_instance._cached_instance = zif
 
@@ -210,8 +168,7 @@ def get_zonefile_instance(new_instance=False):
 
 def gettz(name):
     """
-    This retrieves a time zone from the zoneinfo tarball, or the ``tzdata``
-    package if there is no tarball.
+    This retrieves a time zone from the ``tzdata`` package.
 
     :param name:
         An IANA-style time zone name, as found in the zoneinfo file.
@@ -242,7 +199,7 @@ def gettz(name):
                   DeprecationWarning)
 
     if len(_CLASS_ZONE_INSTANCE) == 0:
-        _CLASS_ZONE_INSTANCE.append(ZoneInfoFile(getzoneinfofile_stream()))
+        _CLASS_ZONE_INSTANCE.append(ZoneInfoFile())
     return _CLASS_ZONE_INSTANCE[0].zones.get(name)
 
 
@@ -263,5 +220,5 @@ def gettz_db_metadata():
                   DeprecationWarning)
 
     if len(_CLASS_ZONE_INSTANCE) == 0:
-        _CLASS_ZONE_INSTANCE.append(ZoneInfoFile(getzoneinfofile_stream()))
+        _CLASS_ZONE_INSTANCE.append(ZoneInfoFile())
     return _CLASS_ZONE_INSTANCE[0].metadata

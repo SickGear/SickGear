@@ -943,11 +943,6 @@ def __get_gettz():
             specifier. An empty string, no argument or ``None`` is interpreted
             as local time.
 
-        :param zoneinfo_priority:
-            If ``True``, look for an IANA key in
-            :func:`dateutil.zoneinfo.get_zonefile_instance` before the search
-            order above, which is used if the key is not found there.
-
         :return:
             Returns an instance of one of ``dateutil``'s :py:class:`tzinfo`
             subclasses.
@@ -979,20 +974,16 @@ def __get_gettz():
             self.__strong_cache = OrderedDict()
             self._cache_lock = _thread.allocate_lock()
 
-        def __call__(self, name=None, zoneinfo_priority=False):
-            # Both lookups can return different zones for one name, so each
-            # has its own cache entry.
-            key = (name, True) if zoneinfo_priority else name
+        def __call__(self, name=None):
             with self._cache_lock:
-                rv = self.__instances.get(key, None)
+                rv = self.__instances.get(name, None)
 
                 if rv is None:
                     # TODO: This holds the cache lock while nocache() reads
                     # the file, so a slow lookup (e.g. walking TZPATH on a
                     # network file system) blocks every other gettz call,
                     # including cache hits for unrelated keys.
-                    rv = self.nocache(name=name,
-                                      zoneinfo_priority=zoneinfo_priority)
+                    rv = self.nocache(name=name)
                     if not (name is None
                             or isinstance(rv, tzlocal_classes)
                             or rv is None):
@@ -1002,12 +993,12 @@ def __get_gettz():
                         #
                         # We also cannot store weak references to None, so we
                         # will also not store that.
-                        self.__instances[key] = rv
+                        self.__instances[name] = rv
                     else:
                         # No need for strong caching, return immediately
                         return rv
 
-                self.__strong_cache[key] = self.__strong_cache.pop(key, rv)
+                self.__strong_cache[name] = self.__strong_cache.pop(name, rv)
 
                 if len(self.__strong_cache) > self.__strong_cache_size:
                     self.__strong_cache.popitem(last=False)
@@ -1026,7 +1017,7 @@ def __get_gettz():
                 self.__strong_cache.clear()
 
         @staticmethod
-        def nocache(name=None, zoneinfo_priority=False):
+        def nocache(name=None):
             """A non-cached version of gettz"""
             tz = None
             if not name:
@@ -1076,21 +1067,6 @@ def __get_gettz():
                     else:
                         tz = None
                 else:
-                    if zoneinfo_priority:
-                        with warnings.catch_warnings():
-                            # Opting in to the tarball is deliberate, so
-                            # don't warn about the zoneinfo deprecation.
-                            warnings.simplefilter(
-                                "ignore", category=DeprecationWarning)
-                            from dateutil.zoneinfo import get_zonefile_instance
-                        try:
-                            tz = get_zonefile_instance().get(name)
-                        except ImportError:
-                            # No tarball and no tzdata to fall back on.
-                            tz = None
-                        if tz is not None:
-                            return tz
-
                     if _escapes_tzpath(name):
                         _warn_tzpath_escape(name)
 
