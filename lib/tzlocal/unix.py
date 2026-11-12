@@ -1,97 +1,79 @@
+import logging
 import os
-import pytz
 import re
 import warnings
+import zoneinfo
+from datetime import timezone
 
 from tzlocal import utils
 
 _cache_tz = None
+_cache_tz_name = None
+
+log = logging.getLogger("tzlocal")
 
 
-def _tz_from_env(tzenv):
-    if tzenv[0] == ':':
-        tzenv = tzenv[1:]
-
-    # TZ specifies a file
-    if os.path.isabs(tzenv) and os.path.exists(tzenv):
-        with open(tzenv, 'rb') as tzfile:
-            return pytz.tzfile.build_tzinfo('local', tzfile)
-
-    # TZ specifies a zoneinfo zone.
-    try:
-        tz = pytz.timezone(tzenv)
-        # That worked, so we return this:
-        return tz
-    except pytz.UnknownTimeZoneError:
-        raise pytz.UnknownTimeZoneError(
-            "tzlocal() does not support non-zoneinfo timezones like %s. \n"
-            "Please use a timezone in the form of Continent/City")
-
-
-def _try_tz_from_env():
-    tzenv = os.environ.get('TZ')
-    if tzenv:
-        try:
-            return _tz_from_env(tzenv)
-        except pytz.UnknownTimeZoneError:
-            pass
-
-
-def _get_localzone(_root='/'):
+def _get_localzone_name(_root="/"):
     """Tries to find the local timezone configuration.
 
-    This method prefers finding the timezone name and passing that to pytz,
-    over passing in the localtime file, as in the later case the zoneinfo
-    name is unknown.
+    This method finds the timezone name, if it can, or it returns None.
 
     The parameter _root makes the function look for files like /etc/localtime
     beneath the _root directory. This is primarily used by the tests.
     In normal usage you call the function without parameters."""
 
-    tzenv = _try_tz_from_env()
+    # First try the ENV setting.
+    tzenv = utils._tz_name_from_env()
     if tzenv:
         return tzenv
 
     # Are we under Termux on Android?
-    if os.path.exists('/system/bin/getprop'):
+    if os.path.exists(os.path.join(_root, "system/bin/getprop")):
+        log.debug("This looks like Termux")
+
         import subprocess
-        androidtz = subprocess.check_output(['getprop', 'persist.sys.timezone']).strip().decode()
-        return pytz.timezone(androidtz)
+
+        try:
+            androidtz = (
+                subprocess.check_output(["getprop", "persist.sys.timezone"])
+                .strip()
+                .decode()
+            )
+            return androidtz
+        except (OSError, subprocess.CalledProcessError):
+            # proot environment or failed to getprop
+            log.debug("It's not termux?")
 
     # Now look for distribution specific configuration files
     # that contain the timezone name.
-    for configfile in ('etc/timezone', 'var/db/zoneinfo'):
+
+    # Stick all of them in a dict, to compare later.
+    found_configs = {}
+
+    for configfile in ("etc/timezone", "var/db/zoneinfo"):
         tzpath = os.path.join(_root, configfile)
         try:
-            with open(tzpath, 'rb') as tzfile:
+            with open(tzpath, encoding="ascii") as tzfile:
                 data = tzfile.read()
+                log.debug(f"{tzpath} found, contents:\n {data}")
 
-                # Issue #3 was that /etc/timezone was a zoneinfo file.
-                # That's a misconfiguration, but we need to handle it gracefully:
-                if data[:5] == b'TZif2':
-                    continue
-
-                etctz = data.strip().decode()
-                if not etctz:
+                tzlines = data.strip("/ \t\r\n")
+                if not tzlines:
                     # Empty file, skip
                     continue
-                for etctz in data.decode().splitlines():
+                for etctz in tzlines.splitlines():
                     # Get rid of host definitions and comments:
-                    if ' ' in etctz:
-                        etctz, dummy = etctz.split(' ', 1)
-                    if '#' in etctz:
-                        etctz, dummy = etctz.split('#', 1)
+                    if " " in etctz:
+                        etctz, _ = etctz.split(" ", 1)
+                    if "#" in etctz:
+                        etctz, _ = etctz.split("#", 1)
                     if not etctz:
                         continue
-                    tz = pytz.timezone(etctz.replace(' ', '_'))
-                    if _root == '/':
-                        # We are using a file in etc to name the timezone.
-                        # Verify that the timezone specified there is actually used:
-                        utils.assert_tz_offset(tz)
-                    return tz
 
-        except IOError:
-            # File doesn't exist or is a directory
+                    found_configs[tzpath] = etctz.replace(" ", "_")
+
+        except (OSError, UnicodeDecodeError):
+            # File doesn't exist or is a directory, or it's a binary file.
             continue
 
     # CentOS has a ZONE setting in /etc/sysconfig/clock,
@@ -99,15 +81,16 @@ def _get_localzone(_root='/'):
     # Gentoo has a TIMEZONE setting in /etc/conf.d/clock
     # We look through these files for a timezone:
 
-    zone_re = re.compile(r'\s*ZONE\s*=\s*\"')
-    timezone_re = re.compile(r'\s*TIMEZONE\s*=\s*\"')
-    end_re = re.compile('\"')
+    zone_re = re.compile(r"\s*ZONE\s*=\s*\"")
+    timezone_re = re.compile(r"\s*TIMEZONE\s*=\s*\"")
+    end_re = re.compile('"')
 
-    for filename in ('etc/sysconfig/clock', 'etc/conf.d/clock'):
+    for filename in ("etc/sysconfig/clock", "etc/conf.d/clock"):
         tzpath = os.path.join(_root, filename)
         try:
-            with open(tzpath, 'rt') as tzfile:
+            with open(tzpath, "rt") as tzfile:
                 data = tzfile.readlines()
+                log.debug(f"{tzpath} found, contents:\n {data}")
 
             for line in data:
                 # Look for the ZONE= setting.
@@ -117,49 +100,146 @@ def _get_localzone(_root='/'):
                     match = timezone_re.match(line)
                 if match is not None:
                     # Some setting existed
-                    line = line[match.end():]
-                    etctz = line[:end_re.search(line).start()]
+                    tzline = line[match.end() :]
+                    end_match = end_re.search(tzline)
+                    if end_match is None:
+                        # Syntax error. Ignore this line.
+                        warnings.warn(
+                            f"Syntax error in {tzpath}. Ignoring line: {line}"
+                        )
+                        continue
+                    etctz = tzline[: end_match.start()]
 
                     # We found a timezone
-                    tz = pytz.timezone(etctz.replace(' ', '_'))
-                    if _root == '/':
-                        # We are using a file in etc to name the timezone.
-                        # Verify that the timezone specified there is actually used:
-                        utils.assert_tz_offset(tz)
-                    return tz
+                    found_configs[tzpath] = etctz.replace(" ", "_")
 
-        except IOError:
-            # File doesn't exist or is a directory
+        except (OSError, UnicodeDecodeError):
+            # UnicodeDecode handles when clock is symlink to /etc/localtime
             continue
 
     # systemd distributions use symlinks that include the zone name,
     # see manpage of localtime(5) and timedatectl(1)
-    tzpath = os.path.join(_root, 'etc/localtime')
+    tzpath = os.path.join(_root, "etc/localtime")
     if os.path.exists(tzpath) and os.path.islink(tzpath):
-        tzpath = os.path.realpath(tzpath)
-        start = tzpath.find("/")+1
+        log.debug(f"{tzpath} found")
+        etctz = os.path.realpath(tzpath)
+        start = etctz.find("/") + 1
         while start != 0:
-            tzpath = tzpath[start:]
+            etctz = etctz[start:]
             try:
-                return pytz.timezone(tzpath)
-            except pytz.UnknownTimeZoneError:
+                zoneinfo.ZoneInfo(etctz)
+                tzinfo = f"{tzpath} is a symlink to"
+                found_configs[tzinfo] = etctz.replace(" ", "_")
+                # Only need first valid relative path in simlink.
+                break
+            except zoneinfo.ZoneInfoNotFoundError:
                 pass
-            start = tzpath.find("/")+1
+            start = etctz.find("/") + 1
 
-    # No explicit setting existed. Use localtime
-    for filename in ('etc/localtime', 'usr/local/etc/localtime'):
-        tzpath = os.path.join(_root, filename)
+    if len(found_configs) > 0:
+        log.debug(f"{len(found_configs)} found:\n {found_configs}")
 
-        if not os.path.exists(tzpath):
-            continue
-        with open(tzpath, 'rb') as tzfile:
-            return pytz.tzfile.build_tzinfo('local', tzfile)
+        # We found some explicit config of some sort!
+        if len(found_configs) > 1:
+            # Uh-oh, multiple configs. See if they match:
+            unique_tzs = _get_unique_tzs(found_configs, _root)
 
-    warnings.warn('Can not find any timezone configuration, defaulting to UTC.')
-    return pytz.utc
+            if len(unique_tzs) != 1 and "etc/timezone" in str(found_configs.keys()):
+                # For some reason some distros are removing support for /etc/timezone,
+                # which is bad, because that's the only place where the timezone is stated
+                # in plain text, and what's worse, they don't delete it. So we can't trust
+                # it now, so when we have conflicting configs, we just ignore it, with a warning.
+                log.warning(
+                    "/etc/timezone is deprecated in some distros, and no longer reliable. "
+                    "tzlocal is ignoring it, and you can likely delete it."
+                )
+                found_configs = {
+                    k: v for k, v in found_configs.items() if "etc/timezone" not in k
+                }
+                unique_tzs = _get_unique_tzs(found_configs, _root)
 
-def get_localzone():
+            if len(unique_tzs) != 1:
+                message = "Multiple conflicting time zone configurations found:\n"
+                for key, value in found_configs.items():
+                    message += f"{key}: {value}\n"
+                message += "Fix the configuration, or set the time zone in a TZ environment variable.\n"
+                raise zoneinfo.ZoneInfoNotFoundError(message)
+
+        # We found exactly one config! Use it.
+        return next(iter(found_configs.values()))
+
+
+def _get_unique_tzs(found_configs, _root):
+    unique_tzs = set()
+    zoneinfopath = os.path.join(_root, "usr", "share", "zoneinfo")
+    directory_depth = len(zoneinfopath.split(os.path.sep))
+
+    for tzname in found_configs.values():
+        # Look them up in /usr/share/zoneinfo, and find what they
+        # really point to:
+        path = os.path.realpath(os.path.join(zoneinfopath, *tzname.split("/")))
+        real_zone_name = "/".join(path.split(os.path.sep)[directory_depth:])
+        unique_tzs.add(real_zone_name)
+
+    return unique_tzs
+
+
+def _get_localzone(_root="/"):
+    """Creates a timezone object from the timezone name.
+
+    If there is no timezone config, it will try to create a file from the
+    localtime timezone, and if there isn't one, it will default to UTC.
+
+    The parameter _root makes the function look for files like /etc/localtime
+    beneath the _root directory. This is primarily used by the tests.
+    In normal usage you call the function without parameters."""
+
+    # First try the ENV setting.
+    tzenv = utils._tz_from_env()
+    if tzenv:
+        return tzenv
+
+    tzname = _get_localzone_name(_root)
+    if tzname is None:
+        # No explicit setting existed. Use localtime
+        log.debug("No explicit setting existed. Use localtime")
+        for filename in ("etc/localtime", "usr/local/etc/localtime"):
+            tzpath = os.path.join(_root, filename)
+
+            if not os.path.exists(tzpath):
+                continue
+            with open(tzpath, "rb") as tzfile:
+                tz = zoneinfo.ZoneInfo.from_file(tzfile, key="local")
+                break
+        else:
+            warnings.warn("Can not find any timezone configuration, defaulting to UTC.")
+            utcname = [x for x in zoneinfo.available_timezones() if "UTC" in x]
+            if utcname:
+                tz = zoneinfo.ZoneInfo(utcname[0])
+            else:
+                tz = timezone.utc
+    else:
+        tz = zoneinfo.ZoneInfo(tzname)
+
+    if _root == "/":
+        # We are using a file in etc to name the timezone.
+        # Verify that the timezone specified there is actually used:
+        utils.assert_tz_offset(tz, error=False)
+    return tz
+
+
+def get_localzone_name() -> str:
+    """Get the computers configured local timezone name, if any."""
+    global _cache_tz_name
+    if _cache_tz_name is None:
+        _cache_tz_name = _get_localzone_name()
+
+    return _cache_tz_name
+
+
+def get_localzone() -> zoneinfo.ZoneInfo:
     """Get the computers configured local timezone, if any."""
+
     global _cache_tz
     if _cache_tz is None:
         _cache_tz = _get_localzone()
@@ -167,8 +247,11 @@ def get_localzone():
     return _cache_tz
 
 
-def reload_localzone():
+def reload_localzone() -> zoneinfo.ZoneInfo:
     """Reload the cached localzone. You need to call this if the timezone has changed."""
+    global _cache_tz_name
     global _cache_tz
+    _cache_tz_name = _get_localzone_name()
     _cache_tz = _get_localzone()
+
     return _cache_tz
