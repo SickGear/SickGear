@@ -7,11 +7,13 @@
 * Update SimpleJSON 4.0.0 (1608c05) to 4.3.0 (d88746d)
 * Update soupsieve 2.9.2 (78661a6) to 3.0.4 (628ec6b)
 * Update Tornado Web Server 6.5.8 (a55abe3) to 6.6.1 (fb0e3df)
+* Update tzlocal 2.1b1 (dd79171) to 5.4.5 (ab833e7)
 * Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
 * Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
 * Change output warning instead of error when Github fails to return alt.rar file
 * Change LimeTorrents, TBP, and TokyoToshokan to use proxy_browser for their requests
 * Change load SickGear zoneinfo via the dateutil tz search path instead of the deprecated dateutil.zoneinfo module
+* Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
 [develop]

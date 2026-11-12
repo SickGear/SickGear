@@ -29,7 +29,7 @@ from . import db, helpers, logger
 from sg_helpers import int_to_time
 
 from lib.dateutil import tz
-from lib.tzlocal import get_localzone
+from lib.tzlocal import get_localzone, get_localzone_name
 
 from sg_helpers import remove_file_perm, scantree
 from six import integer_types, string_types
@@ -106,17 +106,17 @@ def get_tz():
     # type: (...) -> datetime.tzinfo
     t = None
     try:
-        t = get_localzone()
+        # name lookup uses the SickGear zoneinfo on the tz search path
+        t = tz.gettz(get_localzone_name())
     except (BaseException, Exception):
         pass
-    if isinstance(t, datetime.tzinfo) and hasattr(t, 'zone') and t.zone:
+    if not isinstance(t, datetime.tzinfo):
         try:
-            t = tz_fallback(tz.gettz(t.zone))
+            # e.g. /etc/localtime with no zone name
+            t = get_localzone()
         except (BaseException, Exception):
-            t = tz_fallback(t)
-    else:
-        t = tz_fallback(t)
-    return t
+            pass
+    return tz_fallback(t)
 
 
 def get_utc():

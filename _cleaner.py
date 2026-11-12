@@ -37,6 +37,9 @@ if old_magic != magic_number:
 
 # skip cleaned005 as used during dev by testers
 cleanups = [
+    ['.cleaned011.tmp', r'lib\pytz', [
+        r'lib\pytz\__pycache__', r'lib\pytz'
+    ]],
     ['.cleaned010.tmp', r'lib\pkg_resources', [
         r'lib\pkg_resources\extern\__pycache__', r'lib\pkg_resources\extern',
         r'lib\pkg_resources\_vendor\__pycache__', r'lib\pkg_resources\_vendor',
