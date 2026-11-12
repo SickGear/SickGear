@@ -1,17 +1,27 @@
+# Dummy file to match upstream modules
+# without actually serving them.
+# urllib3-future diverged from urllib3.
+# only the top-level (public API) are guaranteed to be compatible.
+# in-fact urllib3-future propose a better way to migrate/transition toward
+# newer protocols.
+
 from __future__ import annotations
 
-import urllib3.connection
-
-from ...connectionpool import HTTPConnectionPool, HTTPSConnectionPool
-from .connection import EmscriptenHTTPConnection, EmscriptenHTTPSConnection
+import warnings
 
 
 def inject_into_urllib3() -> None:
-    # override connection classes to use emscripten specific classes
-    # n.b. mypy complains about the overriding of classes below
-    # if it isn't ignored
-    HTTPConnectionPool.ConnectionCls = EmscriptenHTTPConnection
-    HTTPSConnectionPool.ConnectionCls = EmscriptenHTTPSConnection
-    urllib3.connection.HTTPConnection = EmscriptenHTTPConnection  # type: ignore[misc,assignment]
-    urllib3.connection.HTTPSConnection = EmscriptenHTTPSConnection  # type: ignore[misc,assignment]
-    urllib3.connection.VerifiedHTTPSConnection = EmscriptenHTTPSConnection  # type: ignore[assignment]
+    warnings.warn(
+        (
+            "urllib3-future does not currently support Emscripten Pyodide. "
+            "Use upstream urllib3 on these platforms. See the cohabitation "
+            "instructions at "
+            "https://niquests.readthedocs.io/en/latest/community/faq.html#cohabitation"
+        ),
+        FutureWarning,
+        stacklevel=2,
+    )
+
+
+def extract_from_urllib3() -> None:
+    pass

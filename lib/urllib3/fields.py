@@ -4,12 +4,8 @@ import email.utils
 import mimetypes
 import typing
 
-_TYPE_FIELD_VALUE = typing.Union[str, bytes]
-_TYPE_FIELD_VALUE_TUPLE = typing.Union[
-    _TYPE_FIELD_VALUE,
-    tuple[str, _TYPE_FIELD_VALUE],
-    tuple[str, _TYPE_FIELD_VALUE, str],
-]
+if typing.TYPE_CHECKING:
+    from ._typing import _TYPE_FIELD_VALUE, _TYPE_FIELD_VALUE_TUPLE
 
 
 def guess_content_type(
@@ -45,19 +41,9 @@ def format_header_param_rfc2231(name: str, value: _TYPE_FIELD_VALUE) -> str:
         An RFC-2231-formatted unicode string.
 
     .. deprecated:: 2.0.0
-        Will be removed in urllib3 v3.0. This is not valid for
+        Will be removed in urllib3 v2.1.0. This is not valid for
         ``multipart/form-data`` header parameters.
     """
-    import warnings
-
-    warnings.warn(
-        "'format_header_param_rfc2231' is insecure, deprecated and will be "
-        "removed in urllib3 v3.0. This is not valid for "
-        "multipart/form-data header parameters.",
-        FutureWarning,
-        stacklevel=2,
-    )
-
     if isinstance(value, bytes):
         value = value.decode("utf-8")
 
@@ -165,7 +151,7 @@ class RequestField:
 
     .. versionchanged:: 2.0.0
         The ``header_formatter`` parameter is deprecated and will
-        be removed in urllib3 v3.0.
+        be removed in urllib3 v2.1.0.
     """
 
     def __init__(
@@ -184,14 +170,6 @@ class RequestField:
             self.headers = dict(headers)
 
         if header_formatter is not None:
-            import warnings
-
-            warnings.warn(
-                "The 'header_formatter' parameter is deprecated and "
-                "will be removed in urllib3 v3.0.",
-                FutureWarning,
-                stacklevel=2,
-            )
             self.header_formatter = header_formatter
         else:
             self.header_formatter = format_multipart_header_param

@@ -5,7 +5,7 @@ import typing
 from .url import Url
 
 if typing.TYPE_CHECKING:
-    from ..connection import ProxyConfig
+    from .._typing import ProxyConfig
 
 
 def connection_requires_http_tunnel(
@@ -28,7 +28,7 @@ def connection_requires_http_tunnel(
         return False
 
     # HTTP destinations never require tunneling, we always forward.
-    if destination_scheme == "http":
+    if destination_scheme in {"http", "ws", "psse"}:
         return False
 
     # Support for forwarding with HTTPS proxies and HTTPS destinations.

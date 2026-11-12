@@ -27,3 +27,6 @@ Libs with customisations...
 /lib/tmdbsimple
 /lib/tornado
 /lib/tvdb_api/tvdb_api.py
+/lib/urllib3/backend/hface.py
+/lib/urllib3/contrib/resolver/doh/_urllib3.py
+/lib/urllib3/contrib/resolver/protocols.py

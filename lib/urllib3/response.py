@@ -1,21 +1,19 @@
 from __future__ import annotations
 
-import collections
 import io
 import json as _json
 import logging
-import socket
+import re
 import sys
 import typing
 import warnings
-import zlib
 from contextlib import contextmanager
-from http.client import HTTPMessage as _HttplibHTTPMessage
-from http.client import HTTPResponse as _HttplibHTTPResponse
 from socket import timeout as SocketTimeout
 
-if typing.TYPE_CHECKING:
-    from ._base_connection import BaseHTTPConnection
+try:
+    import zlib
+except ImportError:
+    zlib = None  # type: ignore[assignment]
 
 try:
     try:
@@ -25,40 +23,69 @@ try:
 except ImportError:
     brotli = None
 
-from . import util
-from ._base_connection import _TYPE_BODY
+try:
+    import zstandard as zstd
+
+    # The package 'zstandard' added the 'eof' property starting
+    # in v0.18.0 which we require to ensure a complete and
+    # valid zstd stream was fed into the ZstdDecoder.
+    # See: https://github.com/urllib3/urllib3/pull/2624
+    _zstd_version = tuple(
+        map(int, re.search(r"^([0-9]+)\.([0-9]+)", zstd.__version__).groups())  # type: ignore[union-attr]
+    )
+    if _zstd_version < (0, 18):  # Defensive:
+        zstd = None  # type: ignore[assignment]
+
+except (AttributeError, ImportError, ValueError):  # Defensive:
+    try:
+        from compression import zstd  # type: ignore[no-redef]
+    except ImportError:
+        zstd = None  # type: ignore[assignment]
+
 from ._collections import HTTPHeaderDict
-from .connection import BaseSSLError, HTTPConnection, HTTPException
+from ._typing import _TYPE_BODY
+from ._constant import (
+    C_INT_MAX,
+    CHUNK_AMT_MAX,
+    DECODE_GROWTH_FACTOR,
+    DECODE_MIN_RAW_REFERENCE,
+)
+from .backend import LowLevelResponse, ResponsePromise
 from .exceptions import (
+    BaseSSLError,
     BodyNotHttplibCompatible,
     DecodeError,
     DependencyWarning,
     HTTPError,
     IncompleteRead,
-    InvalidChunkLength,
     InvalidHeader,
     ProtocolError,
     ReadTimeoutError,
     ResponseNotChunked,
+    ResponseNotReady,
     SSLError,
+    MustRedialError,
 )
-from .util.response import is_fp_closed, is_response_to_head
+from .util.response import is_fp_closed
 from .util.retry import Retry
+from .util.traffic_police import UnavailableTraffic
+
+try:
+    from jh2._hazmat import _BytesQueueBuffer as BytesQueueBuffer  # type: ignore[import-untyped]
+except ImportError:
+    from .util.response import BytesQueueBuffer
 
 if typing.TYPE_CHECKING:
+    from email.message import Message
+
+    from typing_extensions import Literal
+
+    from .connection import HTTPConnection
     from .connectionpool import HTTPConnectionPool
+    from .contrib.webextensions import ExtensionFromHTTP
+    from .util.traffic_police import TrafficPolice
 
 log = logging.getLogger(__name__)
-
-# Read in 64 KiB chunks
-_READ_CHUNK_SIZE = 2**16
-
-# Maximum length of a chunk-size line (and the trailing CRLF line) when reading a
-# chunked-transfer-encoded response. Matches ``http.client._MAXLINE`` so urllib3's
-# streaming path bounds these reads exactly like the stdlib ``.read()`` path does,
-# preventing a malicious server from forcing unbounded buffering (memory exhaustion)
-# via an unterminated chunk-size line.
-_MAX_CHUNK_LINE_LENGTH = 2**16
 
 
 class ContentDecoder:
@@ -92,7 +119,7 @@ class DeflateDecoder(ContentDecoder):
         original_max_length = max_length
         if original_max_length < 0:
             max_length = 0
-        elif original_max_length == 0:
+        elif original_max_length == 0:  # Defensive: direct decoder calls only.
             # We should not pass 0 to the zlib decompressor because 0 is
             # the default value that will make zlib decompress without a
             # length limit.
@@ -151,11 +178,10 @@ class GzipDecoder(ContentDecoder):
         self._unconsumed_tail = b""
 
     def decompress(self, data: bytes, max_length: int = -1) -> bytes:
-        ret = bytearray()
         if self._state == GzipDecoderState.SWALLOW_DATA:
-            return bytes(ret)
+            return b""
 
-        if max_length == 0:
+        if max_length == 0:  # Defensive: direct decoder calls only.
             # We should not pass 0 to the zlib decompressor because 0 is
             # the default value that will make zlib decompress without a
             # length limit.
@@ -167,13 +193,22 @@ class GzipDecoder(ContentDecoder):
         # call if decompression is to continue.
         data = self._unconsumed_tail + data
         if not data and self._obj.eof:
-            return bytes(ret)
+            return b""
 
+        # Keep zlib's bytes object unless multiple outputs need combining.
+        ret: bytes | bytearray = b""
         while True:
             try:
-                ret += self._obj.decompress(
+                chunk = self._obj.decompress(
                     data, max_length=max(max_length - len(ret), 0)
                 )
+                if not ret:
+                    ret = chunk
+                elif chunk:
+                    if isinstance(ret, bytes):
+                        ret = bytearray(ret)
+                    ret += chunk
+                    del chunk
             except zlib.error:
                 previous_state = self._state
                 # Ignore data after the first error
@@ -181,7 +216,7 @@ class GzipDecoder(ContentDecoder):
                 self._unconsumed_tail = b""
                 if previous_state == GzipDecoderState.OTHER_MEMBERS:
                     # Allow trailing garbage acceptable in other gzip clients
-                    return bytes(ret)
+                    return ret if isinstance(ret, bytes) else bytes(ret)
                 raise
 
             self._unconsumed_tail = data = (
@@ -191,20 +226,22 @@ class GzipDecoder(ContentDecoder):
                 break
 
             if not data:
-                return bytes(ret)
+                return ret if isinstance(ret, bytes) else bytes(ret)
             # When the end of a gzip member is reached, a new decompressor
             # must be created for unused (possibly future) data.
             if self._obj.eof:
                 self._state = GzipDecoderState.OTHER_MEMBERS
                 self._obj = zlib.decompressobj(16 + zlib.MAX_WBITS)
 
-        return bytes(ret)
+        return ret if isinstance(ret, bytes) else bytes(ret)
 
     @property
     def has_unconsumed_tail(self) -> bool:
         return bool(self._unconsumed_tail)
 
     def flush(self) -> bytes:
+        if self._state == GzipDecoderState.SWALLOW_DATA:
+            return b""
         return self._obj.flush()
 
 
@@ -216,10 +253,18 @@ if brotli is not None:
         # are for 'brotlipy' and bottom branches for 'Brotli'
         def __init__(self) -> None:
             self._obj = brotli.Decompressor()
+            # brotlicffi honors output_buffer_limit, so can_accept_more_data
+            # is trustworthy. google brotli/brotlipy only expose process(),
+            # ignore the limit and report can_accept_more_data=True while
+            # output is still pending. Track pending output ourselves there
+            # (issue #385).
             if hasattr(self._obj, "decompress"):
                 setattr(self, "_decompress", self._obj.decompress)
+                self._lack_output_buffer_limit = False
             else:
                 setattr(self, "_decompress", self._obj.process)
+                self._lack_output_buffer_limit = True
+            self._pending_output = False
 
         # Requires Brotli >= 1.2.0 for `output_buffer_limit`.
         def _decompress(self, data: bytes, output_buffer_limit: int = -1) -> bytes:
@@ -228,9 +273,11 @@ if brotli is not None:
         def decompress(self, data: bytes, max_length: int = -1) -> bytes:
             try:
                 if max_length > 0:
-                    return self._decompress(data, output_buffer_limit=max_length)
+                    decompressed = self._decompress(
+                        data, output_buffer_limit=max_length
+                    )
                 else:
-                    return self._decompress(data)
+                    decompressed = self._decompress(data)
             except TypeError:
                 # Fallback for Brotli/brotlicffi/brotlipy versions without
                 # the `output_buffer_limit` parameter.
@@ -238,10 +285,15 @@ if brotli is not None:
                     "Brotli >= 1.2.0 is required to prevent decompression bombs.",
                     DependencyWarning,
                 )
-                return self._decompress(data)
+                decompressed = self._decompress(data)
+            # non-empty output means more may remain; drives has_unconsumed_tail.
+            self._pending_output = bool(decompressed)
+            return decompressed
 
         @property
         def has_unconsumed_tail(self) -> bool:
+            if self._lack_output_buffer_limit:
+                return self._pending_output
             try:
                 return not self._obj.can_accept_more_data()
             except AttributeError:
@@ -253,27 +305,33 @@ if brotli is not None:
             return b""
 
 
-try:
-    if sys.version_info >= (3, 14):
-        from compression import zstd
-    else:
-        from backports import zstd
-except ImportError:
-    HAS_ZSTD = False
-else:
-    HAS_ZSTD = True
+if zstd is not None:
+    # help distinguish external library from stdlib one
+    _zstd_native = not hasattr(zstd.ZstdDecompressor, "decompressobj")
+
+    def _new_zstd_obj() -> typing.Any:
+        return (
+            zstd.ZstdDecompressor().decompressobj()
+            if not _zstd_native
+            else zstd.ZstdDecompressor()
+        )
 
     class ZstdDecoder(ContentDecoder):
         def __init__(self) -> None:
-            self._obj = zstd.ZstdDecompressor()
+            self._obj = _new_zstd_obj()
+
+        def _decompress_chunk(self, data: bytes, max_length: int) -> bytes:
+            if _zstd_native:
+                return self._obj.decompress(data, max_length=max_length)  # type: ignore[no-any-return]
+            return self._obj.decompress(data)  # type: ignore[no-any-return]
 
         def decompress(self, data: bytes, max_length: int = -1) -> bytes:
             if not data and not self.has_unconsumed_tail:
                 return b""
             if self._obj.eof:
                 data = self._obj.unused_data + data
-                self._obj = zstd.ZstdDecompressor()
-            part = self._obj.decompress(data, max_length=max_length)
+                self._obj = _new_zstd_obj()
+            part = self._decompress_chunk(data, max_length)
             length = len(part)
             data_parts = [part]
             # Every loop iteration is supposed to read data from a separate frame.
@@ -288,29 +346,39 @@ else:
                 and (max_length < 0 or length < max_length)
             ):
                 unused_data = self._obj.unused_data
-                if not self._obj.needs_input:
-                    self._obj = zstd.ZstdDecompressor()
-                part = self._obj.decompress(
+                # The third-party `zstandard` decompressobj cannot be reused
+                # after eof; stdlib `compression.zstd` can be reused while it
+                # still `needs_input`. Reset accordingly.
+                if not _zstd_native or not getattr(self._obj, "needs_input", True):
+                    self._obj = _new_zstd_obj()
+                part = self._decompress_chunk(
                     unused_data,
-                    max_length=(max_length - length) if max_length > 0 else -1,
+                    (max_length - length) if max_length > 0 else -1,
                 )
-                if part_length := len(part):
+                part_length = len(part)
+                if part_length:
                     data_parts.append(part)
                     length += part_length
-                elif self._obj.needs_input:
+                elif getattr(self._obj, "needs_input", True):
                     break
             return b"".join(data_parts)
 
         @property
         def has_unconsumed_tail(self) -> bool:
-            return not (self._obj.needs_input or self._obj.eof) or bool(
-                self._obj.unused_data
-            )
+            return not (
+                getattr(self._obj, "needs_input", True) or self._obj.eof
+            ) or bool(self._obj.unused_data)
 
         def flush(self) -> bytes:
+            if _zstd_native:
+                if not self._obj.eof:
+                    raise DecodeError("Zstandard data is incomplete")
+                return b""
+
+            ret = self._obj.flush()
             if not self._obj.eof:
                 raise DecodeError("Zstandard data is incomplete")
-            return b""
+            return ret  # type: ignore[no-any-return]
 
 
 class MultiDecoder(ContentDecoder):
@@ -328,11 +396,13 @@ class MultiDecoder(ContentDecoder):
 
     def __init__(self, modes: str) -> None:
         encodings = [m.strip() for m in modes.split(",")]
+
         if len(encodings) > self.max_decode_links:
             raise DecodeError(
                 "Too many content encodings in the chain: "
                 f"{len(encodings)} > {self.max_decode_links}"
             )
+
         self._decoders = [_get_decoder(e) for e in encodings]
 
     def flush(self) -> bytes:
@@ -373,150 +443,195 @@ def _get_decoder(mode: str) -> ContentDecoder:
     if "," in mode:
         return MultiDecoder(mode)
 
-    # According to RFC 9110 section 8.4.1.3, recipients should
-    # consider x-gzip equivalent to gzip
-    if mode in ("gzip", "x-gzip"):
+    if zlib is not None and mode == "gzip":
         return GzipDecoder()
 
     if brotli is not None and mode == "br":
         return BrotliDecoder()
 
-    if HAS_ZSTD and mode == "zstd":
+    if zstd is not None and mode == "zstd":
         return ZstdDecoder()
 
-    return DeflateDecoder()
+    # Preserve the historical fallback to deflate for unknown modes. Callers
+    # only pass advertised/supported modes here.
+    if zlib is not None:
+        return DeflateDecoder()
+
+    # Normal responses filter unsupported encodings before calling this factory.
+    raise DecodeError(
+        f"Unsupported content encoding: {mode}"
+    )  # Defensive: no matching decoder and zlib is unavailable.
 
 
-class BytesQueueBuffer:
-    """Memory-efficient bytes buffer
+class HTTPResponse(io.IOBase):
+    """
+    HTTP Response container.
 
-    To return decoded data in read() and still follow the BufferedIOBase API, we need a
-    buffer to always return the correct amount of bytes.
+    Backwards-compatible with :class:`http.client.HTTPResponse` but the response ``body`` is
+    loaded and decoded on-demand when the ``data`` property is accessed.  This
+    class is also compatible with the Python standard library's :mod:`io`
+    module, and can hence be treated as a readable object in the context of that
+    framework.
 
-    This buffer should be filled using calls to put()
+    Extra parameters for behaviour not present in :class:`http.client.HTTPResponse`:
 
-    Our maximum memory usage is determined by the sum of the size of:
+    :param preload_content:
+        If True, the response's body will be preloaded during construction.
 
-     * self.buffer, which contains the full data
-     * the largest chunk that we will copy in get()
+    :param decode_content:
+        If True, will attempt to decode the body based on the
+        'content-encoding' header.
+
+    :param original_response:
+        When this HTTPResponse wrapper is generated from an :class:`http.client.HTTPResponse`
+        object, it's convenient to include the original for debug purposes. It's
+        otherwise unused.
+
+    :param retries:
+        The retries contains the last :class:`~urllib3.util.retry.Retry` that
+        was used during the request.
+
+    :param enforce_content_length:
+        Enforce content length checking. Body returned by server must match
+        value of Content-Length header, if present. Otherwise, raise error.
     """
 
-    def __init__(self) -> None:
-        self.buffer: typing.Deque[bytes | memoryview[bytes]] = collections.deque()
-        self._size: int = 0
-
-    def __len__(self) -> int:
-        return self._size
-
-    def put(self, data: bytes) -> None:
-        self.buffer.append(data)
-        self._size += len(data)
-
-    def get(self, n: int) -> bytes:
-        if n == 0:
-            return b""
-        elif not self.buffer:
-            raise RuntimeError("buffer is empty")
-        elif n < 0:
-            raise ValueError("n should be > 0")
-
-        if len(self.buffer[0]) == n and isinstance(self.buffer[0], bytes):
-            self._size -= n
-            return self.buffer.popleft()
-
-        fetched = 0
-        ret = io.BytesIO()
-        while fetched < n:
-            remaining = n - fetched
-            chunk = self.buffer.popleft()
-            chunk_length = len(chunk)
-            if remaining < chunk_length:
-                chunk = memoryview(chunk)
-                left_chunk, right_chunk = chunk[:remaining], chunk[remaining:]
-                ret.write(left_chunk)
-                self.buffer.appendleft(right_chunk)
-                self._size -= remaining
-                break
-            else:
-                ret.write(chunk)
-                self._size -= chunk_length
-            fetched += chunk_length
-
-            if not self.buffer:
-                break
-
-        return ret.getvalue()
-
-    def get_all(self) -> bytes:
-        buffer = self.buffer
-        if not buffer:
-            assert self._size == 0
-            return b""
-        if len(buffer) == 1:
-            result = buffer.pop()
-            if isinstance(result, memoryview):
-                result = result.tobytes()
-        else:
-            ret = io.BytesIO()
-            ret.writelines(buffer.popleft() for _ in range(len(buffer)))
-            result = ret.getvalue()
-        self._size = 0
-        return result
-
-
-class BaseHTTPResponse(io.IOBase):
-    CONTENT_DECODERS = ["gzip", "x-gzip", "deflate"]
+    CONTENT_DECODERS = []
+    if zlib is not None:
+        CONTENT_DECODERS += ["gzip", "deflate"]
     if brotli is not None:
         CONTENT_DECODERS += ["br"]
-    if HAS_ZSTD:
+    if zstd is not None:
         CONTENT_DECODERS += ["zstd"]
     REDIRECT_STATUSES = [301, 302, 303, 307, 308]
 
-    DECODER_ERROR_CLASSES: tuple[type[Exception], ...] = (IOError, zlib.error)
+    DECODER_ERROR_CLASSES: tuple[type[Exception], ...] = (IOError,)
+    if zlib is not None:
+        DECODER_ERROR_CLASSES += (zlib.error,)
     if brotli is not None:
         DECODER_ERROR_CLASSES += (brotli.error,)
 
-    if HAS_ZSTD:
+    if zstd is not None:
         DECODER_ERROR_CLASSES += (zstd.ZstdError,)
 
     def __init__(
         self,
-        *,
+        body: _TYPE_BODY = "",
         headers: typing.Mapping[str, str] | typing.Mapping[bytes, bytes] | None = None,
-        status: int,
-        version: int,
-        version_string: str,
-        reason: str | None,
-        decode_content: bool,
-        request_url: str | None,
+        status: int = 0,
+        version: int = 0,
+        reason: str | None = None,
+        preload_content: bool = True,
+        decode_content: bool = True,
+        original_response: LowLevelResponse | None = None,
+        pool: HTTPConnectionPool | None = None,
+        connection: HTTPConnection | None = None,
+        msg: Message | None = None,
         retries: Retry | None = None,
+        enforce_content_length: bool = True,
+        request_method: str | None = None,
+        request_url: str | None = None,
+        auto_close: bool = True,
+        police_officer: TrafficPolice[HTTPConnection] | None = None,
     ) -> None:
         if isinstance(headers, HTTPHeaderDict):
             self.headers = headers
         else:
             self.headers = HTTPHeaderDict(headers)  # type: ignore[arg-type]
-        self.status = status
+        try:
+            self.status = int(status)
+        except ValueError:
+            self.status = 0  # merely for tests, was supported due to broken httplib.
+
+        # Mind this case for later on!
+        if preload_content and status == 101:
+            preload_content = False
+
         self.version = version
-        self.version_string = version_string
         self.reason = reason
         self.decode_content = decode_content
         self._has_decoded_content = False
         self._request_url: str | None = request_url
+        self._retries: Retry | None = None
+
+        self._extension: ExtensionFromHTTP | None = None
+
         self.retries = retries
 
         self.chunked = False
-        tr_enc = self.headers.get("transfer-encoding", "").lower()
-        # Don't incur the penalty of creating a list and then discarding it
-        encodings = (enc.strip() for enc in tr_enc.split(","))
-        if "chunked" in encodings:
-            self.chunked = True
+
+        if "transfer-encoding" in self.headers:
+            tr_enc = self.headers.get("transfer-encoding", "").lower()
+            # Don't incur the penalty of creating a list and then discarding it
+            encodings = (enc.strip() for enc in tr_enc.split(","))
+
+            if "chunked" in encodings:
+                self.chunked = True
 
         self._decoder: ContentDecoder | None = None
-        # Distinguish an uninitialized decoder from a response needing no decoder.
         self._decoder_initialized = False
-        self.length_remaining: int | None
 
-    def get_redirect_location(self) -> str | None | typing.Literal[False]:
+        self.enforce_content_length = enforce_content_length
+        self.auto_close = auto_close
+
+        self._body = None
+        self._uncached_read_occurred = False
+        self._fp: LowLevelResponse | typing.IO[typing.Any] | None = None
+        self._original_response = original_response
+        self._fp_bytes_read = 0
+
+        self.msg = msg  # no-op, kept for BC.
+
+        if body and isinstance(body, (str, bytes)):
+            self._body = body
+
+        self._pool = pool
+        self._connection = connection
+
+        if hasattr(body, "read"):
+            self._fp = body  # type: ignore[assignment]
+
+        # Are we using the chunked-style of transfer encoding?
+        self.chunk_left: int | None = None
+
+        # Determine length of response
+        self._request_method: str | None = request_method
+        self.length_remaining: int | None = self._init_length(self._request_method)
+
+        # Used to return the correct amount of bytes for partial read()s
+        self._decoded_buffer = BytesQueueBuffer()
+
+        # Tracks the size of the last successful raw read so that
+        # ``read(amt=-1)`` can bound how much it drains from the decoder's
+        # internal buffer per call (issue #364, GHSA-mf9v-mfxr-j63j).
+        self._last_raw_read_size: int = 0
+
+        self._police_officer: TrafficPolice[HTTPConnection] | None = police_officer
+
+        if self._police_officer is not None:
+            self._police_officer.memorize(self, self._connection)
+            # Direct collection after pool close need not hold a parent checkout.
+            parent = self._police_officer.parent
+            if parent is not None and (self._pool is not None or parent.busy):
+                parent.memorize(self, self._pool)
+
+        self._preloaded_content = preload_content
+
+        # If requested, preload the body.
+        if preload_content and not self._body:
+            self._body = self.read(decode_content=decode_content)
+
+    def is_from_promise(self, promise: ResponsePromise) -> bool:
+        """
+        Determine if this response came from given promise.
+        """
+        return (
+            self._fp is not None
+            and hasattr(self._fp, "from_promise")
+            and self._fp.from_promise == promise
+        )
+
+    def get_redirect_location(self) -> str | None | Literal[False]:
         """
         Should we redirect and where to?
 
@@ -529,41 +644,45 @@ class BaseHTTPResponse(io.IOBase):
         return False
 
     @property
-    def data(self) -> bytes:
-        raise NotImplementedError()
+    def trailers(self) -> HTTPHeaderDict | None:
+        """
+        Retrieve post-response (trailing headers) if any.
+        This WILL return None if no HTTP Trailer Headers have been received.
+        """
+        if self._fp is None:
+            return None
+
+        if hasattr(self._fp, "trailers"):
+            return self._fp.trailers
+
+        return None
+
+    @property
+    def extension(self) -> ExtensionFromHTTP | None:
+        return self._extension
+
+    def start_extension(self, item: ExtensionFromHTTP) -> None:
+        if self._extension is not None:
+            raise OSError("extension already plugged in")
+
+        if not hasattr(self._fp, "_dsa"):
+            raise ResponseNotReady()
+
+        item.start(self)
+
+        self._extension = item
 
     def json(self) -> typing.Any:
         """
-        Deserializes the body of the HTTP response as a Python object.
+        Parses the body of the HTTP response as JSON.
 
-        The body of the HTTP response must be encoded using UTF-8, as per
-        `RFC 8529 Section 8.1 <https://www.rfc-editor.org/rfc/rfc8259#section-8.1>`_.
+        To use a custom JSON decoder pass the result of :attr:`HTTPResponse.data` to the decoder.
 
-        To use a custom JSON decoder pass the result of :attr:`HTTPResponse.data` to
-        your custom decoder instead.
+        This method can raise either `UnicodeDecodeError` or `json.JSONDecodeError`.
 
-        If the body of the HTTP response is not decodable to UTF-8, a
-        `UnicodeDecodeError` will be raised. If the body of the HTTP response is not a
-        valid JSON document, a `json.JSONDecodeError` will be raised.
-
-        Read more :ref:`here <json_content>`.
-
-        :returns: The body of the HTTP response as a Python object.
+        Read more :ref:`here <json>`.
         """
-        data = self.data.decode("utf-8")
-        return _json.loads(data)
-
-    @property
-    def url(self) -> str | None:
-        raise NotImplementedError()
-
-    @url.setter
-    def url(self, url: str | None) -> None:
-        raise NotImplementedError()
-
-    @property
-    def connection(self) -> BaseHTTPConnection | None:
-        raise NotImplementedError()
+        return _json.loads(self.data)
 
     @property
     def retries(self) -> Retry | None:
@@ -573,47 +692,9 @@ class BaseHTTPResponse(io.IOBase):
     def retries(self, retries: Retry | None) -> None:
         # Override the request_url if retries has a redirect location.
         if retries is not None and retries.history:
-            self.url = retries.history[-1].redirect_location
+            if isinstance(retries.history[-1].redirect_location, str):
+                self.url = retries.history[-1].redirect_location
         self._retries = retries
-
-    def stream(
-        self, amt: int | None = _READ_CHUNK_SIZE, decode_content: bool | None = None
-    ) -> typing.Iterator[bytes]:
-        raise NotImplementedError()
-
-    def read(
-        self,
-        amt: int | None = None,
-        decode_content: bool | None = None,
-        cache_content: bool = False,
-    ) -> bytes:
-        raise NotImplementedError()
-
-    def read1(
-        self,
-        amt: int | None = None,
-        decode_content: bool | None = None,
-    ) -> bytes:
-        raise NotImplementedError()
-
-    def read_chunked(
-        self,
-        amt: int | None = None,
-        decode_content: bool | None = None,
-    ) -> typing.Iterator[bytes]:
-        raise NotImplementedError()
-
-    def release_conn(self) -> None:
-        raise NotImplementedError()
-
-    def drain_conn(self) -> None:
-        raise NotImplementedError()
-
-    def shutdown(self) -> None:
-        raise NotImplementedError()
-
-    def close(self) -> None:
-        raise NotImplementedError()
 
     def _init_decoder(self) -> None:
         """
@@ -629,12 +710,8 @@ class BaseHTTPResponse(io.IOBase):
             if content_encoding in self.CONTENT_DECODERS:
                 self._decoder = _get_decoder(content_encoding)
             elif "," in content_encoding:
-                encodings = [
-                    e.strip()
-                    for e in content_encoding.split(",")
-                    if e.strip() in self.CONTENT_DECODERS
-                ]
-                if encodings:
+                encodings = [e.strip() for e in content_encoding.split(",")]
+                if encodings and all(e in self.CONTENT_DECODERS for e in encodings):
                     self._decoder = _get_decoder(content_encoding)
 
         self._decoder_initialized = True
@@ -686,20 +763,13 @@ class BaseHTTPResponse(io.IOBase):
         return b""
 
     # Compatibility methods for `io` module
-    def readinto(self, b: bytearray | memoryview[int]) -> int:
+    def readinto(self, b: bytearray) -> int:
         temp = self.read(len(b))
         if len(temp) == 0:
             return 0
         else:
             b[: len(temp)] = temp
             return len(temp)
-
-    # Methods used by dependent libraries
-    def getheaders(self) -> HTTPHeaderDict:
-        return self.headers
-
-    def getheader(self, name: str, default: str | None = None) -> str | None:
-        return self.headers.get(name, default)
 
     # Compatibility method for http.cookiejar
     def info(self) -> HTTPHeaderDict:
@@ -708,110 +778,16 @@ class BaseHTTPResponse(io.IOBase):
     def geturl(self) -> str | None:
         return self.url
 
-
-class HTTPResponse(BaseHTTPResponse):
-    """
-    HTTP Response container.
-
-    Backwards-compatible with :class:`http.client.HTTPResponse` but the response ``body`` is
-    loaded and decoded on-demand when the ``data`` property is accessed.  This
-    class is also compatible with the Python standard library's :mod:`io`
-    module, and can hence be treated as a readable object in the context of that
-    framework.
-
-    Extra parameters for behaviour not present in :class:`http.client.HTTPResponse`:
-
-    :param preload_content:
-        If True, the response's body will be preloaded during construction.
-
-    :param decode_content:
-        If True, will attempt to decode the body based on the
-        'content-encoding' header.
-
-    :param original_response:
-        When this HTTPResponse wrapper is generated from an :class:`http.client.HTTPResponse`
-        object, it's convenient to include the original for debug purposes. It's
-        otherwise unused.
-
-    :param retries:
-        The retries contains the last :class:`~urllib3.util.retry.Retry` that
-        was used during the request.
-
-    :param enforce_content_length:
-        Enforce content length checking. Body returned by server must match
-        value of Content-Length header, if present. Otherwise, raise error.
-    """
-
-    def __init__(
-        self,
-        body: _TYPE_BODY = "",
-        headers: typing.Mapping[str, str] | typing.Mapping[bytes, bytes] | None = None,
-        status: int = 0,
-        version: int = 0,
-        version_string: str = "HTTP/?",
-        reason: str | None = None,
-        preload_content: bool = True,
-        decode_content: bool = True,
-        original_response: _HttplibHTTPResponse | None = None,
-        pool: HTTPConnectionPool | None = None,
-        connection: HTTPConnection | None = None,
-        msg: _HttplibHTTPMessage | None = None,
-        retries: Retry | None = None,
-        enforce_content_length: bool = True,
-        request_method: str | None = None,
-        request_url: str | None = None,
-        auto_close: bool = True,
-        sock_shutdown: typing.Callable[[int], None] | None = None,
-    ) -> None:
-        super().__init__(
-            headers=headers,
-            status=status,
-            version=version,
-            version_string=version_string,
-            reason=reason,
-            decode_content=decode_content,
-            request_url=request_url,
-            retries=retries,
-        )
-
-        self.enforce_content_length = enforce_content_length
-        self.auto_close = auto_close
-
-        self._body = None
-        self._uncached_read_occurred = False
-        self._fp: _HttplibHTTPResponse | None = None
-        self._original_response = original_response
-        self._fp_bytes_read = 0
-        self.msg = msg
-
-        if body and isinstance(body, (str, bytes)):
-            self._body = body
-
-        self._pool = pool
-        self._connection = connection
-
-        if hasattr(body, "read"):
-            self._fp = body  # type: ignore[assignment]
-        self._sock_shutdown = sock_shutdown
-
-        # Are we using the chunked-style of transfer encoding?
-        self.chunk_left: int | None = None
-
-        # Determine length of response
-        self.length_remaining = self._init_length(request_method)
-
-        # Used to return the correct amount of bytes for partial read()s
-        self._decoded_buffer = BytesQueueBuffer()
-
-        # If requested, preload the body.
-        if preload_content and not self._body:
-            self._body = self.read(decode_content=decode_content)
-
     def release_conn(self) -> None:
-        if not self._pool or not self._connection:
+        if not self._connection:
             return None
 
-        self._pool._put_conn(self._connection)
+        if (
+            self._police_officer is not None
+            and self._police_officer.is_held(self._connection) is True
+        ):
+            self._police_officer.release()
+
         self._connection = None
 
     def drain_conn(self) -> None:
@@ -820,16 +796,26 @@ class HTTPResponse(BaseHTTPResponse):
 
         Unread data in the HTTPResponse connection blocks the connection from being released back to the pool.
         """
+        # A sized read would close upgraded responses and clear their stream access.
+        amt = 2**16 if getattr(self._fp, "_dsa", None) is None else None
         try:
-            while self._raw_read(_READ_CHUNK_SIZE):
+            while self._raw_read(amt):
                 pass
-        except (HTTPError, OSError, BaseSSLError, HTTPException):
+        except (HTTPError, OSError, BaseSSLError):
             pass
         if self._has_decoded_content:
             # `_raw_read` skips decompression, so we should clean up the
             # decoder to avoid keeping unnecessary data in memory.
             self._decoded_buffer = BytesQueueBuffer()
             self._decoder = None
+        if (
+            self._police_officer is not None
+            and self._fp is not None
+            and is_fp_closed(self._fp)
+            and getattr(self._fp, "_dsa", None) is None
+        ):
+            self._police_officer.forget(self)
+            self._police_officer = None
 
     @property
     def data(self) -> bytes:
@@ -852,7 +838,7 @@ class HTTPResponse(BaseHTTPResponse):
     def tell(self) -> int:
         """
         Obtain the number of bytes pulled over the wire so far. May differ from
-        the amount of content returned by :meth:`HTTPResponse.read`
+        the amount of content returned by :meth:``urllib3.response.HTTPResponse.read``
         if bytes are encoded on the wire (e.g, compressed).
         """
         return self._fp_bytes_read
@@ -884,13 +870,16 @@ class HTTPResponse(BaseHTTPResponse):
                 # (e.g. Content-Length: 42, 42). This line ensures the values
                 # are all valid ints and that as long as the `set` length is 1,
                 # all values are the same. Otherwise, the header is invalid.
-                lengths = {int(val) for val in content_length.split(",")}
-                if len(lengths) > 1:
-                    raise InvalidHeader(
-                        "Content-Length contained multiple "
-                        "unmatching values (%s)" % content_length
-                    )
-                length = lengths.pop()
+                if "," in content_length:
+                    lengths = {int(val) for val in content_length.split(",")}
+                    if len(lengths) > 1:
+                        raise InvalidHeader(
+                            "Content-Length contained multiple "
+                            "unmatching values (%s)" % content_length
+                        )
+                    length = lengths.pop()
+                else:
+                    length = int(content_length)
             except ValueError:
                 length = None
             else:
@@ -900,21 +889,18 @@ class HTTPResponse(BaseHTTPResponse):
         else:  # if content_length is None
             length = None
 
-        # Convert status to int for comparison
-        # In some cases, httplib returns a status of "_UNKNOWN"
-        try:
-            status = int(self.status)
-        except ValueError:
-            status = 0
-
         # Check for responses that shouldn't include a body
-        if status in (204, 304) or 100 <= status < 200 or request_method == "HEAD":
+        if (
+            self.status in (204, 304)
+            or 100 <= self.status < 200
+            or request_method == "HEAD"
+        ):
             length = 0
 
         return length
 
     @contextmanager
-    def _error_catcher(self) -> typing.Generator[None]:
+    def _error_catcher(self) -> typing.Generator[None, None, None]:
         """
         Catch low-level python exceptions, instead re-raising urllib3
         variants, so that low-level exceptions are not leaked in the
@@ -934,21 +920,15 @@ class HTTPResponse(BaseHTTPResponse):
                 raise ReadTimeoutError(self._pool, None, "Read timed out.") from e  # type: ignore[arg-type]
 
             except BaseSSLError as e:
-                # SSL errors related to framing/MAC get wrapped and reraised here
-                raise SSLError(e) from e
+                # FIXME: Is there a better way to differentiate between SSLErrors?
+                if "read operation timed out" not in str(e):
+                    # SSL errors related to framing/MAC get wrapped and reraised here
+                    raise SSLError(e) from e
 
-            except IncompleteRead as e:
-                if (
-                    e.expected is not None
-                    and e.partial is not None
-                    and e.expected == -e.partial
-                ):
-                    arg = "Response may not contain content."
-                else:
-                    arg = f"Connection broken: {e!r}"
-                raise ProtocolError(arg, e) from e
+                raise ReadTimeoutError(self._pool, None, "Read timed out.") from e  # type: ignore[arg-type]
 
-            except (HTTPException, OSError) as e:
+            except (OSError, MustRedialError) as e:
+                # This includes IncompleteRead.
                 raise ProtocolError(f"Connection broken: {e!r}", e) from e
 
             # If no exception is thrown, we should avoid cleaning up
@@ -975,12 +955,7 @@ class HTTPResponse(BaseHTTPResponse):
             if self._original_response and self._original_response.isclosed():
                 self.release_conn()
 
-    def _fp_read(
-        self,
-        amt: int | None = None,
-        *,
-        read1: bool = False,
-    ) -> bytes:
+    def _fp_read(self, amt: int | None = None, *, read1: bool = False) -> bytes:
         """
         Read a response with the thought that reading the number of bytes
         larger than can fit in a 32-bit int at a time via SSL in some
@@ -988,20 +963,24 @@ class HTTPResponse(BaseHTTPResponse):
         if `amt` or `self.length_remaining` indicate that a problem may
         happen.
 
-        This happens to urllib3 injected with pyOpenSSL-backed SSL-support.
+        The known cases:
+          * 3.8 <= CPython < 3.9.7 because of a bug
+            https://github.com/urllib3/urllib3/issues/2513#issuecomment-1152559900.
+          * urllib3 injected with pyOpenSSL-backed SSL-support.
+          * CPython < 3.10 only when `amt` does not fit 32-bit int.
         """
         assert self._fp
-        c_int_max = 2**31 - 1
-        if (
-            (amt and amt > c_int_max)
-            or (
-                amt is None
-                and self.length_remaining
-                and self.length_remaining > c_int_max
-            )
-        ) and util.IS_PYOPENSSL:
-            if read1:
-                return self._fp.read1(c_int_max)
+        requires_safe_read = (
+            (amt and amt > C_INT_MAX)
+            or (self.length_remaining and self.length_remaining > C_INT_MAX)
+        ) and sys.version_info < (3, 10)
+        if read1 and isinstance(self._fp, LowLevelResponse):
+            if requires_safe_read:
+                amt = (
+                    CHUNK_AMT_MAX if amt is None or amt < 0 else min(amt, CHUNK_AMT_MAX)
+                )
+            return self._fp.read1(amt)
+        if requires_safe_read:
             buffer = io.BytesIO()
             # Besides `max_chunk_amt` being a maximum chunk size, it
             # affects memory overhead of reading a response by this
@@ -1009,21 +988,21 @@ class HTTPResponse(BaseHTTPResponse):
             # `c_int_max` equal to 2 GiB - 1 byte is the actual maximum
             # chunk size that does not lead to an overflow error, but
             # 256 MiB is a compromise.
-            max_chunk_amt = 2**28
             while amt is None or amt != 0:
                 if amt is not None:
-                    chunk_amt = min(amt, max_chunk_amt)
+                    chunk_amt = min(amt, CHUNK_AMT_MAX)
                     amt -= chunk_amt
                 else:
-                    chunk_amt = max_chunk_amt
-                data = self._fp.read(chunk_amt)
+                    chunk_amt = CHUNK_AMT_MAX
+                try:
+                    data = self._fp.read(chunk_amt)
+                except ValueError:  # Defensive: overly protective
+                    break  # Defensive: can also be an indicator that read ended, should not happen.
                 if not data:
                     break
                 buffer.write(data)
                 del data  # to reduce peak memory usage by `max_chunk_amt`.
             return buffer.getvalue()
-        elif read1:
-            return self._fp.read1(amt) if amt is not None else self._fp.read1()
         else:
             # StringIO doesn't like amt=None
             return self._fp.read(amt) if amt is not None else self._fp.read()
@@ -1041,10 +1020,30 @@ class HTTPResponse(BaseHTTPResponse):
             return None  # type: ignore[return-value]
 
         fp_closed = getattr(self._fp, "closed", False)
+        fp_upgraded = getattr(self._fp, "_dsa", None) is not None
 
         with self._error_catcher():
-            data = self._fp_read(amt, read1=read1) if not fp_closed else b""
-            if amt is not None and amt != 0 and not data:
+            data = (
+                self._fp_read(amt, read1=read1)
+                if not fp_closed and not fp_upgraded
+                else b""
+            )
+
+            # Mocking library often use io.BytesIO
+            # which does not auto-close when reading data
+            # with amt=None.
+            is_foreign_fp_unclosed = (
+                amt is None
+                and not getattr(self._fp, "closed", False)
+                and not fp_upgraded
+            )
+
+            if (amt is not None and amt != 0 and not data) or is_foreign_fp_unclosed:
+                if is_foreign_fp_unclosed:
+                    data_len = len(data)
+                    self._fp_bytes_read += data_len
+                    if self.length_remaining is not None:
+                        self.length_remaining -= data_len
                 # Platform-specific: Buggy versions of Python.
                 # Close the connection when no data is returned
                 #
@@ -1055,7 +1054,8 @@ class HTTPResponse(BaseHTTPResponse):
                 # no harm in redundantly calling close.
                 self._fp.close()
                 if (
-                    self.enforce_content_length
+                    not is_foreign_fp_unclosed
+                    and self.enforce_content_length
                     and self.length_remaining is not None
                     and self.length_remaining != 0
                 ):
@@ -1065,126 +1065,15 @@ class HTTPResponse(BaseHTTPResponse):
                     # raised during streaming, so all calls with incorrect
                     # Content-Length are caught.
                     raise IncompleteRead(self._fp_bytes_read, self.length_remaining)
-            elif read1 and (
-                (amt != 0 and not data) or self.length_remaining == len(data)
-            ):
-                # All data has been read, but `self._fp.read1` in
-                # CPython 3.12 and older doesn't always close
-                # `http.client.HTTPResponse`, so we close it here.
-                # See https://github.com/python/cpython/issues/113199
-                self._fp.close()
 
-        if data:
-            self._fp_bytes_read += len(data)
+        if data and not is_foreign_fp_unclosed:
+            data_len = len(data)
+            self._fp_bytes_read += data_len
             if self.length_remaining is not None:
-                self.length_remaining -= len(data)
-        return data
+                self.length_remaining -= data_len
 
-    def read(
-        self,
-        amt: int | None = None,
-        decode_content: bool | None = None,
-        cache_content: bool = False,
-    ) -> bytes:
-        """
-        Similar to :meth:`http.client.HTTPResponse.read`, but with two additional
-        parameters: ``decode_content`` and ``cache_content``.
-
-        :param amt:
-            How much of the content to read. If specified, caching is skipped
-            because it doesn't make sense to cache partial content as the full
-            response.
-
-        :param decode_content:
-            If True, will attempt to decode the body based on the
-            'content-encoding' header.
-
-        :param cache_content:
-            If True, will save the returned data such that the same result is
-            returned despite of the state of the underlying file object. This
-            is useful if you want the ``.data`` property to continue working
-            after having ``.read()`` the file object. (Overridden if ``amt`` is
-            set.)
-        """
-        self._init_decoder()
-        if decode_content is None:
-            decode_content = self.decode_content
-
-        if amt and amt < 0:
-            # Negative numbers and `None` should be treated the same.
-            amt = None
-        elif amt is not None:
-            cache_content = False
-
-            if (
-                self._decoder
-                and self._decoder.has_unconsumed_tail
-                and len(self._decoded_buffer) < amt
-            ):
-                decoded_data = self._decode(
-                    b"",
-                    decode_content,
-                    flush_decoder=False,
-                    max_length=amt - len(self._decoded_buffer),
-                )
-                self._decoded_buffer.put(decoded_data)
-            if len(self._decoded_buffer) >= amt:
-                return self._decoded_buffer.get(amt)
-
-        data = self._raw_read(amt)
-        if not cache_content:
-            self._uncached_read_occurred = True
-
-        flush_decoder = amt is None or (amt != 0 and not data)
-
-        if (
-            not data
-            and len(self._decoded_buffer) == 0
-            and not (self._decoder and self._decoder.has_unconsumed_tail)
-        ):
-            return data
-
-        if amt is None:
-            data = self._decode(data, decode_content, flush_decoder)
-            # It's possible that there is buffered decoded data after a
-            # partial read.
-            if decode_content and len(self._decoded_buffer) > 0:
-                self._decoded_buffer.put(data)
-                data = self._decoded_buffer.get_all()
-
-            if cache_content and not self._uncached_read_occurred:
-                self._body = data
-        else:
-            # do not waste memory on buffer when not decoding
-            if not decode_content:
-                if self._has_decoded_content:
-                    raise RuntimeError(
-                        "Calling read(decode_content=False) is not supported after "
-                        "read(decode_content=True) was called."
-                    )
-                return data
-
-            decoded_data = self._decode(
-                data,
-                decode_content,
-                flush_decoder,
-                max_length=amt - len(self._decoded_buffer),
-            )
-            self._decoded_buffer.put(decoded_data)
-
-            while len(self._decoded_buffer) < amt and data:
-                # TODO make sure to initially read enough data to get past the headers
-                # For example, the GZ file header takes 10 bytes, we don't want to read
-                # it one byte at a time
-                data = self._raw_read(amt)
-                decoded_data = self._decode(
-                    data,
-                    decode_content,
-                    flush_decoder,
-                    max_length=amt - len(self._decoded_buffer),
-                )
-                self._decoded_buffer.put(decoded_data)
-            data = self._decoded_buffer.get(amt)
+        if isinstance(data, (bytes, bytearray)) and data:
+            self._last_raw_read_size = len(data)
 
         return data
 
@@ -1205,63 +1094,233 @@ class HTTPResponse(BaseHTTPResponse):
             If True, will attempt to decode the body based on the
             'content-encoding' header.
         """
-        if decode_content is None:
-            decode_content = self.decode_content
-        if amt and amt < 0:
-            # Negative numbers and `None` should be treated the same.
-            amt = None
-        # try and respond without going to the network
-        if self._has_decoded_content:
-            if not decode_content:
-                raise RuntimeError(
-                    "Calling read1(decode_content=False) is not supported after "
-                    "read1(decode_content=True) was called."
-                )
-            if (
-                self._decoder
-                and self._decoder.has_unconsumed_tail
-                and (amt is None or len(self._decoded_buffer) < amt)
-            ):
-                decoded_data = self._decode(
-                    b"",
-                    decode_content,
-                    flush_decoder=False,
-                    max_length=(
-                        amt - len(self._decoded_buffer) if amt is not None else None
-                    ),
-                )
-                self._decoded_buffer.put(decoded_data)
-            if len(self._decoded_buffer) > 0:
-                if amt is None:
-                    return self._decoded_buffer.get_all()
-                return self._decoded_buffer.get(amt)
+
+        # A zero-byte read must not consume data or change response state.
         if amt == 0:
             return b""
 
-        # FIXME, this method's type doesn't say returning None is possible
-        data = self._raw_read(amt, read1=True)
+        data = self._read(
+            amt=amt or -1,
+            decode_content=decode_content,
+            read1=True,
+        )
         self._uncached_read_occurred = True
-        if not decode_content or data is None:
+
+        return data
+
+    def read(
+        self,
+        amt: int | None = None,
+        decode_content: bool | None = None,
+        cache_content: bool = False,
+    ) -> bytes:
+        """
+        Similar to :meth:`http.client.HTTPResponse.read`, but with two additional
+        parameters: ``decode_content`` and ``cache_content``.
+
+        :param amt:
+            How much of the content to read. ``None`` or a negative value reads
+            the remaining body. For a non-negative value, caching is skipped
+            because partial content is not the full response. Use :meth:`read1`
+            or :meth:`stream` for incremental reads.
+
+        :param decode_content:
+            If True, will attempt to decode the body based on the
+            'content-encoding' header.
+
+        :param cache_content:
+            If True, will save the returned data such that the same result is
+            returned despite of the state of the underlying file object. This
+            is useful if you want the ``.data`` property to continue working
+            after having ``.read()`` the file object. (Overridden if ``amt`` is
+            non-negative.)
+
+        .. note::
+            ``AsyncHTTPResponse.read()`` retains incremental reads for negative
+            ``amt`` values for backward compatibility.
+        """
+        # Normalize only public read(); read1() and stream() share _read().
+        if amt is not None and amt < 0:
+            amt = None
+        return self._read(
+            amt=amt,
+            decode_content=decode_content,
+            cache_content=cache_content,
+        )
+
+    def _read(
+        self,
+        amt: int | None = None,
+        decode_content: bool | None = None,
+        cache_content: bool = False,
+        *,
+        read1: bool = False,
+    ) -> bytes:
+        """We need this private method to restore BC with urllib3 fast-path for streaming/chunks.
+        see https://github.com/jawah/urllib3.future/issues/379"""
+        # Zero-byte reads must not advance the transport or the decoder.
+        if amt == 0:
+            return b""
+        try:
+            self._init_decoder()
+            if decode_content is None:
+                decode_content = self.decode_content
+
+            if amt is not None:
+                cache_content = False
+
+                if amt < 0:
+                    # Drain any pending data already buffered inside the
+                    # decoder before triggering another raw read. Without
+                    # this, ``stream(amt=-1)`` would loop forever on
+                    # ``_decoder.has_unconsumed_tail`` whenever the decoder
+                    # retains bytes (e.g., gzip body whose decoded output
+                    # exceeded the previous ``max_length`` cap). The
+                    # decoded chunk is bounded by a reasonable growth
+                    # factor of the most recent raw read so a single recv
+                    # carrying many HTTP/2/3 frames cannot expand into
+                    # arbitrarily large memory (issue #364, see also
+                    # GHSA-mf9v-mfxr-j63j).
+                    if self._decoder and self._decoder.has_unconsumed_tail:
+                        cap = (
+                            max(
+                                self._last_raw_read_size,
+                                DECODE_MIN_RAW_REFERENCE,
+                            )
+                            * DECODE_GROWTH_FACTOR
+                        )
+                        decoded_data = self._decode(
+                            b"",
+                            decode_content,
+                            flush_decoder=False,
+                            max_length=cap,
+                        )
+                        if decoded_data:
+                            self._decoded_buffer.put(decoded_data)
+
+                    if len(self._decoded_buffer):
+                        return self._decoded_buffer.get(len(self._decoded_buffer))  # type: ignore[no-any-return]
+
+                if amt > 0:
+                    # Drain any pending data already buffered inside the
+                    # decoder before triggering another raw read. This
+                    # prevents decompression bombs where a single raw
+                    # chunk would otherwise produce a huge decoded
+                    # output (see GHSA-mf9v-mfxr-j63j).
+                    if (
+                        self._decoder
+                        and self._decoder.has_unconsumed_tail
+                        and len(self._decoded_buffer) < amt
+                    ):
+                        decoded_data = self._decode(
+                            b"",
+                            decode_content,
+                            flush_decoder=False,
+                            max_length=amt - len(self._decoded_buffer),
+                        )
+                        self._decoded_buffer.put(decoded_data)
+
+                    if amt <= len(self._decoded_buffer):
+                        return self._decoded_buffer.get(amt)  # type: ignore[no-any-return]
+
+            if self._police_officer is not None:
+                with self._police_officer.borrow(self):
+                    data = self._raw_read(amt, read1=read1)
+            else:
+                data = self._raw_read(amt, read1=read1)
+
+            if not cache_content:
+                self._uncached_read_occurred = True
+
+            if amt and amt < 0:
+                amt = len(data)
+
+            flush_decoder = False
+            if amt is None:
+                flush_decoder = True
+            elif amt != 0 and not data:
+                flush_decoder = True
+
+            decoder = self._decoder
+            if not self._decoded_buffer:
+                if (
+                    decoder is None
+                    and decode_content
+                    and isinstance(self._fp, LowLevelResponse)
+                    and (amt is not None or not cache_content)
+                ):
+                    return data
+
+                if not data and (decoder is None or not decoder.has_unconsumed_tail):
+                    return data
+
+            if amt is None:
+                data = self._decode(data, decode_content, flush_decoder)
+                # A previous bounded read may have left decoded output buffered.
+                if self._decoded_buffer:
+                    data = self._decoded_buffer.get(len(self._decoded_buffer)) + data
+                if cache_content and not self._uncached_read_occurred:
+                    self._body = data
+            else:
+                # do not waste memory on buffer when not decoding
+                if not decode_content:
+                    if self._has_decoded_content:
+                        raise RuntimeError(
+                            "Calling read(decode_content=False) is not supported after "
+                            "read(decode_content=True) was called."
+                        )
+                    return data
+
+                decoded_data = self._decode(
+                    data,
+                    decode_content,
+                    flush_decoder,
+                    max_length=amt - len(self._decoded_buffer),
+                )
+                self._decoded_buffer.put(decoded_data)
+
+                single_exchange = read1 and hasattr(self._fp, "_eot")
+                while len(self._decoded_buffer) < amt and data and not single_exchange:
+                    # TODO make sure to initially read enough data to get past the headers
+                    # For example, the GZ file header takes 10 bytes, we don't want to read
+                    # it one byte at a time
+                    if self._police_officer is not None:
+                        with self._police_officer.borrow(self):
+                            data = self._raw_read(amt)
+                    else:
+                        data = self._raw_read(amt)
+
+                    decoded_data = self._decode(
+                        data,
+                        decode_content,
+                        flush_decoder,
+                        max_length=amt - len(self._decoded_buffer),
+                    )
+                    self._decoded_buffer.put(decoded_data)
+                data = self._decoded_buffer.get(amt)
+
             return data
-
-        self._init_decoder()
-        while True:
-            flush_decoder = not data
-            decoded_data = self._decode(
-                data, decode_content, flush_decoder, max_length=amt
-            )
-            self._decoded_buffer.put(decoded_data)
-            if decoded_data or flush_decoder:
-                break
-            data = self._raw_read(8192, read1=True)
-
-        if amt is None:
-            return self._decoded_buffer.get_all()
-        return self._decoded_buffer.get(amt)
+        finally:
+            if (
+                hasattr(self._fp, "_eot")
+                and (
+                    self._fp._eot  # type: ignore[union-attr]
+                    or is_fp_closed(self._fp)
+                )
+                and self._police_officer is not None
+            ):
+                # an HTTP extension could be live, we don't want to accidentally kill it!
+                if (
+                    not hasattr(self._fp, "_dsa")
+                    or self._fp._dsa is None  # type: ignore[union-attr]
+                    or self._fp._dsa.closed is True  # type: ignore[union-attr]
+                ):
+                    self._police_officer.forget(self)
+                    self._police_officer = None
 
     def stream(
-        self, amt: int | None = _READ_CHUNK_SIZE, decode_content: bool | None = None
-    ) -> typing.Generator[bytes]:
+        self, amt: int | None = 2**16, decode_content: bool | None = None
+    ) -> typing.Generator[bytes, None, None]:
         """
         A generator wrapper for the read() method. A call will block until
         ``amt`` bytes have been read from the connection or until the
@@ -1271,7 +1330,8 @@ class HTTPResponse(BaseHTTPResponse):
             How much of the content to read. The generator will return up to
             much data per iteration, but may return less. This is particularly
             likely when using compressed data. However, the empty string will
-            never be returned.
+            never be returned. Setting -1 will output chunks as soon as they
+            arrive.
 
         :param decode_content:
             If True, will attempt to decode the body based on the
@@ -1279,17 +1339,61 @@ class HTTPResponse(BaseHTTPResponse):
         """
         if amt == 0:
             return
+        if self._fp is None:
+            return
+        while (
+            not is_fp_closed(self._fp)
+            or len(self._decoded_buffer) > 0
+            or (self._decoder and self._decoder.has_unconsumed_tail)
+        ):
+            data = self.read1(amt=amt, decode_content=decode_content)
 
-        if self.chunked and self.supports_chunked_reads():
-            yield from self.read_chunked(amt, decode_content=decode_content)
-        else:
-            while (
+            if data:
+                yield data
+
+    def _handle_chunk(
+        self, amt: int | None, decode_content: bool | None = None
+    ) -> bytes:
+        """Read one transfer-decoded body segment from the protocol backend."""
+        return self.read1(
+            amt=-1 if amt is None else amt,
+            decode_content=decode_content,
+        )
+
+    def read_chunked(
+        self, amt: int | None = None, decode_content: bool | None = None
+    ) -> typing.Generator[bytes, None, None]:
+        """Read an HTTP/1.1 chunked response as transfer-decoded segments."""
+        self._init_decoder()
+        if not self.chunked:
+            raise ResponseNotChunked(
+                "Response is not chunked. "
+                "Header 'transfer-encoding: chunked' is missing."
+            )
+        if not self.supports_chunked_reads():
+            raise BodyNotHttplibCompatible(
+                "Body should be http.client.HTTPResponse like. "
+                "It should have an fp attribute which returns raw chunks."
+            )
+        if decode_content is None:
+            decode_content = self.decode_content
+        if amt == 0:
+            return
+        if amt is not None and amt < 0:
+            amt = None
+
+        with self._error_catcher():
+            while self._fp is not None and (
                 not is_fp_closed(self._fp)
                 or len(self._decoded_buffer) > 0
                 or (self._decoder and self._decoder.has_unconsumed_tail)
             ):
-                data = self.read(amt=amt, decode_content=decode_content)
+                data = self._handle_chunk(amt, decode_content)
+                if data:
+                    yield data
 
+            if decode_content:
+                data = self._flush_decoder()
                 if data:
                     yield data
 
@@ -1297,23 +1401,51 @@ class HTTPResponse(BaseHTTPResponse):
     def readable(self) -> bool:
         return True
 
-    def shutdown(self) -> None:
-        if not self._sock_shutdown:
-            raise ValueError("Cannot shutdown socket as self._sock_shutdown is not set")
-        if self._connection is None:
-            raise RuntimeError(
-                "Cannot shutdown as connection has already been released to the pool"
+    def __del__(self) -> None:
+        if not getattr(self, "closed", True):
+            police = getattr(self, "_police_officer", None)
+            reclaimed = (
+                police._reclaim_reservation(self) if police is not None else None
             )
-        self._sock_shutdown(socket.SHUT_RD)
+            try:
+                self.close()
+            finally:
+                if reclaimed is not None and police is not None:
+                    police.release()
+                    if police._shutdown:
+                        police.kill(reclaimed, idle_only=True)
 
     def close(self) -> None:
-        self._sock_shutdown = None
+        if self.extension is not None and self.extension.closed is False:
+            self.extension.close()
 
-        if not self.closed and self._fp:
+        if isinstance(self._fp, LowLevelResponse) and self._police_officer is not None:
+            police = self._police_officer
+            try:
+                with police.borrow(self) as conn:
+                    try:
+                        self._fp.abort()
+                    except (OSError, BaseSSLError):
+                        # A failed reset write makes the transport unusable.
+                        conn.close()
+                    finally:
+                        self._fp.close()
+                        self._connection = None
+            except UnavailableTraffic:
+                self._fp.close()
+                self._connection = None
+            finally:
+                if self._fp.closed:
+                    police.forget(self)
+                    self._police_officer = None
+        elif isinstance(self._fp, LowLevelResponse) and self._fp._eot:
             self._fp.close()
-
-        if self._connection:
-            self._connection.close()
+            self._connection = None
+        else:
+            if not self.closed and self._fp:
+                self._fp.close()
+            if self._connection:
+                self._connection.close()  # Defensive: external file-like body.
 
         if not self.auto_close:
             io.IOBase.close(self)
@@ -1348,7 +1480,7 @@ class HTTPResponse(BaseHTTPResponse):
             and hasattr(self._fp, "flush")
             and not getattr(self._fp, "closed", False)
         ):
-            return self._fp.flush()
+            return self._fp.flush()  # type: ignore[return-value]
 
     def supports_chunked_reads(self) -> bool:
         """
@@ -1357,143 +1489,14 @@ class HTTPResponse(BaseHTTPResponse):
         the fp attribute. If it is present we assume it returns raw chunks as
         processed by read_chunked().
         """
-        return hasattr(self._fp, "fp")
+        return isinstance(self._fp, LowLevelResponse) or hasattr(self._fp, "fp")
 
     def _update_chunk_length(self) -> None:
-        # First, we'll figure out length of a chunk and then
-        # we'll try to read it from socket.
-        if self.chunk_left is not None:
-            return None
-        line = self._fp.fp.readline(_MAX_CHUNK_LINE_LENGTH + 1)  # type: ignore[union-attr]
-        if len(line) > _MAX_CHUNK_LINE_LENGTH:
-            self.close()
-            raise ProtocolError(
-                "Response chunk size line exceeded maximum allowed length"
-            ) from None
-        line = line.split(b";", 1)[0]
-        try:
-            self.chunk_left = int(line, 16)
-        except ValueError:
-            self.close()
-            if line:
-                # Invalid chunked protocol response, abort.
-                raise InvalidChunkLength(self, line) from None
-            else:
-                # Truncated at start of next chunk
-                raise ProtocolError("Response ended prematurely") from None
+        """Compatibility hook for consumers of urllib3's private chunk parser.
 
-    def _handle_chunk(self, amt: int | None) -> bytes:
-        returned_chunk = None
-        if amt is None:
-            chunk = self._fp._safe_read(self.chunk_left)  # type: ignore[union-attr]
-            returned_chunk = chunk
-            self._fp._safe_read(2)  # type: ignore[union-attr] # Toss the CRLF at the end of the chunk.
-            self.chunk_left = None
-        elif self.chunk_left is not None and amt < self.chunk_left:
-            value = self._fp._safe_read(amt)  # type: ignore[union-attr]
-            self.chunk_left = self.chunk_left - amt
-            returned_chunk = value
-        elif amt == self.chunk_left:
-            value = self._fp._safe_read(amt)  # type: ignore[union-attr]
-            self._fp._safe_read(2)  # type: ignore[union-attr] # Toss the CRLF at the end of the chunk.
-            self.chunk_left = None
-            returned_chunk = value
-        else:  # amt > self.chunk_left
-            returned_chunk = self._fp._safe_read(self.chunk_left)  # type: ignore[union-attr]
-            self._fp._safe_read(2)  # type: ignore[union-attr] # Toss the CRLF at the end of the chunk.
-            self.chunk_left = None
-        return returned_chunk  # type: ignore[no-any-return]
-
-    def read_chunked(
-        self, amt: int | None = None, decode_content: bool | None = None
-    ) -> typing.Generator[bytes]:
+        urllib3-future removes transfer framing in the protocol backend, before
+        bytes reach ``HTTPResponse``. There is no chunk length to update here.
         """
-        Similar to :meth:`HTTPResponse.read`, but with an additional
-        parameter: ``decode_content``.
-
-        :param amt:
-            How much of the content to read. If specified, caching is skipped
-            because it doesn't make sense to cache partial content as the full
-            response.
-
-        :param decode_content:
-            If True, will attempt to decode the body based on the
-            'content-encoding' header.
-        """
-        self._init_decoder()
-        # FIXME: Rewrite this method and make it a class with a better structured logic.
-        if not self.chunked:
-            raise ResponseNotChunked(
-                "Response is not chunked. "
-                "Header 'transfer-encoding: chunked' is missing."
-            )
-        if not self.supports_chunked_reads():
-            raise BodyNotHttplibCompatible(
-                "Body should be http.client.HTTPResponse like. "
-                "It should have have an fp attribute which returns raw chunks."
-            )
-
-        with self._error_catcher():
-            # Don't bother reading the body of a HEAD request.
-            if self._original_response and is_response_to_head(self._original_response):
-                self._original_response.close()
-                return None
-
-            # If a response is already read and closed
-            # then return immediately.
-            if self._fp.fp is None:  # type: ignore[union-attr]
-                return None
-
-            if amt == 0:
-                return
-            elif amt and amt < 0:
-                # Negative numbers and `None` should be treated the same,
-                # but httplib handles only `None` correctly.
-                amt = None
-
-            while True:
-                # First, check if any data is left in the decoder's buffer.
-                if self._decoder and self._decoder.has_unconsumed_tail:
-                    chunk = b""
-                else:
-                    self._update_chunk_length()
-                    self._uncached_read_occurred = True
-                    if self.chunk_left == 0:
-                        break
-                    chunk = self._handle_chunk(amt)
-                decoded = self._decode(
-                    chunk,
-                    decode_content=decode_content,
-                    flush_decoder=False,
-                    max_length=amt,
-                )
-                if decoded:
-                    yield decoded
-
-            if decode_content:
-                # On CPython and PyPy, we should never need to flush the
-                # decoder. However, on Jython we *might* need to, so
-                # lets defensively do it anyway.
-                decoded = self._flush_decoder()
-                if decoded:  # Platform-specific: Jython.
-                    yield decoded
-
-            # Chunk content ends with \r\n: discard it.
-            while self._fp is not None:
-                line = self._fp.fp.readline(_MAX_CHUNK_LINE_LENGTH + 1)
-                if len(line) > _MAX_CHUNK_LINE_LENGTH:
-                    raise ProtocolError(
-                        "Response chunk trailer line exceeded maximum allowed length"
-                    )
-                if not line:
-                    # Some sites may not end with '\r\n'.
-                    break
-                if line == b"\r\n":
-                    break
-
-            # We read everything; close the "file".
-            if self._original_response:
-                self._original_response.close()
 
     @property
     def url(self) -> str | None:
@@ -1505,12 +1508,21 @@ class HTTPResponse(BaseHTTPResponse):
         return self._request_url
 
     @url.setter
-    def url(self, url: str | None) -> None:
+    def url(self, url: str) -> None:
         self._request_url = url
+
+    # Compatibility methods for http.client.HTTPResponse
+    def getheaders(self) -> HTTPHeaderDict:  # Defensive: kept for BC, dead code
+        return self.headers
+
+    def getheader(
+        self, name: str, default: str | None = None
+    ) -> str | None:  # Defensive: kept for BC, dead code
+        return self.headers.get(name, default)
 
     def __iter__(self) -> typing.Iterator[bytes]:
         buffer: list[bytes] = []
-        for chunk in self.stream(decode_content=True):
+        for chunk in self.stream(-1, decode_content=True):
             if b"\n" in chunk:
                 chunks = chunk.split(b"\n")
                 yield b"".join(buffer) + chunks[0] + b"\n"
@@ -1524,3 +1536,15 @@ class HTTPResponse(BaseHTTPResponse):
                 buffer.append(chunk)
         if buffer:
             yield b"".join(buffer)
+
+    def shutdown(self) -> None:
+        """urllib3 implemented this method in version 2.3 to palliate for a
+        thread safety issue[...] using another thread safety issue[...]
+        fortunately, we don't need that hack with urllib3-future thanks to
+        our extensive safety with TrafficPolice. You may safely remove that
+        call."""
+        pass
+
+
+# Kept for BC-purposes.
+BaseHTTPResponse = HTTPResponse

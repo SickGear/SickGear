@@ -2,32 +2,58 @@ from __future__ import annotations
 
 import functools
 import logging
+import socket
+import sys
 import typing
 import warnings
 from types import TracebackType
 from urllib.parse import urljoin
 
-from ._collections import HTTPHeaderDict, RecentlyUsedContainer
+from ._collections import HTTPHeaderDict
+from ._constant import DEFAULT_BLOCKSIZE
 from ._request_methods import RequestMethods
-from .connection import ProxyConfig
-from .connectionpool import HTTPConnectionPool, HTTPSConnectionPool, port_by_scheme
+from ._typing import (
+    _TYPE_BODY,
+    _TYPE_BODY_POSITION,
+    _TYPE_SOCKET_OPTIONS,
+    _TYPE_TIMEOUT,
+    ProxyConfig,
+)
+from .backend import HttpVersion, QuicPreemptiveCacheType, ResponsePromise
+from .connectionpool import (
+    HTTPConnectionPool,
+    HTTPSConnectionPool,
+    _is_same_host,
+    port_by_scheme,
+)
+from .contrib.resolver import (
+    BaseResolver,
+    ManyResolver,
+    ProtocolResolver,
+    ResolverDescription,
+)
 from .exceptions import (
     LocationValueError,
     MaxRetryError,
     ProxySchemeUnknown,
     URLSchemeUnknown,
 )
-from .response import BaseHTTPResponse
-from .util.connection import _TYPE_SOCKET_OPTIONS
+from .response import HTTPResponse
 from .util.proxy import connection_requires_http_tunnel
+from .util.request import NOT_FORWARDABLE_HEADERS
 from .util.retry import Retry
 from .util.timeout import Timeout
-from .util.url import Url, parse_url
+from .util.traffic_police import TrafficPolice, UnavailableTraffic
+from .util.url import Url, _encode_host, parse_extension, parse_url
+
+if sys.platform == "wasi":
+    # wasi don't support lazy import.
+    from .contrib.webextensions import load_extension as load_extension  # noqa: F401
 
 if typing.TYPE_CHECKING:
     import ssl
 
-    from typing_extensions import Self
+    from typing_extensions import Literal
 
 __all__ = ["PoolManager", "ProxyManager", "proxy_from_url"]
 
@@ -39,20 +65,23 @@ SSL_KEYWORDS = (
     "cert_file",
     "cert_reqs",
     "ca_certs",
-    "ca_cert_data",
     "ssl_version",
     "ssl_minimum_version",
     "ssl_maximum_version",
+    "ssl_backend",
     "ca_cert_dir",
+    "ca_cert_data",
     "ssl_context",
     "key_password",
     "server_hostname",
     "assert_hostname",
     "assert_fingerprint",
+    "cert_data",
+    "key_data",
+    "ciphers",
 )
-# Default value for `blocksize` - a new parameter introduced to
-# http.client.HTTPConnection & http.client.HTTPSConnection in Python 3.7
-_DEFAULT_BLOCKSIZE = 16384
+
+_SelfT = typing.TypeVar("_SelfT")
 
 
 class PoolKey(typing.NamedTuple):
@@ -70,17 +99,20 @@ class PoolKey(typing.NamedTuple):
     key_retries: Retry | bool | int | None
     key_block: bool | None
     key_source_address: tuple[str, int] | None
+    key_socket_family: socket.AddressFamily | None
     key_key_file: str | None
     key_key_password: str | None
     key_cert_file: str | None
     key_cert_reqs: str | None
     key_ca_certs: str | None
-    key_ca_cert_data: str | bytes | None
     key_ssl_version: int | str | None
     key_ssl_minimum_version: ssl.TLSVersion | None
     key_ssl_maximum_version: ssl.TLSVersion | None
+    key_ssl_backend: str | None
     key_ca_cert_dir: str | None
+    key_ca_cert_data: str | bytes | None
     key_ssl_context: ssl.SSLContext | None
+    key_ciphers: str | None
     key_maxsize: int | None
     key_headers: frozenset[tuple[str, str]] | None
     key__proxy: Url | None
@@ -92,6 +124,18 @@ class PoolKey(typing.NamedTuple):
     key_assert_fingerprint: str | None
     key_server_hostname: str | None
     key_blocksize: int | None
+    key_disabled_svn: set[HttpVersion] | None
+    key_cert_data: str | bytes | None
+    key_key_data: str | bytes | None
+    key_happy_eyeballs: bool | int | None
+    key_background_watch_delay: float | int | None
+    key_keepalive_delay: float | int | None
+    key_keepalive_idle_window: float | int | None
+
+
+@functools.lru_cache(maxsize=8)
+def _empty_context(key_class: type[PoolKey]) -> dict[str, typing.Any]:
+    return {k: None for k in key_class._fields}
 
 
 def _default_key_normalizer(
@@ -119,34 +163,37 @@ def _default_key_normalizer(
     # Since we mutate the dictionary, make a copy first
     context = request_context.copy()
     context["scheme"] = context["scheme"].lower()
-    context["host"] = context["host"].lower()
+    # Only the address portion of a scoped IPv6 host is case-insensitive.
+    address, separator, zone = context["host"].partition("%")
+    if separator and ":" in address:
+        context["host"] = f"{address.lower()}{separator}{zone}"
+    else:
+        context["host"] = context["host"].lower()
 
     # These are both dictionaries and need to be transformed into frozensets
     for key in ("headers", "_proxy_headers", "_socks_options"):
         if key in context and context[key] is not None:
             context[key] = frozenset(context[key].items())
 
+    if "disabled_svn" in context:
+        context["disabled_svn"] = frozenset(context["disabled_svn"])
+
     # The socket_options key may be a list and needs to be transformed into a
     # tuple.
-    socket_opts = context.get("socket_options")
-    if socket_opts is not None:
-        context["socket_options"] = tuple(socket_opts)
+    if "socket_options" in context and context["socket_options"] is not None:
+        context["socket_options"] = tuple(context["socket_options"])
 
+    # Default key_blocksize to DEFAULT_BLOCKSIZE if missing from the context
+    if "blocksize" not in context:
+        context["blocksize"] = DEFAULT_BLOCKSIZE
+
+    empty_default_ctx = _empty_context(key_class).copy()  # type: ignore[arg-type]
     # Map the kwargs to the names in the namedtuple - this is necessary since
     # namedtuples can't have fields starting with '_'.
-    for key in list(context.keys()):
-        context["key_" + key] = context.pop(key)
-
     # Default to ``None`` for keys missing from the context
-    for field in key_class._fields:
-        if field not in context:
-            context[field] = None
+    empty_default_ctx.update({f"key_{k}": context[k] for k in context})
 
-    # Default key_blocksize to _DEFAULT_BLOCKSIZE if missing from the context
-    if context.get("key_blocksize") is None:
-        context["key_blocksize"] = _DEFAULT_BLOCKSIZE
-
-    return key_class(**context)
+    return key_class(**empty_default_ctx)
 
 
 #: A dictionary that maps a scheme to a callable that creates a pool key.
@@ -202,9 +249,17 @@ class PoolManager(RequestMethods):
         self,
         num_pools: int = 10,
         headers: typing.Mapping[str, str] | None = None,
+        preemptive_quic_cache: QuicPreemptiveCacheType | None = None,
+        resolver: ResolverDescription
+        | list[ResolverDescription]
+        | str
+        | list[str]
+        | BaseResolver
+        | None = None,
         **connection_pool_kw: typing.Any,
     ) -> None:
         super().__init__(headers)
+
         # PoolManager handles redirects itself in PoolManager.urlopen().
         # It always passes redirect=False to the underlying connection pool to
         # suppress per-pool redirect handling. If the user supplied a non-Retry
@@ -217,19 +272,85 @@ class PoolManager(RequestMethods):
             retries = connection_pool_kw["retries"]
             if not isinstance(retries, Retry):
                 retries = Retry.from_int(retries)
+
                 connection_pool_kw = connection_pool_kw.copy()
                 connection_pool_kw["retries"] = retries
+
         self.connection_pool_kw = connection_pool_kw
 
-        self.pools: RecentlyUsedContainer[PoolKey, HTTPConnectionPool]
-        self.pools = RecentlyUsedContainer(num_pools)
+        self._num_pools = num_pools
+
+        self.block = (
+            False if "block" not in connection_pool_kw else connection_pool_kw["block"]
+        )
+
+        self.pools: TrafficPolice[HTTPConnectionPool] = TrafficPolice(
+            num_pools,
+            concurrency=True,
+            strict_maxsize=not self.block,
+        )
 
         # Locally set the pool classes and keys so other PoolManagers can
         # override them.
         self.pool_classes_by_scheme = pool_classes_by_scheme
         self.key_fn_by_scheme = key_fn_by_scheme.copy()
 
-    def __enter__(self) -> Self:
+        self._preemptive_quic_cache = preemptive_quic_cache
+
+        self._own_resolver = not isinstance(resolver, BaseResolver)
+
+        if resolver is None:
+            resolver = [ResolverDescription(ProtocolResolver.SYSTEM)]
+        elif isinstance(resolver, str):
+            resolver = [ResolverDescription.from_url(resolver)]
+        elif isinstance(resolver, ResolverDescription):
+            resolver = [resolver]
+
+        self._resolvers: list[ResolverDescription] = []
+
+        if not isinstance(resolver, BaseResolver):
+            can_resolve_localhost: bool = False
+
+            for resolver_description in resolver:
+                if isinstance(resolver_description, str):
+                    self._resolvers.append(
+                        ResolverDescription.from_url(resolver_description)
+                    )
+
+                    if self._resolvers[-1].protocol == ProtocolResolver.SYSTEM:
+                        can_resolve_localhost = True
+
+                    continue
+
+                self._resolvers.append(resolver_description)
+
+                if self._resolvers[-1].protocol == ProtocolResolver.SYSTEM:
+                    can_resolve_localhost = True
+
+            if not can_resolve_localhost:
+                self._resolvers.append(
+                    ResolverDescription.from_url("system://default?hosts=localhost")
+                )
+
+        #: We want to automatically forward ca_cert_data, ca_cert_dir, and ca_certs.
+        for rd in self._resolvers:
+            if "ca_cert_data" in connection_pool_kw:
+                if "ca_cert_data" not in rd:
+                    rd["ca_cert_data"] = connection_pool_kw["ca_cert_data"]
+            if "ca_cert_dir" in connection_pool_kw:
+                if "ca_cert_dir" not in rd:
+                    rd["ca_cert_dir"] = connection_pool_kw["ca_cert_dir"]
+            if "ca_certs" in connection_pool_kw:
+                if "ca_certs" not in rd:
+                    rd["ca_certs"] = connection_pool_kw["ca_certs"]
+
+        self._resolver: BaseResolver = (
+            ManyResolver(*[r.new() for r in self._resolvers])
+            if not isinstance(resolver, BaseResolver)
+            else resolver
+        )
+
+    def __enter__(self: _SelfT) -> _SelfT:
         return self
 
     def __exit__(
@@ -237,7 +358,7 @@ class PoolManager(RequestMethods):
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
-    ) -> typing.Literal[False]:
+    ) -> Literal[False]:
         self.clear()
         # Return False to re-raise any potential exceptions
         return False
@@ -262,10 +383,10 @@ class PoolManager(RequestMethods):
         if request_context is None:
             request_context = self.connection_pool_kw.copy()
 
-        # Default blocksize to _DEFAULT_BLOCKSIZE if missing or explicitly
+        # Default blocksize to DEFAULT_BLOCKSIZE if missing or explicitly
         # set to 'None' in the request_context.
         if request_context.get("blocksize") is None:
-            request_context["blocksize"] = _DEFAULT_BLOCKSIZE
+            request_context["blocksize"] = DEFAULT_BLOCKSIZE
 
         # Although the context has everything necessary to create the pool,
         # this function has historically only used the scheme, host, and port
@@ -278,16 +399,31 @@ class PoolManager(RequestMethods):
             for kw in SSL_KEYWORDS:
                 request_context.pop(kw, None)
 
+        request_context["preemptive_quic_cache"] = self._preemptive_quic_cache
+
+        if not self._resolver.is_available():
+            self._resolver = self._resolver.recycle()
+
+        request_context["resolver"] = self._resolver
+
+        # By default, each HttpPool can have up to num_pools connections
+        if "maxsize" not in request_context:
+            request_context["maxsize"] = self._num_pools
+
         return pool_cls(host, port, **request_context)
 
     def clear(self) -> None:
         """
         Empty our store of pools and direct them all to close.
 
-        This will not affect in-flight connections, but they will not be
-        re-used after completion.
+        Returned responses remain readable and returned promises remain
+        retrievable. Requests that have not returned either may fail. This
+        manager remains usable for new requests.
         """
         self.pools.clear()
+
+        if self._own_resolver and self._resolver.is_available():
+            self._resolver.close()
 
     def connection_from_host(
         self,
@@ -311,8 +447,8 @@ class PoolManager(RequestMethods):
 
         request_context = self._merge_pool_kwargs(pool_kwargs)
         request_context["scheme"] = scheme or "http"
-        if port is None:
-            port = port_by_scheme.get(request_context["scheme"].lower(), 80)
+        if not port:
+            port = port_by_scheme.get(request_context["scheme"].lower())
         request_context["port"] = port
         request_context["host"] = host
 
@@ -328,18 +464,60 @@ class PoolManager(RequestMethods):
         value must be a key in ``key_fn_by_scheme`` instance variable.
         """
         if "strict" in request_context:
-            warnings.warn(
-                "The 'strict' parameter is no longer needed on Python 3+. "
-                "This will raise an error in urllib3 v3.0.",
-                FutureWarning,
-            )
             request_context.pop("strict")
 
         scheme = request_context["scheme"].lower()
+
         pool_key_constructor = self.key_fn_by_scheme.get(scheme)
+
+        if pool_key_constructor is None:
+            target_scheme, target_implementation = parse_extension(scheme)
+            # we defer the import until there to avoid loading wsproto and such early.
+            from .contrib.webextensions import load_extension
+
+            try:
+                extension = load_extension(target_scheme, target_implementation)
+            except ImportError:
+                pass
+            else:
+                scheme = extension.scheme_to_http_scheme(target_scheme)
+
+                pool_key_constructor = self.key_fn_by_scheme.get(scheme)
+
+                request_context["scheme"] = scheme
+
+                if "port" not in request_context or not request_context["port"]:
+                    request_context["port"] = port_by_scheme.get(
+                        request_context["scheme"].lower()
+                    )
+
+                supported_svn = extension.supported_svn()
+
+                # Keep extension restrictions local to this pool.
+                disabled_svn = (
+                    set(request_context["disabled_svn"])
+                    if "disabled_svn" in request_context
+                    else set()
+                )
+
+                if len(supported_svn) != 3:
+                    if HttpVersion.h11 not in supported_svn:
+                        disabled_svn.add(HttpVersion.h11)
+
+                    if HttpVersion.h2 not in supported_svn:
+                        disabled_svn.add(HttpVersion.h2)
+
+                    if HttpVersion.h3 not in supported_svn:
+                        disabled_svn.add(HttpVersion.h3)
+
+                request_context["disabled_svn"] = disabled_svn
+
         if not pool_key_constructor:
             raise URLSchemeUnknown(scheme)
         pool_key = pool_key_constructor(request_context)
+
+        if self._preemptive_quic_cache is not None:
+            request_context["preemptive_quic_cache"] = self._preemptive_quic_cache
 
         return self.connection_from_pool_key(pool_key, request_context=request_context)
 
@@ -353,19 +531,39 @@ class PoolManager(RequestMethods):
         objects. At a minimum it must have the ``scheme``, ``host``, and
         ``port`` fields.
         """
-        with self.pools.lock:
+
+        # those two lines are there for compatibility purposes
+        # urllib3-future has to be a "perfect" drop-in solution for
+        # urllib3. here the explanation for them:
+        # some programs may just invoke connection_from_xxx directly and
+        # handle the underlying pool manually, thus bypassing the
+        # internal lifecycle intended. this just make sure we declare
+        # not using anything prior to what's next.
+        # this constraint appeared after introducing TrafficPolice.
+        if self.pools.busy:
+            self.pools.release()
+
+        with self.pools.locate_or_hold(pool_key, block=True) as swapper_or_pool:
             # If the scheme, host, or port doesn't match existing open
             # connections, open a new ConnectionPool.
-            pool = self.pools.get(pool_key)
-            if pool:
-                return pool
+            if not hasattr(swapper_or_pool, "is_idle"):
+                # Make a fresh ConnectionPool of the desired type
+                scheme = request_context["scheme"]
+                host = request_context["host"]
+                port = request_context["port"]
 
-            # Make a fresh ConnectionPool of the desired type
-            scheme = request_context["scheme"]
-            host = request_context["host"]
-            port = request_context["port"]
-            pool = self._new_pool(scheme, host, port, request_context=request_context)
-            self.pools[pool_key] = pool
+                pool = self._new_pool(
+                    scheme, host, port, request_context=request_context
+                )
+
+                swapper_or_pool(pool)
+            else:
+                pool = swapper_or_pool  # type: ignore[assignment]
+
+        # make the lower level PoliceTraffic aware
+        # of his parent PoliceTraffic
+        assert pool.pool is not None
+        pool.pool.parent = self.pools
 
         return pool
 
@@ -384,7 +582,10 @@ class PoolManager(RequestMethods):
         """
         u = parse_url(url)
         return self.connection_from_host(
-            u.host, port=u.port, scheme=u.scheme, pool_kwargs=pool_kwargs
+            _encode_host(u.host, u.scheme),
+            port=u.port,
+            scheme=u.scheme,
+            pool_kwargs=pool_kwargs,
         )
 
     def _merge_pool_kwargs(
@@ -399,14 +600,14 @@ class PoolManager(RequestMethods):
         """
         base_pool_kwargs = self.connection_pool_kw.copy()
         if override:
-            for key, value in override.items():
-                if value is None:
-                    try:
-                        del base_pool_kwargs[key]
-                    except KeyError:
-                        pass
-                else:
-                    base_pool_kwargs[key] = value
+            base_pool_kwargs.update(
+                {k: v for k, v in override.items() if v is not None}
+            )
+            return {
+                k: v
+                for k, v in base_pool_kwargs.items()
+                if k not in override or override[k] is not None
+            }
         return base_pool_kwargs
 
     def _proxy_requires_url_absolute_form(self, parsed_url: Url) -> bool:
@@ -422,9 +623,271 @@ class PoolManager(RequestMethods):
             self.proxy, self.proxy_config, parsed_url.scheme
         )
 
-    def urlopen(  # type: ignore[override]
+    def get_response(
+        self, *, promise: ResponsePromise | None = None
+    ) -> HTTPResponse | None:
+        """
+        Retrieve the first response available in the pools.
+        This method should be called after issuing at least one request with ``multiplexed=True``.
+        If none available, return None.
+        """
+        if promise is not None and not isinstance(promise, ResponsePromise):
+            raise TypeError(
+                f"get_response only support ResponsePromise but received {type(promise)} instead. "
+                f"This may occur if you expected the remote peer to support multiplexing but did not."
+            )
+
+        try:
+            with self.pools.borrow(
+                promise or ResponsePromise, block=False, not_idle_only=True
+            ) as pool:
+                response = pool.get_response(promise=promise)
+        except UnavailableTraffic:
+            return None
+
+        if (
+            promise is not None and response is None
+        ):  # Defensive: pool validates promises.
+            raise ValueError(
+                "Invoked get_response with promise=... that no connections across pools recognize"
+            )
+
+        if response is None:
+            return None
+
+        from_promise = None
+
+        if promise:
+            from_promise = promise
+        else:
+            if (
+                response._fp
+                and hasattr(response._fp, "from_promise")
+                and response._fp.from_promise
+            ):
+                from_promise = response._fp.from_promise
+
+        if from_promise is None:  # Defensive: pool attaches promise metadata.
+            raise ValueError(
+                "Internal: Unable to identify originating ResponsePromise from a LowLevelResponse"
+            )
+
+        self.pools.forget(from_promise)
+
+        # Retrieve request ctx
+        method = typing.cast(str, from_promise.get_parameter("method"))
+        redirect = typing.cast(bool, from_promise.get_parameter("pm_redirect"))
+
+        # Handle redirect?
+        if redirect and response.get_redirect_location():
+            url = typing.cast(str, from_promise.get_parameter("pm_url"))
+            body = typing.cast(
+                typing.Union[_TYPE_BODY, None], from_promise.get_parameter("body")
+            )
+            headers = typing.cast(
+                typing.Union[HTTPHeaderDict, None],
+                from_promise.get_parameter("headers"),
+            )
+            preload_content = typing.cast(
+                bool, from_promise.get_parameter("preload_content")
+            )
+            decode_content = typing.cast(
+                bool, from_promise.get_parameter("decode_content")
+            )
+            timeout = typing.cast(
+                typing.Union[_TYPE_TIMEOUT, None], from_promise.get_parameter("timeout")
+            )
+            assert_same_host = typing.cast(
+                bool, from_promise.get_parameter("assert_same_host")
+            )
+            pool_timeout = from_promise.get_parameter("pool_timeout")
+            response_kw = typing.cast(
+                typing.MutableMapping[str, typing.Any],
+                from_promise.get_parameter("response_kw"),
+            )
+            chunked = typing.cast(bool, from_promise.get_parameter("chunked"))
+            body_pos = typing.cast(
+                typing.Optional[_TYPE_BODY_POSITION],
+                from_promise.get_parameter("body_pos"),
+            )
+            retries = typing.cast(Retry, from_promise.get_parameter("retries"))
+
+            redirect_location = response.get_redirect_location()
+            assert isinstance(redirect_location, str)
+            redirect_location = urljoin(url, redirect_location)
+
+            if response.status == 303:
+                method = "GET"
+                body = None
+                chunked = False
+                body_pos = None
+                headers = HTTPHeaderDict(headers)
+
+                for should_be_removed_header in NOT_FORWARDABLE_HEADERS:
+                    headers.discard(should_be_removed_header)
+
+            # Compare request origins, including for deferred proxy responses.
+            u = parse_url(url)
+            scheme = u.scheme or "http"
+            if headers is not None and not _is_same_host(
+                redirect_location,
+                scheme,
+                u.host.strip("[]") if u.host is not None else None,
+                u.port,
+            ):
+                headers_to_remove = retries.remove_headers_on_redirect | {"host"}
+                new_headers = headers.copy()
+                for header in headers:
+                    if header.lower() in headers_to_remove:
+                        new_headers.pop(header, None)
+                headers = new_headers
+
+            try:
+                retries = retries.increment(
+                    method, url, response=response, _pool=response._pool
+                )
+            except MaxRetryError:
+                if retries.raise_on_redirect:
+                    response.drain_conn()
+                    raise
+                return response
+
+            if retries.cache_response_body and response._body is None:
+                response.read(cache_content=True)
+            response.drain_conn()
+            retries.sleep_for_retry(response)
+            log.debug("Redirecting %s -> %s", url, redirect_location)
+
+            new_promise = self.urlopen(
+                method,
+                redirect_location,
+                True,
+                body=body,
+                headers=headers,
+                retries=retries,
+                assert_same_host=assert_same_host,
+                timeout=timeout,
+                pool_timeout=pool_timeout,
+                release_conn=True,
+                chunked=chunked,
+                body_pos=body_pos,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                multiplexed=True,
+                **response_kw,
+            )
+
+            return self.get_response(promise=new_promise if promise else None)
+
+        # Check if we should retry the HTTP response.
+        has_retry_after = bool(response.headers.get("Retry-After"))
+        retries = typing.cast(Retry, from_promise.get_parameter("retries"))
+
+        if retries.is_retry(method, response.status, has_retry_after):
+            url = typing.cast(str, from_promise.get_parameter("pm_url"))
+            body = typing.cast(
+                typing.Union[_TYPE_BODY, None], from_promise.get_parameter("body")
+            )
+            headers = typing.cast(
+                typing.Union[HTTPHeaderDict, None],
+                from_promise.get_parameter("headers"),
+            )
+            preload_content = typing.cast(
+                bool, from_promise.get_parameter("preload_content")
+            )
+            decode_content = typing.cast(
+                bool, from_promise.get_parameter("decode_content")
+            )
+            timeout = typing.cast(
+                typing.Union[_TYPE_TIMEOUT, None], from_promise.get_parameter("timeout")
+            )
+            assert_same_host = typing.cast(
+                bool, from_promise.get_parameter("assert_same_host")
+            )
+            pool_timeout = from_promise.get_parameter("pool_timeout")
+            response_kw = typing.cast(
+                typing.MutableMapping[str, typing.Any],
+                from_promise.get_parameter("response_kw"),
+            )
+            chunked = typing.cast(bool, from_promise.get_parameter("chunked"))
+            body_pos = typing.cast(
+                _TYPE_BODY_POSITION, from_promise.get_parameter("body_pos")
+            )
+
+            try:
+                retries = retries.increment(
+                    method, url, response=response, _pool=response._pool
+                )
+            except MaxRetryError:
+                if (
+                    retries.raise_on_status
+                ):  # Defensive: pool handles status exhaustion.
+                    response.drain_conn()
+                    raise
+                return response
+
+            if retries.cache_response_body and response._body is None:
+                response.read(cache_content=True)
+            response.drain_conn()
+            retries.sleep(response)
+            log.debug("Retry: %s", url)
+            new_promise = self.urlopen(
+                method,
+                url,
+                True,
+                body=body,
+                headers=headers,
+                retries=retries,
+                assert_same_host=assert_same_host,
+                timeout=timeout,
+                pool_timeout=pool_timeout,
+                release_conn=False,
+                chunked=chunked,
+                body_pos=body_pos,
+                preload_content=preload_content,
+                decode_content=decode_content,
+                multiplexed=True,
+                **response_kw,
+            )
+
+            return self.get_response(promise=new_promise if promise else None)
+
+        extension = from_promise.get_parameter("extension")
+
+        # Pool may have already set&start extension.
+        if extension is not None and response.extension is None:
+            if response.status == 101 or (
+                200 <= response.status < 300 and method == "CONNECT"
+            ):  # Defensive: extension startup fallback for custom pools.
+                response.start_extension(extension)
+
+        return response
+
+    @typing.overload  # type: ignore[override]
+    def urlopen(
+        self,
+        method: str,
+        url: str,
+        redirect: bool = True,
+        *,
+        multiplexed: Literal[False] = ...,
+        **kw: typing.Any,
+    ) -> HTTPResponse: ...
+
+    @typing.overload
+    def urlopen(
+        self,
+        method: str,
+        url: str,
+        redirect: bool = True,
+        *,
+        multiplexed: Literal[True],
+        **kw: typing.Any,
+    ) -> ResponsePromise: ...
+
+    def urlopen(
         self, method: str, url: str, redirect: bool = True, **kw: typing.Any
-    ) -> BaseHTTPResponse:
+    ) -> HTTPResponse | ResponsePromise:
         """
         Same as :meth:`urllib3.HTTPConnectionPool.urlopen`
         with custom cross-host redirect logic and only sends the request-uri
@@ -438,25 +901,79 @@ class PoolManager(RequestMethods):
         if u.scheme is None:
             warnings.warn(
                 "URLs without a scheme (ie 'https://') are deprecated and will raise an error "
-                "in urllib3 v3.0. To avoid this FutureWarning ensure all URLs "
+                "in a future version of urllib3. To avoid this DeprecationWarning ensure all URLs "
                 "start with 'https://' or 'http://'. Read more in this issue: "
                 "https://github.com/urllib3/urllib3/issues/2920",
-                category=FutureWarning,
+                category=DeprecationWarning,
                 stacklevel=2,
             )
 
-        conn = self.connection_from_host(u.host, port=u.port, scheme=u.scheme)
+        # if we passed manually an extension to urlopen, we want to manually
+        # disable svn if they are incompatible with said extension.
+        pool_kwargs = None
 
-        kw["assert_same_host"] = False
-        kw["redirect"] = False
+        extension = kw.get("extension")
+        if extension is not None:
+            disabled_svn = set()
 
-        if "headers" not in kw:
-            kw["headers"] = self.headers
+            pool_kwargs = {}
 
-        if self._proxy_requires_url_absolute_form(u):
-            response = conn.urlopen(method, u._replace(fragment=None).url, **kw)
-        else:
-            response = conn.urlopen(method, u.request_uri, **kw)
+            supported = extension.supported_svn()
+            if len(supported) != 3:
+                if HttpVersion.h11 not in supported:
+                    disabled_svn.add(HttpVersion.h11)
+                if HttpVersion.h2 not in supported:
+                    disabled_svn.add(HttpVersion.h2)
+                if HttpVersion.h3 not in supported:
+                    disabled_svn.add(HttpVersion.h3)
+
+            pool_kwargs["disabled_svn"] = disabled_svn
+
+        conn = self.connection_from_host(
+            _encode_host(u.host, u.scheme),
+            port=u.port,
+            scheme=u.scheme,
+            pool_kwargs=pool_kwargs,
+        )
+
+        try:
+            if u.scheme not in (None, "http", "https"):
+                from .contrib.webextensions import load_extension
+
+                extension = load_extension(*parse_extension(u.scheme))  # type: ignore[arg-type]
+                kw["extension"] = extension()
+                kw.update(kw["extension"].urlopen_kwargs)
+
+            kw["assert_same_host"] = False
+            kw["redirect"] = False
+
+            if "headers" not in kw:
+                kw["headers"] = self.headers
+
+            if self._proxy_requires_url_absolute_form(u):
+                # Leave URL normalization to the pool to avoid decoding zone IDs twice.
+                response = conn.urlopen(method, url.split("#", 1)[0], **kw)
+            else:
+                response = conn.urlopen(method, u.request_uri, **kw)
+        finally:
+            self.pools.release()
+
+        if kw.get("multiplexed"):
+            if isinstance(response, ResponsePromise):
+                response.set_parameter("pm_redirect", redirect)
+                response.set_parameter("pm_url", url)
+
+                return response
+
+            # the established connection is not capable of doing multiplexed request
+            kw["multiplexed"] = False
+
+        # we are relaxing that constraint to behave properly
+        # with 3rd party mocking tool such as vcrpy.
+        # see https://github.com/jawah/urllib3.future/issues/320
+        # for more details.
+        # assert isinstance(response, HTTPResponse)
+        response = typing.cast(HTTPResponse, response)
 
         redirect_location = redirect and response.get_redirect_location()
         if not redirect_location:
@@ -465,31 +982,34 @@ class PoolManager(RequestMethods):
         # Support relative URLs for redirecting.
         redirect_location = urljoin(url, redirect_location)
 
+        # RFC 7231, Section 6.4.4
         if response.status == 303:
-            # Change the method according to RFC 9110, Section 15.4.4.
             method = "GET"
-            # And lose the body not to transfer anything sensitive.
             kw["body"] = None
-            # The body is gone, so the state that describes it has to go too:
-            # there is nothing left to frame with chunked transfer encoding,
-            # and nothing left to rewind.
             kw["chunked"] = False
             kw["body_pos"] = None
-            kw["headers"] = HTTPHeaderDict(kw["headers"])._prepare_for_method_change()
+            kw["headers"] = HTTPHeaderDict(kw["headers"])
+
+            for should_be_removed_header in NOT_FORWARDABLE_HEADERS:
+                kw["headers"].discard(should_be_removed_header)
 
         retries = kw.get("retries", response.retries)
         if not isinstance(retries, Retry):
             retries = Retry.from_int(retries, redirect=redirect)
 
-        # Strip headers marked as unsafe to forward to the redirected location.
-        # Check remove_headers_on_redirect to avoid a potential network call within
-        # conn.is_same_host() which may use socket.gethostbyname() in the future.
-        if retries.remove_headers_on_redirect and not conn.is_same_host(
-            redirect_location
+        # The pool may belong to the proxy. Compare destination origins instead,
+        # and remove Host so it can be rebuilt for a cross-origin redirect.
+        scheme = u.scheme or "http"
+        if kw["headers"] is not None and not _is_same_host(
+            redirect_location,
+            scheme,
+            u.host.strip("[]") if u.host is not None else None,
+            u.port,
         ):
+            headers_to_remove = retries.remove_headers_on_redirect | {"host"}
             new_headers = kw["headers"].copy()
             for header in kw["headers"]:
-                if header.lower() in retries.remove_headers_on_redirect:
+                if header.lower() in headers_to_remove:
                     new_headers.pop(header, None)
             kw["headers"] = new_headers
 
@@ -507,7 +1027,16 @@ class PoolManager(RequestMethods):
         log.info("Redirecting %s -> %s", url, redirect_location)
 
         response.drain_conn()
-        return self.urlopen(method, redirect_location, **kw)
+        return self.urlopen(method, redirect_location, **kw)  # type: ignore[no-any-return]
+
+    def __repr__(self) -> str:
+        with self.pools._lock:
+            inner_repr = "; ".join(repr(p) for p in self.pools._registry.values())
+
+            if inner_repr:
+                inner_repr += " "
+
+            return f"<PoolManager {inner_repr}{self.pools}>"
 
 
 class ProxyManager(PoolManager):
@@ -551,17 +1080,15 @@ class ProxyManager(PoolManager):
 
         proxy = urllib3.ProxyManager("https://localhost:3128/")
 
-        resp1 = proxy.request("GET", "http://google.com/")
-        resp2 = proxy.request("GET", "http://httpbin.org/")
+        resp1 = proxy.request("GET", "https://google.com/")
+        resp2 = proxy.request("GET", "https://httpbin.org/")
 
-        # One pool was shared by both plain HTTP requests.
         print(len(proxy.pools))
         # 1
 
         resp3 = proxy.request("GET", "https://httpbin.org/")
         resp4 = proxy.request("GET", "https://twitter.com/")
 
-        # A separate pool was added for each HTTPS target.
         print(len(proxy.pools))
         # 3
 
@@ -575,7 +1102,7 @@ class ProxyManager(PoolManager):
         proxy_headers: typing.Mapping[str, str] | None = None,
         proxy_ssl_context: ssl.SSLContext | None = None,
         use_forwarding_for_https: bool = False,
-        proxy_assert_hostname: None | str | typing.Literal[False] = None,
+        proxy_assert_hostname: None | str | Literal[False] = None,
         proxy_assert_fingerprint: str | None = None,
         **connection_pool_kw: typing.Any,
     ) -> None:
@@ -588,30 +1115,13 @@ class ProxyManager(PoolManager):
         if proxy.scheme not in ("http", "https"):
             raise ProxySchemeUnknown(proxy.scheme)
 
-        # Keep the deprecated ssl_context fallback on the manager for
-        # compatibility, while passing only explicit proxy policy to connections.
-        self.proxy_ssl_context = proxy_ssl_context
-        if (
-            use_forwarding_for_https
-            and proxy.scheme == "https"
-            and connection_pool_kw.get("ssl_context") is not None
-        ):
-            warnings.warn(
-                "Passing ssl_context when use_forwarding_for_https=True is deprecated "
-                "and will raise an error in urllib3 v3.0. "
-                "Use proxy_ssl_context to configure the TLS connection to the proxy.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            if self.proxy_ssl_context is None:
-                self.proxy_ssl_context = connection_pool_kw.get("ssl_context")
-
-        if proxy.port is None:
+        if not proxy.port:
             port = port_by_scheme.get(proxy.scheme, 80)
             proxy = proxy._replace(port=port)
 
         self.proxy = proxy
         self.proxy_headers = proxy_headers or {}
+        self.proxy_ssl_context = proxy_ssl_context
         self.proxy_config = ProxyConfig(
             proxy_ssl_context,
             use_forwarding_for_https,
@@ -623,6 +1133,11 @@ class ProxyManager(PoolManager):
         connection_pool_kw["_proxy_headers"] = self.proxy_headers
         connection_pool_kw["_proxy_config"] = self.proxy_config
 
+        if "disabled_svn" not in connection_pool_kw:
+            connection_pool_kw["disabled_svn"] = set()
+
+        connection_pool_kw["disabled_svn"].add(HttpVersion.h3)
+
         super().__init__(num_pools, headers, **connection_pool_kw)
 
     def connection_from_host(
@@ -632,13 +1147,18 @@ class ProxyManager(PoolManager):
         scheme: str | None = "http",
         pool_kwargs: dict[str, typing.Any] | None = None,
     ) -> HTTPConnectionPool:
-        if scheme == "https":
+        if scheme in {"https", "wss", "sse"}:
             return super().connection_from_host(
                 host, port, scheme, pool_kwargs=pool_kwargs
             )
 
+        assert self.proxy is not None
+
         return super().connection_from_host(
-            self.proxy.host, self.proxy.port, self.proxy.scheme, pool_kwargs=pool_kwargs  # type: ignore[union-attr]
+            _encode_host(self.proxy.host, self.proxy.scheme),
+            self.proxy.port,
+            self.proxy.scheme,
+            pool_kwargs=pool_kwargs,
         )
 
     def _set_proxy_headers(
@@ -658,9 +1178,35 @@ class ProxyManager(PoolManager):
             headers_.update(headers)
         return headers_
 
-    def urlopen(  # type: ignore[override]
-        self, method: str, url: str, redirect: bool = True, **kw: typing.Any
-    ) -> BaseHTTPResponse:
+    @typing.overload  # type: ignore[override]
+    def urlopen(
+        self,
+        method: str,
+        url: str,
+        redirect: bool = True,
+        *,
+        multiplexed: Literal[False] = ...,
+        **kw: typing.Any,
+    ) -> HTTPResponse: ...
+
+    @typing.overload
+    def urlopen(
+        self,
+        method: str,
+        url: str,
+        redirect: bool = True,
+        *,
+        multiplexed: Literal[True],
+        **kw: typing.Any,
+    ) -> ResponsePromise: ...
+
+    def urlopen(
+        self,
+        method: str,
+        url: str,
+        redirect: bool = True,
+        **kw: typing.Any,
+    ) -> HTTPResponse | ResponsePromise:
         "Same as HTTP(S)ConnectionPool.urlopen, ``url`` must be absolute."
         u = parse_url(url)
         if not connection_requires_http_tunnel(self.proxy, self.proxy_config, u.scheme):
@@ -670,7 +1216,16 @@ class ProxyManager(PoolManager):
             headers = kw.get("headers", self.headers)
             kw["headers"] = self._set_proxy_headers(url, headers)
 
-        return super().urlopen(method, url, redirect=redirect, **kw)
+        return super().urlopen(method, url, redirect=redirect, **kw)  # type: ignore[no-any-return]
+
+    def __repr__(self) -> str:
+        with self.pools._lock:
+            inner_repr = "; ".join(repr(p) for p in self.pools._registry.values())
+
+            if inner_repr:
+                inner_repr += " "
+
+            return f"<ProxyManager {self.proxy} {inner_repr}{self.pools}>"
 
 
 def proxy_from_url(url: str, **kw: typing.Any) -> ProxyManager:
