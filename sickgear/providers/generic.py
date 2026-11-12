@@ -734,7 +734,15 @@ class GenericProvider(object):
             (sickgear.TELEGRAM_ACCESS_TOKEN, 'telegram_access_token'),
         ] + [(_k[1], f'sg_apikey_{_k[0]}') for _k in sickgear.API_KEYS if _k[1]] +\
             ([], [(sickgear.SUBTITLES_SERVICES_AUTH[0][1],
-                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)]:
+                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)] +\
+            ([], [  # usernames only for log masking (keys=True), not for the duplicate auth warning
+                (sickgear.WEB_USERNAME, 'sickgear_username'), (sickgear.SAB_USERNAME, 'sab_username'),
+                (sickgear.NZBGET_USERNAME, 'nzbget_username'), (sickgear.TORRENT_USERNAME, 'torrent_username'),
+                (sickgear.KODI_USERNAME, 'kodi_username'), (sickgear.PLEX_USERNAME, 'plex_username'),
+                (sickgear.XBMC_USERNAME, 'xbmc_username'), (sickgear.EMAIL_USER, 'email_user'),
+                (sickgear.ANIDB_USERNAME, 'anidb_username'),
+                (any(sickgear.SUBTITLES_SERVICES_AUTH) and sickgear.SUBTITLES_SERVICES_AUTH[0][0], 'opensubs_user'),
+            ])[keys]:
             if not cur_auth[0] or 4 > len(cur_auth[0]):
                 continue
             if cur_auth[0] not in dedupe.keys():

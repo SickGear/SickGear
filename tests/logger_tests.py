@@ -62,18 +62,20 @@ class DedupeAuthsTests(unittest.TestCase):
             def get_id():
                 return 'rss'
 
-        orig = sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY
-        sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY = (lambda: [Rss()]), 'userkey987'
+        orig = sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY, sickgear.SAB_USERNAME
+        sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY, sickgear.SAB_USERNAME = (
+            (lambda: [Rss()]), 'userkey987', 'sabuser')
         try:
             auths = sickgear.GenericProvider.dedupe_auths(True)
             dupes = sickgear.GenericProvider.dedupe_auths()
         finally:
-            sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY = orig
+            sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY, sickgear.SAB_USERNAME = orig
         self.assertIn('rsskey123456', auths)
         self.assertIn('userkey987', auths)
         self.assertNotIn('bob', auths)
         self.assertIn('bobby_tables', auths)
         self.assertIn('424242', auths)
+        self.assertIn('sabuser', auths)
         self.assertEqual([], dupes)
 
 
