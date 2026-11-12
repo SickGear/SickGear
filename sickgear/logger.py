@@ -80,8 +80,17 @@ class RedactingFilter(logging.Filter):
         cls._rxc = auths and re.compile('(?i)%s' % '|'.join(
             [re.escape(_a) for _a in sorted(auths, key=len, reverse=True)])) or None
 
-    def _mask(self, text):
-        return self._rxc.sub(lambda m: sickgear.helpers.starify(m.group(0)), text)
+    @classmethod
+    def _mask(cls, text):
+        return cls._rxc.sub(lambda m: sickgear.helpers.starify(m.group(0)), text)
+
+    @classmethod
+    def mask_text(cls, text):
+        """Mask secrets in text destined for somewhere other than a log handler (UI error list, exit message)."""
+        cls._refresh()
+        if cls._rxc and isinstance(text, str):
+            return cls._mask(text)
+        return text
 
     def filter(self, record):
         self._refresh()
@@ -239,6 +248,7 @@ class SBRotatingLogHandler(object):
         """
         mem_key = 'logger'
         for to_log in log_list:
+            to_log = RedactingFilter.mask_text(to_log)  # mask here too, out_line also feeds ErrorViewer below
             log_id = md5_for_text(to_log)
             now = SGDatetime.timestamp_near()
             expired = now > sickgear.MEMCACHE.get(mem_key, {}).get(log_id, 0)
@@ -282,7 +292,7 @@ class SBRotatingLogHandler(object):
         log(error_msg, ERROR)
 
         if not self.console_logging:
-            sys.exit(error_msg.encode(sickgear.SYS_ENCODING, 'xmlcharrefreplace'))
+            sys.exit(RedactingFilter.mask_text(error_msg).encode(sickgear.SYS_ENCODING, 'xmlcharrefreplace'))
         else:
             sys.exit(1)
 

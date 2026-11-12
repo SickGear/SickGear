@@ -42,6 +42,21 @@ class RedactingFilterTests(unittest.TestCase):
         self.assertIn('sh0r****', rec.exc_text)
         self.assertNotIn('sh0rtkey', logging.Formatter().format(rec))
 
+    def test_error_viewer_masked(self):
+        from sickgear import classes
+        classes.ErrorViewer.errors = []
+        logger.log('ui error with sh0rtkey', logger.ERROR)
+        self.assertEqual(1, len(classes.ErrorViewer.errors))
+        self.assertNotIn('sh0rtkey', classes.ErrorViewer.errors[0].message)
+        self.assertIn('sh0r****', classes.ErrorViewer.errors[0].message)
+
+    def test_no_secrets_loaded(self):
+        self.set_auths([])
+        self.assertEqual('startup line', logger.RedactingFilter.mask_text('startup line'))
+        self.assertTrue(logger.RedactingFilter().filter(_rec('startup line')))
+        self.set_auths(['sh0rtkey'])
+        self.assertEqual(42, logger.RedactingFilter.mask_text(42))
+
     def test_reset_picks_up_new_secret(self):
         f = logger.RedactingFilter()
         f.filter(_rec('warm cache'))
