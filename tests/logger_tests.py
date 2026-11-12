@@ -51,5 +51,25 @@ class RedactingFilterTests(unittest.TestCase):
         self.assertEqual('key newse*****', rec.getMessage())
 
 
+class DedupeAuthsTests(unittest.TestCase):
+    def test_rss_url_query_and_pushover_userkey(self):
+        class Rss(object):
+            url = 'https://feed.example/rss?user=bob&passkey=rsskey123456'
+
+            @staticmethod
+            def get_id():
+                return 'rss'
+
+        orig = sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY
+        sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY = (lambda: [Rss()]), 'userkey987'
+        try:
+            auths = sickgear.GenericProvider.dedupe_auths(True)
+        finally:
+            sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY = orig
+        self.assertIn('rsskey123456', auths)
+        self.assertIn('userkey987', auths)
+        self.assertNotIn('bob', auths)
+
+
 if '__main__' == __name__:
     unittest.main()

@@ -689,8 +689,10 @@ class GenericProvider(object):
         for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
-            for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
+            for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']:
                 auth = (getattr(cur_p, cur_kt, '') or '').strip()
+                if 'url' == cur_kt:
+                    auth = urlparse(auth).query  # rss feed urls can carry passkey/rsskey params
                 if auth and '0' != auth and 'sg=0' != auth:
                     auth = rxc_cookie.sub('', auth)
                     if '=' not in auth:
@@ -723,7 +725,7 @@ class GenericProvider(object):
             (sickgear.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
             (('', sickgear.GROWL_HOST[:sickgear.GROWL_HOST.find('@')])['@' in sickgear.GROWL_HOST], 'growl_host'),
             (sickgear.PUSHBULLET_ACCESS_TOKEN, 'pushbullet_access_token'),
-            (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'),
+            (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'), (sickgear.PUSHOVER_USERKEY, 'pushover_userkey'),
             (sickgear.PROWL_API, 'prowl_api'),
             (sickgear.PUSHALOT_AUTHORIZATIONTOKEN, 'pushalot_authorizationtoken'),
             (sickgear.SLACK_ACCESS_TOKEN, 'slack_access_token'),
