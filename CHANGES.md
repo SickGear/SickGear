@@ -102,6 +102,8 @@
 * Add Charset Normalizer 3.5.3 (0b45fe2)
 * Add wassima 2.1.5 (4052aa7)
 * Add niquests 3.21.3 (3ebbc84)
+* Change use niquests in place of requests for all HTTP activity
+* Remove Requests library 2.34.2 (6e83187), replaced by niquests
 
 
 [develop]

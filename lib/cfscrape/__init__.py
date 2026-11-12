@@ -41,7 +41,7 @@ class CloudflareScraper(Session):
     def __init__(self, **kwargs):
         super(CloudflareScraper, self).__init__()
 
-        if 'requests' in self.headers['User-Agent']:
+        if 'niquests' in self.headers['User-Agent']:
             # Set a random User-Agent if no custom User-Agent has been set
             self.headers['User-Agent'] = random.choice(DEFAULT_USER_AGENTS)
         self.cf_ua = self.headers['User-Agent']

@@ -4,6 +4,7 @@
 import ast
 import codecs
 import datetime
+import functools
 import getpass
 import hashlib
 import io
@@ -780,10 +781,12 @@ class _IdleLimitPoolMixin(object):
     close a pooled connection that is idle longer than KEEP_ALIVE_IDLE, instead of a request on it.
     A router or firewall can drop an idle connection with no sign, then a request on it waits for its full timeout
     """
-    def _get_conn(self, timeout=None):
-        conn = super()._get_conn(timeout)
+    def _get_conn(self, timeout=None, **kwargs):
+        conn = super()._get_conn(timeout, **kwargs)
         idle_since = getattr(conn, 'sg_idle_since', None)
-        if None is not idle_since and KEEP_ALIVE_IDLE < time.monotonic() - idle_since:
+        # a multiplexed connection is handed out while a request is still on it, close only one that is idle
+        if None is not idle_since and getattr(conn, 'is_idle', True) \
+                and KEEP_ALIVE_IDLE < time.monotonic() - idle_since:
             conn.close()  # the pool connects it again, as it does for a dropped connection
         return conn
 
@@ -1015,9 +1018,10 @@ def get_url(url,  # type: AnyStr
             if post_json:
                 kwargs.setdefault('json', post_json)
 
-            method = session.post
+            # niquests post() has no **kwargs, so route via request() where CloudflareScraper pops url_solver
+            method = functools.partial(session.request, 'POST')
         else:
-            method = session.get
+            method = functools.partial(session.request, 'GET')
 
         for r in range(0, 5):
             response = method(url, timeout=timeout, **kwargs)
@@ -1039,7 +1043,7 @@ def get_url(url,  # type: AnyStr
             if encoding:
                 response.encoding = encoding
             elif not response.encoding or 'charset' not in response.headers.get('Content-Type', ''):
-                response.encoding = response.apparent_encoding
+                response.encoding = None  # niquests guesses via charset_normalizer when None
 
         # noinspection PyProtectedMember
         if provider and not proxy_browser and provider._has_signature(response.text):

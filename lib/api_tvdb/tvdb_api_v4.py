@@ -152,8 +152,8 @@ retries = Retry(total=3,
                 status_forcelist=[429, 500, 502, 503, 504],
                 allowed_methods=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'])
 # noinspection HttpUrlsUsage
-s.mount('http://', HTTPAdapter(TimeoutHTTPAdapter(max_retries=retries)))
-s.mount('https://', HTTPAdapter(TimeoutHTTPAdapter(max_retries=retries)))
+s.mount('http://', TimeoutHTTPAdapter(max_retries=retries))
+s.mount('https://', TimeoutHTTPAdapter(max_retries=retries))
 base_request_para = dict(session=s, hooks={'response': _record_hook}, raise_skip_exception=True, auth=TvdbAuth())
 
 
