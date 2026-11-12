@@ -9178,7 +9178,7 @@ class ConfigGeneral(Config):
             result['result'] = 'Failed: key doesn\'t exist'
         else:
             sickgear.API_KEYS = [ak for ak in sickgear.API_KEYS if ak[0] and api_key != ak[1]]
-            logger.debug(f'Revoked [{app_name}] apikey [{api_key}]')
+            logger.debug(f'Revoked [{app_name}] apikey')
             result.update(dict(result='Success: apikey removed', removed=True))
             sickgear.save_config()
             ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))

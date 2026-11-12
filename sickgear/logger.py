@@ -57,6 +57,49 @@ class NullHandler(logging.Handler):
         pass
 
 
+class RedactingFilter(logging.Filter):
+    """Mask known auth secrets (from GenericProvider.dedupe_auths) in every record before it reaches a handler."""
+    _rxc = None
+    _expires = 0  # class level so reset() invalidates every handler's filter at once
+
+    @classmethod
+    def reset(cls):
+        """Call after config load/save so new or changed secrets are masked immediately."""
+        cls._expires = 0
+
+    @classmethod
+    def _refresh(cls):
+        if time.time() < cls._expires:
+            return
+        try:
+            auths = [_a for _a in sickgear.GenericProvider.dedupe_auths(True) if _a]
+        except (BaseException, Exception):
+            auths = []
+        # retry soon while nothing is loaded yet, otherwise rely on reset() plus a 60s safety net
+        cls._expires = time.time() + (5, 60)[bool(auths)]
+        cls._rxc = auths and re.compile('(?i)%s' % '|'.join(
+            [re.escape(_a) for _a in sorted(auths, key=len, reverse=True)])) or None
+
+    def _mask(self, text):
+        return self._rxc.sub(lambda m: sickgear.helpers.starify(m.group(0)), text)
+
+    def filter(self, record):
+        self._refresh()
+        if self._rxc:
+            try:
+                record.msg, record.args = self._mask(record.getMessage()), ()
+            except (BaseException, Exception):
+                pass
+            if record.exc_info and not record.exc_text:
+                # pre-render so Formatter uses the masked text instead of the raw exc_info
+                record.exc_text = logging.Formatter().formatException(record.exc_info)
+            if record.exc_text:
+                record.exc_text = self._mask(record.exc_text)
+            if record.stack_info:
+                record.stack_info = self._mask(record.stack_info)
+        return True
+
+
 class SBRotatingLogHandler(object):
     def __init__(self, log_file):
         """
@@ -126,6 +169,7 @@ class SBRotatingLogHandler(object):
             h_console = logging.StreamHandler()
             if None is not h_console.stream:
                 h_console.setLevel((logging.INFO, logging.DEBUG)[sickgear.DEBUG])
+                h_console.addFilter(RedactingFilter())
                 h_console.setFormatter(DispatchingFormatter(self._formatters(), logging.Formatter('%(message)s'), ))
                 self.h_console = h_console
 
@@ -138,6 +182,7 @@ class SBRotatingLogHandler(object):
 
         h_file = TimedCompressedRotatingFileHandler(self.log_file_path, logger=self)
         h_file.setLevel(reverseNames[sickgear.FILE_LOGGING_PRESET])
+        h_file.addFilter(RedactingFilter())
         h_file.setFormatter(DispatchingFormatter(self._formatters(False), logging.Formatter('%(message)s'), ))
         self.h_file = h_file
 
