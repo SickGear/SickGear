@@ -99,6 +99,7 @@
 * Add h11 0.16.0 (1c5b075)
 * Add jh2 5.0.15 (3b08a9e)
 * Change replace urllib3 2.8.0 (b1d30ab) with urllib3.future 2.25.907 (c2e56e1)
+* Add Charset Normalizer 3.5.3 (0b45fe2)
 
 
 [develop]
