@@ -55,6 +55,8 @@ class DedupeAuthsTests(unittest.TestCase):
     def test_rss_url_query_and_pushover_userkey(self):
         class Rss(object):
             url = 'https://feed.example/rss?user=bob&passkey=rsskey123456'
+            username = 'bobby_tables'
+            uid = '424242'
 
             @staticmethod
             def get_id():
@@ -64,11 +66,15 @@ class DedupeAuthsTests(unittest.TestCase):
         sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY = (lambda: [Rss()]), 'userkey987'
         try:
             auths = sickgear.GenericProvider.dedupe_auths(True)
+            dupes = sickgear.GenericProvider.dedupe_auths()
         finally:
             sickgear.providers.sorted_sources, sickgear.PUSHOVER_USERKEY = orig
         self.assertIn('rsskey123456', auths)
         self.assertIn('userkey987', auths)
         self.assertNotIn('bob', auths)
+        self.assertIn('bobby_tables', auths)
+        self.assertIn('424242', auths)
+        self.assertEqual([], dupes)
 
 
 if '__main__' == __name__:

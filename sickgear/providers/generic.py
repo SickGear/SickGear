@@ -689,7 +689,9 @@ class GenericProvider(object):
         for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
-            for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']:
+            # username/uid only for log masking (keys=True), same username at two sites is not a duplicate auth
+            for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']
+                           + ([], ['username', 'uid'])[keys]):
                 auth = (getattr(cur_p, cur_kt, '') or '').strip()
                 if 'url' == cur_kt:
                     auth = urlparse(auth).query  # rss feed urls can carry passkey/rsskey params
