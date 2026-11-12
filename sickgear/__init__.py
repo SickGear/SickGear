@@ -1678,6 +1678,7 @@ def init_stage_2():
     config_events = ConfigEvents(_save_config)
     config_events.start()
 
+    logger.RedactingFilter.reset()
     __INITIALIZED__ = True
     return True
 
@@ -1842,6 +1843,7 @@ def save_config(force=False):
     if not CONFIG_LOADED:
         return
 
+    logger.RedactingFilter.reset()
     # use queue if it's available, otherwise, call save_config directly
     hasattr(config_events, 'put') and config_events.put(force) or _save_config(force)
 

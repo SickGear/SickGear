@@ -689,8 +689,12 @@ class GenericProvider(object):
         for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
-            for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
+            # username/uid only for log masking (keys=True), same username at two sites is not a duplicate auth
+            for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']
+                           + ([], ['username', 'uid'])[keys]):
                 auth = (getattr(cur_p, cur_kt, '') or '').strip()
+                if 'url' == cur_kt:
+                    auth = urlparse(auth).query  # rss feed urls can carry passkey/rsskey params
                 if auth and '0' != auth and 'sg=0' != auth:
                     auth = rxc_cookie.sub('', auth)
                     if '=' not in auth:
@@ -723,14 +727,22 @@ class GenericProvider(object):
             (sickgear.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
             (('', sickgear.GROWL_HOST[:sickgear.GROWL_HOST.find('@')])['@' in sickgear.GROWL_HOST], 'growl_host'),
             (sickgear.PUSHBULLET_ACCESS_TOKEN, 'pushbullet_access_token'),
-            (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'),
+            (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'), (sickgear.PUSHOVER_USERKEY, 'pushover_userkey'),
             (sickgear.PROWL_API, 'prowl_api'),
             (sickgear.PUSHALOT_AUTHORIZATIONTOKEN, 'pushalot_authorizationtoken'),
             (sickgear.SLACK_ACCESS_TOKEN, 'slack_access_token'),
             (sickgear.TELEGRAM_ACCESS_TOKEN, 'telegram_access_token'),
         ] + [(_k[1], f'sg_apikey_{_k[0]}') for _k in sickgear.API_KEYS if _k[1]] +\
             ([], [(sickgear.SUBTITLES_SERVICES_AUTH[0][1],
-                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)]:
+                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)] +\
+            ([], [  # usernames only for log masking (keys=True), not for the duplicate auth warning
+                (sickgear.WEB_USERNAME, 'sickgear_username'), (sickgear.SAB_USERNAME, 'sab_username'),
+                (sickgear.NZBGET_USERNAME, 'nzbget_username'), (sickgear.TORRENT_USERNAME, 'torrent_username'),
+                (sickgear.KODI_USERNAME, 'kodi_username'), (sickgear.PLEX_USERNAME, 'plex_username'),
+                (sickgear.XBMC_USERNAME, 'xbmc_username'), (sickgear.EMAIL_USER, 'email_user'),
+                (sickgear.ANIDB_USERNAME, 'anidb_username'),
+                (any(sickgear.SUBTITLES_SERVICES_AUTH) and sickgear.SUBTITLES_SERVICES_AUTH[0][0], 'opensubs_user'),
+            ])[keys]:
             if not cur_auth[0] or 4 > len(cur_auth[0]):
                 continue
             if cur_auth[0] not in dedupe.keys():

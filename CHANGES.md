@@ -13,6 +13,7 @@
 * Change output warning instead of error when Github fails to return alt.rar file
 * Change LimeTorrents, TBP, and TokyoToshokan to use proxy_browser for their requests
 * Change load SickGear zoneinfo via the dateutil tz search path instead of the deprecated dateutil.zoneinfo module
+* Change add log filter to mask known passwords, api keys, and tokens in console and log file output
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
