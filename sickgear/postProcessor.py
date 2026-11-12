@@ -1114,11 +1114,7 @@ class PostProcessor(object):
         # if the show directory doesn't exist then make it if allowed
         if not os.path.isdir(ep_obj.show_obj.location) and sickgear.CREATE_MISSING_SHOW_DIRS:
             self._log('Show directory does not exist, creating it', logger.DEBUG)
-            try:
-                os.mkdir(ep_obj.show_obj.location)
-                # do the library update for synoindex
-                notifiers.NotifierFactory().get('SYNOINDEX').addFolder(ep_obj.show_obj.location)
-            except (OSError, IOError):
+            if not helpers.make_path(ep_obj.show_obj.location, syno=True):
                 raise exceptions_helper.PostProcessingFailed(f'Unable to create show directory:'
                                                              f' {ep_obj.show_obj.location}')
 
