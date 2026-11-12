@@ -96,6 +96,7 @@
 * Change web requests with no session, e.g. to TV info sources, to share kept alive connections
 * Change close a kept alive connection that is idle for over 30 seconds, instead of a request on it that can hang
 * Change TorrentLeech to use torrentleech.org
+* Add h11 0.16.0 (1c5b075)
 
 
 [develop]
