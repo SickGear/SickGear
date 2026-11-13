@@ -39,6 +39,7 @@ from hachoir.stream import FileInputStream
 from lxml_etree import etree
 from six import string_types
 
+import sg_helpers
 import sickgear
 from exceptions_helper import SickGearException, AuthException, ex
 from .. import classes, db, helpers, logger, tvcache
@@ -251,7 +252,7 @@ class GenericProvider(object):
 
         self.cache = tvcache.TVCache(self)
 
-        self.session = CloudflareScraper.create_scraper()
+        self.session = CloudflareScraper.create_scraper(resolver=sg_helpers.DNS_RESOLVER or None)
 
         self.headers = {
             # Using USER_AGENT instead of Mozilla to keep same user agent along authentication and download phases,

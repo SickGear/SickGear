@@ -129,6 +129,7 @@ USER_AGENT = ''
 CACHE_DIR = None
 DATA_DIR = None
 PROXY_SETTING = None
+DNS_RESOLVER = None
 TRASH_REMOVE_SHOW = False
 REMOVE_FILENAME_CHARS = None
 MEMCACHE = {}
@@ -832,21 +833,23 @@ class IdleLimitCacheControlAdapter(_IdleLimitAdapterMixin, CacheControlAdapter):
 # adapters, each with its pool of connections, for requests that are made with no session of the caller.
 # A new session is made for each of those requests, and a pool that lives and ends with that session
 # opens a new connection, with a new TLS handshake, for every request
-_shared_adapters = {}  # type: Dict[Optional[AnyStr], requests.adapters.HTTPAdapter]
+_shared_adapters = {}  # type: Dict[Tuple[Optional[AnyStr], Optional[AnyStr]], requests.adapters.HTTPAdapter]
 _shared_adapters_lock = threading.Lock()
 
 
-def _shared_adapter(cache_dir):
-    # type: (Optional[AnyStr]) -> requests.adapters.HTTPAdapter
+def _shared_adapter(cache_dir, resolver=None):
+    # type: (Optional[AnyStr], Optional[AnyStr]) -> requests.adapters.HTTPAdapter
     """
     :param cache_dir: folder of the response cache, or None for an adapter that does not cache
+    :param resolver: url of the DNS resolver, or None for the DNS of the system
     :return: the adapter that all requests with no session of the caller share
     """
     with _shared_adapters_lock:
-        if cache_dir not in _shared_adapters:
-            _shared_adapters[cache_dir] = IdleLimitHTTPAdapter() if None is cache_dir \
-                else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir))
-        return _shared_adapters[cache_dir]
+        key = (cache_dir, resolver)
+        if key not in _shared_adapters:
+            _shared_adapters[key] = IdleLimitHTTPAdapter(resolver=resolver) if None is cache_dir \
+                else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir), resolver=resolver)
+        return _shared_adapters[key]
 
 
 def get_url(url,  # type: AnyStr
@@ -929,11 +932,11 @@ def get_url(url,  # type: AnyStr
     use_shared_adapter = False
     if None is session:
         if (kwargs.get('url_solver') or '').strip():
-            session = CloudflareScraper.create_scraper()
+            session = CloudflareScraper.create_scraper(resolver=DNS_RESOLVER or None)
         else:
             # in case of an empty argument
             kwargs.pop('url_solver', None)
-            session = requests.Session()
+            session = requests.Session(resolver=DNS_RESOLVER or None)
             use_shared_adapter = True
         session.headers.update({'User-Agent': USER_AGENT})
 
@@ -954,11 +957,12 @@ def get_url(url,  # type: AnyStr
     if use_shared_adapter:
         # the session is new, but its connections are kept for the next request to the same site
         for cur_prefix in ('https://', 'http://'):
-            session.mount(cur_prefix, _shared_adapter(cache_dir))
+            session.mount(cur_prefix, _shared_adapter(cache_dir, DNS_RESOLVER or None))
     # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
     elif cache_dir and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
+        # keep the session resolver, CacheControl mounts a new adapter that would otherwise use system DNS
         session = CacheControl(sess=session, cache=caches.FileCache(cache_dir),
-                               adapter_class=IdleLimitCacheControlAdapter)
+                               adapter_class=functools.partial(IdleLimitCacheControlAdapter, resolver=session.resolver))
 
     provider = kwargs.pop('provider', None)
 
