@@ -20,7 +20,7 @@ $(document).ready(function () {
 		return $.SickGear.Root + '/images/flags/svg/lang/' + lang + '.png'
 	}
 
-	$.getJSON($.SickGear.Root + '/add-shows/get-infosrc-languages', {}, function (data) {
+	var lang_request = $.getJSON($.SickGear.Root + '/add-shows/get-infosrc-languages', {}, function (data) {
 		var htmlText = '', currentLangAdded = '',
 			selected = ' selected="selected"', htmlSelected = '',
 			elInfosrcLang = $('#infosrc-lang-select'),
@@ -106,6 +106,7 @@ $(document).ready(function () {
 
 	$('#submit').on('click', function () {
 		if (!okExit('Update')) return !1;
+		if (lang_request) lang_request.abort();
 		$('#exceptions_list').val(getExceptions());
 		if (config.showIsAnime)
 			generateAniGroupList();
