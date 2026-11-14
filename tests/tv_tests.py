@@ -116,6 +116,50 @@ class TVTests(test.SickbeardTestDBCase):
         sickgear.showDict = {show_obj.sid_int: show_obj}
 
 
+class TVCacheResultTests(test.SickbeardTestDBCase):
+
+    def test_multi_ep_cache_result(self):
+        from sickgear import classes, tvcache
+        from sickgear.common import Quality
+
+        show_obj = TVShow(1, 1, 'en')
+        show_obj.name = 'show name'
+        show_obj.want_episode = lambda *args, **kwargs: True
+        sickgear.showList = [show_obj]
+        sickgear.showDict = {show_obj.sid_int: show_obj}
+        show_obj.sxe_ep_obj[1] = {_n: TVEpisode(show_obj, 1, _n) for _n in (2, 3)}
+
+        class Provider(object):
+            name = 'provider'
+            anime_only = False
+
+            @staticmethod
+            def get_id():
+                return 'provider'
+
+            @staticmethod
+            def get_result(ep_obj_list, url):
+                result = classes.NZBSearchResult(ep_obj_list)
+                result.url = url
+                return result
+
+        cache = tvcache.TVCache(Provider())
+        with cache.get_db() as sg_db:
+            sg_db.action(
+                'INSERT INTO provider_cache (provider, name, season, episodes, indexerid, url, time, quality,'
+                ' release_group, version, indexer, size, uid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                ['provider', 'Show.Name.S01E02E03.720p.HDTV.x264-GRP', 1, '|2|3|', 1, 'http://host/nzb', 0,
+                 Quality.HDTV, 'GRP', -1, 1, 1234, 'guid-1'])
+
+        ep_obj = show_obj.sxe_ep_obj[1][2]
+        ep_obj.wanted_quality = [Quality.HDTV]
+        results = cache.search_cache(ep_obj)
+        self.assertEqual(1, len(results))
+        self.assertEqual([2, 3], results[0].episode_numbers)
+        self.assertEqual([2, 3], [_ep.episode for _ep in results[0].ep_obj_list])
+        self.assertEqual((1, 1234, 'guid-1'), (results[0].season, results[0].size, results[0].puid))
+
+
 class TVFormatPatternTests(test.SickbeardTestDBCase):
 
     def setUp(self):
@@ -282,6 +326,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVCacheResultTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVFormatPatternTests)
