@@ -36,7 +36,7 @@ from sg_helpers import long_path, cmdline_runner
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, List, Optional, Tuple, Union
 
 
 class PostProcessor(object):
@@ -52,7 +52,8 @@ class PostProcessor(object):
     IGNORED_FILESTRINGS = ['/.AppleDouble/', '.DS_Store']
 
     def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None,
-                 use_trash=None, webhandler=None, show_obj=None):
+                 use_trash=None, webhandler=None, show_obj=None, client=None, client_uid=None, puid=None):
+        # type: (str, str, str, bool, bool, Any, TVShow, int, Union[int, str], str) -> None
         """
         Creates a new post processor with the given file path and optionally an NZB name.
 
@@ -95,6 +96,12 @@ class PostProcessor(object):
         self.process_method = process_method if process_method else sickgear.PROCESS_METHOD
 
         self.anime_version = None  # anime equivalent of is_proper
+
+        self.client = client  # type: Optional[int]
+
+        self.client_uid = client_uid  # type: Union[int, str]
+
+        self.puid = puid  # type: Optional[str]
 
         self.anidbEpisode = None
 
@@ -1226,7 +1233,8 @@ class PostProcessor(object):
 
         # log it to history
         anime_version = (-1, self.anime_version)[ep_obj.show_obj.is_anime and None is not self.anime_version]
-        history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
+        history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version,
+                             client=self.client, client_uid=self.client_uid, puid=self.puid)
 
         # send notifications
         notifiers.notify_download(ep_obj)

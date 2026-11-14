@@ -51,7 +51,7 @@
 
 # Send "Process Media" requests to SickGear
 #
-# Process Media extension version: 2.8.
+# Process Media extension version: 2.9.
 # <!--
 # For more info and updates please visit forum topic at
 # -->
@@ -596,9 +596,12 @@ def call_sickgear(nzb_name, dir_name, test=False):
     dupescore = nzbget_var('DUPESCORE')
     dupekey = nzbget_var('DUPEKEY')
     nzbid = nzbget_var('NZBID')
+    sg_puid = env_var.get('NZBPR_SICKGEAR_PUID', None)
     params = {'dir_name': dir_name, 'nzb_name': '%s.nzb' % (nzb_name and re.sub(r'(?i)\.nzb$', '', nzb_name) or None),
               'quiet': 1, 'force': 1, 'failed': int(failed), 'stream': 1, 'dupekey': dupekey, 'is_basedir': 0,
               'client': 'nzbget', 'dupescore': dupescore, 'nzbid': nzbid, 'pp_version': __version__}
+    if sg_puid:
+        params['puid'] = sg_puid
     if test:
         params['test'] = '1'
     py_ver = '%s.%s.%s' % sys.version_info[0:3]

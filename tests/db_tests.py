@@ -46,6 +46,27 @@ class DBBasicTests(test.SickbeardTestDBCase):
         self.assertEqual(mainDB.TEST_BASE_VERSION is not None, self.is_testdb(mainDB.MAX_DB_VERSION))
         self.assertEqual(failed_db.TEST_BASE_VERSION is not None, self.is_testdb(failed_db.MAX_DB_VERSION))
 
+    def test_download_identity(self):
+        from sickgear import failed_history, history
+        from sickgear.common import DOWNLOAD_CLIENTS, SNATCHED, Quality
+
+        puid = '[[provider]]-abc123'
+        history._log_history_item(Quality.composite_status(SNATCHED, Quality.HDTV), 1, 123, 1, 2, Quality.HDTV,
+                                  'Show.S01E02.720p.HDTV.x264-GRP', 'provider', puid=puid,
+                                  client=DOWNLOAD_CLIENTS.SABNZBD, client_uid='SABnzbd_nzo_x1')
+        row = history.find_data_by_puidstr(puid)
+        self.assertEqual('Show.S01E02.720p.HDTV.x264-GRP', row['resource'])
+        self.assertEqual('SABnzbd_nzo_x1', row['client_uid'])
+        self.assertIsNone(history.find_data_by_puidstr('[[provider]]-other'))
+
+        self.assertFalse(failed_history.has_failed(puid=puid))
+        failed_history.add_failed('Show.S01E02.720p.HDTV.x264-GRP', puid=puid,
+                                  client=DOWNLOAD_CLIENTS.SABNZBD, client_uid='SABnzbd_nzo_x1')
+        self.assertTrue(failed_history.has_failed(puid=puid))
+        self.assertTrue(failed_history.has_failed(client=DOWNLOAD_CLIENTS.SABNZBD, client_uid='SABnzbd_nzo_x1'))
+        # only trusted clients are matched by client uid
+        self.assertFalse(failed_history.has_failed(client=DOWNLOAD_CLIENTS.NZBGET, client_uid='SABnzbd_nzo_x1'))
+
     def test_mass_action(self):
         field_list = ['show_id', 'indexer_id', 'indexer', 'show_name', 'location', 'network', 'genre', 'classification',
                       'runtime', 'quality', 'airs', 'status', 'flatten_folders', 'paused', 'startyear', 'air_by_date',

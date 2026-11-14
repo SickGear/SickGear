@@ -55,7 +55,7 @@ from . import classes, clients, config, db, helpers, history, image_cache, logge
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
-    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
+    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings, DOWNLOAD_CLIENTS
 from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, is_sickgear_images_cache_dir, real_path,
                       remove_article, remove_file_perm, starify)
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
@@ -4080,7 +4080,7 @@ class HomeProcessMedia(Home):
 
     def process_files(self, dir_name=None, nzb_name=None, quiet=None, process_method=None, force=None,
                       force_replace=None, failed='0', process_type='auto', stream='0', dupekey=None, is_basedir='1',
-                      client=None, **kwargs):
+                      client=None, nzbid=None, puid=None, **kwargs):
 
         if 'test' in kwargs and kwargs['test'] in ['True', True, 1, '1']:
             return 'Connection success!'
@@ -4091,23 +4091,28 @@ class HomeProcessMedia(Home):
             show_id_regex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
             tvid = 0
             show_obj = None
-            nzbget_call = isinstance(client, string_types) and 'nzbget' == client
-            nzbget_dupekey = nzbget_call and isinstance(dupekey, string_types) and \
-                None is not show_id_regex.search(dupekey)
-            if nzbget_dupekey:
-                m = show_id_regex.match(dupekey)
-                istr = m.group(1)
-                for i in sickgear.TVInfoAPI().sources:
-                    if istr == sickgear.TVInfoAPI(i).config.get('dupekey'):
-                        tvid = i
-                        break
-                show_obj = helpers.find_show_by_id({tvid: int(m.group(2))}, no_mapped_ids=True)
+            client_id = DOWNLOAD_CLIENTS.IDS.get(client, None)
+            if (nzbget_call := DOWNLOAD_CLIENTS.NZBGET == client_id):
+                if (nzbget_dupekey := isinstance(dupekey, string_types) and None is not show_id_regex.search(dupekey)):
+                    m = show_id_regex.match(dupekey)
+                    istr = m.group(1)
+                    for i in sickgear.TVInfoAPI().sources:
+                        if istr == sickgear.TVInfoAPI(i).config.get('dupekey'):
+                            tvid = i
+                            break
+                    show_obj = helpers.find_show_by_id({tvid: int(m.group(2))}, no_mapped_ids=True)
+
+                if sickgear.NZBGET_SCRIPT_VERSION != kwargs.get('pp_version', '0'):
+                    logger.error(f'Calling SickGear-NG.py script {kwargs.get("pp_version", "0")} is not current version'
+                                 f' {sickgear.NZBGET_SCRIPT_VERSION}, please update.')
 
             skip_failure_processing = nzbget_call and not nzbget_dupekey
 
-            if nzbget_call and sickgear.NZBGET_SCRIPT_VERSION != kwargs.get('pp_version', '0'):
-                logger.error(f'Calling SickGear-NG.py script {kwargs.get("pp_version", "0")} is not current version'
-                             f' {sickgear.NZBGET_SCRIPT_VERSION}, please update.')
+            if not show_obj and client_id in DOWNLOAD_CLIENTS.TRUSTED_CLIENT_IDS and nzbid:
+                show_obj, puid = history.find_show_puid_by_client_uid(client_id, nzbid)
+
+            if not show_obj and puid:
+                show_obj = history.find_show_by_puidstr(puid)
 
             if sickgear.NZBGET_SKIP_PM and nzbget_call and nzbget_dupekey and nzb_name and show_obj:
                 processTV.process_minimal(nzb_name, show_obj,
@@ -4138,7 +4143,8 @@ class HomeProcessMedia(Home):
                                                failed='0' != failed,
                                                webhandler=None if '0' == stream else self.send_message,
                                                show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                               skip_failure_processing=skip_failure_processing, client=client)
+                                               skip_failure_processing=skip_failure_processing, client=client_id,
+                                               client_uid=nzbid, puid=puid)
 
                 if '0' == stream:
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)

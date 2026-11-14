@@ -19,7 +19,7 @@ from .. import db
 from ..common import Quality
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 2
+MAX_DB_VERSION = 3
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -101,3 +101,31 @@ class AddIndexerToTables(HistoryStatus):
         self.connection.action('VACUUM')
 
         self.set_db_version(2, check_db_version=False)
+
+
+class AddPuidToTables(AddIndexerToTables):
+    def test(self):
+        return self.has_column('history', 'puid')
+
+    def execute(self):
+        if not self.has_column('history', 'puid'):
+            self.add_column('history', 'puid', 'TEXT', default=None)
+
+        if not self.has_column('history', 'client'):
+            self.add_column('history', 'client', 'INTEGER', default=None)
+
+        if not self.has_column('history', 'client_uid'):
+            self.add_column('history', 'client_uid', 'TEXT', default=None)
+
+        if not self.has_column('failed', 'puid'):
+            self.add_column('failed', 'puid', 'TEXT', default=None)
+
+        if not self.has_column('failed', 'client'):
+            self.add_column('failed', 'client', 'INTEGER', default=None)
+
+        if not self.has_column('failed', 'client_uid'):
+            self.add_column('failed', 'client_uid', 'TEXT', default=None)
+
+        self.connection.action('VACUUM')
+
+        self.set_db_version(3, check_db_version=False)

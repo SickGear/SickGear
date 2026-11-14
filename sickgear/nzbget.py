@@ -18,9 +18,8 @@ import re
 
 import sickgear
 from . import logger
-from .classes import NZBDataSearchResult, NZBSearchResult
 from .common import Quality
-from .helpers import try_int
+from .helpers import try_float, try_int
 from .providers.generic import GenericProvider
 
 from lib.xmlrpclib_to import ServerProxy
@@ -28,8 +27,17 @@ from lib.xmlrpclib_to import ServerProxy
 from _23 import b64encodestring
 from six import moves
 
+# noinspection PyUnreachableCode
+if False:
+    from typing import Union
+    from .classes import NZBDataSearchResult, NZBSearchResult, Proper
+
+
+nzbget_version_regex = re.compile(r'^(\d+\.\d+)')
+
 
 def test_nzbget(host, use_https, username, password, timeout=300):
+    # type: (str, bool, str, str, int) -> bool
 
     result = False
     if not host:
@@ -67,10 +75,10 @@ def test_nzbget(host, use_https, username, password, timeout=300):
 
 
 def send_nzb(search_result):
+    # type: (Union[NZBSearchResult, NZBDataSearchResult, Proper]) -> Union[int, bool]
     """
 
     :param search_result: search result
-    :type search_result: NZBSearchResult or NZBDataSearchResult
     :return:
     """
     result = False
@@ -119,12 +127,40 @@ def send_nzb(search_result):
     try:
         # Find out if nzbget supports priority (Version 9.0+), old versions beginning with a 0.x will use the old cmd
         nzbget_version_str = rpc_client.version()
-        nzbget_version = try_int(nzbget_version_str[:nzbget_version_str.find('.')])
+
+        try:
+            nzbget_version = try_float(nzbget_version_regex.search(nzbget_version_str).group(1), None)
+        except (BaseException, Exception):
+            nzbget_version = None
+
+        if None is nzbget_version:
+            nzbget_version = try_int(nzbget_version_str[:nzbget_version_str.find('.')])
+
+        if None is (puid := getattr(search_result, 'puid_str', None)):
+            puid = []
+        else:
+            puid = [[
+                ("sickgear_puid", puid)
+            ]]
 
         # v13+ has a combined append method that accepts both (url and content)
         # also the return value has changed from boolean to integer
         # (Positive number representing NZBID of the queue item. 0 and negative numbers represent error codes.)
-        if 13 <= nzbget_version:
+        if 25.3 <= nzbget_version:
+            nzbget_result = rpc_client.append(
+                f'{search_result.name}.nzb', (nzbcontent64, search_result.url)[None is nzbcontent64],
+                sickgear.NZBGET_CATEGORY, nzbget_prio, False, False, dupekey, dupescore, 'score', False,
+                *puid
+            )
+
+        elif 16 <= nzbget_version:
+            nzbget_result = rpc_client.append(
+                f'{search_result.name}.nzb', (nzbcontent64, search_result.url)[None is nzbcontent64],
+                sickgear.NZBGET_CATEGORY, nzbget_prio, False, False, dupekey, dupescore, 'score',
+                *puid
+            )
+
+        elif 13 <= nzbget_version:
             nzbget_result = 0 < rpc_client.append(
                 f'{search_result.name}.nzb', (nzbcontent64, search_result.url)[None is nzbcontent64],
                 sickgear.NZBGET_CATEGORY, nzbget_prio, False, False, dupekey, dupescore, 'score')
@@ -167,5 +203,6 @@ def send_nzb(search_result):
             logger.error(f'NZBGet could not add {search_result.name}.nzb to the queue')
     except (BaseException, Exception):
         logger.error(f'Connect Error to NZBGet: could not add {search_result.name}.nzb to the queue')
+        nzbget_result = result = False
 
-    return result
+    return (result, nzbget_result)[isinstance(nzbget_result, int)]

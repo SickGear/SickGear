@@ -18,6 +18,8 @@
 * Change provider cache and search results to carry size, uid, and episode data
 * Change add TV info, size, and uid columns to the provider cache page
 * Change keep aired episodes per season counts on the show object
+* Add download identity tracking for snatches, media process, and failed downloads
+* Update NZBGet Process Media extension, SickGear-NG 2.8 to 2.9
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 

@@ -722,6 +722,7 @@ def migration_code(sg_db):
         20013: sickgear.mainDB.AddHistoryHideColumn,
         20014: sickgear.mainDB.ChangeShowData,
         20015: sickgear.mainDB.ChangeTmdbID,
+        20016: sickgear.mainDB.AddHistoryDownloadIdentity,
         # 20002: sickgear.mainDB.AddCoolSickGearFeature3,
     }
 

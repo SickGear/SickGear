@@ -27,7 +27,7 @@ from exceptions_helper import ex, MultipleShowObjectsException
 from json_helper import json_dumps, json_loads
 
 import sickgear
-from . import common, db, failedProcessor, helpers, logger, notifiers, postProcessor
+from . import common, db, failed_history, failedProcessor, helpers, history, logger, notifiers, postProcessor
 from .common import SNATCHED_ANY
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
@@ -40,7 +40,7 @@ import lib.rarfile.rarfile as rarfile
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr, Dict, List, Optional, Tuple
+    from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
     from .tv import TVShow
 
 
@@ -48,7 +48,8 @@ if False:
 class ProcessTVShow(object):
     """ Process a TV Show """
 
-    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False, client=None):
+    def __init__(self, webhandler=None, is_basedir=True, skip_failure_processing=False, client=None, client_uid=None,
+                 puid=None):
         self.files_passed = 0  # type: int
         self.files_failed = 0  # type: int
         self.fail_detected = False  # type: bool
@@ -56,7 +57,9 @@ class ProcessTVShow(object):
         self._output = []  # type: List
         self.webhandler = webhandler
         self.is_basedir = is_basedir  # type: bool
-        self.client = client  # type: Optional[AnyStr]
+        self.client = client  # type: Optional[int]
+        self.client_uid = client_uid  # type: Union[int, str]
+        self.puid = puid  # type: Optional[str]
 
     @property
     def any_vid_processed(self):
@@ -341,7 +344,9 @@ class ProcessTVShow(object):
             self.is_basedir = True
 
         if None is show_obj:
-            if isinstance(nzb_name, string_types):
+            show_obj = history.find_show_by_client_uid(self.client, self.client_uid)
+
+            if None is show_obj and isinstance(nzb_name, string_types):
                 show_obj = self.check_name(re.sub(r'\.(nzb|torrent)$', '', nzb_name, flags=re.I))
 
             if None is show_obj and dir_name:
@@ -1042,7 +1047,8 @@ class ProcessTVShow(object):
             try:
                 processor = postProcessor.PostProcessor(
                     cur_video_file_path, nzb_name, process_method, force_replace,
-                    use_trash=use_trash, webhandler=self.webhandler, show_obj=show_obj)
+                    use_trash=use_trash, webhandler=self.webhandler, show_obj=show_obj, client=self.client,
+                    client_uid=self.client_uid, puid=self.puid)
 
                 file_success = processor.process()
                 process_fail_message = ''
@@ -1109,11 +1115,18 @@ class ProcessTVShow(object):
             self._log_helper('Download was not added by SickGear, ignoring failure', logger.WARNING)
             return
 
+        if ((self.puid and failed_history.has_failed(puid=self.puid))
+                or (self.client in (common.DOWNLOAD_CLIENTS.SABNZBD,)
+                    and failed_history.has_failed(client=self.client, client_uid=self.client_uid))):
+            self._log_helper('Downlaod has already been set as failed, ignoring failure', logger.WARNING)
+            return
+
         if sickgear.USE_FAILED_DOWNLOADS:
             processor = None
 
             try:
-                processor = failedProcessor.FailedProcessor(dir_name, nzb_name, show_obj)
+                processor = failedProcessor.FailedProcessor(dir_name, nzb_name, show_obj, client=self.client,
+                                                            client_uid=self.client_uid, puid=self.puid)
                 self._set_process_success(processor.process())
                 process_fail_message = ''
             except exceptions_helper.FailedProcessingFailed as e:
@@ -1137,49 +1150,39 @@ class ProcessTVShow(object):
         if failed:
             self._process_failed('', nzb_name=nzb_name, show_obj=show_obj)
         else:
-            processor = postProcessor.PostProcessor('', nzb_name=nzb_name, webhandler=webhandler, show_obj=show_obj)
+            processor = postProcessor.PostProcessor('', nzb_name=nzb_name, webhandler=webhandler, show_obj=show_obj,
+                                                    client=self.client, client_uid=self.client_uid, puid=self.puid)
             processor.process_minimal()
             self._buffer(processor.log.strip('\n'))
 
 
 def process_dir(dir_name, nzb_name=None, process_method=None, force=False, force_replace=None,
                 failed=False, pp_type='auto', cleanup=False, webhandler=None, show_obj=None, is_basedir=True,
-                skip_failure_processing=False, client=None):
+                skip_failure_processing=False, client=None, client_uid=None, puid=None):
+    # type: (str, str, str, bool, bool, bool, str, bool, Any, TVShow, bool, bool, int, Union[int, str], str) -> AnyStr
     """
 
     :param dir_name: dir name
-    :type dir_name: AnyStr
     :param nzb_name: nzb name
-    :type nzb_name: AnyStr or None
     :param process_method: process method
-    :type process_method: AnyStr or None
     :param force:
-    :type force: bool
     :param force_replace:
-    :type force_replace: bool
     :param failed: download failed
-    :type failed: bool
     :param pp_type: processing type
-    :type pp_type: AnyStr
     :param cleanup:
-    :type cleanup: bool
     :param webhandler:
-    :type webhandler:
     :param show_obj: optional show object
-    :type show_obj: sickgear.tv.TVShow or None
     :param is_basedir:
-    :type is_basedir: bool
     :param skip_failure_processing:
-    :type skip_failure_processing: bool
     :param client: string to represent the client
-    :type client: Optional[AnyStr]
-    :return:
-    :rtype: AnyStr
+    :param client_uid: client uid
+    :param puid: puid
     """
     # backward compatibility prevents the case of this function name from being updated to PEP8
-    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing,
-                         client=client).process_dir(dir_name, nzb_name, process_method, force, force_replace, failed,
-                                                    pp_type, cleanup, show_obj)
+    return ProcessTVShow(webhandler, is_basedir, skip_failure_processing=skip_failure_processing, client=client,
+                         client_uid=client_uid, puid=puid).process_dir(dir_name, nzb_name, process_method, force,
+                                                            force_replace, failed, pp_type, cleanup,
+                                                            show_obj)
 
 
 # backward compatibility
