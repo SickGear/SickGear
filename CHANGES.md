@@ -28,6 +28,7 @@
 * Fix video codec label on display show is removed when an episode search finishes
 * Fix video codec of an episode is set to unknown when a snatch fails
 * Add ignore and require word options to add show
+* Change abort the pending info language request on edit show submit
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
