@@ -489,7 +489,7 @@ def get_aired_in_season(show_obj, return_sql=False):
                     ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
                     cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
                     if -1 != cur_scene_season:
-                        ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
+                        ep_count_scene[cur_scene_season] = ep_count_scene.setdefault(cur_scene_season, 0) + 1
 
             show_obj.aired_in_season = ep_count
             show_obj.aired_in_scene_season = ep_count_scene

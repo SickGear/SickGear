@@ -189,6 +189,16 @@ class TVAiredInSeasonTests(test.SickbeardTestDBCase):
         self.assertEqual(4, len(get_aired_in_season(show_obj, return_sql=True)))
         self.assertEqual(4, ep_obj.eps_aired_in_season)
 
+        # scene seasons are counted on their own
+        show_obj = TVShow(1, 2, 'en')
+        with test.db.DBConnection() as sg_db:
+            for cur_ep_num in (1, 2):
+                sg_db.action('INSERT INTO tv_episodes (indexer, showid, season, episode, scene_season, airdate, status)'
+                             ' VALUES (1, 2, 1, ?, 2, ?, 5)', [cur_ep_num, yesterday])
+        get_aired_in_season(show_obj)
+        self.assertEqual({1: 2}, show_obj.aired_in_season)
+        self.assertEqual({2: 2}, show_obj.aired_in_scene_season)
+
 
 class TVFormatPatternTests(test.SickbeardTestDBCase):
 
