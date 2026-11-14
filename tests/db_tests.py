@@ -67,6 +67,17 @@ class DBBasicTests(test.SickbeardTestDBCase):
         # only trusted clients are matched by client uid
         self.assertFalse(failed_history.has_failed(client=DOWNLOAD_CLIENTS.NZBGET, client_uid='SABnzbd_nzo_x1'))
 
+    def test_show_queue_words(self):
+        from sickgear import db
+        with db.DBConnection('cache.db') as cache:
+            cache.action('INSERT INTO show_queue (tvid, prodid, action_id, uid, rls_ignore_words, rls_require_words,'
+                         ' rls_global_exclude_ignore, rls_global_exclude_require) VALUES (?,?,?,?,?,?,?,?)',
+                         [1, 123, 2, 1, 'regex:^a, b', 'c', 'd,e', ''])
+            row = cache.select('SELECT * FROM show_queue WHERE uid = 1')[0]
+        self.assertEqual(('regex:^a, b', 'c', 'd,e', ''), tuple(
+            row[k] for k in ('rls_ignore_words', 'rls_require_words',
+                             'rls_global_exclude_ignore', 'rls_global_exclude_require')))
+
     def test_mass_action(self):
         field_list = ['show_id', 'indexer_id', 'indexer', 'show_name', 'location', 'network', 'genre', 'classification',
                       'runtime', 'quality', 'airs', 'status', 'flatten_folders', 'paused', 'startyear', 'air_by_date',

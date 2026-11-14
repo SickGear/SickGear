@@ -19,7 +19,7 @@ from collections import OrderedDict
 from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 8
+MAX_DB_VERSION = 9
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -96,6 +96,12 @@ class InitialSchema(db.SchemaUpgrade):
             ('provider_cache_size_uid', [
                 'ALTER TABLE [provider_cache] ADD [size] INTEGER DEFAULT -1',
                 'ALTER TABLE [provider_cache] ADD [uid] TEXT'
+            ]),
+            ('save_queue_words', [
+                'ALTER TABLE [show_queue] ADD [rls_ignore_words] TEXT',
+                'ALTER TABLE [show_queue] ADD [rls_require_words] TEXT',
+                'ALTER TABLE [show_queue] ADD [rls_global_exclude_ignore] TEXT',
+                'ALTER TABLE [show_queue] ADD [rls_global_exclude_require] TEXT'
             ]),
         ])
 
@@ -175,4 +181,13 @@ class AddProviderCacheSizeUid(AddSaveQueues):
 
     def execute(self):
         self.do_query(self.queries['provider_cache_size_uid'])
+        self.finish()
+
+
+class AddReqIngLoad(AddProviderCacheSizeUid):
+    def test(self):
+        return 8 < self.call_check_db_version()
+
+    def execute(self):
+        self.do_query(self.queries['save_queue_words'])
         self.finish()
