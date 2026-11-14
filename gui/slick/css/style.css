@@ -5602,3 +5602,48 @@ fancybox.css Overrides
 	margin-right: 5px;
 	transform: scale(1.5);
 }
+/* =======================================================================
+Video codec CSS
+========================================================================== */
+.videocodec-btn {
+	border-radius:15px;
+	padding-left:1em;
+	padding-right:1em;
+	color:#fff;
+}
+.vc-unknown {
+	background-color:darkgrey;
+}
+.vc-264 {
+	background-color:royalblue;
+}
+.vc-265 {
+	background-color:darkgreen;
+}
+.vc-xvid {
+	background-color:brown;
+}
+.vc-mpeg1 {
+	background-color:lightgrey;
+	color:#666;
+}
+.vc-mpeg2 {
+	background-color:grey;
+}
+.vc-vp9 {
+	background-color:paleturquoise;
+	color:navy;
+}
+.vc-vc1 {
+	background-color:orangered;
+}
+.vc-av1 {
+	background-color:darkseagreen;
+	color: darkgreen;
+}
+.vc-av2 {
+	background-color:navy;
+}
+.vc-vvc {
+	background-color:mediumblue;
+}
