@@ -4109,7 +4109,8 @@ class HomeProcessMedia(Home):
             skip_failure_processing = nzbget_call and not nzbget_dupekey
 
             if not show_obj and client_id in DOWNLOAD_CLIENTS.TRUSTED_CLIENT_IDS and nzbid:
-                show_obj, puid = history.find_show_puid_by_client_uid(client_id, nzbid)
+                show_obj, client_puid = history.find_show_puid_by_client_uid(client_id, nzbid)
+                puid = client_puid or puid
 
             if not show_obj and puid:
                 show_obj = history.find_show_by_puidstr(puid)
