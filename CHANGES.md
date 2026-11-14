@@ -17,6 +17,7 @@
 * Change create missing show directory with make_path during post-processing
 * Change provider cache and search results to carry size, uid, and episode data
 * Change add TV info, size, and uid columns to the provider cache page
+* Change keep aired episodes per season counts on the show object
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 

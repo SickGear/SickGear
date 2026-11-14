@@ -33,6 +33,8 @@ from .tv import TVEpisode, TVShow
 
 from six import string_types
 
+one_day_delta = datetime.timedelta(days=1)
+
 # noinspection PyUnreachableCode, PyStatementEffect
 if False:
     from typing import AnyStr, Dict, List, Optional, Tuple, Union
@@ -417,8 +419,6 @@ def is_first_best_match(ep_status, result):
 
 def set_wanted_aired(ep_obj,  # type: TVEpisode
                      unaired,  # type: bool
-                     ep_count,  # type: Dict[int, int]
-                     ep_count_scene,  # type: Dict[int, int]
                      manual=False  # type: bool
                      ):
     """
@@ -426,15 +426,10 @@ def set_wanted_aired(ep_obj,  # type: TVEpisode
 
     :param ep_obj: episode object
     :param unaired: include unaried episodes
-    :param ep_count: count of episodes in seasons
-    :param ep_count_scene: count of episodes in scene seasons
     :param manual: manual search
     """
     ep_status, ep_quality = common.Quality.split_composite_status(ep_obj.status)
     ep_obj.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=unaired, manual=manual)
-    ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
-    ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
-        ep_obj.scene_season, 0) if ep_obj.scene_season else ep_obj.eps_aired_in_season
 
 
 def get_wanted_qualities(ep_obj,  # type: TVEpisode
@@ -461,7 +456,7 @@ def get_wanted_qualities(ep_obj,  # type: TVEpisode
 
 
 def get_aired_in_season(show_obj, return_sql=False):
-    # type: (TVShow, bool) -> Union[Tuple[Dict[int, int], Dict[int, int]], Tuple[Dict[int, int], Dict[int, int], List]]
+    # type: (TVShow, bool) -> Optional[List[SQLITE_ROW]]
     """
     returns tuple of dicts with episode count per (scene) season and optional sql results
 
@@ -469,36 +464,39 @@ def get_aired_in_season(show_obj, return_sql=False):
     :param return_sql: return sql
     :return: returns tuple of dicts with episode count per (scene) season
     """
-    ep_count = {}
-    ep_count_scene = {}
-    tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
+    if (datetime.datetime.now() - show_obj.aired_in_season_update_time) > one_day_delta or return_sql:
+        ep_count = {}
+        ep_count_scene = {}
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
 
-    if show_obj.air_by_date:
-        sql_string = ('SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate'
-                      ' FROM [tv_episodes] AS ep, [tv_shows] AS show'
-                      ' WHERE ep.showid = show.indexer_id AND show.paused = 0 AND season != 0'
-                      ' AND ep.indexer = ? AND ep.showid = ?'
-                      ' AND show.air_by_date = 1')
-    else:
-        sql_string = ('SELECT status, season, scene_season, episode, airdate'
-                      ' FROM [tv_episodes]'
-                      ' WHERE indexer = ? AND showid = ?'
-                      ' AND season > 0')
+        if show_obj.air_by_date:
+            sql_string = ('SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate'
+                          ' FROM [tv_episodes] AS ep, [tv_shows] AS show'
+                          ' WHERE ep.showid = show.indexer_id AND show.paused = 0 AND season != 0'
+                          ' AND ep.indexer = ? AND ep.showid = ?'
+                          ' AND show.air_by_date = 1')
+        else:
+            sql_string = ('SELECT status, season, scene_season, episode, airdate'
+                          ' FROM [tv_episodes]'
+                          ' WHERE indexer = ? AND showid = ?'
+                          ' AND season > 0')
 
-    with db.DBConnection() as sg_db:
-        sql_result = sg_db.select(sql_string, [show_obj.tvid, show_obj.prodid])
-        for cur_result in sql_result:
-            if 1 < helpers.try_int(cur_result['airdate']) <= tomorrow:
-                cur_season = helpers.try_int(cur_result['season'])
-                ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
-                cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
-                if -1 != cur_scene_season:
-                    ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(sql_string, [show_obj.tvid, show_obj.prodid])
+            for cur_result in sql_result:
+                if 1 < helpers.try_int(cur_result['airdate']) <= tomorrow:
+                    cur_season = helpers.try_int(cur_result['season'])
+                    ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
+                    cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
+                    if -1 != cur_scene_season:
+                        ep_count_scene[cur_scene_season] = ep_count_scene.setdefault(cur_scene_season, 0) + 1
 
-    if return_sql:
-        return ep_count, ep_count_scene, sql_result
+            show_obj.aired_in_season = ep_count
+            show_obj.aired_in_scene_season = ep_count_scene
+            show_obj.aired_in_season_update_time = datetime.datetime.now()
 
-    return ep_count, ep_count_scene
+            if return_sql:
+                return sql_result
 
 
 def wanted_episodes(show_obj,  # type: TVShow
@@ -514,7 +512,7 @@ def wanted_episodes(show_obj,  # type: TVShow
     :param unaired: include unaired episodes
     :return: list or dict of wanted episode objects
     """
-    ep_count, ep_count_scene, sql_result_org = get_aired_in_season(show_obj, return_sql=True)
+    sql_result_org = get_aired_in_season(show_obj, return_sql=True)
 
     from_date_ord = from_date.toordinal()
     if unaired:
@@ -545,9 +543,6 @@ def wanted_episodes(show_obj,  # type: TVShow
         if not ep_obj.wanted_quality:
             continue
 
-        ep_obj.eps_aired_in_season = ep_count.get(helpers.try_int(result['season']), 0)
-        ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
-            helpers.try_int(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season
         if make_dict:
             wanted.setdefault(ep_obj.scene_season if ep_obj.show_obj.is_scene else ep_obj.season, []).append(ep_obj)
         else:

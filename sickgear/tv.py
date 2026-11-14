@@ -1368,6 +1368,9 @@ class TVShow(TVShowBase):
         # noinspection PyTypeChecker
         self.release_groups = None  # type: AniGroupList
         self.sxe_ep_obj = {}  # type: Dict
+        self.aired_in_season = {}  # type: Dict
+        self.aired_in_scene_season = {}  # type: Dict
+        self.aired_in_season_update_time = datetime.datetime(2000, 1, 1)  # type: datetime.datetime
 
         self.load_from_db(show_result=show_result, imdb_info_result=imdb_info_result)
 
@@ -3870,6 +3873,17 @@ class TVEpisode(TVEpisodeBase):
         self.scene_season = 0  # type: int
         self.specify_episode(self._season, self._episode, existing_only=existing_only, show_result=show_result)
         self.wanted_quality = []  # type: List
+
+    @property
+    def eps_aired_in_season(self):
+        # type: (...) -> int
+        return self.show_obj.aired_in_season.get(self._season, 0)
+
+    @property
+    def eps_aired_in_scene_season(self):
+        # type: (...) -> int
+        return self.show_obj.aired_in_scene_season.get(
+            self._scene_season, 0) if self.show_obj._scene else self.eps_aired_in_season
 
     @property
     def network(self):
