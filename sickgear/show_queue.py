@@ -124,8 +124,10 @@ class ShowQueue(generic_queue.GenericQueue):
                         show_name=cur_row['show_name'], new_show=bool(cur_row['new_show']),
                         lang=cur_row['lang'], uid=cur_row['uid'], add_to_db=False,
                         rls_ignore_words=cur_row['rls_ignore_words'], rls_require_words=cur_row['rls_require_words'],
-                        rls_global_exclude_ignore=(cur_row['rls_global_exclude_ignore'] or '').split(','),
-                        rls_global_exclude_require=(cur_row['rls_global_exclude_require'] or '').split(','))
+                        rls_global_exclude_ignore=list(
+                            filter(None, (cur_row['rls_global_exclude_ignore'] or '').split(','))),
+                        rls_global_exclude_require=list(
+                            filter(None, (cur_row['rls_global_exclude_require'] or '').split(','))))
 
         except (BaseException, Exception) as e:
             logger.error(f'Exception loading queue {self.__class__.__name__}: {ex(e)}')
