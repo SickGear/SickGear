@@ -141,6 +141,68 @@
 					</label>
 				</div>
 #end if
+
+				<div class="field-pair">
+					<label for="rls_ignore_words">
+						<span class="component-title">Ignore result with any word</span>
+						<span class="component-desc">
+							<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="" class="form-control form-control-inline input-sm input350">
+							<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+							<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma separated words or regular expressions</p>
+						</span>
+					</label>
+				</div>
+
+#if $sickgear.IGNORE_WORDS:
+				<div class="field-pair">
+					<label for="rls_global_exclude_ignore">
+						<span class="component-title">Exclude global ignore word (multi select list)</span>
+						<span class="component-desc">
+							<select id="rls_global_exclude_ignore" name="rls_global_exclude_ignore" multiple="multiple" class="form-control form-control-inline input-sm input350">
+    #set $options = ''
+    #set $selected = ' selected=\"selected\"'
+    #set $num_selected = 0
+    #for $gw in sorted($sickgear.IGNORE_WORDS, key=$str.lower):
+        #set $options += "<option value=\"%s\">%s</option>" % ($gw, $gw)
+    #end for
+								<option value=".*"#if $num_selected then '' else $selected#># Use all ignore word(s) (default) #</option>
+								$options
+							</select>
+						</span>
+					</label>
+				</div>
+#end if
+
+				<div class="field-pair">
+					<label for="rls_require_words">
+						<span class="component-title">Require at least one word</span>
+						<span class="component-desc">
+							<input type="text" name="rls_require_words" id="rls_require_words" value="" class="form-control form-control-inline input-sm input350">
+							<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
+							<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma separated words or regular expressions</p>
+						</span>
+					</label>
+				</div>
+
+#if $sickgear.REQUIRE_WORDS:
+				<div class="field-pair">
+					<label for="rls_global_exclude_require">
+						<span class="component-title">Exclude global require word (multi select list)</span>
+						<span class="component-desc">
+							<select id="rls_global_exclude_require" name="rls_global_exclude_require" multiple="multiple" class="form-control form-control-inline input-sm input350">
+    #set $options = ''
+    #set $selected = ' selected=\"selected\"'
+    #set $num_selected = 0
+    #for $gw in sorted($sickgear.REQUIRE_WORDS, key=$str.lower):
+        #set $options += "<option value=\"%s\">%s</option>" % ($gw, $gw)
+    #end for
+								<option value=".*"#if $num_selected then '' else $selected#># Use all require word(s) (default) #</option>
+								$options
+							</select>
+						</span>
+					</label>
+				</div>
+#end if
 			</div>
 		</div>
 

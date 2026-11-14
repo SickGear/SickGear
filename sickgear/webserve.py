@@ -7056,7 +7056,9 @@ class AddShows(Home):
                      wanted_begin=None, wanted_latest=None, tag=None,
                      pause=None, prune=None, default_status=None, scene=None, subs=None, flatten_folders=None,
                      anime=None, allowlist=None, blocklist=None,
-                     return_to=None, cancel_form=None, rename_suggest=None, **kwargs):
+                     return_to=None, cancel_form=None, rename_suggest=None,
+                     rls_ignore_words=None, rls_require_words=None, rls_global_exclude_ignore=None,
+                     rls_global_exclude_require=None, **kwargs):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
@@ -7176,7 +7178,10 @@ class AddShows(Home):
             wanted_begin=wanted_begin, wanted_latest=wanted_latest, tag=tag,
             paused=pause, prune=prune, default_status=int(default_status), scene=scene, subtitles=subs,
             flatten_folders=flatten_folders, anime=anime, allowlist=allowlist, blocklist=blocklist,
-            show_name=show_name, new_show=new_show, lang=tvinfo_lang
+            show_name=show_name, new_show=new_show, lang=tvinfo_lang,
+            rls_ignore_words=rls_ignore_words, rls_require_words=rls_require_words,
+            rls_global_exclude_ignore=rls_global_exclude_ignore,
+            rls_global_exclude_require=rls_global_exclude_require
         )
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 

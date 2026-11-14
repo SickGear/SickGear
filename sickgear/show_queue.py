@@ -28,7 +28,7 @@ import sickgear
 from . import logger, ui, db, generic_queue, name_cache
 from .anime import AniGroupList
 from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
-from .helpers import should_delete_episode, find_show_by_id
+from .helpers import should_delete_episode, find_show_by_id, split_word_str
 from .indexermapper import clean_show_name, map_indexers_to_show
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
 from .name_parser.parser import NameParser
@@ -122,7 +122,12 @@ class ShowQueue(generic_queue.GenericQueue):
                         flatten_folders=bool_none(cur_row['flatten_folders']), anime=bool_none(cur_row['anime']),
                         blocklist=cur_row['blocklist'], allowlist=cur_row['allowlist'],
                         show_name=cur_row['show_name'], new_show=bool(cur_row['new_show']),
-                        lang=cur_row['lang'], uid=cur_row['uid'], add_to_db=False)
+                        lang=cur_row['lang'], uid=cur_row['uid'], add_to_db=False,
+                        rls_ignore_words=cur_row['rls_ignore_words'], rls_require_words=cur_row['rls_require_words'],
+                        rls_global_exclude_ignore=list(
+                            filter(None, (cur_row['rls_global_exclude_ignore'] or '').split(','))),
+                        rls_global_exclude_require=list(
+                            filter(None, (cur_row['rls_global_exclude_require'] or '').split(','))))
 
         except (BaseException, Exception) as e:
             logger.error(f'Exception loading queue {self.__class__.__name__}: {ex(e)}')
@@ -202,13 +207,16 @@ class ShowQueue(generic_queue.GenericQueue):
                 subtitles, anime, scene, paused,
                 blocklist, allowlist, wanted_begin, wanted_latest,
                 prune, tag, new_show, show_name, upgrade_once,
-                action_id, uid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                action_id, uid, rls_ignore_words, rls_require_words,
+                rls_global_exclude_ignore, rls_global_exclude_require)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, [item.tvid, item.prodid, item.priority, int(item.scheduled_update),
                       item.showDir, item.default_status, item.quality, try_int(item.flatten_folders, None), item.lang,
                       item.subtitles, try_int(item.anime, None), try_int(item.scene, None), try_int(item.paused, None),
                       item.blocklist, item.allowlist, item.default_wanted_begin, item.default_wanted_latest,
                       item.prune, item.tag, int(item.new_show), item.show_name, int(item.upgrade_once),
-                      item.action_id, item.uid]
+                      item.action_id, item.uid, item.rls_ignore_words, item.rls_require_words,
+                      ','.join(item.rls_global_exclude_ignore or []), ','.join(item.rls_global_exclude_require or [])]
             ]]
         return []
 
@@ -651,7 +659,9 @@ class ShowQueue(generic_queue.GenericQueue):
                  quality=None, upgrade_once=False, wanted_begin=None, wanted_latest=None, tag=None,
                  paused=None, prune=None, default_status=None, scene=None, subtitles=None,
                  flatten_folders=None, anime=None, blocklist=None, allowlist=None,
-                 show_name=None, new_show=False, lang='en', uid=None, add_to_db=True):
+                 show_name=None, new_show=False, lang='en', uid=None, add_to_db=True,
+                 rls_ignore_words=None, rls_require_words=None, rls_global_exclude_ignore=None,
+                 rls_global_exclude_require=None):
         """
 
         :param tvid: tvid
@@ -701,7 +711,10 @@ class ShowQueue(generic_queue.GenericQueue):
         queue_item_obj = QueueItemAdd(tvid, prodid, show_dir, default_status, quality, flatten_folders, lang,
                                       subtitles, anime, scene, paused, blocklist, allowlist,
                                       wanted_begin, wanted_latest, prune, tag,
-                                      new_show=new_show, show_name=show_name, upgrade_once=upgrade_once, uid=uid)
+                                      new_show=new_show, show_name=show_name, upgrade_once=upgrade_once, uid=uid,
+                                      rls_ignore_words=rls_ignore_words, rls_require_words=rls_require_words,
+                                      rls_global_exclude_ignore=rls_global_exclude_ignore,
+                                      rls_global_exclude_require=rls_global_exclude_require)
 
         self.add_item(queue_item_obj, add_to_db=add_to_db)
 
@@ -788,7 +801,9 @@ class ShowQueueItem(generic_queue.QueueItem):
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, tvid, prodid, show_dir, default_status, quality, flatten_folders, lang, subtitles, anime,
                  scene, paused, blocklist, allowlist, default_wanted_begin, default_wanted_latest, prune, tag,
-                 scheduled_update=False, new_show=False, show_name=None, upgrade_once=False, uid=None):
+                 scheduled_update=False, new_show=False, show_name=None, upgrade_once=False, uid=None,
+                 rls_ignore_words=None, rls_require_words=None, rls_global_exclude_ignore=None,
+                 rls_global_exclude_require=None):
         """
 
         :param tvid: tvid
@@ -856,6 +871,10 @@ class QueueItemAdd(ShowQueueItem):
         self.subtitles = subtitles
         self.tag = tag
         self.upgrade_once = upgrade_once
+        self.rls_ignore_words = rls_ignore_words
+        self.rls_require_words = rls_require_words
+        self.rls_global_exclude_ignore = rls_global_exclude_ignore
+        self.rls_global_exclude_require = rls_global_exclude_require
 
         # this will initialize self.show_obj to None
         ShowQueueItem.__init__(self, ShowQueueActions.ADD, self.show_obj, scheduled_update, uid=uid)
@@ -1027,6 +1046,23 @@ class QueueItemAdd(ShowQueueItem):
             self.show_obj.flatten_folders = self.flatten_folders if None is not self.flatten_folders \
                 else sickgear.FLATTEN_FOLDERS_DEFAULT
             self.show_obj.anime = self.anime if None is not self.anime else sickgear.ANIME_DEFAULT
+            self.show_obj.rls_ignore_words, self.show_obj.rls_ignore_words_regex = split_word_str(
+                self.rls_ignore_words)
+            self.show_obj.rls_require_words, self.show_obj.rls_require_words_regex = split_word_str(
+                self.rls_require_words)
+
+            if isinstance(self.rls_global_exclude_ignore, list):
+                self.show_obj.rls_global_exclude_ignore = set(r for r in self.rls_global_exclude_ignore if '.*' != r)
+            elif isinstance(self.rls_global_exclude_ignore, str) and '.*' != self.rls_global_exclude_ignore:
+                self.show_obj.rls_global_exclude_ignore = {self.rls_global_exclude_ignore}
+            else:
+                self.show_obj.rls_global_exclude_ignore = set()
+            if isinstance(self.rls_global_exclude_require, list):
+                self.show_obj.rls_global_exclude_require = set(r for r in self.rls_global_exclude_require if '.*' != r)
+            elif isinstance(self.rls_global_exclude_require, str) and '.*' != self.rls_global_exclude_require:
+                self.show_obj.rls_global_exclude_require = {self.rls_global_exclude_require}
+            else:
+                self.show_obj.rls_global_exclude_require = set()
 
             if self.show_obj.anime:
                 self.show_obj.release_groups = AniGroupList(self.show_obj.tvid,
