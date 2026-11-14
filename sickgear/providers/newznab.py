@@ -622,7 +622,7 @@ class NewznabProvider(generic.NZBProvider):
         size = -1
         uid = None
         if 'name_space' in kwargs and 'newznab' in kwargs['name_space']:
-            size, uid = self._parse_size_uid(item, kwargs['name_space'])
+            size, uid = self.parse_size_uid(item, kwargs['name_space'])
         return size, uid
 
     def get_show(self,
@@ -831,7 +831,7 @@ class NewznabProvider(generic.NZBProvider):
         return parsed_date
 
     @staticmethod
-    def _parse_size_uid(item,  # type: etree.Element
+    def parse_size_uid(item,  # type: etree.Element
                         ns,  # type: Dict
                         default=-1  # type: int
                         ):  # type: (...) -> Tuple[int, Union[AnyStr, None]]
@@ -887,8 +887,8 @@ class NewznabProvider(generic.NZBProvider):
         if self._noname in self.url.lower():
             base_params['extended'] = '1'
         else:
-            base_params['attrs'] =  ','.join([k for k, v in NewznabConstants.providerToIndexerMapping.items()
-                                              if v in self.caps])
+            base_params['attrs'] = ','.join([k for k, v in NewznabConstants.providerToIndexerMapping.items()
+                                             if v in self.caps] + ['guid'])
 
         base_params_rss = {'num': self.limits, 'dl': '1'}
         rss_fallback = False
@@ -1093,9 +1093,7 @@ class NewznabProvider(generic.NZBProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.list_propers(search_date)
-        results = [classes.Proper(x['name'], x['url'],
-                                  datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in cache_results]
+        results = self._get_cached_propers(search_date)
 
         check = self._check_auth()
         if isinstance(check, bool) and not check:
@@ -1152,7 +1150,7 @@ class NewznabProvider(generic.NZBProvider):
                     logger.log(f'Unable to figure out the date for entry {title}, skipping it')
                     continue
 
-                result_size, result_uid = self._parse_size_uid(item, ns=n_space)
+                result_size, result_uid = self.parse_size_uid(item, ns=n_space)
                 if not search_date or search_date < result_date:
                     show_obj = self.get_show(item, name_space=n_space)
                     search_result = classes.Proper(title, url, result_date, self.show_obj, parsed_show_obj=show_obj,
@@ -1282,8 +1280,9 @@ class NewznabCache(tvcache.TVCache):
         title, url = self._title_and_url(item)
 
         ids = self.parse_ids(item, ns)
+        parsed_size, uid = NewznabProvider.parse_size_uid(item, ns)
 
         if title and url:
-            return self.add_cache_entry(title, url, tvid_prodid=ids)
+            return self.add_cache_entry(title, url, tvid_prodid=ids, size=parsed_size, uid=uid)
 
         logger.debug(f'Data returned from the {self.provider.name} feed is incomplete, this result is unusable')

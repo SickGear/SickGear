@@ -63,6 +63,9 @@ class SearchResult(LegacySearchResult):
         # assign function for after getting the download data
         self.after_get_data_func = None  # type: Callable or None
 
+        self.season = None  # type: Optional[int]
+
+        self.episode_numbers = []  # type: List[int]
         # list of TVEpisode objects that this result is associated with
         self.ep_obj_list = ep_obj_list  # type: Optional[List[sickgear.tv.TVEpisode]]
 
@@ -86,6 +89,9 @@ class SearchResult(LegacySearchResult):
 
         # is a repack
         self.is_repack = False  # type: bool
+
+        # is a season pack
+        self.is_season_pack = False  # type: bool
 
         # provider unique id
         self.puid = None  # type: Any
@@ -277,10 +283,12 @@ class Proper(LegacyProper):
         self.show_obj = show_obj
         self.tvid = None  # type: Optional[int]
         self.prodid = -1  # type: int
-        self.season = -1  # type: int
-        self.episode = -1  # type: int
+        self.season = kwargs.get('season', -1)  # type: int
+        self.episode = kwargs.get('episode', -1)  # type: int
         self.scene_season = -1  # type: int
         self.scene_episode = -1  # type: int
+
+        self.episode_numbers = kwargs.get('episode_numbers', [])  # type: Optional[List[int]]
 
         super(Proper, self).__init__(**kwargs)
 

@@ -1321,6 +1321,8 @@ class GenericProvider(object):
                 continue
             result.show_obj = parsed_show_obj
             result.name = title
+            result.episode_numbers = episode_numbers
+            result.season = parse_result.season_number
             result.quality = quality
             result.release_group = release_group
             result.content = None
@@ -1341,6 +1343,7 @@ class GenericProvider(object):
                              f' {parse_result.episode_numbers}')
             elif 0 == len(ep_obj_results):
                 ep_num = SEASON_RESULT
+                result.is_season_pack = True
                 logger.debug('Separating full season result to check for later')
 
             if ep_num not in results:
@@ -1357,6 +1360,18 @@ class GenericProvider(object):
 
         return results
 
+    def _get_cached_propers(self, search_date):
+        # type: (datetime.date) -> List[classes.Proper]
+        cache_results = self.cache.list_propers(search_date)
+        results = []
+        for x in cache_results:
+            ep_nbs = [int(_n) for _n in x['episodes'].split('|') if len(_n)]
+            ep_nb = None if not ep_nbs else ep_nbs[0]
+            results.append(classes.Proper(x['name'], x['url'],
+                                          datetime.datetime.fromtimestamp(x['time']), self.show_obj, size=x['size'],
+                                          puid=x['uid'], season=x['season'], episode=ep_nb, episode_numbers=ep_nbs))
+        return results
+
     def find_propers(self, search_date=None, **kwargs):
         # type: (datetime.date, Any) -> List[classes.Proper]
         """
@@ -1365,10 +1380,7 @@ class GenericProvider(object):
         :param kwargs:
         :return:
         """
-        results = self.cache.list_propers(search_date)
-
-        return [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in
-                results]
+        return self._get_cached_propers(search_date)
 
     def seed_ratio(self):
         """
@@ -1548,9 +1560,7 @@ class NZBProvider(GenericProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.list_propers(search_date)
-        results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj)
-                   for x in cache_results]
+        results = self._get_cached_propers(search_date)
 
         if self.should_skip():
             return results
@@ -1607,6 +1617,7 @@ class NZBProvider(GenericProvider):
                     continue
 
                 if not search_date or search_date < result_date:
+                    # todo: no size, puid set
                     search_result = classes.Proper(title, url, result_date, self.show_obj)
                     results.append(search_result)
 

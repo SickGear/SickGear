@@ -424,9 +424,13 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 except (BaseException, Exception):
                     continue
                 if show_obj:
+                    ep_nbs = [int(_n) for _n in cur_result['episodes'].split('|') if len(_n)]
+                    ep_nb = None if not ep_nbs else ep_nbs[0]
                     propers.setdefault(cur_result['provider'], []).append(
                         Proper(cur_result['name'], cur_result['url'],
-                               datetime.datetime.fromtimestamp(cur_result['time']), show_obj, parsed_show_obj=show_obj))
+                               datetime.datetime.fromtimestamp(cur_result['time']), show_obj, parsed_show_obj=show_obj,
+                               size=cur_result['size'], puid=cur_result['uid'],
+                               season=cur_result['season'], episode=ep_nb, episode_numbers=ep_nbs))
 
         if propers:
             logger.log('Found Proper/Repack/Real in recent search, sending data to properfinder')
