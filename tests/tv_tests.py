@@ -160,6 +160,36 @@ class TVCacheResultTests(test.SickbeardTestDBCase):
         self.assertEqual((1, 1234, 'guid-1'), (results[0].season, results[0].size, results[0].puid))
 
 
+class TVAiredInSeasonTests(test.SickbeardTestDBCase):
+
+    def test_aired_in_season(self):
+        from sickgear.search import get_aired_in_season
+
+        show_obj = TVShow(1, 1, 'en')
+        yesterday = datetime.date.today().toordinal() - 1
+        with test.db.DBConnection() as sg_db:
+            for cur_ep_num in (1, 2, 3):
+                sg_db.action('INSERT INTO tv_episodes (indexer, showid, season, episode, airdate, status)'
+                             ' VALUES (1, 1, 1, ?, ?, 5)', [cur_ep_num, yesterday])
+
+        ep_obj = TVEpisode(show_obj, 1, 1)
+        self.assertEqual(0, ep_obj.eps_aired_in_season)
+
+        self.assertIsNone(get_aired_in_season(show_obj))
+        self.assertEqual({1: 3}, show_obj.aired_in_season)
+        self.assertEqual(3, ep_obj.eps_aired_in_season)
+        self.assertEqual(3, ep_obj.eps_aired_in_scene_season)
+
+        # counts are kept for one day unless reset or sql is requested
+        with test.db.DBConnection() as sg_db:
+            sg_db.action('INSERT INTO tv_episodes (indexer, showid, season, episode, airdate, status)'
+                         ' VALUES (1, 1, 1, 4, ?, 5)', [yesterday])
+        get_aired_in_season(show_obj)
+        self.assertEqual(3, ep_obj.eps_aired_in_season)
+        self.assertEqual(4, len(get_aired_in_season(show_obj, return_sql=True)))
+        self.assertEqual(4, ep_obj.eps_aired_in_season)
+
+
 class TVFormatPatternTests(test.SickbeardTestDBCase):
 
     def setUp(self):
@@ -329,6 +359,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVCacheResultTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVAiredInSeasonTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVFormatPatternTests)

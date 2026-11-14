@@ -490,6 +490,9 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 # if an error occurred assume the episode hasn't aired yet
                 continue
 
+            # reset episode per season counts
+            show_obj.aired_in_season_update_time = datetime.datetime(2000, 1, 1)
+
             ep_obj = show_obj.get_episode(int(cur_result['season']), int(cur_result['episode']))
             with ep_obj.lock:
                 # Now that it is time, change state of UNAIRED show into expected or skipped
@@ -642,8 +645,8 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
             logger.log(f'Beginning manual search for: [{self.segment.pretty_name()}]')
             self.started = True
 
-            ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
-            set_wanted_aired(self.segment, True, ep_count, ep_count_scene, manual=True)
+            get_aired_in_season(self.show_obj)
+            set_wanted_aired(self.segment, True, manual=True)
             if not getattr(self.segment, 'wanted_quality', None):
                 ep_status, ep_quality = common.Quality.split_composite_status(self.segment.status)
                 self.segment.wanted_quality = search.get_wanted_qualities(self.segment, ep_status, ep_quality,
@@ -732,9 +735,9 @@ class BacklogQueueItem(BaseSearchQueueItem):
         is_error = False
         try:
             if not self.standard_backlog:
-                ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
+                get_aired_in_season(self.show_obj)
                 for ep_obj in self.segment:  # type: sickgear.tv.TVEpisode
-                    set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
+                    set_wanted_aired(ep_obj, True)
 
             logger.log(f'Beginning backlog search for: [{self.show_obj.unique_name}]')
             search_result = search.search_providers(
@@ -792,7 +795,7 @@ class FailedQueueItem(BaseSearchQueueItem):
         self.started = True
 
         try:
-            ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
+            get_aired_in_season(self.show_obj)
             for ep_obj in self.segment:  # type: sickgear.tv.TVEpisode
 
                 logger.log(f'Marking episode as bad: [{ep_obj.pretty_name()}]')
@@ -806,7 +809,7 @@ class FailedQueueItem(BaseSearchQueueItem):
 
                 logger.log(f'Beginning failed download search for: [{ep_obj.pretty_name()}]')
 
-                set_wanted_aired(ep_obj, True, ep_count, ep_count_scene, manual=True)
+                set_wanted_aired(ep_obj, True, manual=True)
 
             search_result = search.search_providers(self.show_obj, self.segment, True, try_other_searches=True) or []
 

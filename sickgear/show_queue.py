@@ -1377,6 +1377,8 @@ class QueueItemUpdate(ShowQueueItem):
         logger.log(f'Beginning update of {self.show_obj.unique_name}')
 
         logger.debug(f'Retrieving show info from {sickgear.TVInfoAPI(self.show_obj.tvid).name}')
+        # reset episode per season counts
+        self.show_obj.aired_in_season_update_time = datetime.datetime(2000, 1, 1)
         try:
             result = self.show_obj.load_from_tvinfo(cache=not self.force, tvinfo_data=self.tvinfo_data,
                                                     scheduled_update=self.scheduled_update, switch=self.switch)

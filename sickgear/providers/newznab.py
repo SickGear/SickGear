@@ -674,13 +674,10 @@ class NewznabProvider(generic.NZBProvider):
                     s.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=True)
                 needed.check_needed_qualities(s.wanted_quality)
 
-        if not hasattr(ep_obj, 'eps_aired_in_season'):
+        if not ep_obj.show_obj.aired_in_season:
             # this should not happen, the creation is missing for the search in this case
-            logger.warning('eps_aired_in_season property was missing for search, creating it')
-            ep_count, ep_count_scene = get_aired_in_season(ep_obj.show_obj)
-            ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
-            ep_obj.eps_aired_in_scene_season = ep_count_scene.get(ep_obj.scene_season, 0) if ep_obj.show_obj.is_scene \
-                else ep_obj.eps_aired_in_season
+            logger.warning('aired_in_season is not set, setting it')
+            get_aired_in_season(ep_obj.show_obj)
 
         per_ep, limit_per_ep = 0, 0
         if needed.need_sd and not needed.need_hd:
