@@ -30,6 +30,7 @@ from six import integer_types, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Callable, Dict, List, Optional
+    from .tv import TVShow
 
 
 class SearchResult(LegacySearchResult):
@@ -273,22 +274,16 @@ class AllShowInfosNoFilterListUI(ShowInfoFilter):
 
 class Proper(LegacyProper):
     def __init__(self, name, url, date, show_obj, parsed_show_obj=None, size=-1, puid=None, **kwargs):
+        # type: (AnyStr, AnyStr, datetime.datetime, Optional[TVShow], Optional[TVShow], int, Optional[AnyStr], Any) -> None
         """
 
         :param name: release name
-        :type name: AnyStr
         :param url: url
-        :type url: AnyStr
         :param date: date
-        :type date:
         :param show_obj: show object or None
-        :type show_obj: sickgear.tv.TVShow or None
         :param parsed_show_obj: parsed show object
-        :type parsed_show_obj: sickbread.tv.TVShow
         :param size: size
-        :type size: int or long
         :param puid: puid
-        :type puid: AnyStr
         :param kwargs:
         """
         self.name = name

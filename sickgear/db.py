@@ -464,7 +464,7 @@ def _restore_database(filename, version):
 
 def _process_upgrade(connection, upgrade_class):
     instance = upgrade_class(connection)
-    logger.debug(f'Checking {_pretty_name(upgrade_class.__name__)} database upgrade')
+    logger.debug(f'Checking "{_pretty_name(upgrade_class.__name__)}" database upgrade')
     if not instance.test():
         connection.is_upgrading = True
         connection.upgrade_log(f'{getattr(upgrade_class, "pretty_name", None) or _pretty_name(upgrade_class.__name__)}')
