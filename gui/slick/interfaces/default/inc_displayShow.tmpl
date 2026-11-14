@@ -1,7 +1,7 @@
 #import datetime
 #import sickgear
 #from sickgear import network_timezones, subtitles
-#from sickgear.common import Overview, Quality, statusStrings, ARCHIVED, UNAIRED, SUBTITLED, SNATCHED_ANY, DOWNLOADED
+#from sickgear.common import Overview, Quality, statusStrings, ARCHIVED, UNAIRED, SUBTITLED, SNATCHED_ANY, DOWNLOADED, VideoCodec
 #from sickgear.sgdatetime import SGDatetime
 #from lib import subliminal
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
@@ -77,7 +77,7 @@
 				<img src="$sbRoot/images/info32.png" width="16" height="16" alt="" class="plotInfo#echo '%s' %\
                     ('None opacity40', ('" id="plot_info_%s_%s_%s' % (($show_obj.tvid_prodid,) + $ep_key)))[None is not $ep['description'] and '' != $ep['description']]#">
     #set $cls = (' class="tba grey-text"', '')['good' == $Overview.overviewStrings[$ep_cats[$ep_str]]]
-				#if not $ep['name'] or 'TBA' == $ep['name']#<em${cls}>TBA</em>#else#$ep['name']#end if#
+				<span  title="$ep['release_name']">#if not $ep['name'] or 'TBA' == $ep['name']#<em${cls}>TBA</em>#else#$ep['name']#end if#</span>
 			</td>
 
     #set $ep_dt = $network_timezones.get_episode_time($ep['airdate'], $network_time, $show_obj.network, $show_obj.airtime, $network_timezone, $ep['timestamp'], $ep['network'], $ep['airtime'], $ep['timezone'])
@@ -101,7 +101,7 @@
     #slurp
     #set $curStatus, $curQuality = $Quality.split_composite_status(int($ep['status']))
     #if Quality.NONE != $curQuality
-			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if#</td>
+			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if##if None != $ep['video_codec']##set $vc = $VideoCodec.get_file_vc($ep['video_codec']) or $VideoCodec.get_snatch_vc($ep['video_codec'])#<span class="videocodec-btn $VideoCodec.get_html_class($vc)">$VideoCodec.get_name($vc, $ep['release_name'] or $getVar('snatched_names', {}).get($ep_key))</span>#end if#</td>
     #else
 			<td class="col-status">$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</td>
     #end if

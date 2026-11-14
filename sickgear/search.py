@@ -178,6 +178,8 @@ def snatch_episode(result, end_status=SNATCHED):
             else:
                 cur_ep_obj.status = Quality.composite_status(end_status, result.quality)
 
+            cur_ep_obj.video_codec = common.VideoCodec.set_snatched_vc(cur_ep_obj._video_codec, result.video_codec)
+
             item = cur_ep_obj.get_sql()
             if None is not item:
                 sql_l.append(item)

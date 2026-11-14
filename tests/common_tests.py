@@ -7,7 +7,7 @@ import os.path
 sys.path.insert(1, os.path.abspath('..'))
 
 from sickgear import common
-from sickgear.common import Quality, WantedQualities
+from sickgear.common import Quality, WantedQualities, VideoCodec
 from sickgear.name_parser.parser import NameParser
 
 
@@ -3114,6 +3114,110 @@ class QualityTests(unittest.TestCase):
         ])
         for q, l in quality_tests.items():
             self.check_sceneQuality([((v, False), q) for v in l])
+
+    def test_get_videocodec(self):
+        vc_tests = {
+            ('Test.Show.S01E02.WEB.h264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.x264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.h265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.x265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.VP9-GROUP', VideoCodec.VC_VP9),
+            ('Test.Show.S01E02.WEB.AV1-GROUP', VideoCodec.VC_AV1),
+            ('Test.Show.S01E02.WEB.AV2-GROUP', VideoCodec.VC_AV2),
+            ('Test.Show.S01E02.WEB.VVC-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.h266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.x266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.h.266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.x.266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.DVDRiP.XViD-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.DVDRiP.DiVX-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1.MPEG2-GROUP', VideoCodec.VC_MPEG2),
+            ('Test.Show.S01E02.WEB.h.264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.x.264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.h.265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.x.265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB_h264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB_x264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB_h265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB_x265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB_VP9-GROUP', VideoCodec.VC_VP9),
+            ('Test.Show.S01E02.WEB_AV1-GROUP', VideoCodec.VC_AV1),
+            ('Test.Show.S01E02.DVDRiP_XViD-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.DVDRiP_DiVX-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1_MPEG2-GROUP', VideoCodec.VC_MPEG2),
+            ('Test.Show.S01E02.WEB.h264', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.x264', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.h265', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.x265', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.VP9', VideoCodec.VC_VP9),
+            ('Test.Show.S01E02.WEB.AV1', VideoCodec.VC_AV1),
+            ('Test.Show.S01E02.DVDRiP.XViD', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.DVDRiP.DiVX', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1.MPEG2', VideoCodec.VC_MPEG2),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1-GROUP', VideoCodec.VC_UNKNOWN),
+            ('Test.Show.S05E17.2021.1080p.Netflix.WEB-DL.AVC.DDP.5.1-GROUP', VideoCodec.VC_264),
+        }
+        for cur_test, cur_res in vc_tests:
+            self.assertEqual(cur_res, VideoCodec.get_videocodec_from_name(cur_test),
+                             msg=f'{cur_test} not parsed as {VideoCodec.videocodec_names[cur_res]}')
+
+    def test_vc_get_name(self):
+        for cur_vc, cur_name, cur_res in [
+            (VideoCodec.VC_264, 'Test.Show.S01E02.WEB.x264-GROUP', 'x264'),
+            (VideoCodec.VC_264, 'Test.Show.S01E02.WEB.H.264-GROUP', 'H.264'),
+            (VideoCodec.VC_265, 'Test Show S01E02 WEB X 265-GROUP', 'x265'),
+            (VideoCodec.VC_VVC, 'Test.Show.S01E02.WEB.x266-GROUP', 'x266'),
+            (VideoCodec.VC_265, 'Test.Show.S01E02.WEB.x264-GROUP', 'H.265'),
+            (VideoCodec.VC_264, None, 'H.264'),
+            (VideoCodec.VC_VP9, 'Test.Show.S01E02.WEB.x264-GROUP', 'VP9'),
+        ]:
+            self.assertEqual(cur_res, VideoCodec.get_name(cur_vc, cur_name), msg=f'{cur_vc} with {cur_name}')
+
+    def test_vc_combos(self):
+        vc_combo_tests = [
+            (None, (None, None)),
+            (0, (None, VideoCodec.VC_UNKNOWN)),
+            (VideoCodec.VC_AV2 * 100, (VideoCodec.VC_AV2, None)),
+            (0, (VideoCodec.VC_UNKNOWN, VideoCodec.VC_UNKNOWN)),
+            (0 * 100 + VideoCodec.VC_AV1, (VideoCodec.VC_UNKNOWN, VideoCodec.VC_AV1)),
+            (VideoCodec.VC_264 * 100 + VideoCodec.VC_AV1, (VideoCodec.VC_264, VideoCodec.VC_AV1)),
+            (VideoCodec.VC_264 * 100 + VideoCodec.VC_MPEG1, (VideoCodec.VC_264, VideoCodec.VC_MPEG1)),
+            (VideoCodec.VC_265 * 100 + VideoCodec.VC_UNKNOWN, (VideoCodec.VC_265, VideoCodec.VC_UNKNOWN)),
+        ]
+        for res, vc_vals in vc_combo_tests:
+            c_vc = VideoCodec.combine_vcs(vc_vals[0], vc_vals[1])
+            e_vc = [c_vc]
+            if None is res:
+                e_vc.append(None)
+            self.assertTrue(res in e_vc, msg=f'combine videocodec incorrect: {res} != {c_vc} for {vc_vals}')
+            s_vc, f_vc = VideoCodec.split_vc(c_vc)
+            e_vc = (vc_vals[0] or 0, vc_vals[1] or 0)
+            if None is res:
+                e_vc = (0, 0)
+            self.assertEqual((s_vc, f_vc), e_vc,
+                             msg=f'split videocodec incorrect: {(s_vc, f_vc)} != {vars()} for {vc_vals}')
+            f_vc = VideoCodec.get_file_vc(c_vc)
+            e_vc = 0 if None is vc_vals[1] else vc_vals[1]
+            self.assertEqual(f_vc, e_vc, msg=f'file_vc wrong for: {f_vc} expected: {e_vc}')
+            s_vc = VideoCodec.get_snatch_vc(c_vc)
+            e_vc = 0 if None is vc_vals[0] else vc_vals[0]
+            self.assertEqual(s_vc, e_vc, msg=f'snatch_vc wrong for: {s_vc} expected: {e_vc}')
+
+        add_vc_tests = [
+            ((None, VideoCodec.VC_265), VideoCodec.VC_AV1),
+            ((None, VideoCodec.VC_265), VideoCodec.VC_UNKNOWN),
+            ((None, VideoCodec.VC_UNKNOWN), VideoCodec.VC_AV1),
+            ((VideoCodec.VC_265, VideoCodec.VC_MPEG1), VideoCodec.VC_AV2),
+            ((None, None), VideoCodec.VC_VVC),
+        ]
+        for base_vc, add_vc in add_vc_tests:
+            _b = VideoCodec.combine_vcs(*base_vc)
+            _n = VideoCodec.set_snatched_vc(_b, add_vc)
+            _e = VideoCodec.combine_vcs(add_vc, base_vc[1])
+            self.assertEqual(_n, _e, msg=f'add_snatched_vc wrong: {_n} expected: {_e}')
+            _n = VideoCodec.set_file_vc(_b, add_vc)
+            _e = VideoCodec.combine_vcs(base_vc[0], add_vc)
+            self.assertEqual(_n, _e, msg=f'add_file_vc wrong: {_n} expected: {_e}')
 
     # TODO: fix these anime test cases at travis
     def test_get_proper_level_anime(self):

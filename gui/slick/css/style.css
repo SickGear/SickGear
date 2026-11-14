@@ -3803,7 +3803,8 @@ span.path{
 }
 
 span.btn-text,
-span.quality{
+span.quality,
+.videocodec-btn{
 	font:12px/13px "Open Sans", verdana, sans-serif;
 	background-image:-webkit-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
 	background-image:-moz-linear-gradient(top, rgba(255, 255, 255, 0.08),rgba(255, 255, 255, 0) 50%,rgba(0, 0, 0, 0) 50%,rgba(0, 0, 0, 0.25));
@@ -5601,4 +5602,55 @@ fancybox.css Overrides
 .profile-menu .ui-icon{
 	margin-right: 5px;
 	transform: scale(1.5);
+}
+/* =======================================================================
+Video codec CSS
+========================================================================== */
+.videocodec-btn{
+	margin-left:4px;
+	white-space:nowrap
+}
+
+.vc-unknown{
+	background-color:#999
+}
+
+.vc-264{
+	background-color:#3a62b8
+}
+
+.vc-265{
+	background-color:#2f6f2f
+}
+
+.vc-xvid{
+	background-color:#8e2f2f
+}
+
+.vc-mpeg1{
+	background-color:#888
+}
+
+.vc-mpeg2{
+	background-color:#666
+}
+
+.vc-vp9{
+	background-color:#2b8a8a
+}
+
+.vc-vc1{
+	background-color:#b5541c
+}
+
+.vc-av1{
+	background-color:#5e8f5e
+}
+
+.vc-av2{
+	background-color:#26326e
+}
+
+.vc-vvc{
+	background-color:#3b3fa8
 }

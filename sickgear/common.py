@@ -25,10 +25,18 @@ import sickgear
 
 from six import integer_types, string_types
 
+from exceptions_helper import ex
+from sickgear import logger
+
+from lib.hachoir.parser import createParser
+from lib.hachoir.metadata import extractMetadata
+from lib.hachoir.metadata.metadata_item import QUALITY_BEST
+from lib.hachoir.stream import InputStreamError
+
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
 if False:
-    from typing import List, Tuple
+    from typing import List, Optional, Tuple
 
 try:
     INSTANCE_ID = str(uuid.uuid1())
@@ -264,7 +272,6 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        from sickgear import logger
         name = os.path.basename(name)
 
         name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
@@ -358,14 +365,7 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        from exceptions_helper import ex
-        from sickgear import logger
         if os.path.isfile(filename):
-
-            from lib.hachoir.parser import createParser
-            from lib.hachoir.metadata import extractMetadata
-            from lib.hachoir.metadata.metadata_item import QUALITY_BEST
-            from lib.hachoir.stream import InputStreamError
 
             parser = height = width = None
             msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
@@ -514,6 +514,262 @@ class Quality(object):
     DOWNLOADED = None
     ARCHIVED = None
     FAILED = None
+
+
+class VideoCodec:
+    VC_UNKNOWN = 0
+    VC_MPEG1 = 1
+    VC_MPEG2 = 2
+    VC_DivXvid = 3
+    VC_VC1 = 4
+    VC_264 = 5
+    VC_VP9 = 6
+    VC_265 = 7
+    VC_AV1 = 8
+    VC_VVC = 9
+    VC_AV2 = 10
+
+    # used for release names
+    videocodec_regex = {
+        VC_264: r'(?:(?:x|h)[. _-]?264|avc)',
+        VC_265: r'(?:(?:x|h)[. _-]?265|hevc)',
+        VC_DivXvid: r'(?:divx|xvid)',
+        VC_VP9: r'vp9',
+        VC_VC1: r'(?<!a)vc1',
+        VC_AV1: r'av1',
+        VC_AV2: r'av2',
+        VC_VVC: r'(?:(?:x|h)[. _-]?266|vvc)',
+        VC_MPEG1: r'mpeg.?1',
+        VC_MPEG2: r'mpeg.?2'
+    }
+
+    # used for codec identification from file metadata/header
+    videocodec_ident_regex = {
+        VC_264: r'(?:264|avc1?)',
+        VC_265: r'(?:265|hevc|hvc1|hev1)',
+        VC_DivXvid: r'(?:divx|xvid)',
+        VC_VP9: r'vp.?9',
+        VC_VC1: r'(?<!a)vc.?1',
+        VC_AV1: r'av0?1',
+        VC_AV2: r'av0?2',
+        VC_VVC: r'(?:266|vvc)',
+        VC_MPEG1: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?1).*$',
+        VC_MPEG2: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?2|h.?222|h.?262).*$'
+    }
+
+    compiled_vc_ident_regex = {_c_k: re.compile(f'{_c_vc}', flags=re.I)
+                               for _c_k, _c_vc in videocodec_ident_regex.items()}
+
+    videocodec_names = {
+        VC_UNKNOWN: 'Unknown',
+        VC_MPEG1: 'MPEG-1',
+        VC_MPEG2: 'MPEG-2',
+        VC_DivXvid: 'DivX/Xvid',
+        VC_VC1: 'VC-1',
+        VC_264: 'H.264',
+        VC_VP9: 'VP9',
+        VC_265: 'H.265',
+        VC_AV1: 'AV1',
+        VC_VVC: 'H.266',
+        VC_AV2: 'AV2'
+    }
+
+    compiled_vc_regex = {_c_k: re.compile(f'[. _-]{_c_vc}\\b', flags=re.I)
+                         for _c_k, _c_vc in videocodec_regex.items()}
+
+    videocodec_html_class = {
+        VC_UNKNOWN: 'vc-unknown',
+        VC_264: 'vc-264',
+        VC_265: 'vc-265',
+        VC_DivXvid: 'vc-xvid',
+        VC_MPEG1: 'vc-mpeg1',
+        VC_MPEG2: 'vc-mpeg2',
+        VC_VP9: 'vc-vp9',
+        VC_VC1: 'vc-vc1',
+        VC_AV1: 'vc-av1',
+        VC_AV2: 'vc-av2',
+        VC_VVC: 'vc-vvc',
+    }
+
+    @staticmethod
+    def combine_vcs(snatched_vc, file_vc):
+        # type: (int, int) -> int
+        """
+        combine snatched and downlaoded video codec
+
+        :param snatched_vc: snatched video codec
+        :param file_vc: file video codec
+        """
+        return (snatched_vc or 0) * 100 + (file_vc or 0)
+
+    @staticmethod
+    def split_vc(vc):
+        # type: (int) -> Tuple[int, int]
+        """
+        split videocodec into snatched and file codec
+
+        :param vc: video codec
+        """
+        return (vc or 0) // 100, (vc or 0) % 100
+
+    @staticmethod
+    def get_file_vc(vc):
+        # type: (int) -> int
+        """
+        return file video codec part of combined video codec
+
+        :param vc: video codec value
+        """
+        return (vc or 0) % 100
+
+    @staticmethod
+    def get_snatch_vc(vc):
+        # type: (int) -> int
+        """
+        return snatch video codec part of combined video codec
+
+        :param vc: video codec value
+        """
+        return (vc or 0) // 100
+
+    @staticmethod
+    def set_snatched_vc(cur_video_codec, snatched_vc):
+        # type: (int, int) -> int
+        """
+        add/replace snatched video codec to existing video codec value
+
+        :param cur_video_codec: exiting current combined video codec value
+        :param snatched_vc: snatched video codec to to add/replaced
+        """
+        return  ((snatched_vc or 0) * 100) + ((cur_video_codec or 0) % 100)
+
+    @staticmethod
+    def set_file_vc(cur_video_codec, file_vc):
+        # type: (int, int) -> int
+        """
+        add/replace file video codec to existing combined video codec
+
+        :param cur_video_codec: exiting current combined video codec value
+        :param file_vc: file video codec to to add/replaced
+        """
+        return (((cur_video_codec or 0) // 100) * 100) + (file_vc or 0)
+
+    @staticmethod
+    def get_html_class(codec_id):
+        # type: (int) -> str
+        return VideoCodec.videocodec_html_class.get(codec_id, 'vc-unknown')
+
+    @staticmethod
+    def get_name(codec_id, release_name=None):
+        # type: (int, Optional[str]) -> str
+        """
+        return display name of video codec, in the x26N form when release_name has that form of this codec
+
+        :param codec_id: video codec
+        :param release_name: release name
+        """
+        name = VideoCodec.videocodec_names.get(codec_id, '')
+        if release_name and name.startswith('H.26') \
+                and re.search(r'[. _-]x[. _-]?%s\b' % name[2:], release_name, flags=re.I):
+            return 'x%s' % name[2:]
+        return name
+
+    @staticmethod
+    def get_videocodec_from_name(release_name):
+        # type: (str) -> int
+        """
+        Parse release_name to find used videocodec
+
+        :param release_name: release name to parse
+        :return: VideoCodec constant
+        """
+        if isinstance(release_name, str):
+            for _current_vc_type, _current_vc in VideoCodec.compiled_vc_regex.items():
+                if _current_vc.search(release_name):
+                    return _current_vc_type
+
+        return VideoCodec.VC_UNKNOWN
+
+    @staticmethod
+    def get_file_video_codec(filename):
+        # type: (str) -> Optional[int]
+        """
+
+        :param filename: filename
+        """
+        if not os.path.isfile(filename):
+            return None
+        else:
+
+            parser, vc = None, None
+            msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
+            try:
+                parser = createParser(filename)
+            except InputStreamError as e:
+                logger.warning(msg % (filename, ex(e)))
+                try:
+                    # noinspection PyProtectedMember
+                    parser.stream._input.close()
+                except (BaseException, Exception):
+                    pass
+                return None
+            except (BaseException, Exception) as e:
+                logger.error(msg % (filename, ex(e)))
+                logger.error(traceback.format_exc())
+                try:
+                    # noinspection PyProtectedMember
+                    parser.stream._input.close()
+                except (BaseException, Exception):
+                    pass
+                return None
+
+            if parser:
+                extract = None
+                try:
+                    args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
+                    parser.parse_exif = False
+                    parser.parse_photoshop_content = False
+                    parser.parse_comments = False
+                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: lib.hachoir.
+                except (BaseException, Exception) as e:
+                    logger.warning(msg % (filename, ex(e)))
+                    try:
+                        # noinspection PyProtectedMember
+                        parser.stream._input.close()
+                    except (BaseException, Exception):
+                        pass
+                    return None
+                if extract:
+                    try:
+                        file_data = extract.exportDictionary()
+                        vc = next(v for k,v in file_data.items() if 'Video stream' in k)['Compression']
+                    except (AttributeError, ValueError):
+                        try:
+                            for metadata in extract.iterGroups():
+                                if re.search('(?i)video', metadata.header):
+                                    vc = metadata.get('Compression')
+                                    break
+                        except (AttributeError, ValueError):
+                            try:
+                                # noinspection PyProtectedMember
+                                parser.stream._input.close()
+                            except (BaseException, Exception):
+                                pass
+                            return None
+
+                    # noinspection PyProtectedMember
+                    parser.stream._input.close()
+                    if not vc:
+                        return None
+                    for _current_vc_type, _current_vc in VideoCodec.compiled_vc_ident_regex.items():
+                        if _current_vc.search(vc):
+                            return _current_vc_type
+                else:
+                    return None
+            else:
+                return None
+
+            return (None, VideoCodec.VC_UNKNOWN)[bool(vc)]
 
 
 class WantedQualities(dict):
