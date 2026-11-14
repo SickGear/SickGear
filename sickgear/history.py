@@ -18,20 +18,23 @@ from . import db
 import datetime
 
 from . import helpers, logger
-from .common import FAILED, SNATCHED, SNATCHED_PROPER, SUBTITLED, Quality
+from .common import DOWNLOAD_CLIENTS, FAILED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, SUBTITLED, Quality
 from .name_parser.parser import NameParser
 import sickgear
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Any, AnyStr
+    from typing import Any, AnyStr, Optional, Tuple, Union
+    from .tv import TVShow, TVEpisode
+    from sqlite3 import Row
 
 
 dateFormat = '%Y%m%d%H%M%S'
 
 
-def _log_history_item(action, tvid, prodid, season, episode, quality, resource, provider, version=-1):
-    # type: (int, int, int, int, int, int, AnyStr, AnyStr, int) -> None
+def _log_history_item(action, tvid, prodid, season, episode, quality, resource, provider, version=-1, puid=None,
+                      client=None, client_uid=None):
+    # type: (int, int, int, int, int, int, AnyStr, AnyStr, int, Optional[str], Optional[ind], Optional[int]) -> None
     """
 
     :param action: action
@@ -42,23 +45,29 @@ def _log_history_item(action, tvid, prodid, season, episode, quality, resource, 
     :param quality: quality
     :param provider: provider name
     :param version: version
+    :param puid: puid of result
+    :param client_uid: client uid
     """
     log_date = datetime.datetime.now().strftime(dateFormat)
 
     with db.DBConnection() as sg_db:
         sg_db.action(
             'INSERT INTO history'
-            ' (action, date, showid, season, episode, quality, resource, provider, version, indexer, hide)'
-            ' VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-            [action, log_date, int(prodid), int(season), int(episode), quality, resource, provider, version, int(tvid), 0])
+            ' (action, date, showid, season, episode, quality, resource, provider, version, indexer, hide, puid,'
+            ' client, client_uid)'
+            ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [action, log_date, int(prodid), int(season), int(episode), quality, resource, provider, version,
+             int(tvid), 0, puid, client, client_uid])
 
 
-def log_snatch(search_result):
-    # type: (sickgear.classes.SearchResult) -> None
+def log_snatch(search_result, client=None, client_result=None):
+    # type: (sickgear.classes.SearchResult, Optional[int], Union[str, int, bool]) -> None
     """
     log search result to db
 
     :param search_result: search result
+    :param client: client from common DOWNLOAD_CLIENTS
+    :param client_result: client result
     """
     for cur_ep_obj in search_result.ep_obj_list:
 
@@ -76,12 +85,16 @@ def log_snatch(search_result):
 
         resource = search_result.name
 
+        client_uid = (None, client_result)[isinstance(client_result, (str, int))]
+
         _log_history_item(action, cur_ep_obj.show_obj.tvid, cur_ep_obj.show_obj.prodid,
-                          cur_ep_obj.season, cur_ep_obj.episode, quality, resource, provider, version)
+                          cur_ep_obj.season, cur_ep_obj.episode, quality, resource, provider, version,
+                          search_result.puid_str, client, client_uid)
 
 
-def log_download(ep_obj, filename, new_ep_quality, release_group=None, version=-1):
-    # type: (sickgear.tv.TVEpisode, AnyStr, int, AnyStr, int) -> None
+def log_download(ep_obj, filename, new_ep_quality, release_group=None, version=-1, puid=None,
+                      client=None, client_uid=None):
+    # type: (sickgear.tv.TVEpisode, AnyStr, int, AnyStr, int, Optional[str], Optional[int], Optional[int]) -> None
     """
     log download of episode
 
@@ -90,6 +103,9 @@ def log_download(ep_obj, filename, new_ep_quality, release_group=None, version=-
     :param new_ep_quality: new episode quality
     :param release_group: release group
     :param version: version
+    :param puid: puid
+    :param client: client from common DOWNLOAD_CLIENTS
+    :param client_uid: client uid
     """
     quality = new_ep_quality
 
@@ -102,7 +118,8 @@ def log_download(ep_obj, filename, new_ep_quality, release_group=None, version=-
     action = ep_obj.status
 
     _log_history_item(action, ep_obj.show_obj.tvid, ep_obj.show_obj.prodid,
-                      ep_obj.season, ep_obj.episode, quality, filename, provider, version)
+                      ep_obj.season, ep_obj.episode, quality, filename, provider, version,
+                      puid, client, client_uid)
 
 
 def log_subtitle(tvid, prodid, season, episode, status, subtitle_result):
@@ -126,20 +143,24 @@ def log_subtitle(tvid, prodid, season, episode, status, subtitle_result):
     _log_history_item(action, tvid, prodid, season, episode, quality, resource, provider)
 
 
-def log_failed(ep_obj, release, provider=None):
-    # type: (sickgear.tv.TVEpisode, AnyStr, AnyStr) -> None
+def log_failed(ep_obj, release, provider=None, client=None, client_uid=None, puid=None):
+    # type: (TVEpisode, str, str, int, Union[int, str], str) -> None
     """
     log failed downloaded episode
 
     :param ep_obj: episode object
     :param release: release
     :param provider: provider name
+    :param client: client id from common
+    :param client_uid: client uid
+    :param puid: puid
     """
     status, quality = Quality.split_composite_status(ep_obj.status)
     action = Quality.composite_status(FAILED, quality)
 
     _log_history_item(action, ep_obj.show_obj.tvid, ep_obj.show_obj.prodid,
-                      ep_obj.season, ep_obj.episode, quality, release, provider)
+                      ep_obj.season, ep_obj.episode, quality, release, provider,
+                      client=client, client_uid=client_uid, puid=puid)
 
 
 def reset_status(tvid, prodid, season, episode):
@@ -180,6 +201,77 @@ def reset_status(tvid, prodid, season, episode):
                 sg_db.action(undo_status, [history['action'],
                                            history['tv_id'], history['prod_id'],
                                            history['season'], history['episode']])
+
+
+def find_show_by_puidstr(puid_str):
+    # type: (str) -> TVShow
+    with db.DBConnection() as my_db:
+        if (sql_result := my_db.select(
+                f'SELECT * FROM history WHERE puid = ? AND'
+                f' (action LIKE "%{SNATCHED:02d}" OR action LIKE "%{SNATCHED_PROPER:02d}"'
+                f' OR action LIKE "%{SNATCHED_BEST:02d}") LIMIT 1', [puid_str])):
+            show_obj = None
+            try:
+                show_obj = helpers.find_show_by_id({int(sql_result[0]['indexer']): int(sql_result[0]['showid'])},
+                                                   check_multishow=True)
+            except (BaseException, Exception):
+                pass
+            return show_obj
+
+
+def find_data_by_puidstr(puid_str):
+    # type: (str) -> Optional[Row]
+    """
+    Returns the sql row or None of the matching history table
+
+    :param puid_str: puid of download
+    :return: Sql Row
+    """
+    with db.DBConnection() as my_db:
+        if (sql_result := my_db.select(
+                f'SELECT * FROM history WHERE puid = ? AND'
+                f' (action LIKE "%{SNATCHED:02d}" OR action LIKE "%{SNATCHED_PROPER:02d}"'
+                f' OR action LIKE "%{SNATCHED_BEST:02d}") LIMIT 1', [puid_str])):
+            return sql_result[0]
+    return None
+
+
+def find_show_puid_by_client_uid(client, client_uid):
+    # type: (int, Union[int, str]) -> Tuple[TVShow, str]
+    """
+    get show object and puid by client and client_uid from history db
+    only looks for snatched entries
+
+    :param client: client from common.DOWNLOAD_CLIENTS
+    :param client_uid: uid send from client
+    """
+    show_obj = None
+    puid = None
+    if client in DOWNLOAD_CLIENTS.TRUSTED_CLIENT_IDS:
+        with db.DBConnection() as my_db:
+            if (sql_result := my_db.select(
+                    f'SELECT * FROM history WHERE client = ? AND client_uid = ? AND'
+                    f' (action LIKE "%{SNATCHED:02d}" OR action LIKE "%{SNATCHED_PROPER:02d}"'
+                    f' OR action LIKE "%{SNATCHED_BEST:02d}") LIMIT 1', [client, client_uid])):
+                try:
+                    show_obj = helpers.find_show_by_id({int(sql_result[0]['indexer']): int(sql_result[0]['showid'])},
+                                                       check_multishow=True)
+                    puid = sql_result[0]['puid']
+                except (BaseException, Exception):
+                    pass
+    return show_obj, puid
+
+
+def find_show_by_client_uid(client, client_uid):
+    # type: (int, Union[int, str]) -> TVShow
+    """
+    get show object by client and client_uid from history db
+    only looks for snatched entries
+
+    :param client: client from common.DOWNLOAD_CLIENTS
+    :param client_uid: uid send from client
+    """
+    return find_show_puid_by_client_uid(client, client_uid)[0]
 
 
 def history_snatched_proper_fix():

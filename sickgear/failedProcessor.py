@@ -17,32 +17,37 @@
 import exceptions_helper
 
 import sickgear
-from . import logger, search_queue, show_name_helpers
+from . import logger, failed_history, history, search_queue, show_name_helpers
 from ._legacy_classes import LegacyFailedProcessor
 from .name_parser.parser import NameParser, InvalidNameException, InvalidShowException
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr
+    from typing import AnyStr, Optional, Union
+    from .tv import TVShow
 
 
 class FailedProcessor(LegacyFailedProcessor):
     """Take appropriate action when a download fails to complete"""
 
-    def __init__(self, dir_name, nzb_name, show_obj=None):
+    def __init__(self, dir_name, nzb_name, show_obj=None, client=None, client_uid=None, puid=None):
+        # type: (str, str, TVShow, int, Union[int, str], str) -> None
         """
         :param dir_name: Full path to the folder of the failed download
-        :type dir_name: AnyStr
         :param nzb_name: Full name of the nzb file that failed
-        :type nzb_name: AnyStr or None
         :param show_obj: show object
-        :type show_obj: sickgear.tv.TVShow or None
+        :param client: client
+        :param client_uid: client uid
+        :param puid: puid
         """
-        self.dir_name = dir_name  # type: AnyStr
-        self.nzb_name = nzb_name  # type: AnyStr or None
-        self._show_obj = show_obj  # type: sickgear.tv.TVShow or None
+        self.dir_name = dir_name  # type: str
+        self.nzb_name = nzb_name  # type: Optional[str]
+        self._show_obj = show_obj  # type: Optional[TVShow]
+        self.client = client  # type: Optional[int]
+        self.client_uid = client_uid  # type: Union[int, str]
+        self.puid = puid  # type: Optional[str]
 
-        self.log = ''  # type: AnyStr
+        self.log = ''  # type: str
 
     @property
     def show_obj(self):
@@ -67,9 +72,19 @@ class FailedProcessor(LegacyFailedProcessor):
         """
         self._log(f'Failed download detected: ({self.nzb_name}, {self.dir_name})')
 
-        release_name = show_name_helpers.determine_release_name(self.dir_name, self.nzb_name)
+        sql_result, release_name = None, None
+        if self.puid:
+            sql_result = history.find_data_by_puidstr(self.puid)
+            if sql_result:
+                release_name = sql_result['resource']
+        if not release_name:
+            release_name = show_name_helpers.determine_release_name(self.dir_name, self.nzb_name)
         if None is release_name:
             self._log('Warning: unable to find a valid release name.', logger.WARNING)
+            raise exceptions_helper.FailedProcessingFailed()
+
+        if failed_history.has_failed(release_name, puid=self.puid, client=self.client, client_uid=self.client_uid):
+            self._log('Warning: release was already failed processed.', logger.WARNING)
             raise exceptions_helper.FailedProcessingFailed()
 
         try:
@@ -96,7 +111,9 @@ class FailedProcessor(LegacyFailedProcessor):
         for episode in parsed.episode_numbers:
             segment = parsed.show_obj.get_episode(parsed.season_number, episode)
 
-            cur_failed_queue_item = search_queue.FailedQueueItem(parsed.show_obj, [segment])
+            cur_failed_queue_item = search_queue.FailedQueueItem(parsed.show_obj, [segment],
+                                                                 client=self.client, client_uid=self.client_uid,
+                                                                 puid=self.puid)
             sickgear.search_queue_scheduler.action.add_item(cur_failed_queue_item)
 
         return True

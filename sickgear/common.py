@@ -757,3 +757,23 @@ class NeededQualities(object):
                     self.need_webdl = True
                 if not self.need_uhd and max(wanted_qualities) > NeededQualities.max_hd:
                     self.need_uhd = True
+
+
+class DOWNLOAD_CLIENTS():
+    NZBGET = 1
+    SABNZBD = 2
+    NZB_BLACKHOLE = 3
+    TORRENT = 10
+    TORRENT_BLACKHOLE = 11
+
+    IDS = {
+        'nzbget': NZBGET,
+        'sabnzbd': SABNZBD,
+        'blackhole': NZB_BLACKHOLE,
+        'torrent': TORRENT,
+        'torrent-blackhole': TORRENT_BLACKHOLE,
+    }
+
+    REVERSE_IDS = {v: k for k,v in IDS.items()}
+
+    TRUSTED_CLIENT_IDS = [SABNZBD]

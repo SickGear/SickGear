@@ -56,7 +56,7 @@ except ImportError:  # On error, exit
 
 
 # noinspection DuplicatedCode
-def process_files(dir_to_process, org_nzb_name=None, status=None):
+def process_files(dir_to_process, org_nzb_name=None, status=None, client=None, nzbid=None, puid=None):
     # Default values
     host = 'localhost'
     port = '8081'
@@ -118,6 +118,15 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
 
     if None is not status:
         params['failed'] = status
+
+    if None is not client:
+        params['client'] = client
+
+    if None is not nzbid:
+        params['nzbid'] = nzbid
+
+    if None is not puid:
+        params['puid'] = puid
 
     login_url = f'{url}/login'
     url = f'{url}/home/process-media/files'

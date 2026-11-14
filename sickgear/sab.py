@@ -16,17 +16,21 @@
 
 import sickgear
 from . import logger
-from .classes import NZBDataSearchResult, NZBSearchResult
+
+
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, Tuple, Union
+    from .classes import NZBDataSearchResult, NZBSearchResult, Proper
 
 
 def send_nzb(search_result):
+    # type: (Union[NZBSearchResult, NZBDataSearchResult, Proper]) -> Union[str, bool]
     """
     Sends an nzb to SABnzbd via the API.
 
     :param search_result: The NZBSearchResult object to send to SAB
-    :type search_result: NZBSearchResult or NZBDataSearchResult
     :return: success
-    :rtype: bool
     """
 
     success, result, nzb_type = True, '', 'nzb'
@@ -79,6 +83,8 @@ def send_nzb(search_result):
     # do some crude parsing of the result text to determine what SAB said
     if result.get('status'):
         logger.debug(f'Success from SABnzbd using {nzb_type}')
+        if 'nzo_ids' in result and isinstance(result['nzo_ids'], list) and 0 < len(result['nzo_ids']):
+            return result['nzo_ids'][0]
         return True
     elif 'error' in result:
         logger.error(f'Failed using {nzb_type} with SABnzbd, response: {result.get("error", "und")}')
@@ -100,7 +106,7 @@ def _check_sab_response(result):
 
 
 def _get_url(url, params=None, **kwargs):
-
+    # type: (str, Any, ...) -> Tuple[bool, str]
     result = sickgear.helpers.get_url(url, params=params, parse_json=True, **kwargs)
     if None is result:
         logger.error('Error, no response from SABnzbd')
@@ -109,6 +115,7 @@ def _get_url(url, params=None, **kwargs):
 
 
 def access_method(host):
+    # type: (str) -> Tuple[bool, str]
 
     success, result = _get_url(f'{host}api', params={'mode': 'auth', 'output': 'json'})
     if not success:
@@ -117,6 +124,7 @@ def access_method(host):
 
 
 def test_authentication(host=None, username=None, password=None, apikey=None):
+    # type: (str, str, str, str) -> Tuple[bool, str]
     """
     Sends a simple API request to SAB to determine if the given connection information is correct
 

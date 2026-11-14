@@ -27,7 +27,7 @@ if False:
     from _23 import DirEntry
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20016
+MAX_DB_VERSION = 20017
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -2096,3 +2096,20 @@ class ChangeTmdbID(db.SchemaUpgrade):
 
         return self.set_db_version(20016)
 
+
+# 20016 -> 20017
+class AddHistoryDownloadIdentity(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database(self.connection, 'sickbeard.db', self.call_check_db_version())
+
+        self.upgrade_log('Add puid and client columns to history')
+        if not self.has_column('history', 'puid'):
+            self.add_column('history', 'puid', 'TEXT', default=None)
+
+        if not self.has_column('history', 'client'):
+            self.add_column('history', 'client', 'INTEGER', default=None)
+
+        if not self.has_column('history', 'client_uid'):
+            self.add_column('history', 'client_uid', 'TEXT', default=None)
+
+        return self.set_db_version(20017)

@@ -104,6 +104,16 @@ class SearchResult(LegacySearchResult):
         self.priority = 0  # type: int
 
     @property
+    def puid_str(self):
+        # type: (...) -> Optional[str]
+        """
+        returns a string of provider name + puid
+        """
+        if self.puid:
+            return f'[[{getattr(self.provider, "name", "unknown")}]]-{self.puid}'
+        return None
+
+    @property
     def show_obj(self):
         # type: (...) -> Optional[sickgear.tv.TVShow]
         return self._show_obj
@@ -291,6 +301,16 @@ class Proper(LegacyProper):
         self.episode_numbers = kwargs.get('episode_numbers', [])  # type: Optional[List[int]]
 
         super(Proper, self).__init__(**kwargs)
+
+    @property
+    def puid_str(self):
+        # type: (...) -> Optional[str]
+        """
+        returns a string of provider name + puid
+        """
+        if self.puid:
+            return f'[[{getattr(self.provider, "name", "unknown")}]]-{self.puid}'
+        return None
 
     @property
     def show_obj(self):

@@ -27,7 +27,8 @@ from sg_helpers import write_file
 import sickgear
 from . import clients, common, db, failed_history, helpers, history, logger, \
     notifiers, nzbget, nzbSplitter, show_name_helpers, sab, ui
-from .common import DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_EP_RESULT, SEASON_RESULT, Quality
+from .common import (DOWNLOAD_CLIENTS, DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_EP_RESULT,
+                     SEASON_RESULT, Quality)
 from .providers.generic import GenericProvider
 from .tv import TVEpisode, TVShow
 
@@ -113,14 +114,18 @@ def snatch_episode(result, end_status=SNATCHED):
     if 0 < result.properlevel:
         end_status = SNATCHED_PROPER
 
+    client_id = None
     # NZB files can be sent straight to SAB or saved to disk
     if result.resultType in ('nzb', 'nzbdata'):
         if 'blackhole' == sickgear.NZB_METHOD:
             dl_result = _download_result(result)
+            client_id = DOWNLOAD_CLIENTS.NZB_BLACKHOLE
         elif 'sabnzbd' == sickgear.NZB_METHOD:
             dl_result = sab.send_nzb(result)
+            client_id = DOWNLOAD_CLIENTS.SABNZBD
         elif 'nzbget' == sickgear.NZB_METHOD:
             dl_result = nzbget.send_nzb(result)
+            client_id = DOWNLOAD_CLIENTS.NZBGET
         else:
             logger.error(f'Unknown NZB action specified in config: {sickgear.NZB_METHOD}')
             dl_result = False
@@ -135,6 +140,7 @@ def snatch_episode(result, end_status=SNATCHED):
         # torrents are saved to disk when blackhole mode
         if 'blackhole' == sickgear.TORRENT_METHOD:
             dl_result = _download_result(result)
+            client_id = DOWNLOAD_CLIENTS.TORRENT_BLACKHOLE
         else:
             # make sure we have the torrent file content
             if not result.content and not result.url.startswith('magnet'):
@@ -144,6 +150,7 @@ def snatch_episode(result, end_status=SNATCHED):
                     return False
             # Snatches torrent with client
             dl_result = clients.get_client_instance(sickgear.TORRENT_METHOD)().send_torrent(result)
+            client_id = DOWNLOAD_CLIENTS.TORRENT
 
             if result.cache_filepath:
                 helpers.remove_file_perm(result.cache_filepath)
@@ -155,11 +162,11 @@ def snatch_episode(result, end_status=SNATCHED):
         return False
 
     if sickgear.USE_FAILED_DOWNLOADS:
-        failed_history.add_snatched(result)
+        failed_history.add_snatched(result, client=client_id, client_uid=dl_result)
 
     ui.notifications.message('Episode snatched', result.name)
 
-    history.log_snatch(result)
+    history.log_snatch(result, client_id, dl_result)
 
     # don't notify when we re-download an episode
     sql_l = []

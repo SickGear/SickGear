@@ -777,8 +777,8 @@ class BacklogQueueItem(BaseSearchQueueItem):
 
 
 class FailedQueueItem(BaseSearchQueueItem):
-    def __init__(self, show_obj, segment, uid=None):
-        # type: (sickgear.tv.TVShow, List[sickgear.tv.TVEpisode], AnyStr) -> None
+    def __init__(self, show_obj, segment, uid=None, client=None, client_uid=None, puid=None):
+        # type: (sickgear.tv.TVShow, List[sickgear.tv.TVEpisode], AnyStr, str, int, str) -> None
         """
 
         :param show_obj: show object
@@ -788,6 +788,9 @@ class FailedQueueItem(BaseSearchQueueItem):
         super(FailedQueueItem, self).__init__(show_obj, segment, 'Retry', FAILED_SEARCH, uid=uid)
         self.priority = generic_queue.QueuePriorities.HIGH  # type: int
         self.name = f'RETRY-{show_obj.tvid_prodid}'  # type: AnyStr
+        self.client = client
+        self.client_uid = client_uid
+        self.puid = puid
         self.started = None
 
     def run(self):
@@ -804,8 +807,8 @@ class FailedQueueItem(BaseSearchQueueItem):
                 (release, provider) = failed_history.find_release(ep_obj)
                 failed_history.revert_episode(ep_obj)
                 if release:
-                    failed_history.add_failed(release)
-                    history.log_failed(ep_obj, release, provider)
+                    failed_history.add_failed(release, puid=self.puid, client=self.client, client_uid=self.client_uid)
+                    history.log_failed(ep_obj, release, provider, self.client, self.client_uid, self.puid)
 
                 logger.log(f'Beginning failed download search for: [{ep_obj.pretty_name()}]')
 
