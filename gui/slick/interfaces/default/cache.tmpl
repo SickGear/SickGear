@@ -25,7 +25,7 @@
 			'.col-uid': {sorter: 'text'},
 		},
 		textExtraction: {
-			'.col-tvinfo': function(node) {return \$(node).attr('tvid') || ''},
+			'.col-tvinfo': function(node) {return \$(node).find('i').data('tvid') || ''},
 		},
 	});
 
@@ -90,7 +90,8 @@
 				<td class="col-name-cache">$hItem['name']</td>
 				<td class="col-cache">$hItem['season']</td>
 				<td class="col-episodes" style="white-space:nowrap">$hItem['episodes'].strip('|').replace('|', ',')</td>
-				<td class="col-cache col-tvinfo"><i class="icon16 $sickgear.TVInfoAPI($hItem['indexer']).config['slug']" data-tvid="$hItem['indexer']"></i></td>
+    #set $slug = $hItem['indexer'] in $sickgear.TVInfoAPI().all_sources and $sickgear.TVInfoAPI($hItem['indexer']).config.get('slug') or ''
+				<td class="col-cache col-tvinfo"><i class="icon16 $slug" data-tvid="$hItem['indexer']"></i></td>
 				<td class="col-cache">$hItem['indexerid']</td>
 				<td class="col-cache"><span title="$hItem['url']" class="addQTip"><img src="$sbRoot/images/info32.png" width="16" height="16"></span></td>
 				<td class="col-cache">$hItem['time']</td>
