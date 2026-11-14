@@ -1006,6 +1006,12 @@ class PostProcessor(object):
                     self._log(f'Found release name {self.release_name}', logger.DEBUG)
 
                 cur_ep_obj.release_name = self.release_name or ''
+                v_c = None
+                if self.release_name:
+                    v_c = common.VideoCodec.get_videocodec_from_name(self.release_name)
+                if v_c in (None, common.VideoCodec.VC_UNKNOWN):
+                    v_c = common.VideoCodec.get_file_video_codec(self.file_path)
+                cur_ep_obj.video_codec = common.VideoCodec.combine_vcs(0, v_c)
 
                 any_qualities, best_qualities = common.Quality.split_quality(cur_ep_obj.show_obj.quality)
                 cur_status, cur_quality = common.Quality.split_composite_status(cur_ep_obj.status)

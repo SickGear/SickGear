@@ -20,6 +20,7 @@
 * Change keep aired episodes per season counts on the show object
 * Add download identity tracking for snatches, media process, and failed downloads
 * Update NZBGet Process Media extension, SickGear-NG 2.8 to 2.9
+* Add video codec tracking for episodes
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 

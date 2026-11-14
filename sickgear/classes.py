@@ -23,7 +23,7 @@ import threading
 
 import sickgear
 from ._legacy_classes import LegacySearchResult, LegacyProper
-from .common import Quality
+from .common import Quality, VideoCodec
 
 from six import integer_types, string_types
 
@@ -96,6 +96,8 @@ class SearchResult(LegacySearchResult):
         # provider unique id
         self.puid = None  # type: Any
 
+        self._vc = None  # type: Optional[int]
+
         # path to cache file
         self.cache_filepath = ''  # type: AnyStr
 
@@ -112,6 +114,16 @@ class SearchResult(LegacySearchResult):
         if self.puid:
             return f'[[{getattr(self.provider, "name", "unknown")}]]-{self.puid}'
         return None
+
+    @property
+    def video_codec(self):
+        # type: (...) -> Optional[int]
+        """
+        returns const from common VideoCodec class
+        """
+        if None is self._vc and self.name:
+            self._vc = VideoCodec.get_videocodec_from_name(self.name)
+        return self._vc
 
     @property
     def show_obj(self):
@@ -299,6 +311,7 @@ class Proper(LegacyProper):
         self.scene_episode = -1  # type: int
 
         self.episode_numbers = kwargs.get('episode_numbers', [])  # type: Optional[List[int]]
+        self._vc = None  # type: Optional[int]
 
         super(Proper, self).__init__(**kwargs)
 
@@ -311,6 +324,16 @@ class Proper(LegacyProper):
         if self.puid:
             return f'[[{getattr(self.provider, "name", "unknown")}]]-{self.puid}'
         return None
+
+    @property
+    def video_codec(self):
+        # type: (...) -> Optional[int]
+        """
+        returns const from common VideoCodec class
+        """
+        if None is self._vc and self.name:
+            self._vc = VideoCodec.get_videocodec_from_name(self.name)
+        return self._vc
 
     @property
     def show_obj(self):

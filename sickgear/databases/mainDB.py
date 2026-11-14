@@ -27,7 +27,7 @@ if False:
     from _23 import DirEntry
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20017
+MAX_DB_VERSION = 20018
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -2113,3 +2113,15 @@ class AddHistoryDownloadIdentity(db.SchemaUpgrade):
             self.add_column('history', 'client_uid', 'TEXT', default=None)
 
         return self.set_db_version(20017)
+
+
+# 20017 -> 20018
+class AddEpisodeVideoCodec(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database(self.connection, 'sickbeard.db', self.call_check_db_version())
+
+        self.upgrade_log('Add video_codec column to tv_episodes')
+        if not self.has_column('tv_episodes', 'video_codec'):
+            self.add_column('tv_episodes', 'video_codec', 'INTEGER', default=None)
+
+        return self.set_db_version(20018)

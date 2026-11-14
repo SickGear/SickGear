@@ -42,7 +42,7 @@ from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
 from .anime import AniGroupList
 from .classes import WeakList
-from .common import Quality, statusStrings, \
+from .common import Quality, VideoCodec, statusStrings, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, \
     NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_LIMITED_EXTEND_E_PREFIXED, NAMING_SEPARATED_REPEAT
 from .generic_queue import QueuePriorities
@@ -2304,6 +2304,21 @@ class TVShow(TVShowBase):
 
                     ep_obj.load_from_db(season, episode, show_result=[cur_row], scene_result=scene_sql_result)
                     ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=cached_show)
+                    # in case media processing is set to untouched for removed episodes
+                    if (non_quality_status := 100 > ep_obj._status and None is not ep_obj._video_codec) or (
+                            None is ep_obj._video_codec and ep_obj._release_name):
+                        ep_changed = False
+                        # status with no quality can't have a video codec
+                        if non_quality_status:
+                            ep_obj.video_codec = None
+                            ep_obj.release_name = ''
+                            ep_changed = True
+                        elif ep_obj._release_name:
+                            ep_changed = True
+                            ep_obj.video_codec = VideoCodec.get_videocodec_from_name(ep_obj._release_name)
+                        if ep_changed and (ep_sql := ep_obj.get_sql()):
+                            sql_l.append(ep_sql)
+
                 scanned_eps[season][episode] = True
             except exceptions_helper.EpisodeDeletedException:
                 logger.debug(f'Tried loading an episode that should have been deleted from the DB [{self._name}],'
@@ -2549,6 +2564,13 @@ class TVShow(TVShowBase):
             # if it's a new file then
             if not same_file:
                 ep_obj.release_name = ''
+                ep_obj.video_codec = VideoCodec.set_file_vc(ep_obj._video_codec, None)
+            if (_vc := VideoCodec.get_file_vc(ep_obj._video_codec)) in (None, VideoCodec.VC_UNKNOWN):
+                if ep_obj.release_name:
+                    _vc = VideoCodec.get_videocodec_from_name(ep_obj.release_name)
+                if _vc in (None, VideoCodec.VC_UNKNOWN):
+                    _vc = VideoCodec.get_file_video_codec(path)
+                ep_obj.video_codec = VideoCodec.set_file_vc(ep_obj._video_codec, _vc)
 
             # if user replaces a file, attempt to recheck the quality unless it's know to be the same file
             if check_quality_again and not same_file:
@@ -3459,6 +3481,7 @@ class TVShow(TVShowBase):
                         ep_obj.hasnfo = False
                         ep_obj.hastbn = False
                         ep_obj.release_name = ''
+                        ep_obj.video_codec = None
 
                         result = ep_obj.get_sql()
                         if None is not result:
@@ -3467,6 +3490,23 @@ class TVShow(TVShowBase):
                 # the file exists, set its modify file stamp
                 if sickgear.AIRDATE_EPISODES:
                     ep_obj.airdate_modify_stamp()
+
+            # check for missing video codec data with release name set
+            if (non_quality_status := None is not ep_obj._video_codec and 100 > ep_obj._status) or (
+                    None is ep_obj._video_codec and ep_obj._release_name):
+                ep_changed = False
+                if non_quality_status:
+                    ep_obj.video_codec = None
+                    ep_obj.release_name = ''
+                    ep_changed = True
+                elif ep_obj._release_name:
+                    f_vc = VideoCodec.get_videocodec_from_name(ep_obj._release_name)
+                    ep_changed = True
+                    if f_vc in (None, VideoCodec.VC_UNKNOWN) and os.path.isfile(ep_obj.location):
+                        f_vc = VideoCodec.get_file_video_codec(ep_obj.location)
+                    ep_obj.video_codec = VideoCodec.set_file_vc(ep_obj._video_codec, f_vc)
+                if ep_changed and (result := ep_obj.get_sql()):
+                    sql_l.append(result)
 
         if deleted:
             logger.log(f'{self.tvid_prodid}: {("Permanently deleted", "Trashed")[sickgear.TRASH_REMOVE_SHOW]}'
@@ -3864,6 +3904,7 @@ class TVEpisode(TVEpisodeBase):
         self._timestamp = None  # type: Optional[int]
         self._timezone = None  # type: Optional[AnyStr]
         self._tvid = int(show_obj.tvid)  # type: int
+        self._video_codec = None  # type: Optional[int]
 
         self.check_for_meta_files()
         self.lock = threading.RLock()
@@ -3884,6 +3925,27 @@ class TVEpisode(TVEpisodeBase):
         # type: (...) -> int
         return self.show_obj.aired_in_scene_season.get(
             self._scene_season, 0) if self.show_obj._scene else self.eps_aired_in_season
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, *arg):
+        # statues without quality can't have a video codec
+        if 100 > arg[0]:
+            self._video_codec = None
+        self.dirty_setter('_status')(self, *arg)
+
+    @property
+    def video_codec(self):
+        # type: (...) -> Optional[int]
+        return self._video_codec
+
+    @video_codec.setter
+    def video_codec(self, *args):
+        # type: (Optional[int]) -> None
+        self.dirty_setter('_video_codec')(self, *args)
 
     @property
     def network(self):
@@ -4231,6 +4293,7 @@ class TVEpisode(TVEpisodeBase):
         self._subtitles_searchcount = show_result['subtitles_searchcount']
         self._timestamp = show_result['timestamp'] or self._make_timestamp()
         self._version = self._version if not show_result['version'] else int(show_result['version'])
+        self._video_codec = show_result['video_codec']
         self.location = show_result['location'] and os.path.normpath(show_result['location']) or self.location
 
         if None is not show_result['release_group']:
@@ -4790,7 +4853,7 @@ class TVEpisode(TVEpisodeBase):
             release_name, is_proper, showid, season, episode, absolute_number,
             version, release_group,
             network, network_id, network_country, network_country_code, network_is_stream,
-            airtime, runtime, timestamp, timezone,
+            airtime, runtime, timestamp, timezone, video_codec,
             scene_absolute_number, scene_season, scene_episode)
             VALUES
             ((SELECT episode_id FROM tv_episodes
@@ -4804,7 +4867,7 @@ class TVEpisode(TVEpisodeBase):
             ,?,?,?,?
             ,?,?
             ,?,?,?,?,?
-            ,?,?,?,?,
+            ,?,?,?,?,?,
             (SELECT scene_absolute_number FROM tv_episodes
              WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?),
             (SELECT scene_season FROM tv_episodes
@@ -4822,7 +4885,7 @@ class TVEpisode(TVEpisodeBase):
                   self._version, self._release_group,
                   self._network, self._network_id,
                   self._network_country, self._network_country_code, self._network_is_stream,
-                  time_to_int(self._airtime), self._runtime, self._timestamp, self._timezone,
+                  time_to_int(self._airtime), self._runtime, self._timestamp, self._timezone, self._video_codec,
                   self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
                   self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
                   self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode]]
@@ -4871,6 +4934,7 @@ class TVEpisode(TVEpisodeBase):
             timestamp=self._timestamp,
             timezone=self._timezone,
             version=self._version,
+            video_codec=self._video_codec,
         )
 
         control_value_dict = dict(
