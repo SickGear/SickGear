@@ -2273,6 +2273,26 @@ class Home(MainHandler):
             self.redirect('/home/')
 
     # noinspection PyUnusedLocal
+    @private_call
+    @staticmethod
+    def snatched_names(sg_db, show_obj, season=None):
+        # type: (db.DBConnection, TVShow, Optional[int]) -> Dict[Tuple[int, int], AnyStr]
+        """
+        return the release name of the newest snatch of each episode of a show, or of one of its seasons
+
+        :param sg_db: database connection
+        :param show_obj: show object
+        :param season: season number, or None for all seasons
+        """
+        return {(cur_result['season'], cur_result['episode']): cur_result['resource'] for cur_result in sg_db.select(
+            'SELECT season, episode, resource'
+            ' FROM history'
+            ' WHERE indexer = ? AND showid = ?'
+            ' AND action IN (%s)' % ','.join(['%s' % x for x in Quality.SNATCHED_ANY])
+            + ('', ' AND season = ?')[None is not season]
+            + ' ORDER BY date',
+            [show_obj.tvid, show_obj.prodid] + ([], [season])[None is not season])}
+
     def season_render(self, tvid_prodid=None, season=None, **kwargs):
 
         response = {'success': False}
@@ -2300,6 +2320,7 @@ class Home(MainHandler):
                                       ' ORDER BY episode DESC',
                                       [show_obj.tvid, show_obj.prodid,
                                        season])
+            t.snatched_names = self.snatched_names(sg_db, show_obj, season)
         t.episodes = sql_result
 
         ep_cats = {}
@@ -2516,6 +2537,7 @@ class Home(MainHandler):
                 if status_overview:
                     ep_cats['%sx%s' % (row['season'], row['episode'])] = status_overview
             t.ep_cats = ep_cats
+            t.snatched_names = self.snatched_names(sg_db, show_obj)
 
             for row in sg_db.select('SELECT season, count(*) AS cnt, status'
                                     ' FROM tv_episodes'

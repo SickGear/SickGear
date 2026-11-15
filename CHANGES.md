@@ -24,6 +24,7 @@
 * Add video codec label and release name tooltip to episode rows on display show
 * Change video codec names to standard names, e.g. H/X264 to H.264
 * Change video codec label on display show to the x264, x265, or x266 form when the release name has that form
+* Change video codec label of a snatched episode on display show to use the snatched release name
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
