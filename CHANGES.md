@@ -3,6 +3,7 @@
 * Fix file info tip of the quality label on display show is removed when an episode search finishes
 * Fix status text on display show differs from a page load when an episode search finishes
 * Fix missing image icon over the episode search icon, and the icon after a search ends
+* Fix row colour of an archived episode on display show during and after an episode search
 
 
 ### 3.36.9 (2026-11-09 17:10:00 UTC)

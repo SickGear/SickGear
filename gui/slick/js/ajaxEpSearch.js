@@ -123,8 +123,9 @@ function uiUpdateComplete(data) {
 
 					// update row status
 					if (ep.statusoverview) {
+						// display show also has class archived on the row of an Archived status
 						uiClearClass(link$.closest('tr'))
-							.addClass(ep.statusoverview);
+							.addClass(ep.statusoverview).toggleClass('archived', /^Archived/.test(ep.status));
 					}
 					// update quality text for status column
 					var rSearchTerm = /(\w+)\s\((.+?)\)/;
@@ -174,7 +175,7 @@ function imgUpdate(link$, tip, cls) {
 }
 
 function uiClearClass(el$) {
-	return el$.removeClass('skipped wanted qual good unaired snatched') || el$;
+	return el$.removeClass('skipped wanted qual good unaired snatched archived') || el$;
 }
 
 function uiWanted(el$) {
