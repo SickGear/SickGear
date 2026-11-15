@@ -168,8 +168,9 @@ function getAttr(el$, name) {
 }
 
 function imgUpdate(link$, tip, cls) {
-	link$.find('img').attr('src', '').attr('title', tip).prop('alt', '')
-		.removeClass('spinner2 queued search no yes').addClass(cls);
+	// the class sets the image, an empty src shows the missing image icon of a browser over it
+	link$.find('img').attr('src', baseUrl() + '/images/trans.png').attr('title', tip).prop('alt', '')
+		.removeClass('spinner2 queued search no yes success upgrade').addClass(cls);
 }
 
 function uiClearClass(el$) {
