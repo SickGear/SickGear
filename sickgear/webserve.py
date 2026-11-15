@@ -4765,7 +4765,8 @@ class AddShows(Home):
         t.blocklist = []
         t.groups = []
 
-        t.show_scene_maps = list(scene_exceptions.MEMCACHE['release_map_xem'].values())
+        # ids of shows with a XEM map, by TV info source id
+        t.show_scene_maps = dict(scene_exceptions.MEMCACHE['release_map_xem'])
 
         has_shows = len(sickgear.showList)
         t.try_id = []  # [dict try_tip: try_term]
