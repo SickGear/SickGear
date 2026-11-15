@@ -49,13 +49,10 @@ $(function(){
 		if(!confirmArr.length){
 			command();
 		} else {
-			$.confirm({
+			confirmDialog({
 				title: 'Are you sure ?',
 				text: confirmArr.join(' and ') + ' show(s)',
-				confirm	: command,
-				cancel	: function(){},
-				confirmButton: 'Yes', confirmButtonClass: 'green',
-				cancelButton: 'No', cancelButtonClass: 'red'
+				confirm	: command
 			});
 		}
 

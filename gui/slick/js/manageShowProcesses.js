@@ -59,7 +59,7 @@ $(document).ready(function() {
 
 	$('input[id^="clear-btn-"]').click(function() {
 		var param = {'show_type': $(this).data('action')};
-		$.confirm({
+		confirmDialog({
 			title: 'Confirm cancel',
 			text: 'Cancel pending actions ?',
 			confirm	: function(){
@@ -67,16 +67,13 @@ $(document).ready(function() {
 					.done(function(){
 						location.reload();
 					});
-			},
-			cancel	: function(){},
-			confirmButton: 'Yes', confirmButtonClass: 'green',
-			cancelButton: 'No', cancelButtonClass: 'red'
+			}
 		});
 	});
 
 	$('input[id^="clear-people-btn"]').click(function() {
 		var param = {'people_type': $(this).data('action')};
-		$.confirm({
+		confirmDialog({
 			title: 'Confirm cancel',
 			text: 'Cancel pending actions ?',
 			confirm	: function(){
@@ -84,10 +81,7 @@ $(document).ready(function() {
 					.done(function(){
 						location.reload();
 					});
-			},
-			cancel	: function(){},
-			confirmButton: 'Yes', confirmButtonClass: 'green',
-			cancelButton: 'No', cancelButtonClass: 'red'
+			}
 		});
 	});
 
