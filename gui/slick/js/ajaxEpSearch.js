@@ -9,6 +9,7 @@
 /** @namespace ep.quality */
 /** @namespace ep.retrystate */
 /** @namespace ep.statusoverview */
+/** @namespace ep.fileinfo */
 
 var dev = !1,
 	logInfo = dev ? console.info.bind(window.console) : function() {},
@@ -135,7 +136,11 @@ function uiUpdateComplete(data) {
 			}
 
 			// update the status area
-			link$.closest('.col-search').siblings('.col-status').html(htmlContent);
+			var status$ = link$.closest('.col-search').siblings('.col-status').html(htmlContent);
+			// keep the file info tip that display show has on its quality label
+			if ('finished' === ep.searchstate && ep.fileinfo && $.SickGear.qTips) {
+				$.SickGear.qTips(status$.find('.quality').addClass('addQTip').attr('title', ep.fileinfo));
+			}
 		}
 	});
 	return isFinished;
