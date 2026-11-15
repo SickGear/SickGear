@@ -641,6 +641,10 @@ class SchemaUpgrade(object):
             tbl_name = re.findall(r'(?i)CREATE.*?TABLE.*?\s([^\s(]+)\s*\(', query)
             if tbl_name and self.has_table(tbl_name[0]):
                 continue
+            # a column can exist, e.g. in a db of a test branch that added it in an earlier step
+            column = re.findall(r'(?i)ALTER\s+TABLE\s+\[?([^\s\]]+)\]?\s+ADD\s+(?:COLUMN\s+)?\[?([^\s\]]+)', query)
+            if column and self.has_column(*column[0]):
+                continue
             self.connection.action(query)
 
     def finish(self, tbl_dropped=False):

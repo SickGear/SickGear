@@ -78,6 +78,16 @@ class DBBasicTests(test.SickbeardTestDBCase):
             row[k] for k in ('rls_ignore_words', 'rls_require_words',
                              'rls_global_exclude_ignore', 'rls_global_exclude_require')))
 
+    def test_upgrade_with_existing_columns(self):
+        from sickgear import db
+        with db.DBConnection('cache.db') as cache:
+            columns = cache.table_info('show_queue')
+            # run the steps from 7 again, the columns that they add exist
+            cache.action('UPDATE db_version SET db_version = ?', [7])
+            db.upgrade_database(cache, cache_db.InitialSchema)
+            self.assertEqual(cache_db.MAX_DB_VERSION, cache.check_db_version())
+            self.assertEqual(list(columns), list(cache.table_info('show_queue')))
+
     def test_mass_action(self):
         field_list = ['show_id', 'indexer_id', 'indexer', 'show_name', 'location', 'network', 'genre', 'classification',
                       'runtime', 'quality', 'airs', 'status', 'flatten_folders', 'paused', 'startyear', 'air_by_date',
