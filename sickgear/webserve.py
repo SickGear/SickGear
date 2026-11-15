@@ -55,7 +55,8 @@ from . import classes, clients, config, db, helpers, history, image_cache, logge
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
-    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings, DOWNLOAD_CLIENTS
+    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, VideoCodec, qualityPresetStrings, statusStrings, \
+    DOWNLOAD_CLIENTS
 from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, is_sickgear_images_cache_dir, real_path,
                       remove_article, remove_file_perm, starify)
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
@@ -3738,6 +3739,18 @@ class Home(MainHandler):
         if statusoverview:
             ep_data.update(dict(statusoverview=Overview.overviewStrings[
                 helpers.get_overview(ep_type.status, show_item.quality, show_item.upgrade_once)]))
+        # video codec label, so that the ui can keep it when it writes the status of a finished search
+        # as display show, a status without a quality has no label, e.g. Wanted after a failed snatch
+        if isinstance(ep_type, sickgear.tv.TVEpisode) and None is not ep_type.video_codec \
+                and Quality.NONE != ep_quality:
+            v_c = VideoCodec.get_file_vc(ep_type.video_codec) or VideoCodec.get_snatch_vc(ep_type.video_codec)
+            release_name = ep_type.release_name
+            if not release_name:
+                with db.DBConnection() as sg_db:
+                    release_name = Home.snatched_names(sg_db, show_item, ep_type.season).get(
+                        (ep_type.season, ep_type.episode))
+            ep_data.update(dict(videocodec=VideoCodec.get_name(v_c, release_name),
+                                videocodec_class=VideoCodec.get_html_class(v_c)))
 
         return ep_data, (show_item.tvid, show_item.prodid, ep_type.season, ep_type.episode)
 
