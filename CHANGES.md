@@ -1,6 +1,7 @@
 ﻿### 3.36.10 (2026-xx-xx xx:xx:00 UTC)
 
 * Fix file info tip of the quality label on display show is removed when an episode search finishes
+* Fix status text on display show differs from a page load when an episode search finishes
 
 
 ### 3.36.9 (2026-11-09 17:10:00 UTC)

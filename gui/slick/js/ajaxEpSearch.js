@@ -128,8 +128,14 @@ function uiUpdateComplete(data) {
 					}
 					// update quality text for status column
 					var rSearchTerm = /(\w+)\s\((.+?)\)/;
-					htmlContent = ep.status.replace(rSearchTerm,
-						'$1' + ' <span class="quality ' + ep.quality + '">' + '$2' + '</span>');
+					htmlContent = ep.status.replace(rSearchTerm, function (all, status, quality) {
+						// display show has no text for Downloaded, and an icon for Subtitled
+						if (displayShow$.length) {
+							status = 'Downloaded' === status ? '' : 'Subtitled' !== status ? status
+								: '<span class="addQTip" title="Subtitled"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>';
+						}
+						return status + ' <span class="quality ' + ep.quality + '">' + quality + '</span>';
+					});
 
 					// remove backed vars
 					link$.removeAttr('data-status data-rowclass data-imgclass');
@@ -137,9 +143,12 @@ function uiUpdateComplete(data) {
 
 			// update the status area
 			var status$ = link$.closest('.col-search').siblings('.col-status').html(htmlContent);
-			// keep the file info tip that display show has on its quality label
-			if ('finished' === ep.searchstate && ep.fileinfo && $.SickGear.qTips) {
-				$.SickGear.qTips(status$.find('.quality').addClass('addQTip').attr('title', ep.fileinfo));
+			// keep the tips that display show has on its quality label and on its subtitled icon
+			if ('finished' === ep.searchstate && $.SickGear.qTips) {
+				if (ep.fileinfo) {
+					status$.find('.quality').addClass('addQTip').attr('title', ep.fileinfo);
+				}
+				$.SickGear.qTips(status$.find('.addQTip'));
 			}
 		}
 	});
