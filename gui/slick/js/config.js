@@ -188,7 +188,7 @@ $(document).ready(function () {
 
 	elDel.on('click', function(e) {
 		all('off');
-		$.confirm({
+		confirmDialog({
 			title	: 'Remove the "' + nameList().replace('\'s', '').replace(' list', '') + '" IMDb Watchlist',
 			text	: 'Are you sure you want to remove <span class="footerhighlight">' + nameList() + '</span> ?<br><br>',
 			confirm	: function() {
@@ -202,9 +202,7 @@ $(document).ready(function () {
 							.fail(function() {
 								all('on'); setControls(!0, 'Invalid ID'); setOnOff(); });
 			},
-			cancel	: function() {e.preventDefault(); all('on'); defaultControls();},
-			confirmButton: 'Yes', confirmButtonClass: 'green',
-			cancelButton: 'No', cancelButtonClass: 'red'
+			cancel	: function() {e.preventDefault(); all('on'); defaultControls();}
 		});
 	});
 

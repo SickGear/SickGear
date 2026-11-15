@@ -148,14 +148,13 @@ $(document).ready(function () {
 		$.getJSON(sbRoot + '/config/general/export-alt', {'tvid_prodid': $('#tvid_prodid').val()},
 			function (data) {
 				if (data.text) {
-					$.confirm({
+					confirmDialog({
 						title	: 'Export names/numbers',
 						text	: 'Copy/paste the following for export...' +
 							'<div><pre style="width:95%;margin:10px auto 0;max-height:250px">' + data.text + '</pre></div>',
 						confirm	: function(){},
-						cancel	: function(){},
-						confirmButton: 'Close', confirmButtonClass: 'green',
-						cancelButton: '', cancelButtonClass: 'red'
+						confirmButton: 'Close',
+						cancelButton: ''
 					});
 				}
 				that$.removeAttr('disabled');
@@ -372,13 +371,10 @@ $(document).ready(function () {
 					+ '</input><br><br>'),
 			checkAction = !newMain ? 'save ID changes' : 'change the TV info source';
 
-		$.confirm({
+		confirmDialog({
 			title	: save ? 'Confirm changes' : 'Get default IDs',
 			text	: extraWarn + 'Are you sure you want to ' + (save ? checkAction : 'fetch default IDs') + ' ?',
-			confirm	: function(){save ? saveMapping(paused, 'on' === $('#mark-wanted:checked').val()) : resetMapping()},
-			cancel	: function(){},
-			confirmButton: 'Yes', confirmButtonClass: 'green',
-			cancelButton: 'No', cancelButtonClass: 'red'
+			confirm	: function(){save ? saveMapping(paused, 'on' === $('#mark-wanted:checked').val()) : resetMapping()}
 		});
 
 	});
