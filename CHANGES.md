@@ -31,6 +31,7 @@
 * Change abort the pending info language request on edit show submit
 * Fix database upgrade fails when a column that it adds exists
 * Change confirmation dialogs to confirm on Return and to move by their title bar
+* Fix a cfscrape log message turns on console output of all log messages, e.g. in tests
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
