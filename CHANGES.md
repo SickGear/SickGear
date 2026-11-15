@@ -22,6 +22,7 @@
 * Update NZBGet Process Media extension, SickGear-NG 2.8 to 2.9
 * Add video codec tracking for episodes
 * Add video codec label and release name tooltip to episode rows on display show
+* Change video codec names to standard names, e.g. H/X264 to H.264
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 

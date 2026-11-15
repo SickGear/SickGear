@@ -562,15 +562,15 @@ class VideoCodec:
 
     videocodec_names = {
         VC_UNKNOWN: 'Unknown',
-        VC_MPEG1: 'Mpeg-1',
-        VC_MPEG2: 'Mpeg-2',
-        VC_DivXvid: 'DivX/XviD',
-        VC_VC1: 'VC1',
-        VC_264: 'H/X264',
+        VC_MPEG1: 'MPEG-1',
+        VC_MPEG2: 'MPEG-2',
+        VC_DivXvid: 'DivX/Xvid',
+        VC_VC1: 'VC-1',
+        VC_264: 'H.264',
         VC_VP9: 'VP9',
-        VC_265: 'H/X265',
+        VC_265: 'H.265',
         VC_AV1: 'AV1',
-        VC_VVC: 'VVC/266',
+        VC_VVC: 'H.266',
         VC_AV2: 'AV2'
     }
 
