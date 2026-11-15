@@ -23,16 +23,18 @@ import random
 import re
 import shutil
 import unittest
+from unittest import mock
 from urllib.parse import urlparse, parse_qs
 
+import test_lib as test  # must be before import sg_helpers and sickgear
 import sg_helpers
 import sickgear
-import test_lib as test
 from sickgear import common, db, failed_history, history, search_queue, helpers, indexermapper
 from sickgear.common import Quality, VideoCodec
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_TVDB
 from sickgear.tv import TVEpisode, TVShow
+from sickgear.providers import newznab
 from sickgear.providers.newznab import NewznabProvider
 from sickgear.search_queue import ProperSearchQueueItem, FailedQueueItem
 
@@ -511,6 +513,9 @@ class SearchTest(test.SickbeardTestDBCase):
         sickgear.WANTEDLIST_CACHE = common.WantedQualities()
         self._old_serverproxy = sickgear.nzbget.ServerProxy
         sickgear.nzbget.ServerProxy = test.MockServerProxy(self._process_nzbget_responce)
+        # skip provider paging delays, they made this test take minutes
+        self._old_newznab_time = newznab.time
+        newznab.time = mock.Mock(wraps=newznab.time, sleep=lambda *_: None)
         self._old_get_url = sg_helpers.get_url
         sg_helpers.get_url = self.mock_get_url
         helpers.get_url = self.mock_get_url
@@ -556,6 +561,7 @@ class SearchTest(test.SickbeardTestDBCase):
         sickgear.scene_numbering.xem_refresh = self._xem_refresh
         sickgear.tv.TVEpisode.specify_episode = test._fake_specify_ep
         sg_helpers.get_url = self._old_get_url
+        newznab.time = self._old_newznab_time
         helpers.get_url = self._old_get_url
         sickgear.nzbget.ServerProxy = self._old_serverproxy
         for provider in sickgear.providers.sorted_sources():
