@@ -1,4 +1,4 @@
-﻿### 3.36.10 (2026-xx-xx xx:xx:00 UTC)
+﻿### 3.36.10 (2026-11-16 04:17:00 UTC)
 
 * Fix file info tip of the quality label on display show is removed when an episode search finishes
 * Fix status text on display show differs from a page load when an episode search finishes
@@ -7,6 +7,7 @@
 * Fix scene numbering option is never shown on add show for a show with a XEM map
 * Fix subtitles option is not saved by "Save as defaults" on add show
 * Fix a quality preset is saved as Custom by "Save as defaults" on add show
+* Fix a cfscrape log message turns on console output of all log messages, e.g. in tests
 
 
 ### 3.36.9 (2026-11-09 17:10:00 UTC)

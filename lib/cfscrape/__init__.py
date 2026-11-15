@@ -11,6 +11,8 @@ import time
 
 from _23 import b64encodestring, urlparse
 
+logger = logging.getLogger('cfscrape')
+logger.addHandler(logging.NullHandler())
 
 DEFAULT_USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko)'
@@ -127,7 +129,7 @@ class CloudflareScraper(Session):
         if None is not response and params['cookies'] and not response.ok \
                 and 'invalid cookie domain' in str(self._fs_json(response).get('message')):
             # the site moved the browser to another host before cookies were set (e.g. an ad redirect), retry once
-            logging.warning('FlareSolverr cookie domain mismatch fetching %s, retrying without cookies' % url)
+            logger.warning('FlareSolverr cookie domain mismatch fetching %s, retrying without cookies' % url)
             params['cookies'] = []
             response = self._flaresolverr_post(url_solver, params, proxy_browser)
         if None is not response:
@@ -241,7 +243,7 @@ class CloudflareScraper(Session):
             resp = scraper.get(url, **kwargs)
             resp.raise_for_status()
         except (BaseException, Exception):
-            logging.error('[%s] returned an error. Could not collect tokens.' % url)
+            logger.error('[%s] returned an error. Could not collect tokens.' % url)
             raise
 
         domain = urlparse(resp.url).netloc
