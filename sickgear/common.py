@@ -660,6 +660,21 @@ class VideoCodec:
         return VideoCodec.videocodec_html_class.get(codec_id, 'vc-unknown')
 
     @staticmethod
+    def get_name(codec_id, release_name=None):
+        # type: (int, Optional[str]) -> str
+        """
+        return display name of video codec, in the x26N form when release_name has that form of this codec
+
+        :param codec_id: video codec
+        :param release_name: release name
+        """
+        name = VideoCodec.videocodec_names.get(codec_id, '')
+        if release_name and name.startswith('H.26') \
+                and re.search(r'[. _-]x[. _-]?%s\b' % name[2:], release_name, flags=re.I):
+            return 'x%s' % name[2:]
+        return name
+
+    @staticmethod
     def get_videocodec_from_name(release_name):
         # type: (str) -> int
         """

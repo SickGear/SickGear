@@ -3161,6 +3161,18 @@ class QualityTests(unittest.TestCase):
             self.assertEqual(cur_res, VideoCodec.get_videocodec_from_name(cur_test),
                              msg=f'{cur_test} not parsed as {VideoCodec.videocodec_names[cur_res]}')
 
+    def test_vc_get_name(self):
+        for cur_vc, cur_name, cur_res in [
+            (VideoCodec.VC_264, 'Test.Show.S01E02.WEB.x264-GROUP', 'x264'),
+            (VideoCodec.VC_264, 'Test.Show.S01E02.WEB.H.264-GROUP', 'H.264'),
+            (VideoCodec.VC_265, 'Test Show S01E02 WEB X 265-GROUP', 'x265'),
+            (VideoCodec.VC_VVC, 'Test.Show.S01E02.WEB.x266-GROUP', 'x266'),
+            (VideoCodec.VC_265, 'Test.Show.S01E02.WEB.x264-GROUP', 'H.265'),
+            (VideoCodec.VC_264, None, 'H.264'),
+            (VideoCodec.VC_VP9, 'Test.Show.S01E02.WEB.x264-GROUP', 'VP9'),
+        ]:
+            self.assertEqual(cur_res, VideoCodec.get_name(cur_vc, cur_name), msg=f'{cur_vc} with {cur_name}')
+
     def test_vc_combos(self):
         vc_combo_tests = [
             (None, (None, None)),
