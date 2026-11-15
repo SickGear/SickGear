@@ -275,7 +275,8 @@ def revert_episode(ep_obj):
                 logger.warning('Episode not found in failed.db history. Setting it to WANTED')
 
             ep_obj.status = status_revert
-            ep_obj.video_codec = VideoCodec.set_snatched_vc(ep_obj._video_codec, None)
+            # no snatched and no file codec is no codec, not codec unknown
+            ep_obj.video_codec = VideoCodec.set_snatched_vc(ep_obj._video_codec, None) or None
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:

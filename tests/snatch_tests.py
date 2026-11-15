@@ -911,7 +911,7 @@ class SearchTest(test.SickbeardTestDBCase):
                                 msg=f'release name is set for failed episode: {f_i["release_name"]}')
                 self.assertTrue(old_status != ep_obj.status,
                                 msg=f'failed episode status not correctly set: {f_i["release_name"]}')
-                self.assertTrue(old_video_codec == ep_obj.video_codec,
+                self.assertTrue((old_video_codec or None) == ep_obj.video_codec,
                                 msg=f'failed episode video codec not correctly set: {f_i["release_name"]}')
             else:
                 self.assertTrue(os.path.isfile(target_file), msg=f'File not post processed: {filename}')
