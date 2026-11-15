@@ -78,11 +78,6 @@
                     ('None opacity40', ('" id="plot_info_%s_%s_%s' % (($show_obj.tvid_prodid,) + $ep_key)))[None is not $ep['description'] and '' != $ep['description']]#">
     #set $cls = (' class="tba grey-text"', '')['good' == $Overview.overviewStrings[$ep_cats[$ep_str]]]
 				<span  title="$ep['release_name']">#if not $ep['name'] or 'TBA' == $ep['name']#<em${cls}>TBA</em>#else#$ep['name']#end if#</span>
-	#if None != $ep['video_codec']
-				<span class="videocodec-btn $VideoCodec.get_html_class($ep['video_codec'])">
-					$VideoCodec.videocodec_names.get($ep['video_codec'], '')
-				</span>
-	#end if
 			</td>
 
     #set $ep_dt = $network_timezones.get_episode_time($ep['airdate'], $network_time, $show_obj.network, $show_obj.airtime, $network_timezone, $ep['timestamp'], $ep['network'], $ep['airtime'], $ep['timezone'])
@@ -106,7 +101,7 @@
     #slurp
     #set $curStatus, $curQuality = $Quality.split_composite_status(int($ep['status']))
     #if Quality.NONE != $curQuality
-			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if#</td>
+			<td class="col-status">#if $SUBTITLED == $curStatus#<span class="addQTip" title="$statusStrings[$curStatus]"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>#else#$statusStrings[$curStatus].replace('Downloaded', '')#end if# #if 'Unknown' != $statusStrings[$curStatus]#<span class="quality $Quality.get_quality_css($curQuality)#if $downloaded# addQTip" title="$downloaded#end if#">$Quality.get_quality_ui($curQuality)</span>#end if##if None != $ep['video_codec']#<span class="videocodec-btn $VideoCodec.get_html_class($ep['video_codec'])">$VideoCodec.videocodec_names.get($ep['video_codec'], '')</span>#end if#</td>
     #else
 			<td class="col-status">$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</td>
     #end if
