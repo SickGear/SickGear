@@ -302,10 +302,11 @@
 
 					<div class="field-pair">
 						<label for="prune">
-							<span class="component-title">Keep up to</span>
+							<span class="component-title">Keep only the newest</span>
 							<span class="component-desc">
 								<input type="text" name="prune" id="prune" value="#echo $show_obj.prune and $show_obj.prune or ''#" class="form-control form-control-inline input-sm input75" style="width:50px">
-								<p>most recent downloads (blank for all)</p>
+								<p>downloads (blank to keep all)</p>
+								<p id="prune-warn" class="red-text" style="display:none">older downloaded episodes beyond this number will be deleted</p>
 							</span>
 						</label>
 					</div>

@@ -9186,8 +9186,7 @@ class ConfigGeneral(Config):
     @staticmethod
     def save_add_show_defaults(default_status, any_qualities='', best_qualities='', default_wanted_begin=None,
                                default_wanted_latest=None, default_flatten_folders=False, default_scene=False,
-                               default_subs=False, default_anime=False, default_pause=False, default_tag='',
-                               default_prune=None):
+                               default_subs=False, default_anime=False, default_pause=False, default_tag=''):
 
         any_qualities = ([], any_qualities.split(','))[any(any_qualities)]
         best_qualities = ([], best_qualities.split(','))[any(best_qualities)]
@@ -9203,7 +9202,6 @@ class ConfigGeneral(Config):
         sickgear.SUBTITLES_DEFAULT = config.checkbox_to_value(default_subs)
         sickgear.FLATTEN_FOLDERS_DEFAULT = config.checkbox_to_value(default_flatten_folders)
         sickgear.ANIME_DEFAULT = config.checkbox_to_value(default_anime)
-        sickgear.PRUNE_DEFAULT = config.minimax(default_prune, 0, 0, 9999)
 
         sickgear.save_config()
 

@@ -22,8 +22,7 @@ $(function(){
 			default_scene: $('#scene').prop('checked'),
 			default_subs: $('#subs').prop('checked'),
 			default_flatten_folders: $('#flatten_folders').prop('checked'),
-			default_anime: $('#anime').prop('checked'),
-			default_prune: $('#prune').val()
+			default_anime: $('#anime').prop('checked')
 		});
 
 		new PNotify({
@@ -36,7 +35,7 @@ $(function(){
 	});
 
 	$('#statusSelect, #quality-preset, #wanted-qualities, #upgrade-qualities, #wanted_begin, #wanted_latest, #tag,'
-		+ ' #pause, #scene, #subs, #flatten_folders, #anime, #prune').change(function() {
+		+ ' #pause, #scene, #subs, #flatten_folders, #anime').change(function() {
 		$('#saveDefaultsButton').attr('disabled', false);
 	});
 
@@ -62,6 +61,11 @@ $(function(){
 			});
 		}
 		return !1;
+	});
+
+	// "Keep up to" deletes episodes, so say so when a number is entered
+	$('#prune').on('input change', function() {
+		$('#prune-warn').toggle(0 < parseInt($(this).val(), 10));
 	});
 
 });
