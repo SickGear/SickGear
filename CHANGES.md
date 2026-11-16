@@ -35,6 +35,7 @@
 * Add "Keep up to" to the options saved by "Save as defaults" on add show
 * Fix view log page fails when the number of lines to show is given in its url
 * Fix a field turns light in the dark theme when the browser fills it, e.g. from a picked earlier search
+* Change the folder browser dialog to confirm on Return as the confirmation dialogs do
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
