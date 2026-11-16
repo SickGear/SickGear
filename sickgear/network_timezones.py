@@ -165,7 +165,8 @@ def _setup_zoneinfo():
         logger.error(f'Unable to read zoneinfo version from {zonefile_path}')
         return
     tz_dir = os.path.abspath(os.path.join(sickgear.ZONEINFO_DIR, f'tz-{version}'))
-    if tz_dir == _tz_dir:
+    # a folder that was removed, e.g. with the cache folder, is extracted again
+    if tz_dir == _tz_dir and os.path.isdir(tz_dir):
         # a folder replaced by an earlier call may still be in use by lookups that were underway at the switch,
         # so folders of other versions are only removed on a later call
         for entry in os.scandir(sickgear.ZONEINFO_DIR):
