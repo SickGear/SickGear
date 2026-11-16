@@ -341,4 +341,4 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(FakeProviderTests)
-    unittest.TextTestRunner(verbosity=2).run(FakeNewznabProvider)
+    unittest.TextTestRunner(verbosity=2).run(suite)

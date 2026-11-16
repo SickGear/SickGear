@@ -29,5 +29,5 @@ class CompatibilityTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    suite = unittest.TestLoader().loadTestsFromTestCase(QualityTests)
+    suite = unittest.TestLoader().loadTestsFromTestCase(CompatibilityTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
