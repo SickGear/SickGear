@@ -40,7 +40,7 @@ $(function(){
 	});
 
 	var updateOptions = function(that$, oldlink, newlink){
-		that$.html(that$.html().replace(oldlink, newlink));
+		that$.val(that$.val().replace(oldlink, newlink));
 		if (!(/undefined/i.test(typeof $.SickGear.myform))){
 			$.SickGear.myform.loadsection(2);
 		}
