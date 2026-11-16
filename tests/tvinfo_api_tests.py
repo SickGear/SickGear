@@ -16,7 +16,8 @@ import sys
 import unittest
 import os.path
 import shutil
-sys.path.insert(1, os.path.abspath('..'))
+from os.path import abspath, basename, dirname, join, splitext
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 
 import sickgear
 from sickgear.indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TRAKT, TVINFO_IMDB, \
@@ -36,11 +37,11 @@ if False:
 
 NoneType = type(None)
 threading_Lock = (type(threading.Lock()), type(threading.RLock()))
-file_dir = os.path.dirname(__file__)
+file_dir = dirname(__file__)
 sickgear.CACHE_DIR = os.path.join(file_dir, 'cache')
 os.makedirs(sickgear.CACHE_DIR, exist_ok=True)
 
-test_base_name = os.path.splitext(os.path.basename(__file__))[0]
+test_base_name = splitext(basename(__file__))[0]
 mock_data_dir = os.path.join(file_dir, 'mock_data', test_base_name)
 os.makedirs(mock_data_dir, exist_ok=True)
 cast_types = [t for t in RoleTypes.reverse.keys() if t < RoleTypes.crew_limit]

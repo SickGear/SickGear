@@ -24,12 +24,12 @@ if '__main__' == __name__:
     import glob
     import sys
     import unittest
-    import os
+    from os.path import abspath, basename, dirname, join
 
-    sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                                    'lib')))
+    sys.path.insert(1, abspath(join(dirname(dirname(abspath(__file__))), 'lib')))
     # sorted, so that every platform runs the modules in the same order, glob order differs by file system
-    test_file_strings = sorted(x for x in glob.glob('*_tests.py') if x not in __file__)
+    test_file_strings = sorted(basename(x) for x in glob.glob(join(dirname(abspath(__file__)), '*_tests.py'))
+                               if basename(x) != basename(__file__))
     module_strings = [file_string[0:len(file_string) - 3] for file_string in test_file_strings]
     suites = [unittest.defaultTestLoader.loadTestsFromName(file_string) for file_string in module_strings]
     testSuite = unittest.TestSuite(suites)

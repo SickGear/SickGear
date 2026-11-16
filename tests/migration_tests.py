@@ -5,12 +5,13 @@ import glob
 import unittest
 import test_lib as test
 import sickgear
+from os.path import abspath, dirname, join
 from time import sleep
 from sickgear import db, logger
 from sickgear.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 sickgear.SYS_ENCODING = 'UTF-8'
 
