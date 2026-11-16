@@ -72,3 +72,4 @@ if '__main__' == __name__:
     print('==================')
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(XEMBasicTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
