@@ -21,7 +21,8 @@ $(function(){
 			default_scene: $('#scene').prop('checked'),
 			default_subtitles: $('#subs').prop('checked'),
 			default_flatten_folders: $('#flatten_folders').prop('checked'),
-			default_anime: $('#anime').prop('checked')
+			default_anime: $('#anime').prop('checked'),
+			default_prune: $('#prune').val()
 		});
 
 		new PNotify({
@@ -34,7 +35,7 @@ $(function(){
 	});
 
 	$('#statusSelect, #quality-preset, #wanted-qualities, #upgrade-qualities, #wanted_begin, #wanted_latest, #tag,'
-		+ ' #pause, #scene, #subs, #flatten_folders, #anime').change(function() {
+		+ ' #pause, #scene, #subs, #flatten_folders, #anime, #prune').change(function() {
 		$('#saveDefaultsButton').attr('disabled', false);
 	});
 

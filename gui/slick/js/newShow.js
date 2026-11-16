@@ -112,6 +112,7 @@ $(document).ready(function () {
 			+ ' in <em>lang:' + elInfosrcLang.val() + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);"') + '></span>'
 			+ ' for <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
 			+ '...');
+		fitStepOne();
 
 		searchRequestXhr = $.ajax({
 			url: sbRoot + '/add-shows/search-tvinfo-for-showname',
@@ -124,6 +125,7 @@ $(document).ready(function () {
 			dataType: 'json',
 			error: function () {
 				$('#search-results').empty().html('search timed out, try again in a few mins.');
+				fitStepOne();
 			},
 			success: function (data) {
 				var resultStr = '', attrs = '', checked = !1, rowType, row = 0, srcState = '',
@@ -401,7 +403,12 @@ $(document).ready(function () {
 	});
 
 	$('#quality-preset').change(function () {
-		myform.loadsection(2);
+		// refit the step height when the custom quality block is shown or hidden, its fade out ends later
+		setTimeout(function () {
+			$('.show-if-quality-custom').promise().done(function () {
+				myform.loadsection(2);
+			});
+		}, 0);
 	});
 
 	/***********************************************
@@ -409,6 +416,14 @@ $(document).ready(function () {
 	* This notice MUST stay intact for legal use
 	* Visit http://www.dynamicdrive.com/ for this script and 100s more.
 	***********************************************/
+
+	// fit the height of step 1 to a change of its content, if the step is in view.
+	// a search at page load is run before the wizard is made, the wizard then sets the height
+	function fitStepOne() {
+		if (myform && 0 === myform.currentsection) {
+			myform.loadsection(0);
+		}
+	}
 
 	var myform = $.SickGear.myform = new FormToWizard({
 		fieldsetborderwidth: 0,
@@ -418,7 +433,8 @@ $(document).ready(function () {
 			populateLangSelect();
 			updateSampleText();
 			if ($('input:hidden[name="which_series"]').length && $('#fullShowPath').length) {
-				goToStep(3);
+				// step 2 has options to set, as well as the folder
+				goToStep(2);
 			}
 		}
 	});
@@ -553,7 +569,8 @@ $(document).ready(function () {
 
 	$('#anime').change (function () {
 		updateSampleText();
-		myform.loadsection(2);
+		// refit the height of the step that is in view
+		myform.loadsection(myform.currentsection);
 	});
 
 	function add_option_to_pool (text) {

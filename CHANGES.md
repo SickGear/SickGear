@@ -32,6 +32,8 @@
 * Fix database upgrade fails when a column that it adds exists
 * Change confirmation dialogs to confirm on Return and to move by their title bar
 * Fix a cfscrape log message turns on console output of all log messages, e.g. in tests
+* Change add show steps to set folder and release filters in step 2, and to choose episodes and quality in step 3
+* Add "Keep up to" to the options saved by "Save as defaults" on add show
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 

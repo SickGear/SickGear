@@ -227,6 +227,7 @@ SCENE_DEFAULT = False
 SUBTITLES_DEFAULT = False
 FLATTEN_FOLDERS_DEFAULT = False
 ANIME_DEFAULT = False
+PRUNE_DEFAULT = 0
 USE_IMDB_INFO = True
 IMDB_ACCOUNTS = []
 IMDB_DEFAULT_LIST_ID = '64552276'
@@ -643,7 +644,7 @@ def init_stage_1(console_logging):
     global RESULTS_SORTBY
     # Add Show Defaults
     global QUALITY_DEFAULT, WANTED_BEGIN_DEFAULT, WANTED_LATEST_DEFAULT, SHOW_TAG_DEFAULT, PAUSE_DEFAULT, \
-        STATUS_DEFAULT, SCENE_DEFAULT, SUBTITLES_DEFAULT, FLATTEN_FOLDERS_DEFAULT, ANIME_DEFAULT
+        STATUS_DEFAULT, SCENE_DEFAULT, SUBTITLES_DEFAULT, FLATTEN_FOLDERS_DEFAULT, ANIME_DEFAULT, PRUNE_DEFAULT
     # Post-processing
     global KEEP_PROCESSED_DIR, PROCESS_LAST_DIR, PROCESS_LAST_METHOD, PROCESS_LAST_CLEANUP
     # Views
@@ -920,6 +921,7 @@ def init_stage_1(console_logging):
     SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
     FLATTEN_FOLDERS_DEFAULT = bool(check_setting_int(CFG, 'General', 'flatten_folders_default', 0))
     ANIME_DEFAULT = bool(check_setting_int(CFG, 'General', 'anime_default', 0))
+    PRUNE_DEFAULT = minimax(check_setting_int(CFG, 'General', 'prune_default', 0), 0, 0, 9999)
 
     PROVIDER_ORDER = check_setting_str(CFG, 'General', 'provider_order', '').split()
     PROVIDER_HOMES = sg_helpers.ast_eval(check_setting_str(CFG, 'General', 'provider_homes', None), {})
@@ -1920,6 +1922,7 @@ def _save_config(force=False, **kwargs):
     new_config['General']['scene_default'] = int(SCENE_DEFAULT)
     new_config['General']['flatten_folders_default'] = int(FLATTEN_FOLDERS_DEFAULT)
     new_config['General']['anime_default'] = int(ANIME_DEFAULT)
+    new_config['General']['prune_default'] = int(PRUNE_DEFAULT)
     new_config['General']['provider_order'] = ' '.join(PROVIDER_ORDER)
     new_config['General']['provider_homes'] = '%s' % dict([(pid, v) for pid, v in list(PROVIDER_HOMES.items())
                                                            if pid in [
