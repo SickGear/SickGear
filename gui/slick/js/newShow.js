@@ -510,7 +510,7 @@ $(document).ready(function () {
 				sep_char = '';
 			}
 
-			if (root_dir_text.substr(sample_text.length - 1) != sep_char) {
+			if (root_dir_text.substr(root_dir_text.length - 1) != sep_char) {
 				root_dir_text += sep_char;
 			}
 			root_dir_text += '<i>||</i>' + sep_char;
