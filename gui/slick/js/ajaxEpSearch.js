@@ -9,6 +9,7 @@
 /** @namespace ep.quality */
 /** @namespace ep.retrystate */
 /** @namespace ep.statusoverview */
+/** @namespace ep.fileinfo */
 /** @namespace ep.videocodec */
 /** @namespace ep.videocodec_class */
 
@@ -124,13 +125,20 @@ function uiUpdateComplete(data) {
 
 					// update row status
 					if (ep.statusoverview) {
+						// display show also has class archived on the row of an Archived status
 						uiClearClass(link$.closest('tr'))
-							.addClass(ep.statusoverview);
+							.addClass(ep.statusoverview).toggleClass('archived', /^Archived/.test(ep.status));
 					}
 					// update quality text for status column
 					var rSearchTerm = /(\w+)\s\((.+?)\)/;
-					htmlContent = ep.status.replace(rSearchTerm,
-						'$1' + ' <span class="quality ' + ep.quality + '">' + '$2' + '</span>');
+					htmlContent = ep.status.replace(rSearchTerm, function (all, status, quality) {
+						// display show has no text for Downloaded, and an icon for Subtitled
+						if (displayShow$.length) {
+							status = 'Downloaded' === status ? '' : 'Subtitled' !== status ? status
+								: '<span class="addQTip" title="Subtitled"><i class="sgicon-subtitles" style="vertical-align:middle"></i></span>';
+						}
+						return status + ' <span class="quality ' + ep.quality + '">' + quality + '</span>';
+					});
 					// keep the video codec label that display show has in its status column
 					if (ep.videocodec && displayShow$.length) {
 						htmlContent += '<span class="videocodec-btn ' + ep.videocodec_class + '">' + ep.videocodec + '</span>';
@@ -141,7 +149,14 @@ function uiUpdateComplete(data) {
 			}
 
 			// update the status area
-			link$.closest('.col-search').siblings('.col-status').html(htmlContent);
+			var status$ = link$.closest('.col-search').siblings('.col-status').html(htmlContent);
+			// keep the tips that display show has on its quality label and on its subtitled icon
+			if ('finished' === ep.searchstate && $.SickGear.qTips) {
+				if (ep.fileinfo) {
+					status$.find('.quality').addClass('addQTip').attr('title', ep.fileinfo);
+				}
+				$.SickGear.qTips(status$.find('.addQTip'));
+			}
 		}
 	});
 	return isFinished;
@@ -160,12 +175,13 @@ function getAttr(el$, name) {
 }
 
 function imgUpdate(link$, tip, cls) {
-	link$.find('img').attr('src', '').attr('title', tip).prop('alt', '')
-		.removeClass('spinner2 queued search no yes').addClass(cls);
+	// the class sets the image, an empty src shows the missing image icon of a browser over it
+	link$.find('img').attr('src', baseUrl() + '/images/trans.png').attr('title', tip).prop('alt', '')
+		.removeClass('spinner2 queued search no yes success upgrade').addClass(cls);
 }
 
 function uiClearClass(el$) {
-	return el$.removeClass('skipped wanted qual good unaired snatched') || el$;
+	return el$.removeClass('skipped wanted qual good unaired snatched archived') || el$;
 }
 
 function uiWanted(el$) {

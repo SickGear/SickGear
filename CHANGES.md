@@ -31,7 +31,6 @@
 * Change abort the pending info language request on edit show submit
 * Fix database upgrade fails when a column that it adds exists
 * Change confirmation dialogs to confirm on Return and to move by their title bar
-* Fix a cfscrape log message turns on console output of all log messages, e.g. in tests
 * Change add show steps to set folder and release filters in step 2, and to choose episodes and quality in step 3
 * Add "Keep up to" to the options saved by "Save as defaults" on add show
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
@@ -44,6 +43,18 @@
 * Update Tornado Web Server 6.5.10 (143a06b) to 6.6.1 (fb0e3df)
 * Update SimpleJSON 4.2.0 (0ace7d1) to 4.3.0 (d88746d)
 * Update soupsieve 2.10.0 (fc195cd) to 3.0.4 (628ec6b)
+
+
+### 3.36.10 (2026-11-16 04:17:00 UTC)
+
+* Fix file info tip of the quality label on display show is removed when an episode search finishes
+* Fix status text on display show differs from a page load when an episode search finishes
+* Fix missing image icon over the episode search icon, and the icon after a search ends
+* Fix row colour of an archived episode on display show during and after an episode search
+* Fix scene numbering option is never shown on add show for a show with a XEM map
+* Fix subtitles option is not saved by "Save as defaults" on add show
+* Fix a quality preset is saved as Custom by "Save as defaults" on add show
+* Fix a cfscrape log message turns on console output of all log messages, e.g. in tests
 
 
 ### 3.36.9 (2026-11-09 17:10:00 UTC)

@@ -3739,6 +3739,14 @@ class Home(MainHandler):
         if statusoverview:
             ep_data.update(dict(statusoverview=Overview.overviewStrings[
                 helpers.get_overview(ep_type.status, show_item.quality, show_item.upgrade_once)]))
+        # file info, so that the ui can keep the tip of the quality label when it writes the status of a finished search
+        ep_loc = isinstance(ep_type, sickgear.tv.TVEpisode) and ep_type.location
+        if ep_loc:
+            show_loc = show_item._location
+            if show_loc and ep_loc.lower().startswith(show_loc.lower()):
+                ep_loc = ep_loc[len(show_loc) + 1:]
+            ep_data.update(dict(fileinfo='<strong>file</strong> %s<br><strong>size</strong> %s' % (
+                ep_loc, helpers.human(ep_type.file_size))))
         # video codec label, so that the ui can keep it when it writes the status of a finished search
         # as display show, a status without a quality has no label, e.g. Wanted after a failed snatch
         if isinstance(ep_type, sickgear.tv.TVEpisode) and None is not ep_type.video_codec \
@@ -4787,7 +4795,8 @@ class AddShows(Home):
         t.blocklist = []
         t.groups = []
 
-        t.show_scene_maps = list(scene_exceptions.MEMCACHE['release_map_xem'].values())
+        # ids of shows with a XEM map, by TV info source id
+        t.show_scene_maps = dict(scene_exceptions.MEMCACHE['release_map_xem'])
 
         has_shows = len(sickgear.showList)
         t.try_id = []  # [dict try_tip: try_term]
