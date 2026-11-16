@@ -13,7 +13,8 @@ $(function(){
 		$.get(sbRoot + '/config/general/save-add-show-defaults', {
 			default_status: $('#statusSelect').val(),
 			any_qualities: anyQualArray.join(','),
-			best_qualities: bestQualArray.join(','),
+			// a preset has no upgrade qualities, its upgrade list is only a start point for Custom
+			best_qualities: parseInt($('#quality-preset').val(), 10) ? '' : bestQualArray.join(','),
 			default_wanted_begin: $('#wanted_begin').val(),
 			default_wanted_latest: $('#wanted_latest').val(),
 			default_tag: $('#tag').val(),
