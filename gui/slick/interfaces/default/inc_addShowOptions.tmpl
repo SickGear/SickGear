@@ -54,7 +54,7 @@
 				<label for="prune">
 					<span class="component-title">Keep up to</span>
 					<span class="component-desc">
-						<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
+						<input type="text" name="prune" id="prune" value="#echo $sg_var('PRUNE_DEFAULT', 0) or ''#" class="form-control form-control-inline input-sm input75" style="width:50px">
 						<p>most recent downloads (blank for all)</p>
 					</span>
 				</label>
