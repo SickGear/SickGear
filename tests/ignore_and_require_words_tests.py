@@ -1,8 +1,8 @@
-import os.path
 import sys
 import unittest
+from os.path import abspath, dirname, join
 
-sys.path.insert(1, os.path.abspath('..'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 
 import sickgear
 from sickgear import helpers, show_name_helpers

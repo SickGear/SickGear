@@ -27,9 +27,10 @@ import shutil
 import sys
 import xml.etree.ElementTree as ET
 import unittest
+from os.path import abspath, dirname, join
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import sickgear
 from sickgear import db, providers, tvcache
@@ -45,7 +46,7 @@ if False:
 # =================
 # test globals
 # =================
-TESTDIR = os.path.abspath('.')
+TESTDIR = abspath(dirname(__file__))
 TESTDBNAME = 'sickbeard.db'
 TESTCACHEDBNAME = 'cache.db'
 TESTFAILEDDBNAME = 'failed.db'
@@ -104,7 +105,7 @@ sickgear.PROVIDER_ORDER = []
 sickgear.newznab_providers = providers.newznab_source_list('')
 sickgear.provider_list = providers.provider_modules()
 
-sickgear.PROG_DIR = os.path.abspath('..')
+sickgear.PROG_DIR = abspath(join(dirname(__file__), '..'))
 # sickgear.DATA_DIR = os.path.join(sickgear.PROG_DIR, 'tests')
 sickgear.DATA_DIR = os.path.join(TESTDIR, 'data')
 sickgear.LOG_DIR = os.path.join(TESTDIR, 'Logs')

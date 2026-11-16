@@ -1,13 +1,13 @@
-import os
 import sys
 import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
 
 import unittest
+from os.path import abspath, dirname, join
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 from sickgear import properFinder, search
 

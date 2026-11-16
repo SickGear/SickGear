@@ -1,11 +1,11 @@
 import datetime
-import os.path
 import test_lib as test
 import sys
 import unittest
+from os.path import abspath, dirname, join, normpath
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import sickgear
 from sickgear import db, name_cache, tv
@@ -629,7 +629,7 @@ class ComboTests(unittest.TestCase):
         for (name, result, which_regexes) in combination_test_cases:
             # Normalise the paths. Converts UNIX-style paths into Windows-style
             # paths when test is run on Windows.
-            self._test_combo(os.path.normpath(name), result, which_regexes)
+            self._test_combo(normpath(name), result, which_regexes)
 
 
 class BasicTests(unittest.TestCase):

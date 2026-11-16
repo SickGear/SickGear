@@ -3,8 +3,8 @@ import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 
 import sys
-import os.path
-sys.path.insert(1, os.path.abspath('..'))
+from os.path import abspath, dirname, join
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 
 from sickgear import common
 from sickgear.common import Quality, WantedQualities, VideoCodec

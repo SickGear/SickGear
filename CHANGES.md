@@ -45,6 +45,7 @@
 * Change wording of step 1 of add show, the show search, to be shorter and clearer
 * Fix the folder in the summary of add show has a doubled separator when the parent folder ends with one
 * Change the add show options template to separate files for the folder, filter and fansub group options, instead of parts chosen by a variable
+* Change the tests to run from any folder, e.g. one at a time in an IDE
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
