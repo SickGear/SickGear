@@ -3664,7 +3664,9 @@ class Home(MainHandler):
                                    [('searchstate', 'searching'), ('statusoverview', False)])[None is active.success],
                                   retrystate=True)
             for ep_ns in active.segment_ns:
-                ep_data, uniq_sxe = self.prepare_episode(ep_ns, **episode_params)
+                # a finished search uses the episode, as the results below, to add its video codec and file info
+                ep_data, uniq_sxe = self.prepare_episode(
+                    (None is not active.success and getattr(ep_ns, 'ep_obj', None)) or ep_ns, **episode_params)
                 ep_data_list.append(ep_data)
                 seen_eps.add(uniq_sxe)
 
