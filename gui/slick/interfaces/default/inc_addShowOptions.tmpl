@@ -9,13 +9,10 @@
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
 ##
-## a page can output the options in parts, 'flat' and 'parent' to show with its parent folder step, then 'main'
-#set $part = $getVar('addshow_options_part', None)
-#set $show_main = $part in (None, 'main')
-#set $show_flat = $part in (None, 'flat')
-#set $show_moved = $part in (None, 'parent')
+## the episode and quality options, and after them the folder and filter options unless a page shows those
+## in a step of their own, which it says with addshow_options_main_only
+#set $main_only = $getVar('addshow_options_main_only', False)
 ##
-#if $show_main
 		<div class="stepDiv linefix">
 
 			<div style="float:right;margin:-30px 0px 20px 15px;font-size:12px;line-height:27px;">
@@ -132,101 +129,12 @@
 					</label>
 				</div>
 
+#if not $main_only
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowFlatFolders.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowFilters.tmpl')
 #end if
-#if $show_flat
-				<div class="field-pair">
-					<label for="flatten_folders">
-						<span class="component-title">Flat folder structure</span>
-						<span class="component-desc">
-							<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''#>
-							<p>put all episodes in the show folder, without season folders</p>
-						</span>
-					</label>
-				</div>
-#end if
-#if $show_moved
-
-				<div class="field-pair">
-					<label for="rls_ignore_words">
-						<span class="component-title">Ignore releases with any of these words</span>
-						<span class="component-desc">
-							<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="" placeholder="e.g. [[regex:]word1, word2, ..., word_n, regex_n]" class="form-control form-control-inline input-sm input350">
-							<p class="note" style="clear:both">skip a release if its name contains <em class="grey-text">any</em> of these (comma separated words or regex)</p>
-						</span>
-					</label>
-				</div>
-
-#if $sickgear.IGNORE_WORDS:
-				<div class="field-pair">
-					<label for="rls_global_exclude_ignore">
-						<span class="component-title">Except these global ignore words</span>
-						<span class="component-desc">
-							<select id="rls_global_exclude_ignore" name="rls_global_exclude_ignore" multiple="multiple" class="form-control form-control-inline input-sm input350">
-    #set $options = ''
-    #set $selected = ' selected=\"selected\"'
-    #set $num_selected = 0
-    #for $gw in sorted($sickgear.IGNORE_WORDS, key=$str.lower):
-        #set $options += "<option value=\"%s\">%s</option>" % ($gw, $gw)
-    #end for
-								<option value=".*"#if $num_selected then '' else $selected#># Use all global ignore words (default) #</option>
-								$options
-							</select>
-						</span>
-					</label>
-				</div>
-#end if
-
-				<div class="field-pair">
-					<label for="rls_require_words">
-						<span class="component-title">Require one of these words</span>
-						<span class="component-desc">
-							<input type="text" name="rls_require_words" id="rls_require_words" value="" placeholder="e.g. [[regex:]word1, word2, ..., word_n, regex_n]" class="form-control form-control-inline input-sm input350">
-							<p class="note" style="clear:both">skip a release unless its name contains <em class="grey-text">one</em> of these (comma separated words or regex)</p>
-						</span>
-					</label>
-				</div>
-
-#if $sickgear.REQUIRE_WORDS:
-				<div class="field-pair">
-					<label for="rls_global_exclude_require">
-						<span class="component-title">Except these global require words</span>
-						<span class="component-desc">
-							<select id="rls_global_exclude_require" name="rls_global_exclude_require" multiple="multiple" class="form-control form-control-inline input-sm input350">
-    #set $options = ''
-    #set $selected = ' selected=\"selected\"'
-    #set $num_selected = 0
-    #for $gw in sorted($sickgear.REQUIRE_WORDS, key=$str.lower):
-        #set $options += "<option value=\"%s\">%s</option>" % ($gw, $gw)
-    #end for
-								<option value=".*"#if $num_selected then '' else $selected#># Use all global require words (default) #</option>
-								$options
-							</select>
-						</span>
-					</label>
-				</div>
-#end if
-#if $enable_anime_options
-				<div class="field-pair">
-					<label for="anime">
-						<span class="component-title">Show is anime</span>
-						<span class="component-desc">
-							<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''#>
-							<p>releases are numbered like <em class="grey-text">Show.265</em>, not <em class="grey-text">Show.S02E03</em></p>
-						</span>
-					</label>
-				</div>
-#end if
-#end if
-#if $show_main
 			</div>
 		</div>
-#end if
-#if $show_moved
-
-#if $enable_anime_options
-#import sickgear.anime
-#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_anigrouplists.tmpl')
-#else
-		<input type="hidden" name="anime" id="anime" value="0">
-#end if
+#if not $main_only
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowAnimeGroups.tmpl')
 #end if

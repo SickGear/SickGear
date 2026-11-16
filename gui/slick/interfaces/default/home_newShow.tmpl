@@ -145,8 +145,7 @@
 			<legend class="legendStep"><p>Set folder and release filters</p></legend>
 
 			<div class="stepDiv linefix">
-    #set global $addshow_options_part = 'flat'
-#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowFlatFolders.tmpl')
 				<div class="field-pair">
 					<span class="component-title">Pick parent folder</span>
 					<span class="component-desc">
@@ -158,8 +157,8 @@
     #end if
 					</span>
 				</div>
-    #set global $addshow_options_part = 'parent'
-#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowFilters.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowAnimeGroups.tmpl')
 			</div>
 		</fieldset>
 
@@ -172,7 +171,7 @@
 </style>
 		<fieldset class="sectionwrap step-three" style="visibility:hidden">
 			<legend class="legendStep"><p>Choose episodes and quality</p></legend>
-#set global $addshow_options_part = 'main'
+#set global $addshow_options_main_only = True
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
 		</fieldset>
 

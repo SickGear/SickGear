@@ -44,6 +44,7 @@
 * Fix "Save as defaults" on add show stays ready to save after an option is changed back to its saved value
 * Change wording of step 1 of add show, the show search, to be shorter and clearer
 * Fix the folder in the summary of add show has a doubled separator when the parent folder ends with one
+* Change the add show options template to separate files for the folder, filter and fansub group options, instead of parts chosen by a variable
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
