@@ -1,4 +1,9 @@
-﻿### 3.36.10 (2026-11-16 04:17:00 UTC)
+﻿### 3.36.11 (2026-11-16 13:18:00 UTC)
+
+* Fix file info tip of the quality label on display show is lost when the page sees a search finish before its queue item ends
+
+
+### 3.36.10 (2026-11-16 04:17:00 UTC)
 
 * Fix file info tip of the quality label on display show is removed when an episode search finishes
 * Fix status text on display show differs from a page load when an episode search finishes
