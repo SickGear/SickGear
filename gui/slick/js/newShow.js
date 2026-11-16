@@ -106,11 +106,19 @@ $(document).ready(function () {
 				? ' <span class="boldest">' + elTvDatabase.find('option:selected').attr('data-name') + '</span>'
 				: '';
 
+		// the language name from its title, e.g. "English (eng/en/en)", else from the browser, else its abbreviation
+		var langName = (elInfosrcLang.find('option:selected').attr('data-title') || '').replace(/\s*\(.*$/, '');
+		if (!langName) {
+			try {
+				langName = new Intl.DisplayNames(['en'], {type: 'language'}).of(elInfosrcLang.val());
+			} catch (e) {}
+			langName = langName || elInfosrcLang.val();
+		}
 		$('#search-results').empty().html('<img id="searchingAnim" src="' + sbRoot + '/images/loading32' + themeSpinner + '.gif" height="32" width="32">'
-			+ ' searching '
+			+ ' Searching'
 			+ tvSearchSrc
-			+ ' in <em>lang:' + elInfosrcLang.val() + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);"') + '></span>'
 			+ ' for <span class="boldest">' + cleanseText(elNameToSearch.val(), !0) + '</span>'
+			+ ' in <em>' + langName + '</em> <span' + htmlFlag(elInfosrcLang.val()).replace('.png)"', '.png);"') + '></span>'
 			+ '...');
 		fitStepOne();
 
@@ -124,7 +132,7 @@ $(document).ready(function () {
 			timeout: parseInt($('#indexer_timeout').val(), 10) * parseInt($('#indexer_count').val(), 2) * 1000 + 15000,
 			dataType: 'json',
 			error: function () {
-				$('#search-results').empty().html('search timed out, try again in a few mins.');
+				$('#search-results').empty().html('The search timed out, try again in a few minutes');
 				fitStepOne();
 			},
 			success: function (data) {
@@ -132,7 +140,7 @@ $(document).ready(function () {
 					resultItem, nBuffer = 0, nBufferSize = 20, nAll = 0;
 
 				if (null === data.results || 0 === data.results.length) {
-					resultStr += '<span class="boldest">Sorry, no results found. Try a different search.</span>';
+					resultStr += '<span class="boldest">No shows found, try other words or an id</span>';
 				} else {
 					var n = 0, result = {
 						SrcName: n, isInDB: ++n, SrcId: ++n, SrcDBId: ++n, SrcSlug: ++n, SrcUrl: ++n, ShowID: ++n,
@@ -161,7 +169,7 @@ $(document).ready(function () {
 
 						srcState = [
 							null === item[result.SrcName] ? '' : item[result.SrcName],
-							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">exists in db</a></span>']
+							!1 === item[result.isInDB] ? '' : '<span class="exists-db"><a href="' + sbRoot + item[result.isInDB] + '" target="_blank">already added</a></span>']
 							.join(' - ').replace(/(^[\s-]+|[\s-]+$)/, '');
 
 						resultItem = '<div class="results-item' + ' ' + item[result.SrcSlug] + rowType + '" data-indb="' + (!1 === item[result.isInDB] ? '' : '1')
@@ -190,7 +198,7 @@ $(document).ready(function () {
 							+ (0 < item[result.Network].length ? '<div class=\'add-shows-network\'><em>' + item[result.Network] + '</em></div>' : '')
 							+ (item[result.ImgUrl] && '<img class=\'add-shows-image\' src=\'/' + item[result.ImgUrl] + '\'>' || '')
 							+ (0 < item[result.Overview].length ? '<p class=\'add-shows-overview\'>' + item[result.Overview] + '</p>' : '')
-							+ '<span class=\'add-shows-cta\'>Click for more</span></div>'
+							+ '<span class=\'add-shows-cta\'>Click for details</span></div>'
 							+ '"'
 							+ ' href="' + anonURL + item[result.SrcUrl] + '"'
 							+ ' onclick="window.open(this.href, \'_blank\'); return !1;"'
@@ -224,10 +232,10 @@ $(document).ready(function () {
 						+ '<option ' + (/^oldest/.test(config.resultsSortby) ? classAttrSel + selAttr : '') + 'value="oldest">Oldest aired</option>'
 						+ '<option ' + defSortby + 'value="rel">Relevancy</option>'
 						+ '</optgroup><optgroup label="With...">'
-						+ '<option ' + (!/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ontop">Exists on top</option>'
-						+ '<option ' + (/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="notop">Exists combined</option>'
-						+ '<option ' + (!/nogroup/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ingroup">Source grouped</option>'
-						+ '<option ' + (/nogroup$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="nogroup">Source combined</option>'
+						+ '<option ' + (!/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ontop">Added shows first</option>'
+						+ '<option ' + (/notop$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="notop">Added shows mixed in</option>'
+						+ '<option ' + (!/nogroup/.test(config.resultsSortby) ? classAttrSel : '') + 'value="ingroup">Group by source</option>'
+						+ '<option ' + (/nogroup$/.test(config.resultsSortby) ? classAttrSel : '') + 'value="nogroup">Mix sources</option>'
 						+ '</optgroup></select></span>'
 						+ '</legend>' + "\n"
 						+ '<div id="holder">'
@@ -487,8 +495,8 @@ $(document).ready(function () {
 			showName = $('#provided-show-name').val();
 		}
 		updateAniGrouplist(showName);
-		var sample_text = '<p>Adding show <span class="show-name">' + cleanseText(showName, !0) + '</span>'
-			+ (!showName.length ? 'into<br>' : '<br>into' + (!config.folder.length ? '' : ' user location'))
+		var sample_text = '<p>Adding <span class="show-name">' + cleanseText(showName, !0) + '</span>'
+			+ (!showName.length ? 'to<br>' : '<br>to')
 			+ ' <span class="show-dest">';
 
 		// if we have a root dir selected, figure out the path
@@ -514,7 +522,8 @@ $(document).ready(function () {
 			sample_text += 'unknown dir.';
 		}
 
-		sample_text += '</span></p>';
+		sample_text += '</span>'
+			+ (!config.folder.length ? '' : ' <span class="chosen-folder">your chosen folder</span>') + '</p>';
 
 		// if we have a show name then sanitize and use it for the dir name
 		if (showName.length) {

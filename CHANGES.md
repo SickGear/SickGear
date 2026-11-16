@@ -42,6 +42,7 @@
 * Add a link to the show at TheXEM.info to the scene numbering option on add show
 * Change "More options..." on add show to the "More Gear" and "Less Gear" button of the config pages
 * Fix "Save as defaults" on add show stays ready to save after an option is changed back to its saved value
+* Change wording of step 1 of add show, the show search, to be shorter and clearer
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 

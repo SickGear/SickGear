@@ -1433,6 +1433,16 @@ div.formpaginate{
 	font-weight:600
 }
 
+/* a folder name given on the path conflict page, to stand out in both themes */
+#newShowPortal #displayText .chosen-folder{
+	display:inline-block;
+	padding:0 6px;
+	border-radius:3px;
+	background-color:#faa732;
+	color:#222;
+	font-weight:600
+}
+
 #addRootDirTable td label .filepath{
 	font-weight:900
 }
