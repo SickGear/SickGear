@@ -421,6 +421,8 @@ $(document).ready(function() {
 		});
 	}
 	qTips($('.addQTip'));
+	// used by ajaxEpSearch.js
+	$.SickGear.qTips = qTips;
 
 	function tableInit(table$) {
 		const sbroot$ = $('#sbRoot');

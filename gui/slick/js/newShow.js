@@ -448,7 +448,7 @@ $(document).ready(function () {
 			elScene = $('#scene'),
 			elRootDirs = $('#rootDirs'),
 			elFullShowPath = $('#fullShowPath'),
-			idxWhichShowID = 2, idxWhichTitle = 3;
+			idxWhichSrcID = 0, idxWhichShowID = 2, idxWhichTitle = 3;
 
 		if (!!elRadio.length) {
 			$('#rename-suggest').val(elRadio.attr('data-rename-suggest'));
@@ -460,7 +460,8 @@ $(document).ready(function () {
 		// if they've picked a radio button then use that
 		else if (elRadio.length) {
 			showName = elRadio.val().split('|')[idxWhichTitle];
-			elScene[0].checked = 0 <= showSceneMaps.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
+			elScene[0].checked = 0 <= (showSceneMaps[parseInt(elRadio.val().split('|')[idxWhichSrcID], 10)] || [])
+				.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
 			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'block' : 'None');
 		}
 		// if we provided a show in the hidden field, use that

@@ -1,4 +1,16 @@
-﻿### 3.36.9 (2026-11-09 17:10:00 UTC)
+﻿### 3.36.10 (2026-11-16 04:17:00 UTC)
+
+* Fix file info tip of the quality label on display show is removed when an episode search finishes
+* Fix status text on display show differs from a page load when an episode search finishes
+* Fix missing image icon over the episode search icon, and the icon after a search ends
+* Fix row colour of an archived episode on display show during and after an episode search
+* Fix scene numbering option is never shown on add show for a show with a XEM map
+* Fix subtitles option is not saved by "Save as defaults" on add show
+* Fix a quality preset is saved as Custom by "Save as defaults" on add show
+* Fix a cfscrape log message turns on console output of all log messages, e.g. in tests
+
+
+### 3.36.9 (2026-11-09 17:10:00 UTC)
 
 * Fix flag images in certain environments, e.g. docker builds
 * Change update fallback zoneinfo to 2026f
