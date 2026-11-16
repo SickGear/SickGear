@@ -1,5 +1,15 @@
 $(function(){
 
+	// the options that "Save as defaults" saves, and their state when last saved
+	var defaultsFields = '#statusSelect, #quality-preset, #wanted-qualities, #upgrade-qualities, #wanted_begin,'
+		+ ' #wanted_latest, #tag, #pause, #scene, #subs, #flatten_folders, #anime';
+	function defaultsState() {
+		return $(defaultsFields).map(function() {
+			return 'checkbox' === this.type ? this.checked : String($(this).val());
+		}).get().join('|');
+	}
+	var savedDefaults = defaultsState();
+
 	$('#saveDefaultsButton').click(function() {
 		var anyQualArray = [], bestQualArray = [];
 
@@ -31,12 +41,13 @@ $(function(){
 			shadow: false
 		});
 
+		savedDefaults = defaultsState();
 		$(this).attr('disabled', true);
 	});
 
-	$('#statusSelect, #quality-preset, #wanted-qualities, #upgrade-qualities, #wanted_begin, #wanted_latest, #tag,'
-		+ ' #pause, #scene, #subs, #flatten_folders, #anime').change(function() {
-		$('#saveDefaultsButton').attr('disabled', false);
+	// ready to save only while an option differs from its saved state, so that a change back is nothing to save
+	$(defaultsFields).change(function() {
+		$('#saveDefaultsButton').attr('disabled', defaultsState() === savedDefaults);
 	});
 
 	var updateOptions = function(that$, oldlink, newlink){
