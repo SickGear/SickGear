@@ -138,7 +138,7 @@
 						<span class="component-title">Flat folder structure</span>
 						<span class="component-desc">
 							<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''#>
-							<p>do not create sub folders</p>
+							<p>put all episodes in the show folder, without season folders</p>
 						</span>
 					</label>
 				</div>
@@ -147,10 +147,10 @@
 
 				<div class="field-pair">
 					<label for="rls_ignore_words">
-						<span class="component-title">Ignore result with any word</span>
+						<span class="component-title">Ignore releases with any of these words</span>
 						<span class="component-desc">
 							<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="" placeholder="e.g. [[regex:]word1, word2, ..., word_n, regex_n]" class="form-control form-control-inline input-sm input350">
-							<p class="note" style="clear:both">ignore search result <em class="grey-text">if its title contains any</em> of these comma separated words or regular expressions</p>
+							<p class="note" style="clear:both">skip a release if its name contains <em class="grey-text">any</em> of these (comma separated words or regex)</p>
 						</span>
 					</label>
 				</div>
@@ -158,7 +158,7 @@
 #if $sickgear.IGNORE_WORDS:
 				<div class="field-pair">
 					<label for="rls_global_exclude_ignore">
-						<span class="component-title">Exclude global ignore word (multi select list)</span>
+						<span class="component-title">Except these global ignore words</span>
 						<span class="component-desc">
 							<select id="rls_global_exclude_ignore" name="rls_global_exclude_ignore" multiple="multiple" class="form-control form-control-inline input-sm input350">
     #set $options = ''
@@ -167,7 +167,7 @@
     #for $gw in sorted($sickgear.IGNORE_WORDS, key=$str.lower):
         #set $options += "<option value=\"%s\">%s</option>" % ($gw, $gw)
     #end for
-								<option value=".*"#if $num_selected then '' else $selected#># Use all ignore word(s) (default) #</option>
+								<option value=".*"#if $num_selected then '' else $selected#># Use all global ignore words (default) #</option>
 								$options
 							</select>
 						</span>
@@ -177,10 +177,10 @@
 
 				<div class="field-pair">
 					<label for="rls_require_words">
-						<span class="component-title">Require at least one word</span>
+						<span class="component-title">Require one of these words</span>
 						<span class="component-desc">
 							<input type="text" name="rls_require_words" id="rls_require_words" value="" placeholder="e.g. [[regex:]word1, word2, ..., word_n, regex_n]" class="form-control form-control-inline input-sm input350">
-							<p class="note" style="clear:both">ignore search result <em class="grey-text">unless its title contains one</em> of these comma separated words or regular expressions</p>
+							<p class="note" style="clear:both">skip a release unless its name contains <em class="grey-text">one</em> of these (comma separated words or regex)</p>
 						</span>
 					</label>
 				</div>
@@ -188,7 +188,7 @@
 #if $sickgear.REQUIRE_WORDS:
 				<div class="field-pair">
 					<label for="rls_global_exclude_require">
-						<span class="component-title">Exclude global require word (multi select list)</span>
+						<span class="component-title">Except these global require words</span>
 						<span class="component-desc">
 							<select id="rls_global_exclude_require" name="rls_global_exclude_require" multiple="multiple" class="form-control form-control-inline input-sm input350">
     #set $options = ''
@@ -197,7 +197,7 @@
     #for $gw in sorted($sickgear.REQUIRE_WORDS, key=$str.lower):
         #set $options += "<option value=\"%s\">%s</option>" % ($gw, $gw)
     #end for
-								<option value=".*"#if $num_selected then '' else $selected#># Use all require word(s) (default) #</option>
+								<option value=".*"#if $num_selected then '' else $selected#># Use all global require words (default) #</option>
 								$options
 							</select>
 						</span>
@@ -210,7 +210,7 @@
 						<span class="component-title">Show is anime</span>
 						<span class="component-desc">
 							<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''#>
-							<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
+							<p>releases are numbered like <em class="grey-text">Show.265</em>, not <em class="grey-text">Show.S02E03</em></p>
 						</span>
 					</label>
 				</div>

@@ -1437,10 +1437,6 @@ div.formpaginate{
 	font-weight:900
 }
 
-#addShowForm #anigrouplists{
-	padding:0 0 0 15px
-}
-
 #edit-show #anigrouplists,
 #edit-show #anigrouplists h4,
 #edit-show #anigrouplists p,
@@ -3306,11 +3302,11 @@ select .selected:before{
 
 #addShowForm #add-allow,
 #addShowForm #add-block{
-	margin:0 0 10px 30px !important
+	margin:0 0 10px !important
 }
 #addShowForm #remove-allow,
 #addShowForm #remove-block{
-	margin:0 0 0 30px !important
+	margin:0 !important
 }
 #edit-show #add-allow,
 #edit-show #add-block{
@@ -3981,9 +3977,6 @@ option.flag{
 div.anigrouplists h4{
 	margin-top:0
 }
-#addShowForm .anigrouplists.pool h4{
-	margin-right:20px !important
-}
 div.anigrouplists{
 	text-align:center
 }
@@ -4031,8 +4024,11 @@ div.anigrouplists.pool select{
 	float:right
 }
 #addShowForm #pool{
-	width:310px;
-	margin-right:20px !important
+	width:310px
+}
+/* fit beside the allow list in the field column */
+#addShowForm div.anigrouplists.pool{
+	width:310px
 }
 
 div.anigrouplists span{
@@ -5043,17 +5039,24 @@ div.formpaginate .prev, div.formpaginate .next{
 	width:831px
 }
 
+/* long words, e.g. a regex, scroll into view */
+#rls_global_exclude_ignore,
+#rls_global_exclude_require{
+	overflow-x:auto
+}
+
 /* a wider label column on add show, its labels are longer than those of config pages */
+#addShowForm .step-two .stepDiv.linefix span.component-title,
 #addShowForm .step-three .stepDiv span.component-title{
 	width:262px
 }
 
-#import-shows #addShowForm .stepDiv span.component-desc,
-#addShowForm .step-two .stepDiv.linefix span.component-desc{
+#import-shows #addShowForm .stepDiv span.component-desc{
 	width:639px
 }
 
 /* the field column gives the label column the width it gains */
+#addShowForm .step-two .stepDiv.linefix span.component-desc,
 #addShowForm .step-three .stepDiv span.component-desc{
 	margin-left:272px;
 	width:559px

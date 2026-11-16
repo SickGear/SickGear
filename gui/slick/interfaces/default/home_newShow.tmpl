@@ -151,7 +151,7 @@
 					<span class="component-title">Pick parent folder</span>
 					<span class="component-desc">
     #if $provided_show_dir
-						Pre-chosen Destination Folder: <b>$provided_show_dir</b>
+						Folder: <b>$provided_show_dir</b> <span class="grey-text">(chosen when adding existing shows)</span>
 						<input type="hidden" id="fullShowPath" name="full_show_path" value="$provided_show_dir">
     #else
     #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
