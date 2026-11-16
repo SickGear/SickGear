@@ -1077,6 +1077,19 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	color:var(--text);
 	background-color: #181818;
 }
+
+/* a field the browser autofilled, e.g. from a picked earlier search, is painted light by the browser */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill{
+	-webkit-box-shadow:0 0 0 1000px #181818 inset;
+	-webkit-text-fill-color:var(--text);
+	caret-color:var(--text);
+	/* a long delay to the browser background, so that it does not flash light before the rule above paints */
+	transition:background-color 600000s 0s
+}
 #fileBrowserDialog .form-control:active,
 #fileBrowserDialog .form-control:hover {
 	background-color: #444412;
