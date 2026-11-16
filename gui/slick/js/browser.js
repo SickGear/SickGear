@@ -33,11 +33,20 @@
 			data = $.grep(data, function(){
 				return i++ != 0;
 			});
-			$('<input type="text" class="form-control input-sm">')
+			var pathField$ = $('<input type="text" class="form-control input-sm">')
 				.val(firstVal.currentPath)
 				.on('keypress', function(e){
 					if (13 === e.which) {
-						browse(e.target.value, endpoint, includeFiles);
+						// a pick from the suggestion list is handled by its own select event
+						if ($(e.target).autocomplete('widget').is(':visible'))
+							return;
+						e.preventDefault();
+						// Return goes to a changed path, and confirms the path that is in view
+						if (e.target.value === currentBrowserPath) {
+							$('.browserDialog .ui-button:contains("Ok")').click();
+						} else {
+							browse(e.target.value, endpoint, includeFiles);
+						}
 					}
 				})
 				.appendTo(fileBrowserDialog)
@@ -69,6 +78,8 @@
 			});
 			$('a', list).wrap('<li class="ui-state-default ui-corner-all">');
 			fileBrowserDialog.dialog('option', 'classes.ui-dialog', 'browserDialog');
+			// the field is made new for each folder, so give it the focus for the keys to work
+			pathField$.trigger('focus');
 		});
 	}
 
@@ -96,6 +107,14 @@
 				maxWidth:    docWidth - 80,
 				modal:       true,
 				autoOpen:    false
+			});
+			// Return confirms as on confirmation dialogs, except on a button, a link, or the path field, which handle it.
+			// on the document, as a click on the dialog, e.g. on its title, can leave the focus outside of it
+			$(document).on('keydown', function(e){
+				if (13 === e.which && fileBrowserDialog.dialog('isOpen') && !$(e.target).is('button, a, input, textarea')) {
+					e.preventDefault();
+					$('.browserDialog .ui-button:contains("Ok")').click();
+				}
 			});
 		}
 
