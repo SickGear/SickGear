@@ -19,7 +19,7 @@ $(function(){
 			default_tag: $('#tag').val(),
 			default_pause: $('#pause').prop('checked'),
 			default_scene: $('#scene').prop('checked'),
-			default_subtitles: $('#subs').prop('checked'),
+			default_subs: $('#subs').prop('checked'),
 			default_flatten_folders: $('#flatten_folders').prop('checked'),
 			default_anime: $('#anime').prop('checked')
 		});

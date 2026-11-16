@@ -5,6 +5,7 @@
 * Fix missing image icon over the episode search icon, and the icon after a search ends
 * Fix row colour of an archived episode on display show during and after an episode search
 * Fix scene numbering option is never shown on add show for a show with a XEM map
+* Fix subtitles option is not saved by "Save as defaults" on add show
 
 
 ### 3.36.9 (2026-11-09 17:10:00 UTC)
