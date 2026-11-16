@@ -29,7 +29,8 @@ from urllib.parse import urlparse, parse_qs
 import test_lib as test  # must be before import sg_helpers and sickgear
 import sg_helpers
 import sickgear
-from sickgear import common, db, failed_history, history, search_queue, helpers, indexermapper
+from sickgear import common, db, failed_history, history, search_queue, helpers, indexermapper, \
+    network_timezones
 from sickgear.common import Quality, VideoCodec
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_TVDB
@@ -493,6 +494,12 @@ class SearchTest(test.SickbeardTestDBCase):
         self.download_dir = os.path.join(sickgear.DATA_DIR, 'download')
         self._proper_search_run = None
 
+    @classmethod
+    def tearDownClass(cls):
+        super(SearchTest, cls).tearDownClass()
+        # the mock get_url fails the network timezone fetch, its retry delay would stop the fetch of tests that run later
+        network_timezones.reset_last_retry()
+
     def setUp(self):
         super().setUp()
         os.makedirs(self.download_dir, exist_ok=True)
@@ -526,6 +533,11 @@ class SearchTest(test.SickbeardTestDBCase):
                                                and True is not TVInfoAPI(i).config.get('people_only')]
         self.mock_provider_domains = []
         sickgear.name_parser.parser.name_parser_cache = sickgear.name_parser.parser.NameParserCache()
+        # settings changed below, restored at tearDown so that tests that run later are not affected
+        self._old_settings = {k: getattr(sickgear, k) for k in (
+            'NZB_METHOD', 'NZBGET_USE_HTTPS', 'NZBGET_HOST', 'NZBGET_CATEGORY', 'NZBGET_USERNAME',
+            'NZBGET_PASSWORD', 'SAB_HOST', 'SAB_APIKEY', 'SAB_CATEGORY', 'SAB_PASSWORD', 'SAB_USERNAME',
+            'NZB_DIR')}
         sickgear.NZB_METHOD = 'nzbget'
         sickgear.NZBGET_USE_HTTPS = False
         sickgear.NZBGET_HOST = self._nzbget_host
@@ -562,6 +574,8 @@ class SearchTest(test.SickbeardTestDBCase):
         sickgear.tv.TVEpisode.specify_episode = test._fake_specify_ep
         sg_helpers.get_url = self._old_get_url
         newznab.time = self._old_newznab_time
+        for k, v in self._old_settings.items():
+            setattr(sickgear, k, v)
         helpers.get_url = self._old_get_url
         sickgear.nzbget.ServerProxy = self._old_serverproxy
         for provider in sickgear.providers.sorted_sources():
