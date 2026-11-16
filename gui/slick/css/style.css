@@ -5043,10 +5043,20 @@ div.formpaginate .prev, div.formpaginate .next{
 	width:831px
 }
 
+/* a wider label column on add show, its labels are longer than those of config pages */
+#addShowForm .step-three .stepDiv span.component-title{
+	width:262px
+}
+
 #import-shows #addShowForm .stepDiv span.component-desc,
-#addShowForm .step-two .stepDiv.linefix span.component-desc,
-#addShowForm .step-three .stepDiv span.component-desc{
+#addShowForm .step-two .stepDiv.linefix span.component-desc{
 	width:639px
+}
+
+/* the field column gives the label column the width it gains */
+#addShowForm .step-three .stepDiv span.component-desc{
+	margin-left:272px;
+	width:559px
 }
 
 .stepDiv.parent-folder{

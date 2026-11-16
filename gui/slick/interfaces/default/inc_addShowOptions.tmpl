@@ -18,30 +18,30 @@
 		<div class="stepDiv linefix">
 
 			<div style="float:right;margin:-30px 0px 20px 15px;font-size:12px;line-height:27px;">
-				<span class="grey-text">To reuse options below when adding more shows&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled"></span>
+				<span class="grey-text">Use these choices for shows you add later&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled"></span>
 			</div>
 
 			<div class="field-pair">
-				<p class="grey-text"><span style="font-weight:800">Edit</span> options anytime from the details view of the show</p>
+				<p class="grey-text">You can change these later on the show's edit page</p>
 			</div>
 
 #try:
 	#if True == $enable_default_wanted:
 			<div class="field-pair">
 				<label for="wanted_begin">
-					<span class="component-title">From season 1 forward, set</span>
+					<span class="component-title">Wanted from the first episode</span>
 					<span class="component-desc">
 						<input type="number" name="wanted_begin" id="wanted_begin" value="$sg_str('WANTED_BEGIN_DEFAULT')" class="form-control input-sm input75">
-						<span>episodes as wanted (10 ... 0, and where -1 is whole first season)</span>
+						<span>episodes (-1 for all of season 1)</span>
 					</span>
 				</label>
 			</div>
 			<div class="field-pair">
 				<label for="wanted_latest">
-					<span class="component-title">From latest going back, set</span>
+					<span class="component-title">Wanted from the latest episode back</span>
 					<span class="component-desc">
 						<input type="number" name="wanted_latest" id="wanted_latest" value="$sg_str('WANTED_LATEST_DEFAULT')" class="form-control input-sm input75">
-						<span>episodes as wanted (10 ... 0, and where -1 is whole latest season)</span>
+						<span>episodes (-1 for all of the latest season)</span>
 					</span>
 				</label>
 			</div>
@@ -52,10 +52,10 @@
 
 			<div class="field-pair">
 				<label for="prune">
-					<span class="component-title">Keep up to</span>
+					<span class="component-title">Keep only the newest</span>
 					<span class="component-desc">
 						<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
-						<p>most recent downloads (blank for all)</p>
+						<p>downloads (blank to keep all)</p>
 						<p id="prune-warn" class="red-text" style="display:none">older downloaded episodes beyond this number will be deleted</p>
 					</span>
 				</label>
@@ -70,7 +70,7 @@
 							<option value="$tag"#if $tag == $getattr(sickgear, 'SHOW_TAG_DEFAULT', $getattr(sickgear, 'DEFAULT_SHOW_TAG', None)) then $selected else ''#>$tag</option>
 #end for
 						</select>
-						<span>and display on the show list page under this section</span>
+						<span>listed under this group on the show list</span>
 					</span>
 				</label>
 			</div>
@@ -90,7 +90,7 @@
 						<span class="component-title">Add paused</span>
 						<span class="component-desc">
 							<input class="cb" type="checkbox" name="pause" id="pause"#if $sg_var('PAUSE_DEFAULT') then $checked else ''#>
-							<p>pause search tasks to allow edits</p>
+							<p>add without searching, so you can change settings first</p>
 						</span>
 					</label>
 				</div>
@@ -104,7 +104,7 @@
 								<option value="$curStatus"#if $sg_var('STATUS_DEFAULT', SKIPPED) == $curStatus then $selected else ''#>$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</option>
 #end for
 							</select>
-							<span>set the initial status of missing episodes</span>
+							<span>status for episodes that are not on disk</span>
 						</span>
 					</label>
 				</div>
@@ -126,7 +126,7 @@
 						<span class="component-title">Scene numbering</span>
 						<span class="component-desc">
 							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''#>
-							<p>if any exists, enable editable episode numbers from TheXEM.info for search and media processing</p>
+							<p>use TheXEM.info episode numbers for search and media processing</p>
 						</span>
 					</label>
 				</div>

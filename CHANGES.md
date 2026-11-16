@@ -37,6 +37,7 @@
 * Fix a field turns light in the dark theme when the browser fills it, e.g. from a picked earlier search
 * Change the folder browser dialog to confirm on Return as the confirmation dialogs do
 * Change "Keep up to" on edit show and mass edit to "Keep only the newest" with the warning of add show
+* Change wording of the episode and quality options on add show to be shorter and clearer, with a wider label column
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
