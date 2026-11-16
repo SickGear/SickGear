@@ -18,7 +18,9 @@ import datetime
 import os
 import re
 import threading
+import time
 import traceback
+from urllib.parse import quote
 
 import exceptions_helper
 from exceptions_helper import ex
@@ -648,50 +650,88 @@ def search_for_needed_episodes(ep_obj_list):
     return list(found_results.values())
 
 
+PREDB_API = 'https://api.predb.net/'
+PREDB_MIN_GAP = 2  # seconds between requests, predb.net allows 30 in 60 seconds and blocks an overload
+PREDB_CACHE_AGE = 3600  # seconds to reuse a found release, the same names are checked again in later searches
+_predb_lock = threading.Lock()
+_predb_cache = {}  # type: Dict[AnyStr, Tuple[float, Optional[Dict]]]
+_predb_last = [0.0]
+
+
+def predb_release(release_name):
+    # type: (AnyStr) -> Tuple[Union[Dict, None, bool], AnyStr]
+    """
+    Look up an exact release name at predb.net
+
+    :param release_name: release title
+    :return: the predb.net data of the release, None if it is not listed, or False if predb.net could not be read,
+             and the url used
+    """
+    url = f'{PREDB_API}?type=pre&release={quote(release_name)}'
+    key = release_name.lower()
+    with _predb_lock:
+        now = time.time()
+        for cur_key in [_k for _k, (_t, _) in _predb_cache.items() if PREDB_CACHE_AGE < now - _t]:
+            del _predb_cache[cur_key]
+        if key in _predb_cache:
+            return _predb_cache[key][1], url
+
+        wait = PREDB_MIN_GAP - (now - _predb_last[0])
+        if 0 < wait:
+            time.sleep(wait)
+        resp = helpers.get_url(PREDB_API, params=dict(type='pre', release=release_name), parse_json=True)
+        _predb_last[0] = time.time()
+
+        if not isinstance(resp, dict) or 'success' != (resp.get('status') or '').lower():
+            if isinstance(resp, dict) and resp.get('message'):
+                logger.debug(f'predb.net replied [{resp.get("message")}] to [{url}]')
+            return False, url
+
+        sane_name = helpers.full_sanitize_scene_name(release_name)
+        data = next(iter([_d for _d in (resp.get('data') or [])
+                          if isinstance(_d, dict)
+                          and sane_name == helpers.full_sanitize_scene_name((_d.get('release') or '').strip())]),
+                    None)
+        _predb_cache[key] = (_predb_last[0], data)
+    return data, url
+
+
 def can_reject(release_name):
     # type: (AnyStr) -> Union[Tuple[None, None],Tuple[True or AnyStr, AnyStr]]
     """
     Check if a release name should be rejected at external services.
-    If any site reports result as a valid scene release, then return None, None.
     If predb reports result as nuked, then return nuke reason and url attempted.
+    If any site reports result as a valid scene release, then return None, None.
     If fail to find result at all services, return reject and url details for each site.
 
     :param release_name: Release title
     :return: None, None if release has no issue otherwise True/Nuke reason, URLs that rejected
     """
     rej_urls = []
+    data, predb_url = predb_release(release_name)
+    if False is data:
+        rej_urls += [f'Failed contact \'{predb_url}\'']
+    elif data:
+        # status 0 ok, 1 nuked, 2 unnuked, 3 delpre, 4 undelpre
+        if helpers.try_int(data.get('status')) not in (0, 2, 4):
+            return data.get('reason') or 'Reason not set', f'\'{predb_url}\''
+        if helpers.try_int(data.get('pretime')):
+            return None, None
+        rej_urls += [f'\'{predb_url}\'']
+    else:
+        rej_urls += [f'\'{predb_url}\'']
+
     srrdb_url = f'https://www.srrdb.com/api/search/r:{re.sub("[][]", "", release_name)}/order:date-desc'
     resp = helpers.get_url(srrdb_url, parse_json=True)
     if not resp:
-        srrdb_rej = True
         rej_urls += [f'Failed contact \'{srrdb_url}\'']
+    elif (len(resp.get('results', []))
+          and release_name.lower() == resp.get('results', [{}])[0].get('release', '').lower()):
+        return None, None
     else:
-        srrdb_rej = (not len(resp.get('results', []))
-                     or release_name.lower() != resp.get('results', [{}])[0].get('release', '').lower())
-        rej_urls += ([], [f'\'{srrdb_url}\''])[srrdb_rej]
+        rej_urls += [f'\'{srrdb_url}\'']
 
-    sane_name = helpers.full_sanitize_scene_name(release_name)
-    # predb_url = 'https://predb.ovh/api/v1/?q=@name "%s"' % sane_name
-    predb_url = f'https://predb.de/api/?q={release_name}'
-    resp = helpers.get_url(predb_url, parse_json=True)
-    predb_rej = True
-    if not resp:
-        rej_urls += [f'Failed contact \'{predb_url}\'']
-    elif 'success' == resp.get('status', '').lower():
-        rows = resp and resp.get('data') or []
-        for data in rows:
-            if sane_name == helpers.full_sanitize_scene_name((data.get('release') or '').strip()):
-                nuke_type = helpers.try_int(data.get('status'))
-                if not nuke_type:
-                    predb_rej = not helpers.try_int(data.get('pretime'))
-                else:
-                    predb_rej = nuke_type not in (2, 4) and (data.get('reason') or 'Reason not set')
-                break
-        rej_urls += ([], [f'\'{predb_url}\''])[bool(predb_rej)]
-
-    pred = any([not srrdb_rej, not predb_rej])
-
-    return pred and (None, None) or (predb_rej or True,  ', '.join(rej_urls))
+    return True, ', '.join(rej_urls)
 
 
 def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, manual_search, try_other_searches):

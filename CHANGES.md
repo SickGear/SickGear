@@ -57,6 +57,11 @@
 * Update soupsieve 2.10.0 (fc195cd) to 3.0.4 (628ec6b)
 
 
+### 3.36.12 (2026-11-16 19:27:00 UTC)
+
+* Fix the scene release check at predb, its api moved to api.predb.net, a nuke now rejects a release that srrdb lists
+
+
 ### 3.36.11 (2026-11-16 13:18:00 UTC)
 
 * Fix file info tip of the quality label on display show is lost when the page sees a search finish before its queue item ends
