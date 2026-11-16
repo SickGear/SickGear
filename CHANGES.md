@@ -33,6 +33,7 @@
 * Change confirmation dialogs to confirm on Return and to move by their title bar
 * Change add show steps to set folder and release filters in step 2, and to choose episodes and quality in step 3
 * Add "Keep up to" to the options saved by "Save as defaults" on add show
+* Fix view log page fails when the number of lines to show is given in its url
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
