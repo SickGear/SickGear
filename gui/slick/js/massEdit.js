@@ -29,4 +29,11 @@ $(document).ready(function(){
 		$('#display_new_root_dir_'+cur_id).html('<b>DELETED</b>');
 	});
 
+	// "Keep only the newest" deletes episodes, so say so while it has a number
+	function pruneWarn() {
+		$('#prune-warn').toggle(0 < parseInt($('#prune').val(), 10));
+	}
+	pruneWarn();
+	$('#prune').on('input change', pruneWarn);
+
 });

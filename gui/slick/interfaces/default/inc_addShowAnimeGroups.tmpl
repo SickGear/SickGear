@@ -1,0 +1,13 @@
+#import sickgear
+##
+<% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+## the fansub groups of add show, or the anime field when anime options are off
+##
+
+#if $enable_anime_options
+#import sickgear.anime
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_anigrouplists.tmpl')
+#else
+		<input type="hidden" name="anime" id="anime" value="0">
+#end if

@@ -171,10 +171,11 @@
 	</div>
 
 	<div class="optionWrapper" >
-		<span class="selectTitle">Keep up to <span class="grey-text">(0 = no prune)</span></span>
+		<span class="selectTitle">Keep only the newest <span class="grey-text">(0 = keep all)</span></span>
 		<div class="selectChoices">
 			<input type="text" name="prune" id="prune" value="#if None is not $prune_value then $prune_value else ''#" class="form-control form-control-inline input-sm input75" style="width:50px;margin-top:0">
 			<span>blank = no change</span>
+			<span id="prune-warn" class="red-text" style="display:none;margin-left:6px">older downloaded episodes beyond this number will be deleted</span>
 		</div><br>
 	</div>
 

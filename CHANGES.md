@@ -32,10 +32,19 @@
 * Fix database upgrade fails when a column that it adds exists
 * Change confirmation dialogs to confirm on Return and to move by their title bar
 * Change add show steps to set folder and release filters in step 2, and to choose episodes and quality in step 3
-* Add "Keep up to" to the options saved by "Save as defaults" on add show
+* Change "Keep up to" on add show to warn that it deletes older downloaded episodes, and to not be saved as a default
 * Fix view log page fails when the number of lines to show is given in its url
 * Fix a field turns light in the dark theme when the browser fills it, e.g. from a picked earlier search
 * Change the folder browser dialog to confirm on Return as the confirmation dialogs do
+* Change "Keep up to" on edit show and mass edit to "Keep only the newest" with the warning of add show
+* Change wording of the episode and quality options on add show to be shorter and clearer, with a wider label column
+* Change wording of the folder and release filter options on add show and edit show to be shorter and clearer, with a wider label column on add show
+* Add a link to the show at TheXEM.info to the scene numbering option on add show
+* Change "More options..." on add show to the "More Gear" and "Less Gear" button of the config pages
+* Fix "Save as defaults" on add show stays ready to save after an option is changed back to its saved value
+* Change wording of step 1 of add show, the show search, to be shorter and clearer
+* Fix the folder in the summary of add show has a doubled separator when the parent folder ends with one
+* Change the add show options template to separate files for the folder, filter and fansub group options, instead of parts chosen by a variable
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
 
 
