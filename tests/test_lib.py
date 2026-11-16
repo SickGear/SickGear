@@ -63,7 +63,8 @@ SHOWDIR = os.path.join(TESTDIR, f'{SHOWNAME} final')
 #     os.path.join(TESTDIR, 'sickgear.log'), sickgear.logger.NUM_LOGS, sickgear.logger.LOG_SIZE)
 sickgear.logger.SBRotatingLogHandler.log_file = os.path.join(os.path.join(TESTDIR, 'Logs'), 'test_sickgear.log')
 
-locale.setlocale(locale.LC_ALL, 'en')
+# English day and month names for dates in mock data, 'C' is a locale of every platform
+locale.setlocale(locale.LC_TIME, 'C')
 
 # =================
 # prepare env functions
@@ -732,7 +733,7 @@ def generate_newznab_feed(data, domain='api.example.com', category='', offset=0,
     ET.SubElement(doc, "image")   # .text = ''
     ET.SubElement(doc, "newznab:response", attrib={'offset': f"{offset}", 'total': f"{total}"})
 
-    locale.setlocale(locale.LC_ALL, 'en')
+    locale.setlocale(locale.LC_TIME, 'C')
     for i in data[offset:offset+limit]:
         title = i['release_name']
         guid = i['guid']
