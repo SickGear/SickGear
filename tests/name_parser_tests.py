@@ -997,3 +997,6 @@ if '__main__' == __name__:
 
     suite = unittest.TestLoader().loadTestsFromTestCase(MultiSceneNumbering)
     unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(DupeNameTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
