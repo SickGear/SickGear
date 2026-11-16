@@ -479,6 +479,8 @@ $(document).ready(function () {
 			elScene[0].checked = 0 <= (showSceneMaps[parseInt(elRadio.val().split('|')[idxWhichSrcID], 10)] || [])
 				.indexOf(parseInt(elRadio.val().split('|')[idxWhichShowID], 10));
 			$('#scene-maps-found').css('display', elScene.is(':checked') ? 'block' : 'None');
+			// link to the show at TheXEM, by name as display show does
+			$('#scene-xem-link').attr('href', $.SickGear.anonURL + 'http://thexem.info/search?q=' + encodeURIComponent(showName));
 		}
 		// if we provided a show in the hidden field, use that
 		else if (elInput.length && elInput.val().length) {

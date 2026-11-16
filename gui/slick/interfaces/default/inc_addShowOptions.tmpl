@@ -1,6 +1,7 @@
 #import sickgear
-#from sickgear.common import *
 #from sickgear import subtitles
+#from sickgear.common import *
+#from sickgear.helpers import anon_url
 ##
 #set $checked = ' checked="checked"'
 #set $selected = ' selected="selected"'
@@ -126,7 +127,7 @@
 						<span class="component-title">Scene numbering</span>
 						<span class="component-desc">
 							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''#>
-							<p>use TheXEM.info episode numbers for search and media processing</p>
+							<p>use <a id="scene-xem-link" href="$anon_url('http://thexem.info/')" rel="noreferrer" target="_blank" title="View XEM info in new tab">TheXEM.info</a> episode numbers for search and media processing</p>
 						</span>
 					</label>
 				</div>
