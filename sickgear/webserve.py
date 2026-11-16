@@ -10481,6 +10481,8 @@ class EventLogs(MainHandler):
         t.submenu = self.error_logs_menu
 
         min_level = int(min_level)
+        # a value given in the url is a string
+        max_lines = helpers.try_int(max_lines, 500)
 
         regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*(\S+)\s+:{2}\s*(.*\r?\n)$')
 
