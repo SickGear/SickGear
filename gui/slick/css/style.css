@@ -844,6 +844,30 @@ inc_rootDirs.tmpl
 	text-align:center
 }
 
+/* folder list as a field of add show */
+.step-two .field-pair #rootDirs{
+	display:block
+}
+
+.step-two .stepDiv.linefix .field-pair .rootdir-controls input{
+	float:none
+}
+
+.step-two .field-pair .rootdir-controls{
+	margin-bottom:20px
+}
+
+/* word fields and lists are as wide as the folder list */
+.step-two .field-pair .input350{
+	width:430px
+}
+
+/* and its lists are as high as the folder list */
+.step-two .field-pair #rootDirs,
+.step-two .field-pair select[multiple]{
+	height:110px
+}
+
 /* =======================================================================
 home.tmpl
 ========================================================================== */
@@ -5006,6 +5030,7 @@ div.formpaginate .prev, div.formpaginate .next{
 }
 
 #import-shows .stepDiv,
+.step-two .stepDiv.linefix,
 .step-three .stepDiv{
 	padding:15px 0
 }
@@ -5019,6 +5044,7 @@ div.formpaginate .prev, div.formpaginate .next{
 }
 
 #import-shows #addShowForm .stepDiv span.component-desc,
+#addShowForm .step-two .stepDiv.linefix span.component-desc,
 #addShowForm .step-three .stepDiv span.component-desc{
 	width:639px
 }

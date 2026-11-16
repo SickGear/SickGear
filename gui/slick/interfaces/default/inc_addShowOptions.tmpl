@@ -7,45 +7,58 @@
 ##
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+## a page can output the options in parts, 'flat' and 'parent' to show with its parent folder step, then 'main'
+#set $part = $getVar('addshow_options_part', None)
+#set $show_main = $part in (None, 'main')
+#set $show_flat = $part in (None, 'flat')
+#set $show_moved = $part in (None, 'parent')
+##
+#if $show_main
 		<div class="stepDiv linefix">
 
 			<div style="float:right;margin:-30px 0px 20px 15px;font-size:12px;line-height:27px;">
 				<span class="grey-text">To reuse options below when adding more shows&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled"></span>
 			</div>
 
-			<div class="field-pair alt">
-				<p class="grey-text"><span style="font-weight:800">Edit</span> options anytime from the details view of the show</p>
-			</div>
-
 			<div class="field-pair">
-#set $qualities = $Quality.split_quality($sg_var('QUALITY_DEFAULT', SD))
-#set global $any_qualities = $qualities[0]
-#set global $best_qualities = $qualities[1]
-#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+				<p class="grey-text"><span style="font-weight:800">Edit</span> options anytime from the details view of the show</p>
 			</div>
 
 #try:
 	#if True == $enable_default_wanted:
-			<div class="field-pair alt">
-				<span class="component-title">From season 1 forward, set</span>
-				<span class="component-desc">
-					<label for="wanted_begin" style="padding-bottom:10px">
+			<div class="field-pair">
+				<label for="wanted_begin">
+					<span class="component-title">From season 1 forward, set</span>
+					<span class="component-desc">
 						<input type="number" name="wanted_begin" id="wanted_begin" value="$sg_str('WANTED_BEGIN_DEFAULT')" class="form-control input-sm input75">
 						<span>episodes as wanted (10 ... 0, and where -1 is whole first season)</span>
-					</label>
-				</span>
-				<span class="component-title">From latest going back, set</span>
-				<span class="component-desc">
-					<label for="wanted_latest">
+					</span>
+				</label>
+			</div>
+			<div class="field-pair">
+				<label for="wanted_latest">
+					<span class="component-title">From latest going back, set</span>
+					<span class="component-desc">
 						<input type="number" name="wanted_latest" id="wanted_latest" value="$sg_str('WANTED_LATEST_DEFAULT')" class="form-control input-sm input75">
 						<span>episodes as wanted (10 ... 0, and where -1 is whole latest season)</span>
-					</label>
-				</span>
+					</span>
+				</label>
 			</div>
 	#end if
 #except (NameError, NotFound):
 	#pass
 #end try
+
+			<div class="field-pair">
+				<label for="prune">
+					<span class="component-title">Keep up to</span>
+					<span class="component-desc">
+						<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
+						<p>most recent downloads (blank for all)</p>
+					</span>
+				</label>
+			</div>
 
 			<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
 				<label for="tag">
@@ -61,25 +74,22 @@
 				</label>
 			</div>
 
-			<div><a id="moreless-options-addshow" href="#" name="More options">More options...</a></div>
+			<div class="field-pair">
+#set $qualities = $Quality.split_quality($sg_var('QUALITY_DEFAULT', SD))
+#set global $any_qualities = $qualities[0]
+#set global $best_qualities = $qualities[1]
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+			</div>
+
+			<div><a id="moreless-options-addshow" href="#" name="More options" style="display:block">More options...</a></div>
 			<div id="options-addshow" style="display:none">
 
-				<div class="field-pair alt" style="margin-top:10px">
+				<div class="field-pair" style="margin-top:10px">
 					<label for="pause">
 						<span class="component-title">Add paused</span>
 						<span class="component-desc">
 							<input class="cb" type="checkbox" name="pause" id="pause"#if $sg_var('PAUSE_DEFAULT') then $checked else ''#>
 							<p>pause search tasks to allow edits</p>
-						</span>
-					</label>
-				</div>
-
-				<div class="field-pair alt">
-					<label for="prune">
-						<span class="component-title">Keep up to</span>
-						<span class="component-desc">
-							<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
-							<p>most recent downloads (blank for all)</p>
 						</span>
 					</label>
 				</div>
@@ -98,18 +108,8 @@
 					</label>
 				</div>
 
-				<div class="field-pair alt" id="scene-maps-found" style="display:none">
-					<label for="scene">
-						<span class="component-title">Scene numbering</span>
-						<span class="component-desc">
-							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''#>
-							<p>if any exists, enable editable episode numbers from TheXEM.info for search and media processing</p>
-						</span>
-					</label>
-				</div>
-
 #if $sg_var('USE_SUBTITLES'):
-				<div class="field-pair alt">
+				<div class="field-pair">
 					<label for="subs">
 						<span class="component-title">Subtitles</span>
 						<span class="component-desc">
@@ -120,7 +120,19 @@
 				</div>
 #end if
 
-				<div class="field-pair alt">
+				<div class="field-pair" id="scene-maps-found" style="display:none">
+					<label for="scene">
+						<span class="component-title">Scene numbering</span>
+						<span class="component-desc">
+							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''#>
+							<p>if any exists, enable editable episode numbers from TheXEM.info for search and media processing</p>
+						</span>
+					</label>
+				</div>
+
+#end if
+#if $show_flat
+				<div class="field-pair">
 					<label for="flatten_folders">
 						<span class="component-title">Flat folder structure</span>
 						<span class="component-desc">
@@ -129,26 +141,15 @@
 						</span>
 					</label>
 				</div>
-
-#if $enable_anime_options
-				<div class="field-pair alt">
-					<label for="anime">
-						<span class="component-title">Show is anime</span>
-						<span class="component-desc">
-							<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''#>
-							<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
-						</span>
-					</label>
-				</div>
 #end if
+#if $show_moved
 
 				<div class="field-pair">
 					<label for="rls_ignore_words">
 						<span class="component-title">Ignore result with any word</span>
 						<span class="component-desc">
-							<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="" class="form-control form-control-inline input-sm input350">
-							<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
-							<p class="note">ignore search result <em class="grey-text">if its title contains any</em> of these comma separated words or regular expressions</p>
+							<input type="text" name="rls_ignore_words" id="rls_ignore_words" value="" placeholder="e.g. [[regex:]word1, word2, ..., word_n, regex_n]" class="form-control form-control-inline input-sm input350">
+							<p class="note" style="clear:both">ignore search result <em class="grey-text">if its title contains any</em> of these comma separated words or regular expressions</p>
 						</span>
 					</label>
 				</div>
@@ -177,9 +178,8 @@
 					<label for="rls_require_words">
 						<span class="component-title">Require at least one word</span>
 						<span class="component-desc">
-							<input type="text" name="rls_require_words" id="rls_require_words" value="" class="form-control form-control-inline input-sm input350">
-							<p>e.g. [[regex:]word1, word2, ..., word_n, regex_n]</p>
-							<p class="note">ignore search result <em class="grey-text">unless its title contains one</em> of these comma separated words or regular expressions</p>
+							<input type="text" name="rls_require_words" id="rls_require_words" value="" placeholder="e.g. [[regex:]word1, word2, ..., word_n, regex_n]" class="form-control form-control-inline input-sm input350">
+							<p class="note" style="clear:both">ignore search result <em class="grey-text">unless its title contains one</em> of these comma separated words or regular expressions</p>
 						</span>
 					</label>
 				</div>
@@ -203,12 +203,28 @@
 					</label>
 				</div>
 #end if
+#if $enable_anime_options
+				<div class="field-pair">
+					<label for="anime">
+						<span class="component-title">Show is anime</span>
+						<span class="component-desc">
+							<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''#>
+							<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
+						</span>
+					</label>
+				</div>
+#end if
+#end if
+#if $show_main
 			</div>
 		</div>
+#end if
+#if $show_moved
 
 #if $enable_anime_options
 #import sickgear.anime
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_anigrouplists.tmpl')
 #else
 		<input type="hidden" name="anime" id="anime" value="0">
+#end if
 #end if

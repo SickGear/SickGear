@@ -138,30 +138,42 @@
 #end if
 
 			</div>
-			<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
 #if not $kwargs.get('action')
 		<fieldset class="sectionwrap step-two" style="visibility:hidden">
-			<legend class="legendStep"><p>Pick parent folder</p></legend>
+			<legend class="legendStep"><p>Set folder and release filters</p></legend>
 
-			<div class="stepDiv parent-folder">
+			<div class="stepDiv linefix">
+    #set global $addshow_options_part = 'flat'
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
+				<div class="field-pair">
+					<span class="component-title">Pick parent folder</span>
+					<span class="component-desc">
     #if $provided_show_dir
-				Pre-chosen Destination Folder: <b>$provided_show_dir</b> <br>
-				<input type="hidden" id="fullShowPath" name="full_show_path" value="$provided_show_dir"><br>
+						Pre-chosen Destination Folder: <b>$provided_show_dir</b>
+						<input type="hidden" id="fullShowPath" name="full_show_path" value="$provided_show_dir">
     #else
     #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_rootDirs.tmpl')
     #end if
+					</span>
+				</div>
+    #set global $addshow_options_part = 'parent'
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
 			</div>
-			<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
+<style>
+#addShowForm .sectionwrap.step-three > div.stepDiv > div:first-child {
+    margin: -10px 0 0 0 !important;
+    padding: 0 0 25px;
+    line-height: normal !important;
+}
+</style>
 		<fieldset class="sectionwrap step-three" style="visibility:hidden">
-			<legend class="legendStep"><p>Set custom options</p></legend>
-				<div class="stepDiv">
+			<legend class="legendStep"><p>Choose episodes and quality</p></legend>
+#set global $addshow_options_part = 'main'
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowOptions.tmpl')
-				</div>
-				<div style="clear:both">&nbsp;</div>
 		</fieldset>
 
     #for $curNextDir in $other_shows
