@@ -2668,7 +2668,9 @@ class TVShow(TVShowBase):
         self._network_country = show_result['network_country']
         self._network_country_code = show_result['network_country_code']
         self._network_id = show_result['network_id']
-        self._network_is_stream = bool(show_result['network_is_stream'])
+        # keep an unknown value as None, as TV info gives it, or every update marks the record as changed
+        self._network_is_stream = (None if None is show_result['network_is_stream']
+                                   else bool(show_result['network_is_stream']))
         self._overview = self._overview or show_result['overview'] or ''
         self._paused = int(show_result['paused'])
         self._prune = show_result['prune'] or 0
@@ -4190,7 +4192,8 @@ class TVEpisode(TVEpisodeBase):
 
         # todo: change to _tvid , _epid after removing indexer, indexerid
         self._tvid = int(show_result['indexer'])
-        self._epid = int(show_result['indexerid'])
+        # indexerid is set too, as the epid setter does, or a later set of the same epid marks the episode as changed
+        self._epid = self._indexerid = int(show_result['indexerid'])
 
         self._absolute_number = show_result['absolute_number']
         self._airdate = datetime.date.fromordinal(int(show_result['airdate']))
@@ -4204,7 +4207,9 @@ class TVEpisode(TVEpisodeBase):
         self._network_country = show_result['network_country']
         self._network_country_code = show_result['network_country_code']
         self._network_id = show_result['network_id']
-        self._network_is_stream = bool(show_result['network_is_stream'])
+        # keep an unknown value as None, as TV info gives it, or every update marks the record as changed
+        self._network_is_stream = (None if None is show_result['network_is_stream']
+                                   else bool(show_result['network_is_stream']))
         self._runtime = show_result['runtime']
         self._season = season
         self._status = self._status if None is show_result['status'] else int(show_result['status'])
@@ -4405,18 +4410,19 @@ class TVEpisode(TVEpisodeBase):
                 self.status = SKIPPED
             return False
 
-        self.network = ep_info.network
-        if not self._network:
-            self.network = self._show_obj.internal_network
+        # set network and timezone once, with the final value,
+        # a set of an empty value first and the show value after, marks an unchanged episode as changed
+        self.network = ep_info.network or self._show_obj.internal_network
         self.network_id = ep_info.network_id
         self.network_country = ep_info.network_country
         self.network_country_code = ep_info.network_country_code
-        self.timezone = ep_info.network_timezone
-        if not self._timezone and (self._network or self._show_obj.internal_timezone):
+        ep_timezone = ep_info.network_timezone
+        if not ep_timezone and (self._network or self._show_obj.internal_timezone):
             if self._show_obj.internal_timezone:
-                self._timezone = self._show_obj.internal_timezone
+                ep_timezone = self._show_obj.internal_timezone
             else:
-                _, self.timezone = network_timezones.get_network_timezone(self._network, return_name=True)
+                _, ep_timezone = network_timezones.get_network_timezone(self._network, return_name=True)
+        self.timezone = ep_timezone
         self.network_is_stream = ep_info.network_is_stream
         self.airtime = ep_info.airtime
         self.runtime = ep_info.runtime

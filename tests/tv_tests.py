@@ -26,10 +26,11 @@ import sickgear
 from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
 from exceptions_helper import MultipleShowObjectsException
 from sickgear.helpers import find_show_by_id
-from sickgear import indexermapper
+from sickgear import db, indexermapper
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 from sickgear.scene_exceptions import ReleaseMap
+from lib.tvinfo_base import TVInfoEpisode
 
 # noinspection PyUnreachableCode
 if False:
@@ -91,6 +92,67 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         ep_obj.save_to_db()
         ep_obj.load_from_db(1, 1)
         self.assertEqual(ep_obj.name, 'asdasdasdajkaj')
+
+
+class TVEpisodeLoadTests(test.SickbeardTestDBCase):
+    """ an episode that loads from the db is not marked as changed when TV info then gives it the same values """
+
+    def setUp(self):
+        super(TVEpisodeLoadTests, self).setUp()
+        sickgear.showList = []
+        sickgear.showDict = {}
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        with db.DBConnection() as sg_db:
+            sg_db.action(
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, status, airdate, subtitles)'
+                ' VALUES (1, 123456, 1001, 1, 1, ?, 1, "")', [sickgear.common.SKIPPED])
+        self.ep_obj = TVShow(1, 123456, 'en').get_episode(1, 1)
+
+    def tearDown(self):
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        super(TVEpisodeLoadTests, self).tearDown()
+
+    def test_loaded_episode_is_not_changed(self):
+        self.assertEqual(1001, self.ep_obj.epid)
+        self.assertFalse(self.ep_obj.dirty)
+
+    def test_same_epid_is_no_change(self):
+        self.ep_obj.epid = 1001
+        self.assertFalse(self.ep_obj.dirty)
+
+    def test_unknown_network_is_stream_is_no_change(self):
+        self.ep_obj.network_is_stream = None
+        self.assertFalse(self.ep_obj.dirty)
+
+    def test_new_value_is_a_change(self):
+        self.ep_obj.network_is_stream = True
+        self.assertTrue(self.ep_obj.dirty)
+
+    def test_same_tvinfo_data_is_no_change(self):
+        ep_info = TVInfoEpisode()
+        for cur_key, cur_value in dict(id=1001, episodename='Pilot', firstaired='2020-01-02', absolute_number=1).items():
+            # TV info sources give a value as attribute and as key
+            setattr(ep_info, cur_key, cur_value)
+            ep_info[cur_key] = cur_value
+
+        def load(network):
+            # a new show object each time, as a show update after a restart has
+            show_obj = TVShow(1, 123456, 'en')
+            show_obj.network = network
+            cur_ep_obj = show_obj.get_episode(1, 1)
+            cur_ep_obj.load_from_tvinfo(1, 1, update=True, cached_show={1: {1: ep_info}})
+            return cur_ep_obj
+
+        for cur_network in ('', 'CBS'):
+            ep_obj = load(cur_network)
+            self.assertTrue(ep_obj.dirty)
+            ep_obj.save_to_db()
+            self.assertFalse(load(cur_network).dirty, msg=f'show network "{cur_network}"')
 
 
 class TVTests(test.SickbeardTestDBCase):
@@ -279,6 +341,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeLoadTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)

@@ -1,4 +1,9 @@
-﻿### 3.36.12 (2026-11-16 19:27:00 UTC)
+﻿### 3.36.13 (2026-11-18 19:41:00 UTC)
+
+* Fix a show update writes every episode to the DB even when no episode data has changed
+
+
+### 3.36.12 (2026-11-16 19:27:00 UTC)
 
 * Fix the scene release check at predb, its api moved to api.predb.net, a nuke now rejects a release that srrdb lists
 
