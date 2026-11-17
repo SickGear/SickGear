@@ -785,6 +785,14 @@ class ShowQueueItem(generic_queue.QueueItem):
     def _is_loading(self):
         return False
 
+    def finish(self):
+        # a show task loads every episode of its show, release the episode objects that are no longer used
+        if self.show_obj:
+            released = self.show_obj.release_episodes()
+            if released:
+                logger.debug(f'Released {released} episode objects of [{self.show_obj.name}] from memory')
+        super(ShowQueueItem, self).finish()
+
     def __str__(self):
         return f'<{self.__class__.__name__} ({self.show_obj and self.show_obj.name})>'
 
