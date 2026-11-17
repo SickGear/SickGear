@@ -27,6 +27,7 @@ import os.path
 import re
 import stat
 import threading
+import time
 import traceback
 from collections import Counter, OrderedDict
 from functools import reduce
@@ -1371,6 +1372,9 @@ class TVShow(TVShowBase):
         self.sxe_ep_obj = {}  # type: Dict
         # numbers of episodes that a search found are not wanted, and that have no episode object
         self.unwanted_sxe = {}  # type: Dict[int, Set[int]]
+        # file sizes of episode folders, and the time that the first of these folders was listed
+        self._ep_dir_sizes = {}  # type: Dict[AnyStr, Dict[AnyStr, int]]
+        self._ep_dir_time = 0  # type: float
         self.aired_in_season = {}  # type: Dict
         self.aired_in_scene_season = {}  # type: Dict
         self.aired_in_season_update_time = datetime.datetime(2000, 1, 1)  # type: datetime.datetime
@@ -1759,6 +1763,42 @@ class TVShow(TVShowBase):
                     ep_obj_list.append(ep_obj)
 
         return ep_obj_list
+
+    def ep_file_size(self, location):
+        # type: (AnyStr) -> int
+        """
+        Return the size of an episode file, or 0 if there is no file.
+
+        The files of a folder are listed once and that list is used for 30 seconds. When the episodes of a show
+        load, that is one disk call for a season folder, in place of two disk calls for each episode file in it.
+
+        :param location: path of an episode file
+        """
+        if not location:
+            return 0
+
+        now = time.time()
+        if 30 < now - self._ep_dir_time:
+            self._ep_dir_sizes, self._ep_dir_time = {}, now
+
+        folder, name = os.path.split(location)
+        sizes = self._ep_dir_sizes.get(folder)
+        if None is sizes:
+            sizes = {}
+            try:
+                with os.scandir(folder) as entries:
+                    for cur_entry in entries:
+                        if cur_entry.is_file():
+                            sizes[os.path.normcase(cur_entry.name)] = cur_entry.stat().st_size
+            except OSError:
+                pass
+            self._ep_dir_sizes[folder] = sizes
+
+        size = sizes.get(os.path.normcase(name))
+        if None is size:
+            # not in the list, this can be a file that is new since the folder was listed, so ask the disk
+            size = os.path.getsize(location) if os.path.isfile(location) else 0
+        return size
 
     def get_episode(self,
                     season=None,  # type: Optional[int]
@@ -4316,7 +4356,10 @@ class TVEpisode(TVEpisodeBase):
         self._timestamp = show_result['timestamp'] or self._make_timestamp()
         self._version = self._version if not show_result['version'] else int(show_result['version'])
         self._video_codec = show_result['video_codec']
-        self.location = show_result['location'] and os.path.normpath(show_result['location']) or self.location
+        # not the location setter, it asks the disk for the file and its size for every episode that is loaded,
+        # that is slow on a network drive. The show lists a folder once and gives the size, 0 if the file is gone
+        self._location = show_result['location'] and os.path.normpath(show_result['location']) or self._location
+        self._file_size = self._show_obj.ep_file_size(self._location)
 
         if None is not show_result['release_group']:
             self._release_group = show_result['release_group']
