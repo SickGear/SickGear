@@ -51,6 +51,7 @@
 * Fix bundled modules loaded twice under two names, e.g. a TV info source did not handle a skipped connection
 * Change load hachoir and the growl, subtitle, rar, and AniDB libraries at first use on Python 3.15+, not at every start
 * Change group imports in PEP 8 order: Python standard library, then bundled libraries, then SickGear code
+* Change templates to import only the names they use from sickgear.common, instead of every name
 
 
 [develop]
