@@ -46,6 +46,9 @@ VIDEO_CODEC_NAME = {
     5: "On2 VP6 with alpha channel",
     6: "Screen video version 2",
     7: "AVC",
+    8: "Real H.263",
+    9: "MPEG-4 Visual",
+    12: "HEVC",
 }
 
 FRAME_TYPE = {

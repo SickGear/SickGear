@@ -290,8 +290,13 @@ class MP4Metadata(MultipleMetadata):
                                 if 'format' in sample_entry:
                                     compression = sample_entry['format'].value.decode("utf-8")
                                     if compression:
-                                        cur_data['data'].append(('compression',
-                                                                 mp4_fourcc.get(compression, compression)))
+                                        codec = mp4_fourcc.get(compression, compression)
+                                        if 'dvh1' == compression:
+                                            # this name is Dolby Vision with HEVC, and also DVCPRO HD
+                                            # it is HEVC when the entry has an hvcC box, FFmpeg decides it so too
+                                            codec = ('DV', codec)[b'hvcC' in sample_entry.stream.readBytes(
+                                                sample_entry.absolute_address, sample_entry.size // 8)]
+                                        cur_data['data'].append(('compression', codec))
 
                                 if 'width' in sample_entry:
                                     cur_data['data'].append(('width',  sample_entry['width'].value))
@@ -497,7 +502,7 @@ class AsfMetadata(MultipleMetadata):
 
 
 # format identifiers of the registration descriptor of a private stream (type 6)
-TS_Registration_video = {b'AV01': 'AV1', b'HEVC': 'HEVC', b'VC-1': 'VC-1'}
+TS_Registration_video = {b'AV01': 'AV1', b'HEVC': 'HEVC', b'VC-1': 'VC-1', b'VVC ': 'VVC'}
 
 
 class TSMetadata(MultipleMetadata):
@@ -559,16 +564,23 @@ class MPEGMetadata(MultipleMetadata):
         stream = mov.stream
         limit = min(stream.size or 0, 2 * 1024 * 1024 * 8)
         start = stream.searchBytes(b'\0\0\1\xb3', 0, limit)
-        if None is start or limit < start + 12 * 8:
-            return None
-        # a sequence header is 12 bytes, and up to 128 bytes of matrices
-        following = stream.readBytes(start + 4 * 8, min(160, (limit - start) // 8 - 4))
-        code = following.find(b'\0\0\1', 8)
-        return 'MPEG-2 video' if -1 != code and following[code + 3:code + 4] == b'\xb5' else 'MPEG-1 video'
+        while None is not start and limit >= start + 12 * 8:
+            # a sequence header is 12 bytes, and up to 128 bytes of matrices
+            following = stream.readBytes(start + 4 * 8, min(160, (limit - start) // 8 - 4))
+            # MPEG-4 video uses this start code for another header, so check the fields: a width and a height,
+            # an aspect ratio code of 1 to 14, a frame rate code of 1 to 8, and the marker bit
+            if (following[0] or following[1] >> 4) and (following[1] & 0xF or following[2]) \
+                    and 1 <= following[3] >> 4 <= 14 and 1 <= following[3] & 0xF <= 8 and following[6] & 0x20:
+                code = following.find(b'\0\0\1', 8)
+                return 'MPEG-2 video' if -1 != code and following[code + 3:code + 4] == b'\xb5' else 'MPEG-1 video'
+            start = stream.searchBytes(b'\0\0\1\xb3', start + 4 * 8, limit)
+        return None
 
     def extract(self, mov):
         video_track = Metadata(self)
-        video_track.compression = self.videoVersion(mov) or mov.description
+        # with no sequence header of MPEG-1 or MPEG-2 video, the codec is another one and is not known
+        if codec := self.videoVersion(mov):
+            video_track.compression = codec
         self.addGroup('video[1]', video_track, 'Video stream #1')
 
 

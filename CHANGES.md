@@ -77,6 +77,7 @@
 * Update soupsieve 2.10.0 (fc195cd) to 3.0.4 (628ec6b)
 * Fix video codec read from a file for Dolby Vision in mp4 and H.266 in ts, and an error for a file with no video
 * Fix video codec read from a file is unknown or wrong for Xvid, DivX, VC-1, MPEG-1, MPEG-2, and codecs in flv
+* Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
 
 
 ### 3.36.13 (2026-11-19 09:59:00 UTC)

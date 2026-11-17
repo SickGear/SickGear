@@ -3247,9 +3247,13 @@ class QualityTests(unittest.TestCase):
         for cur_name, cur_vc in [
             ('avc1', VideoCodec.VC_264), ('dvav', VideoCodec.VC_264), ('dva1', VideoCodec.VC_264),
             ('hvc1', VideoCodec.VC_265), ('hev1', VideoCodec.VC_265),
+            # layered HEVC
+            ('lhv1', VideoCodec.VC_265), ('lhe1', VideoCodec.VC_265),
             # Dolby Vision with HEVC
             ('dvhe', VideoCodec.VC_265), ('dvh1', VideoCodec.VC_265),
             ('av01', VideoCodec.VC_AV1), ('av02', VideoCodec.VC_AV2), ('vp09', VideoCodec.VC_VP9),
+            # the sample entry names of the AOMedia draft "AV2 Codec ISO Media File Format Binding"
+            ('av2E', VideoCodec.VC_AV2), ('av2e', VideoCodec.VC_AV2),
             ('vvc1', VideoCodec.VC_VVC), ('vvi1', VideoCodec.VC_VVC),
         ]:
             self.assertEqual(cur_vc, codec_of(mp4_fourcc[cur_name]), msg=cur_name)
@@ -3274,14 +3278,28 @@ class QualityTests(unittest.TestCase):
                                  ('"FMP4" (fourcc:"FMP4")', VideoCodec.VC_DivXvid),
                                  ('DivX v5 (fourcc:"DX50")', VideoCodec.VC_DivXvid),
                                  ('V_MPEG4/MS/V3', VideoCodec.VC_UNKNOWN),
+                                 # written with a zero for the O by some muxers
+                                 ('V_MPEG4/IS0/ASP', VideoCodec.VC_DivXvid), ('V_MPEG4/IS0/AVC', VideoCodec.VC_264),
+                                 # Avid 1:1 is not AV1
+                                 ('"AV1X" (fourcc:"AV1X")', VideoCodec.VC_UNKNOWN),
+                                 ('"AV01" (fourcc:"AV01")', VideoCodec.VC_AV1), ('V_AV1', VideoCodec.VC_AV1),
                                  # the object type of an mp4v entry
                                  (mp4_codecs[0x61], VideoCodec.VC_MPEG2), (mp4_codecs[0x6a], VideoCodec.VC_MPEG1),
                                  # VC-1 as mkv, ts and asf name it
-                                 ('V_MS/VFW/FOURCC (WVC1)', VideoCodec.VC_VC1),
+                                 ('V_MS/VFW/FOURCC (WVC1)', VideoCodec.VC_VC1), ('V_VC1', VideoCodec.VC_VC1),
                                  ('V_MS/VFW/FOURCC (WMV2)', VideoCodec.VC_UNKNOWN),
                                  (TS_Elementary_stream_types[0xEA], VideoCodec.VC_VC1),
                                  ('Windows Media Video V9', VideoCodec.VC_VC1),
-                                 ('Windows Media Video V8', VideoCodec.VC_UNKNOWN)]:
+                                 ('Windows Media Video V8', VideoCodec.VC_UNKNOWN),
+                                 # ATI VCR 1.0 is not VC-1
+                                 ('ATI VCR 1.0 (fourcc:"VCR1")', VideoCodec.VC_UNKNOWN),
+                                 ('V_MS/VFW/FOURCC (VCR1)', VideoCodec.VC_UNKNOWN),
+                                 ('Microsoft MPEG-4 (M4S2) (fourcc:"M4S2")', VideoCodec.VC_DivXvid),
+                                 ('"mpg1" (fourcc:"mpg1")', VideoCodec.VC_MPEG1),
+                                 ('"mpg2" (fourcc:"mpg2")', VideoCodec.VC_MPEG2),
+                                 (mp4_fourcc['m1v '], VideoCodec.VC_MPEG1),
+                                 (mp4_fourcc['m2v1'], VideoCodec.VC_MPEG2),
+                                 (mp4_fourcc['xdv2'], VideoCodec.VC_MPEG2)]:
             self.assertEqual(cur_vc, codec_of(cur_text), msg=cur_text)
 
     @staticmethod
@@ -3338,7 +3356,8 @@ class QualityTests(unittest.TestCase):
         from hachoir.stream import StringInputStream
 
         pack = bytes([0, 0, 1, 0xBA]) + bytes(8) + bytes([0, 0, 1, 0xE0, 0, 0])
-        sequence = bytes([0, 0, 1, 0xB3]) + bytes(8)
+        # 720 x 576, aspect ratio code 2, frame rate code 3, marker bit
+        sequence = bytes([0, 0, 1, 0xB3, 0x2D, 0x02, 0x40, 0x23, 0, 0, 0x20, 0])
         for cur_data, cur_text in [
             # a sequence header with an extension after it is MPEG-2 video, also in a pack of version 1
             (pack + sequence + bytes([0, 0, 1, 0xB5]) + bytes(8), 'MPEG-2 video'),
@@ -3346,6 +3365,8 @@ class QualityTests(unittest.TestCase):
             (pack + sequence + bytes([0, 0, 1, 0xB8]) + bytes(8), 'MPEG-1 video'),
             # no sequence header
             (pack + bytes(64), None),
+            # the start code of a sequence header with fields that are not valid, as MPEG-4 video has it
+            (pack + bytes([0, 0, 1, 0xB3]) + bytes(8) + bytes([0, 0, 1, 0xB5]) + bytes(8), None),
         ]:
             parser = type('FakeParser', (), {'stream': StringInputStream(cur_data)})
             self.assertEqual(cur_text, MPEGMetadata.videoVersion(parser), msg=cur_text)
