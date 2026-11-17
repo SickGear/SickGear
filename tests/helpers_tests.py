@@ -309,7 +309,26 @@ class AniDBSessionFileTests(unittest.TestCase):
         conn.handle.assert_not_called()
 
 
+class HachoirParserTests(unittest.TestCase):
+    def test_only_used_parsers_are_loaded(self):
+        # lib/hachoir is trimmed to the parsers that SickGear uses, an update of the lib must keep that
+        from hachoir.parser import HachoirParserList, guessParser
+        from hachoir.stream import StringInputStream
+
+        tags = [cur_parser.getParserTags() for cur_parser in HachoirParserList.getInstance()]
+        self.assertEqual({'audio', 'container', 'image', 'misc', 'video'}, {cur_tag['category'] for cur_tag in tags})
+        ids = {cur_tag['id'] for cur_tag in tags}
+        self.assertEqual({'torrent'}, {cur_tag['id'] for cur_tag in tags if 'misc' == cur_tag['category']})
+        self.assertEqual(set(), {'asf', 'bmp', 'flv', 'gif', 'jpeg', 'matroska', 'mov', 'mpeg_ts', 'mpeg_video',
+                                 'ogg', 'png', 'real_media', 'riff'} - ids)
+        self.assertNotIn('hachoir.parser.network.ouid', sys.modules)
+
+        torrent = b'd8:announce15:http://x.test/a4:infod6:lengthi5e4:name1:a12:piece lengthi16384e6:pieces0:ee'
+        self.assertEqual('application/x-bittorrent', guessParser(StringInputStream(torrent)).mime_type)
+        self.assertIsNone(guessParser(StringInputStream(b'PK' + bytes([3, 4] + [0] * 64))))
+
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests, HachoirParserTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
