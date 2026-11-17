@@ -22,7 +22,7 @@ import gzip
 import sickgear
 import sickgear.providers
 from . import db, helpers, logger, naming
-from lib.api_trakt import TraktAPI
+from api_trakt import TraktAPI
 
 from _23 import urlsplit, urlunsplit
 from sg_helpers import compress_file, copy_file, remove_file_perm, scantree, try_int

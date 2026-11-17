@@ -30,7 +30,7 @@ from sickgear import db, indexermapper
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 from sickgear.scene_exceptions import ReleaseMap
-from lib.tvinfo_base import TVInfoEpisode
+from tvinfo_base import TVInfoEpisode
 
 # noinspection PyUnreachableCode
 if False:

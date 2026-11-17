@@ -32,7 +32,7 @@ from .indexers.indexer_config import TVINFO_TVDB
 from .scheduler import Job
 from .sgdatetime import SGDatetime
 
-import lib.rarfile.rarfile as rarfile
+import rarfile.rarfile as rarfile
 
 from _23 import list_range
 

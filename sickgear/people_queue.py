@@ -26,7 +26,7 @@ if False:
     from six import integer_types
     from typing import AnyStr, Dict, List, Optional
     from .tv import TVShow
-    from lib.tvinfo_base import CastList
+    from tvinfo_base import CastList
 
 
 class PeopleQueue(generic_queue.GenericQueue):

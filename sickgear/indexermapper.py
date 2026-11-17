@@ -24,7 +24,7 @@ from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVI
 
 import sickgear
 
-from lib.dateutil.parser import parse
+from dateutil.parser import parse
 
 from six import moves, string_types
 

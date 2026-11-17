@@ -33,7 +33,7 @@ from . import regexes
 from exceptions_helper import ex
 import sickgear
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
 
 from .._legacy_classes import LegacyParseResult

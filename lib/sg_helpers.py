@@ -28,9 +28,9 @@ from html.parser import HTMLParser
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
 from cachecontrol import CacheControl, caches
-from lib.dateutil.parser import parser
-# from lib.tmdbsimple.configuration import Configuration
-# from lib.tmdbsimple.genres import Genres
+from dateutil.parser import parser
+# from tmdbsimple.configuration import Configuration
+# from tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
 from send2trash import send2trash
 

@@ -28,10 +28,10 @@ from six import integer_types, string_types
 from exceptions_helper import ex
 from sickgear import logger
 
-from lib.hachoir.parser import createParser
-from lib.hachoir.metadata import extractMetadata
-from lib.hachoir.metadata.metadata_item import QUALITY_BEST
-from lib.hachoir.stream import InputStreamError
+from hachoir.parser import createParser
+from hachoir.metadata import extractMetadata
+from hachoir.metadata.metadata_item import QUALITY_BEST
+from hachoir.stream import InputStreamError
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
@@ -734,7 +734,7 @@ class VideoCodec:
                     parser.parse_exif = False
                     parser.parse_photoshop_content = False
                     parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: lib.hachoir.
+                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: hachoir.
                 except (BaseException, Exception) as e:
                     logger.warning(msg % (filename, ex(e)))
                     try:

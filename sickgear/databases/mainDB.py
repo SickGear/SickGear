@@ -1990,7 +1990,7 @@ class ChangeShowData(db.SchemaUpgrade):
 # 20015 -> 20016
 class ChangeTmdbID(db.SchemaUpgrade):
     def execute(self):
-        from lib.tvinfo_base import TVINFO_TMDB, TVINFO_TMDB_OLD, TVINFO_TVDB, TVINFO_TVMAZE
+        from tvinfo_base import TVINFO_TMDB, TVINFO_TMDB_OLD, TVINFO_TVDB, TVINFO_TVMAZE
         from sg_helpers import move_file, scantree
         from ..image_cache import ImageCache, cache_img_src
         import re

@@ -1,5 +1,5 @@
 import re
-import lib.fanart as fanart
+import fanart
 from bs4_parser import BS4Parser
 from exceptions_helper import ex
 from .errors import ResponseFanartError

@@ -22,8 +22,7 @@ from .common import *
 from .scheduler import Job
 
 import sickgear
-
-from lib import subliminal
+import subliminal
 
 SINGLE = 'und'
 
@@ -42,9 +41,9 @@ def sorted_service_list():
                 image=f'{cur_service}.png',
                 name=services_mapping[cur_service],
                 enabled=1 == sickgear.SUBTITLES_SERVICES_ENABLED[cur_index],
-                api_based=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
+                api_based=__import__(f'subliminal.services.{cur_service}', globals=globals(),
                                      locals=locals(), fromlist=['Service']).Service.api_based,
-                url=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
+                url=__import__(f'subliminal.services.{cur_service}', globals=globals(),
                                locals=locals(), fromlist=['Service']).Service.site_url)
             new_list.append(cur_service_dict)
         cur_index += 1
@@ -57,9 +56,9 @@ def sorted_service_list():
                 image=f'{cur_service}.png',
                 name=services_mapping[cur_service],
                 enabled=False,
-                api_based=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
+                api_based=__import__(f'subliminal.services.{cur_service}', globals=globals(),
                                      locals=locals(), fromlist=['Service']).Service.api_based,
-                url=__import__(f'lib.subliminal.services.{cur_service}', globals=globals(),
+                url=__import__(f'subliminal.services.{cur_service}', globals=globals(),
                                locals=locals(), fromlist=['Service']).Service.site_url)
             new_list.append(cur_service_dict)
 

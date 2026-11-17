@@ -1,6 +1,8 @@
 import os
+import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import threading
@@ -217,7 +219,40 @@ class AniDBLockTests(unittest.TestCase):
         self.assertTrue(self.lock_is_free())
 
 
+class LibImportTests(unittest.TestCase):
+    # a module that is imported as both `lib.x` and `x` is two modules, each with its own classes and state,
+    # e.g. `except x.SomeError` does not handle a raised `lib.x.SomeError`.
+    # the rule is one name for each bundled module: `x`, never `lib.x`
+
+    def test_lib_modules_are_loaded_once(self):
+        from sickgear import webapi, webserve
+        self.assertTrue(webapi and webserve)
+        self.assertEqual([], sorted(_name for _name in list(sys.modules) if _name.startswith('lib.')))
+
+    def test_no_import_has_a_lib_prefix(self):
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        is_lib_import = re.compile(r"""^\s*#?\s*(from\s+lib[.\s]|import\s+lib\b)|__import__\(f?['"]lib\.""", re.M)
+        try:
+            # the files of the repo only, else a local file that is not in the repo fails the test
+            names = subprocess.run(['git', 'ls-files', '-z', '--', '*.py', '*.tmpl'], cwd=base,
+                                   capture_output=True, check=True).stdout.decode('utf-8').split('\0')
+        except (OSError, subprocess.CalledProcessError):
+            names = []
+            for cur_dir, dir_names, file_names in os.walk(base):
+                dir_names[:] = [_d for _d in dir_names if not _d.startswith('.') and '__pycache__' != _d]
+                names += [os.path.relpath(os.path.join(cur_dir, _n), base) for _n in file_names
+                          if _n.endswith(('.py', '.tmpl'))]
+        found = []
+        for cur_name in filter(None, names):
+            cur_file = os.path.join(base, cur_name)
+            if os.path.isfile(cur_file):
+                with open(cur_file, encoding='utf-8', errors='replace') as fh:
+                    if is_lib_import.search(fh.read()):
+                        found.append(os.path.normpath(cur_name))
+        self.assertEqual([], sorted(found))
+
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, LibImportTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

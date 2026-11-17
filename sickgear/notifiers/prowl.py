@@ -21,7 +21,7 @@ from .generic import Notifier
 import sickgear
 
 from _23 import urlencode
-from lib.six import moves
+from six import moves
 
 
 class ProwlNotifier(Notifier):

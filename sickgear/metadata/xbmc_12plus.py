@@ -19,7 +19,7 @@ import datetime
 from . import generic
 from .. import logger
 import sg_helpers
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 import sickgear
 import exceptions_helper
 from exceptions_helper import ex

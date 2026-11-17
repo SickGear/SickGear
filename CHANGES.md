@@ -48,6 +48,7 @@
 * Change the add show options template to separate files for the folder, filter and fansub group options, instead of parts chosen by a variable
 * Change the tests to run from any folder, e.g. one at a time in an IDE
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
+* Fix bundled modules loaded twice under two names, e.g. a TV info source did not handle a skipped connection
 
 
 [develop]

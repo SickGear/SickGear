@@ -20,7 +20,7 @@ import re
 from . import generic
 from ..helpers import try_int
 from exceptions_helper import ex
-from lib.bencode import bdecode
+from bencode import bdecode
 
 from _23 import make_btih
 

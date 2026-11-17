@@ -7,6 +7,8 @@ __api_version__ = '1.0.0'
 
 import datetime
 import hashlib
+import imdbgql
+import imdbpie
 import logging
 import os
 import re
@@ -17,10 +19,9 @@ import traceback
 from .imdb_exceptions import *
 # from bs4_parser import BS4Parser
 from exceptions_helper import ex
-from lib import imdbpie, imdbgql
-from lib.dateutil.parser import parser
-# from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
-from lib.tvinfo_base import (
+from dateutil.parser import parser
+# from tvinfo_base.exceptions import BaseTVinfoShownotfound
+from tvinfo_base import (
     TVInfoCharacter, TVInfoPerson, PersonGenders, TVINFO_IMDB,
     # TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_TRAKT,
     # TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_X, TVINFO_WIKIPEDIA,

@@ -1,12 +1,12 @@
-from lib.api_tvdb.tvdb_api import Tvdb
-from lib.api_tvdb.tvdb_api_v4 import TvdbAPIv4
-import lib.api_tvdb.tvdb_api_v4
-from lib.api_trakt.indexerapiinterface import TraktIndexer
-from lib.api_tvmaze.tvmaze_api import TvMaze
-from lib.api_tmdb.tmdb_api import TmdbIndexer
-from lib.api_imdb.imdb_api import IMDbIndexer
+from api_tvdb.tvdb_api import Tvdb
+from api_tvdb.tvdb_api_v4 import TvdbAPIv4
+import api_tvdb.tvdb_api_v4
+from api_trakt.indexerapiinterface import TraktIndexer
+from api_tvmaze.tvmaze_api import TvMaze
+from api_tmdb.tmdb_api import TmdbIndexer
+from api_imdb.imdb_api import IMDbIndexer
 # noinspection PyUnresolvedReferences
-from lib.tvinfo_base import (
+from tvinfo_base import (
     TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_X, TVINFO_WIKIPEDIA,
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE,
     TVINFO_TRAKT_SLUG, TVINFO_TVDB_SLUG, TVINFO_TIKTOK, TVINFO_WIKIDATA, TVINFO_LINKEDIN, TVINFO_FANSITE,
@@ -264,4 +264,4 @@ tvinfo_config[src].update(dict(
     finder='%ssearch/tv?query=%s' % (tvinfo_config[src]['main_url'], '%s'),
 ))
 
-lib.api_tvdb.tvdb_api_v4.TVDB_API_CONFIG = tvinfo_config[TVINFO_TVDB]
+api_tvdb.tvdb_api_v4.TVDB_API_CONFIG = tvinfo_config[TVINFO_TVDB]

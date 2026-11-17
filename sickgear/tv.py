@@ -23,11 +23,13 @@ from weakref import ReferenceType
 
 import datetime
 import glob
+import imdbpie
 import inspect
 import os.path
 import re
 import requests
 import stat
+import subliminal
 import threading
 import traceback
 
@@ -53,16 +55,15 @@ from .name_parser.parser import InvalidNameException, InvalidShowException, Name
 from .sgdatetime import SGDatetime
 from .tv_base import TVEpisodeBase, TVShowBase
 
-from lib import imdbpie, subliminal
-from lib.dateutil import tz
-from lib.dateutil.parser import parser as du_parser
+from dateutil import tz
+from dateutil.parser import parser as du_parser
 try:
-    from lib.thefuzz import fuzz
+    from thefuzz import fuzz
 except ImportError as e:
-    from lib.fuzzywuzzy import fuzz
-from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
+    from fuzzywuzzy import fuzz
+from tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
 
 from six import integer_types, moves, string_types
@@ -71,7 +72,7 @@ from six import integer_types, moves, string_types
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Text, Tuple, Union
     from sqlite3 import Row
-    from lib.tvinfo_base import CastList, TVInfoCharacter, TVInfoPerson, \
+    from tvinfo_base import CastList, TVInfoCharacter, TVInfoPerson, \
         TVInfoEpisode, TVInfoShow
 
 coreid_warnings = False

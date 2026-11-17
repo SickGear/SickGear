@@ -13,7 +13,7 @@ from six import integer_types, iteritems, iterkeys, string_types, text_type
 from typing import Callable
 
 
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from sg_helpers import calc_age, make_path
 
 # noinspection PyUnreachableCode

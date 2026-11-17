@@ -19,7 +19,7 @@ import re
 try:
     import telnetlib
 except ImportError:
-    import lib.telnetlib313up as telnetlib
+    import telnetlib313up as telnetlib
 
 from .generic import BaseNotifier
 import sickgear

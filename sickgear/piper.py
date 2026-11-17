@@ -9,7 +9,7 @@ import re
 
 from json_helper import json_loads
 from sg_helpers import cmdline_runner, is_virtualenv
-from lib.requests.structures import CaseInsensitiveDict
+from requests.structures import CaseInsensitiveDict
 
 # noinspection PyUnreachableCode
 if False:

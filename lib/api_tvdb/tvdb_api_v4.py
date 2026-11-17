@@ -18,10 +18,10 @@ from urllib3.util.retry import Retry
 
 from .tvdb_exceptions import TvdbError, TvdbTokenFailure, TvdbPersonNotFound
 from exceptions_helper import ex
-from lib.dateutil.parser import parser
+from dateutil.parser import parser
 # noinspection PyProtectedMember
-from lib.exceptions_helper import ConnectionSkipException
-from lib.tvinfo_base import (
+from exceptions_helper import ConnectionSkipException
+from tvinfo_base import (
     CastList, CrewList, PersonGenders, RoleTypes,
     TVInfoBase, TVInfoCharacter, TVInfoEpisode, TVInfoIDs, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoNetwork,
     TVInfoPerson, TVInfoSeason, TVInfoSeasonTypes, TVInfoShow, TVInfoSocialIDs,

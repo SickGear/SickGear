@@ -21,8 +21,8 @@ from . import generic
 from .. import logger
 import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
-from lib.tvinfo_base import RoleTypes
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base import RoleTypes
+from tvinfo_base.exceptions import *
 import sickgear
 import exceptions_helper
 from exceptions_helper import ex
@@ -34,7 +34,7 @@ from six import string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict, Optional, Union
-    from lib.tvinfo_base import PersonBase
+    from tvinfo_base import PersonBase
 
 
 class KODIMetadata(generic.GenericMetadata):

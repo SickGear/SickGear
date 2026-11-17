@@ -26,12 +26,12 @@ from .. import logger
 import sg_helpers
 from ..indexers import indexer_config
 from ..indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB
-from lib.tvinfo_base import TVInfoImage, TVInfoImageType, TVInfoImageSize
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base import TVInfoImage, TVInfoImageType, TVInfoImageSize
+from tvinfo_base.exceptions import *
 import sickgear
 from exceptions_helper import ex
-from lib.fanart.core import Request as fanartRequest
-import lib.fanart as fanart
+from fanart.core import Request as fanartRequest
+import fanart
 from lxml_etree import etree
 
 from six import string_types
@@ -39,7 +39,7 @@ from six import string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, Dict, Generator, List, Optional, Tuple, Union
-    from lib.tvinfo_base import TVInfoShow
+    from tvinfo_base import TVInfoShow
     from ..tv import TVShow
 
 

@@ -18,8 +18,8 @@ import datetime
 import os
 import traceback
 
-from lib.dateutil.parser import parser
-from lib.tvinfo_base.exceptions import *
+from dateutil.parser import parser
+from tvinfo_base.exceptions import *
 
 import exceptions_helper
 from exceptions_helper import ex
@@ -42,7 +42,7 @@ from sg_helpers import try_int
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
-    from lib.tvinfo_base import TVInfoShow
+    from tvinfo_base import TVInfoShow
     from .tv import TVEpisode
 
 # Define special priority of tv source switch tasks, higher than anything else except newly added shows

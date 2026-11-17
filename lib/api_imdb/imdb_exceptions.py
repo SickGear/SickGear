@@ -8,7 +8,7 @@ __all__ = ['IMDbException', 'IMDbError', 'IMDbUserabort', 'IMDbShownotfound',
            'IMDbSeasonnotfound', 'IMDbEpisodenotfound', 'IMDbAttributenotfound', 'IMDbTokenexpired',
            'IMDbPersonNotFound']
 
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 
 
 class IMDbException(BaseTVinfoException):

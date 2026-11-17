@@ -20,7 +20,7 @@
 from .generic import GenericClient
 from .. import logger
 import sickgear
-from lib.requests.exceptions import RequestException
+from requests.exceptions import RequestException
 
 from _23 import b64encodestring
 

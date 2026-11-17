@@ -36,8 +36,8 @@ from ..show_name_helpers import get_show_names
 from ..scene_exceptions import ReleaseMap
 from ..tv import TVEpisode, TVShow
 
-from lib.dateutil import parser
-from lib.sg_helpers import md5_for_text, try_int
+from dateutil import parser
+from sg_helpers import md5_for_text, try_int
 from exceptions_helper import AuthException, ex, MultipleShowObjectsException
 from lxml_etree import etree
 

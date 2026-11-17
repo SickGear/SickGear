@@ -34,9 +34,9 @@ from exceptions_helper import ex
 from json_helper import is_orjson, json_dumps, JSON_INDENT, json_loads, JSONEncoder, ORJSON_OPTIONS
 from tornado import gen
 from tornado.concurrent import run_on_executor
-from lib import subliminal
 
 import sickgear
+import subliminal
 from . import classes, db, helpers, history, image_cache, logger, network_timezones, processTV, search_queue, ui
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
@@ -44,7 +44,7 @@ from .name_parser.parser import NameParser
 from .helpers import df, find_mount_point, starify
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from .scene_numbering import set_scene_numbering_helper
 from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
@@ -219,7 +219,7 @@ class Api(webserve.BaseHandler):
         _call_dispatcher = call_dispatcher
         # if profile was set wrap "_call_dispatcher" in the profile function
         if 'profile' in kwargs:
-            from lib.profilehooks import profile
+            from profilehooks import profile
 
             _call_dispatcher = profile(_call_dispatcher, immediate=True)
             del kwargs['profile']

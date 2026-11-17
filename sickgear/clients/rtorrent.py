@@ -17,8 +17,8 @@
 from .generic import GenericClient
 from .. import logger
 import sickgear
-from lib.rtorrent import RTorrent
-from lib.rtorrent.compat import xmlrpclib
+from rtorrent import RTorrent
+from rtorrent.compat import xmlrpclib
 
 
 class RtorrentAPI(GenericClient):

@@ -23,6 +23,8 @@ import unittest
 import warnings
 import sys
 import test_lib as test
+# test_lib puts the bundled lib folder on the path
+import requests
 
 warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
@@ -36,7 +38,6 @@ from sickgear.tv import TVEpisode, TVShow
 from sickgear.webserveInit import WebServer
 from sickgear import webapi, scheduler, search_backlog, search_queue, show_queue, history, db
 from sickgear.scene_numbering import set_scene_numbering_helper
-from lib import requests
 from six import integer_types, string_types
 
 # noinspection PyUnreachableCode

@@ -27,10 +27,10 @@ from bs4_parser import BS4Parser
 from collections import OrderedDict
 from sg_helpers import clean_data, get_url, try_int
 
-from lib.cachecontrol import CacheControl, caches
-from lib.dateutil.parser import parse
-from lib.exceptions_helper import ConnectionSkipException
-from lib.tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, RoleTypes, \
+from cachecontrol import CacheControl, caches
+from dateutil.parser import parse
+from exceptions_helper import ConnectionSkipException
+from tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, RoleTypes, \
     TVINFO_TVDB, TVINFO_TVDB_SLUG, TVInfoBase, TVInfoIDs, TVInfoNetwork, TVInfoShow
 
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired

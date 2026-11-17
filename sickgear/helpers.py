@@ -32,7 +32,7 @@ from . import db, logger, notifiers
 from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
 from .sgdatetime import SGDatetime
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from exceptions_helper import ex, MultipleShowObjectsException
 
 import dateutil.parser
@@ -638,7 +638,7 @@ def create_https_certificates(ssl_cert, ssl_key):
     """
 
     try:
-        from lib.certgen import generate_key, generate_local_cert
+        from certgen import generate_key, generate_local_cert
     except (BaseException, Exception):
         return False
 

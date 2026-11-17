@@ -1,13 +1,13 @@
 from hashlib import sha1
 import re
+import requests
 import time
 
 from . import http_error_code
 from .. import logger
 import sickgear
 from exceptions_helper import ex
-from lib.bencode import bencode, bdecode
-from lib import requests
+from bencode import bencode, bdecode
 
 from _23 import make_btih
 from six import string_types

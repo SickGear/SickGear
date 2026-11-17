@@ -36,7 +36,7 @@ from .sgdatetime import SGDatetime
 from six import string_types, text_type
 from sg_helpers import long_path, scantree
 
-import lib.rarfile.rarfile as rarfile
+import rarfile.rarfile as rarfile
 
 # noinspection PyUnreachableCode
 if False:

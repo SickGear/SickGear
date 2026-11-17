@@ -28,8 +28,8 @@ import sickgear
 from . import db, helpers, logger
 from sg_helpers import int_to_time
 
-from lib.dateutil import tz
-from lib.tzlocal import get_localzone, get_localzone_name
+from dateutil import tz
+from tzlocal import get_localzone, get_localzone_name
 
 from sg_helpers import remove_file_perm, scantree
 from six import integer_types, string_types

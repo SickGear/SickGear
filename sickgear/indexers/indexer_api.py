@@ -18,7 +18,7 @@ import os
 from .indexer_config import init_config, tvinfo_config
 from sg_helpers import proxy_setting
 import sickgear
-from lib.tvinfo_base import TVInfoBase
+from tvinfo_base import TVInfoBase
 
 # noinspection PyUnreachableCode
 if False:

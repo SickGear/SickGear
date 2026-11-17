@@ -22,7 +22,7 @@ from .common import Quality
 from .helpers import try_float, try_int
 from .providers.generic import GenericProvider
 
-from lib.xmlrpclib_to import ServerProxy
+from xmlrpclib_to import ServerProxy
 
 from _23 import b64encodestring
 from six import moves

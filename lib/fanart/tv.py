@@ -1,4 +1,4 @@
-import lib.fanart as fanart
+import fanart
 from .items import LeafItem, Immutable, ResourceItem
 __all__ = (
     'CharacterItem',

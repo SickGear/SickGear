@@ -16,13 +16,13 @@ from tornado._locale_data import LOCALE_NAMES
 from urllib3.util.retry import Retry
 
 from sg_helpers import clean_data, enforce_type, get_url, try_int
-from lib.dateutil.parser import parser
+from dateutil.parser import parser
 # noinspection PyProtectedMember
-from lib.dateutil.tz.tz import _datetime_to_timestamp
-from lib.exceptions_helper import ConnectionSkipException, ex
-from lib.pytvmaze import tvmaze
+from dateutil.tz.tz import _datetime_to_timestamp
+from exceptions_helper import ConnectionSkipException, ex
+from pytvmaze import tvmaze
 from .tvmaze_exceptions import *
-from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
+from tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
     crew_type_names, TVInfoPerson, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoNetwork, TVInfoSeason, \
     PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB, TVINFO_CAST_LIMIT
 
@@ -31,7 +31,7 @@ from six import integer_types, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional
-    from lib.pytvmaze.tvmaze import Episode as TVMazeEpisode, Show as TVMazeShow
+    from pytvmaze.tvmaze import Episode as TVMazeEpisode, Show as TVMazeShow
 
 log = logging.getLogger('tvmaze.api')
 log.addHandler(logging.NullHandler())

@@ -22,7 +22,7 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 import sickgear
 from sickgear.indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TRAKT, TVINFO_IMDB, \
     TVINFO_TVDB_SLUG, TVINFO_TRAKT_SLUG
-from lib.tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
+from tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
     TVInfoSocialIDs as TVInfoSocialIDs_lib, TVInfoCharacter as TVInfoCharacter_lib, TVInfoShow as TVInfoShow_lib, \
     TVInfoIDs as TVInfoIDs_lib, CastList as CastList_lib, CrewList as CrewList_lib, \
     TVInfoEpisode as TVInfoEpisode_lib, TVInfoSeason as TVInfoSeason_lib, \
