@@ -59,6 +59,7 @@
 * Change log one line per show when a refresh checks its media files, instead of up to seven lines per file
 * Change log no line per media file for the file name parse of a show refresh
 * Change reuse a session's kept alive connection for web requests, instead of a new connection per request
+* Change web requests with no session, e.g. to TV info sources, to share kept alive connections
 
 
 [develop]
