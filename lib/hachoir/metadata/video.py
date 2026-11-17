@@ -495,7 +495,9 @@ class TSMetadata(MultipleMetadata):
             if 'pid' in packet:
                 if (0 == packet['pid'].value and 'payload' in packet
                         and 'PAT' in packet['payload']):
-                    pmt_pid = packet['payload']['PAT']['Program map PID'].value
+                    # program number 0 gives the PID of the network table, not of a program map
+                    pmt_pid = next((program['Program map PID'].value for program in packet['payload']['PAT']
+                                    if program['Program num'].value), None)
                 elif pmt_pid == packet['pid'].value:
                     if 'PMT' in packet['payload']:
                         self.processPMT(packet['payload']['PMT'], stream_ids)

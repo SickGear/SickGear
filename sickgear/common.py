@@ -556,7 +556,7 @@ class VideoCodec:
         VC_265: r'(?:265|hevc|hvc1|hev1)',
         VC_DivXvid: r'(?:divx|xvid)',
         VC_VP9: r'vp.?9',
-        VC_VC1: r'(?<!a)vc.?1',
+        VC_VC1: r'(?:wvc1|(?<![a-z])vc.?1)',
         VC_AV1: r'av0?1',
         VC_AV2: r'av0?2',
         VC_VVC: r'(?:266|vvc)',
@@ -749,7 +749,8 @@ class VideoCodec:
                 if extract:
                     try:
                         file_data = extract.exportDictionary()
-                        vc = next(v for k,v in file_data.items() if 'Video stream' in k)['Compression']
+                        # a file with no video stream, or with no codec name for it, gives None
+                        vc = next((v for k, v in file_data.items() if k.startswith('Video')), {}).get('Compression')
                     except (AttributeError, ValueError):
                         try:
                             for metadata in extract.iterGroups():
@@ -769,9 +770,15 @@ class VideoCodec:
                     if not vc:
                         return None
                     for _current_vc_type, _current_vc in VideoCodec.compiled_vc_ident_regex.items():
-                        if _current_vc.search(vc):
+                        if _current_vc.search(f'{vc}'):
                             return _current_vc_type
                 else:
+                    # a file that stays open cannot be moved or deleted on Windows
+                    try:
+                        # noinspection PyProtectedMember
+                        parser.stream._input.close()
+                    except (BaseException, Exception):
+                        pass
                     return None
             else:
                 return None
