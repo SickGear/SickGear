@@ -3237,7 +3237,7 @@ class QualityTests(unittest.TestCase):
 
     # TODO: fix these anime test cases at travis
     def test_file_video_codec_tables(self):
-        from hachoir.parser.container.mp4 import mp4_fourcc
+        from hachoir.parser.container.mp4 import mp4_codecs, mp4_fourcc
         from hachoir.parser.video.mpeg_ts import TS_Elementary_stream_types, TS_Video_stream_types
 
         def codec_of(text):
@@ -3266,7 +3266,22 @@ class QualityTests(unittest.TestCase):
 
         for cur_text, cur_vc in [('VC-1', VideoCodec.VC_VC1), ('"WVC1"', VideoCodec.VC_VC1),
                                  # MPEG-5 EVC is not VC-1
-                                 ('evc1', VideoCodec.VC_UNKNOWN), ('V_MPEG4/ISO/AVC', VideoCodec.VC_264)]:
+                                 ('evc1', VideoCodec.VC_UNKNOWN), ('V_MPEG4/ISO/AVC', VideoCodec.VC_264),
+                                 # MPEG-4 part 2 as mkv, mp4, ts and avi name it
+                                 ('V_MPEG4/ISO/ASP', VideoCodec.VC_DivXvid), ('V_MPEG4/ISO/SP', VideoCodec.VC_DivXvid),
+                                 (mp4_fourcc['mp4v'], VideoCodec.VC_DivXvid), (mp4_codecs[0x20], VideoCodec.VC_DivXvid),
+                                 (TS_Elementary_stream_types[0x10], VideoCodec.VC_DivXvid),
+                                 ('"FMP4" (fourcc:"FMP4")', VideoCodec.VC_DivXvid),
+                                 ('DivX v5 (fourcc:"DX50")', VideoCodec.VC_DivXvid),
+                                 ('V_MPEG4/MS/V3', VideoCodec.VC_UNKNOWN),
+                                 # the object type of an mp4v entry
+                                 (mp4_codecs[0x61], VideoCodec.VC_MPEG2), (mp4_codecs[0x6a], VideoCodec.VC_MPEG1),
+                                 # VC-1 as mkv, ts and asf name it
+                                 ('V_MS/VFW/FOURCC (WVC1)', VideoCodec.VC_VC1),
+                                 ('V_MS/VFW/FOURCC (WMV2)', VideoCodec.VC_UNKNOWN),
+                                 (TS_Elementary_stream_types[0xEA], VideoCodec.VC_VC1),
+                                 ('Windows Media Video V9', VideoCodec.VC_VC1),
+                                 ('Windows Media Video V8', VideoCodec.VC_UNKNOWN)]:
             self.assertEqual(cur_vc, codec_of(cur_text), msg=cur_text)
 
     @staticmethod
@@ -3280,21 +3295,60 @@ class QualityTests(unittest.TestCase):
         def program(number, pid):
             return bytes([number >> 8, number & 0xFF, 0xE0 | pid >> 8, pid & 0xFF])
 
-        def stream(stream_type, pid):
-            return bytes([stream_type, 0xE0 | pid >> 8, pid & 0xFF, 0xF0, 0])
+        def stream(stream_type, pid, descriptors=bytes()):
+            return bytes([stream_type, 0xE0 | pid >> 8, pid & 0xFF, 0xF0, len(descriptors)]) + descriptors
 
         # the first program of the table is number 0, it gives the PID of the network table and not of a program map
-        ts = self._ts_packet(0, 0, program(0, 0x10) + program(1, 0x1000))
-        # one H.266 video stream and one AAC audio stream
-        # the CRC of the packet reads as a H.264 stream when it is taken as a third stream
-        ts += self._ts_packet(0x1000, 2, bytes([0xE1, 0, 0xF0, 0]) + stream(0x33, 0x100) + stream(0x0F, 0x101))
-        ts += (bytes([0x47, 0x1F, 0xFF, 0x10]) + bytes([0xFF]) * 184) * 8
-
+        pat = self._ts_packet(0, 0, program(0, 0x10) + program(1, 0x1000))
+        null = (bytes([0x47, 0x1F, 0xFF, 0x10]) + bytes([0xFF]) * 184) * 8
         with tempfile.TemporaryDirectory() as temp_dir:
-            filename = os.path.join(temp_dir, 'test.ts')
-            with open(filename, 'wb') as fh:
-                fh.write(ts)
-            self.assertEqual(VideoCodec.VC_VVC, VideoCodec.get_file_video_codec(filename))
+            for cur_video, cur_vc in [
+                # one H.266 video stream and one AAC audio stream
+                # the CRC of the packet reads as a H.264 stream when it is taken as a third stream
+                (stream(0x33, 0x100), VideoCodec.VC_VVC),
+                # a private stream with a registration descriptor (tag 5) that names AV1, after another descriptor
+                (stream(0x06, 0x100, bytes([0x0A, 1, 0, 5, 4]) + b'AV01'), VideoCodec.VC_AV1),
+                # a private stream with no descriptor is not video
+                (stream(0x06, 0x100), None),
+            ]:
+                filename = os.path.join(temp_dir, 'test.ts')
+                with open(filename, 'wb') as fh:
+                    fh.write(pat + self._ts_packet(0x1000, 2, bytes([0xE1, 0, 0xF0, 0]) + cur_video
+                                                   + stream(0x0F, 0x101)) + null)
+                self.assertEqual(cur_vc, VideoCodec.get_file_video_codec(filename), msg=f'{cur_video}')
+
+    def test_file_video_codec_flv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for cur_video, cur_vc in [
+                # codec 7 in the low four bits of the first byte
+                (bytes([0x17, 0, 0, 0, 0]), VideoCodec.VC_264),
+                # enhanced FLV: the high bit of the first byte is set, then the fourcc follows
+                (bytes([0x90]) + b'hvc1' + bytes([1]), VideoCodec.VC_265),
+                (bytes([0x90]) + b'av01' + bytes([1]), VideoCodec.VC_AV1),
+                (bytes([0x12, 0]), VideoCodec.VC_UNKNOWN),
+            ]:
+                filename = os.path.join(temp_dir, 'test.flv')
+                with open(filename, 'wb') as fh:
+                    fh.write(b'FLV' + bytes([1, 1, 0, 0, 0, 9, 0, 0, 0, 0, 9, 0, 0, len(cur_video), 0, 0, 0, 0, 0, 0, 0])
+                             + cur_video + bytes([0, 0, 0, 11 + len(cur_video)]))
+                self.assertEqual(cur_vc, VideoCodec.get_file_video_codec(filename), msg=f'{cur_video}')
+
+    def test_file_video_codec_mpeg(self):
+        from hachoir.metadata.video import MPEGMetadata
+        from hachoir.stream import StringInputStream
+
+        pack = bytes([0, 0, 1, 0xBA]) + bytes(8) + bytes([0, 0, 1, 0xE0, 0, 0])
+        sequence = bytes([0, 0, 1, 0xB3]) + bytes(8)
+        for cur_data, cur_text in [
+            # a sequence header with an extension after it is MPEG-2 video, also in a pack of version 1
+            (pack + sequence + bytes([0, 0, 1, 0xB5]) + bytes(8), 'MPEG-2 video'),
+            # a sequence header and then the start of a group of pictures is MPEG-1 video
+            (pack + sequence + bytes([0, 0, 1, 0xB8]) + bytes(8), 'MPEG-1 video'),
+            # no sequence header
+            (pack + bytes(64), None),
+        ]:
+            parser = type('FakeParser', (), {'stream': StringInputStream(cur_data)})
+            self.assertEqual(cur_text, MPEGMetadata.videoVersion(parser), msg=cur_text)
 
     def test_file_video_codec_without_codec(self):
         closed = []

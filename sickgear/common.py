@@ -554,9 +554,11 @@ class VideoCodec:
     videocodec_ident_regex = {
         VC_264: r'(?:264|avc1?)',
         VC_265: r'(?:265|hevc|hvc1|hev1)',
-        VC_DivXvid: r'(?:divx|xvid)',
+        # MPEG-4 part 2, by its fourcc and by the names that mkv, mp4 and ts give it
+        VC_DivXvid: r'(?:divx|xvid|dx50|fmp4|mp4v|3iv[x2]|mpeg-?4 visual|mpeg4/iso/(?:a?sp|ap)|14496-2)',
         VC_VP9: r'vp.?9',
-        VC_VC1: r'(?:wvc1|(?<![a-z])vc.?1)',
+        # Windows Media Video 9 is VC-1
+        VC_VC1: r'(?:wvc1|wmv3|wmva|windows media video v?9|(?<![a-z])vc.?1)',
         VC_AV1: r'av0?1',
         VC_AV2: r'av0?2',
         VC_VVC: r'(?:266|vvc)',

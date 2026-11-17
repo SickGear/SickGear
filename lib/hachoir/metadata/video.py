@@ -73,7 +73,13 @@ class MkvMetadata(MultipleMetadata):
         video = Metadata(self)
         self.trackCommon(track, video)
         try:
-            video.compression = track["CodecID/string"].value
+            codec = track["CodecID/string"].value
+            if 'V_MS/VFW/FOURCC' == codec and "CodecPrivate/binary" in track:
+                # the private data is a BITMAPINFOHEADER, its bytes 16 to 19 are the fourcc, e.g. WVC1 for VC-1
+                fourcc = track["CodecPrivate/binary"].value[16:20].decode('ascii', 'replace')
+                if 4 == len(fourcc):
+                    codec = f'{codec} ({fourcc})'
+            video.compression = codec
             if "Video" in track:
                 video.width = track["Video/PixelWidth/unsigned"].value
                 video.height = track["Video/PixelHeight/unsigned"].value
@@ -196,7 +202,7 @@ class FlvMetadata(MultipleMetadata):
 
     @fault_tolerant
     def extractVideo(self, video, meta):
-        meta.compression = video["codec"].display
+        meta.compression = video["fourcc"].value if "fourcc" in video else video["codec"].display
 
     def extractAMF(self, amf):
         for entry in amf.array("item"):
@@ -299,12 +305,16 @@ class MP4Metadata(MultipleMetadata):
                                 if 'samplesize' in sample_entry:
                                     cur_data['data'].append(('bits_per_sample', sample_entry['samplesize'].value))
 
-                                if 'audio' in cur_data.get('grp_key', ''):
+                                if ('audio' in cur_data.get('grp_key', '')
+                                        or b'mp4v' == sample_entry['format'].value):
                                     for es in sample_entry:
                                         if ('esds' in es and 'ES' in es['esds'] and 'decConfigDescr' in es['esds']['ES']
                                                 and 'objectTypeIndication' in es['esds']['ES']['decConfigDescr']):
                                             if (_a_c := es['esds']['ES']['decConfigDescr'
                                             ]['objectTypeIndication'].value) in mp4_codecs:
+                                                # the object type is more exact than the name of the entry
+                                                cur_data['data'] = [_d for _d in cur_data['data']
+                                                                    if 'compression' != _d[0]]
                                                 cur_data['data'].append(('compression', mp4_codecs[_a_c]))
                                             break
         if 'grp_key' in cur_data:
@@ -486,6 +496,10 @@ class AsfMetadata(MultipleMetadata):
 #                    meta.compression = text
 
 
+# format identifiers of the registration descriptor of a private stream (type 6)
+TS_Registration_video = {b'AV01': 'AV1', b'HEVC': 'HEVC', b'VC-1': 'VC-1'}
+
+
 class TSMetadata(MultipleMetadata):
 
     def extract(self, mov):
@@ -509,7 +523,15 @@ class TSMetadata(MultipleMetadata):
         for d in data:
             if 'Elementary Stream #' in d.name:
                 cur_data = {'data': []}
-                if d['stream type'].value in TS_Video_stream_types:
+                codec = None
+                if 0x06 == d['stream type'].value and 'Elementary stream descriptors' in d:
+                    # private data, a registration descriptor (tag 5) can name its codec
+                    descriptors = d['Elementary stream descriptors'].value
+                    while 6 <= len(descriptors) and not codec:
+                        if 5 == descriptors[0]:
+                            codec = TS_Registration_video.get(descriptors[2:6])
+                        descriptors = descriptors[2 + descriptors[1]:]
+                if codec or d['stream type'].value in TS_Video_stream_types:
                     cur_data.update({'grp_key': f'video[{track_counter["video"]}]',
                                      'grp_header': f'Video stream #{track_counter["video"]}'})
                     stream_ids['video'].append(d['Elementary PID'].value)
@@ -521,7 +543,7 @@ class TSMetadata(MultipleMetadata):
                     track_counter['audio'] += 1
                 else:
                     continue
-                cur_data['data'].append(('compression', TS_Elementary_stream_types.get(d['stream type'].value)))
+                cur_data['data'].append(('compression', codec or TS_Elementary_stream_types.get(d['stream type'].value)))
                 cur_track = Metadata(self)
                 for en in cur_data['data']:
                     setattr(cur_track, en[0], en[1])
@@ -530,9 +552,23 @@ class TSMetadata(MultipleMetadata):
 
 class MPEGMetadata(MultipleMetadata):
 
+    @staticmethod
+    def videoVersion(mov):
+        # the parser gives the version of the pack header, and a pack of version 1 can hold MPEG-2 video
+        # MPEG-2 video has an extension start code (B5) after its sequence header (B3), MPEG-1 video has not
+        stream = mov.stream
+        limit = min(stream.size or 0, 2 * 1024 * 1024 * 8)
+        start = stream.searchBytes(b'\0\0\1\xb3', 0, limit)
+        if None is start or limit < start + 12 * 8:
+            return None
+        # a sequence header is 12 bytes, and up to 128 bytes of matrices
+        following = stream.readBytes(start + 4 * 8, min(160, (limit - start) // 8 - 4))
+        code = following.find(b'\0\0\1', 8)
+        return 'MPEG-2 video' if -1 != code and following[code + 3:code + 4] == b'\xb5' else 'MPEG-1 video'
+
     def extract(self, mov):
         video_track = Metadata(self)
-        video_track.compression = mov.description
+        video_track.compression = self.videoVersion(mov) or mov.description
         self.addGroup('video[1]', video_track, 'Video stream #1')
 
 
