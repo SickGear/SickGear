@@ -770,6 +770,26 @@ def proxy_setting(setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
+# adapters, each with its pool of connections, for requests that are made with no session of the caller.
+# A new session is made for each of those requests, and a pool that lives and ends with that session
+# opens a new connection, with a new TLS handshake, for every request
+_shared_adapters = {}  # type: Dict[Optional[AnyStr], requests.adapters.HTTPAdapter]
+_shared_adapters_lock = threading.Lock()
+
+
+def _shared_adapter(cache_dir):
+    # type: (Optional[AnyStr]) -> requests.adapters.HTTPAdapter
+    """
+    :param cache_dir: folder of the response cache, or None for an adapter that does not cache
+    :return: the adapter that all requests with no session of the caller share
+    """
+    with _shared_adapters_lock:
+        if cache_dir not in _shared_adapters:
+            _shared_adapters[cache_dir] = requests.adapters.HTTPAdapter() if None is cache_dir \
+                else CacheControlAdapter(cache=caches.FileCache(cache_dir))
+        return _shared_adapters[cache_dir]
+
+
 def get_url(url,  # type: AnyStr
             post_data=None,  # type: Optional
             params=None,  # type: Optional
@@ -847,6 +867,7 @@ def get_url(url,  # type: AnyStr
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
+    use_shared_adapter = False
     if None is session:
         if (kwargs.get('url_solver') or '').strip():
             session = CloudflareScraper.create_scraper()
@@ -854,6 +875,7 @@ def get_url(url,  # type: AnyStr
             # in case of an empty argument
             kwargs.pop('url_solver', None)
             session = requests.Session()
+            use_shared_adapter = True
         session.headers.update({'User-Agent': USER_AGENT})
 
     proxy_browser = kwargs.get('proxy_browser')
@@ -869,10 +891,14 @@ def get_url(url,  # type: AnyStr
         # session streaming
         session.stream = True
 
+    cache_dir = None if kwargs.pop('nocache', False) else os.path.join(CACHE_DIR or get_system_temp_dir(), 'sessions')
+    if use_shared_adapter:
+        # the session is new, but its connections are kept for the next request to the same site
+        for cur_prefix in ('https://', 'http://'):
+            session.mount(cur_prefix, _shared_adapter(cache_dir))
     # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
-    if not kwargs.pop('nocache', False) and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
-        cache_dir = CACHE_DIR or get_system_temp_dir()
-        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+    elif cache_dir and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
+        session = CacheControl(sess=session, cache=caches.FileCache(cache_dir))
 
     provider = kwargs.pop('provider', None)
 
