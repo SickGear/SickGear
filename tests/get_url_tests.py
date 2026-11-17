@@ -73,6 +73,13 @@ class GetUrlTests(unittest.TestCase):
         self.assertEqual([{'name': 'Show S01E01'}],
                          self.get_url(b'[{"name":"Show S01E01"}]', parse_json=True))
 
+    def test_cache_adapter_is_mounted_once_per_session(self):
+        session = FakeSession('page')
+        get_url('https://example.org/', session=session)
+        adapter = session.adapters['https://']
+        get_url('https://example.org/', session=session)
+        self.assertIs(adapter, session.adapters['https://'])
+
 
 if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(GetUrlTests)
