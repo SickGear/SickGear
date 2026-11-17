@@ -25,7 +25,7 @@ from io import StringIO
 from html.parser import HTMLParser
 
 import requests
-from cachecontrol import CacheControl, caches
+from cachecontrol import CacheControl, CacheControlAdapter, caches
 from dateutil.parser import parser
 # from tmdbsimple.configuration import Configuration
 # from tmdbsimple.genres import Genres
@@ -869,7 +869,8 @@ def get_url(url,  # type: AnyStr
         # session streaming
         session.stream = True
 
-    if not kwargs.pop('nocache', False):
+    # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
+    if not kwargs.pop('nocache', False) and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
         cache_dir = CACHE_DIR or get_system_temp_dir()
         session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
 
