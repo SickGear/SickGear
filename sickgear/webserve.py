@@ -58,7 +58,6 @@ from tornado.ioloop import IOLoop
 # import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-from iso639 import Lang
 from cfscrape import CloudflareScraper
 from dateutil import tz
 from dateutil.relativedelta import relativedelta
@@ -106,7 +105,7 @@ from tvinfo_base.base import tv_src_names
 from tvinfo_base.exceptions import *
 from _23 import decode_bytes, decode_str, getargspec, \
     map_consume, map_none, quote_plus, unquote_plus, urlparse
-from sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
+from sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country, language_to_alpha2
 from tvinfo_base import TVInfoShow
 
 if is_orjson:
@@ -4485,15 +4484,9 @@ class AddShows(Home):
             return alpha2_to_alpha3.get(country_code, country_code)
 
         def _lang_cc(lang_name):
-            cc = ''
-            if lang_name:
-                try:
-                    cc = Lang(lang_name).pt1 or ''
-                    if cc:
-                        cc = lang_to_country(cc.lower())
-                except(BaseException, Exception):
-                    pass
-            return cc
+            # the two letter code of a language. The page asks for the flag of this code, and the flag file handler
+            # gives the flag of the country of the language. So this must not be a country code, see _country_cc
+            return language_to_alpha2.get(lang_name, '')
 
         # noinspection PyUnboundLocalVariable
         map_consume(final_results.extend,
@@ -5646,10 +5639,8 @@ class AddShows(Home):
         lang_list = {c for c in cur_show_info.spoken_languages
                      or (cur_show_info.language and [cur_show_info.language]) or []}
         if lang_list and any(len(l) > 3 for l in lang_list):
-            try:
-                lang_list = {Lang(l).pt1 for l in lang_list}
-            except (BaseException, Exception):
-                pass
+            # a name that has no two letter code stays as it is
+            lang_list = {language_to_alpha2.get(l, l) for l in lang_list}
         languages = {f'tag-language-{replace_regex.sub("_", c).upper()}' for c in lang_list}
         if not languages:
             languages = {f'tag-language-UNKNOWN'}
