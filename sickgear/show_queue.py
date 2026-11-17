@@ -1465,7 +1465,6 @@ class QueueItemUpdate(ShowQueueItem):
             # for each ep we found on TVDB delete it from the DB list
             for cur_season in tvinfo_ep_list:
                 for cur_episode in tvinfo_ep_list[cur_season]:
-                    logger.debug(f'Removing {cur_season}x{cur_episode} from the DB list')
                     if cur_season in db_ep_obj_list and cur_episode in db_ep_obj_list[cur_season]:
                         del db_ep_obj_list[cur_season][cur_episode]
 
