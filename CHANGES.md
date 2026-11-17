@@ -5,6 +5,7 @@
 * Fix daily show update writes the metadata files of every unchanged show again, each day
 * Fix media file is left open after its quality is read from a file that gives no metadata, e.g. some ts files
 * Fix shutdown and restart can wait without end for the AniDB connection after a failed AniDB command
+* Fix wrong country flag in show search results where a source gives a two letter origin country, e.g. Trakt
 
 
 ### 3.36.12 (2026-11-16 19:27:00 UTC)

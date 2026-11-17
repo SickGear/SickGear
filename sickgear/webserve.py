@@ -109,7 +109,7 @@ import lib.rarfile.rarfile as rarfile
 
 from _23 import decode_bytes, decode_str, getargspec, \
     map_consume, map_none, quote_plus, unquote_plus, urlparse
-from lib.sg_lang_codes import alpha3_to_alpha2, lang_to_country
+from lib.sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
 from six import binary_type, integer_types, moves, string_types
 from lib.tvinfo_base import TVInfoShow
 
@@ -4439,6 +4439,12 @@ class AddShows(Home):
             except (BaseException, Exception):
                 return ''
 
+        def _country_cc(country_code):
+            # the page asks for a flag by language code, and the flag file handler reads a two letter name as
+            # a language first, e.g. `kr` as the language Kanuri, which gives the flag of Niger. It reads a
+            # three letter name as a country, so give that for a country
+            return alpha2_to_alpha3.get(f'{country_code}'.lower(), country_code)
+
         def _lang_cc(lang_name):
             cc = ''
             if lang_name:
@@ -4468,7 +4474,7 @@ class AddShows(Home):
                        (show.get('genres') or show.get('genre') or '').replace('|', ', '),  # 12
                        show.get('language') or '',  # 13
                        (isinstance(show.get('origin_countries'), list) and show['origin_countries'] and
-                        show['origin_countries'][0]) or _lang_cc(show.get('language')),  # 14
+                        _country_cc(show['origin_countries'][0])) or _lang_cc(show.get('language')),  # 14
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
                                      helpers.xhtml_escape((show.get('overview') or '')[:250:].strip()))),  # 15

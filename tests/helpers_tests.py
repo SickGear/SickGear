@@ -82,6 +82,25 @@ class HelpersTests(unittest.TestCase):
             self.assertEqual(t['result'], helpers.encrypt(*t['param']))
 
 
+class FlagCodeTests(unittest.TestCase):
+    def test_country_code_for_the_language_flag_path(self):
+        # the flag file handler of webserve turns a name under /images/flags/svg/lang/ into a country like this
+        from sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
+
+        def flag_of(name):
+            name = lang_to_country.get(name.lower(), name)
+            return alpha3_to_alpha2.get(name, name)
+
+        # a two letter country code that is also a language code gives the flag of another country
+        self.assertEqual('ne', flag_of('kr'))
+        self.assertEqual('ad', flag_of('ca'))
+        # the three letter code of every country gives the flag of that country
+        for cur_alpha2, cur_alpha3 in alpha2_to_alpha3.items():
+            self.assertEqual(cur_alpha2, flag_of(cur_alpha3))
+        self.assertEqual('kor', alpha2_to_alpha3['kr'])
+        self.assertEqual('deu', alpha2_to_alpha3['de'])
+
+
 class AniDBLockTests(unittest.TestCase):
     """ a command that raises gives the connection lock back, a kept lock blocks the shutdown of the app """
 
@@ -145,6 +164,6 @@ class AniDBLockTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, AniDBLockTests):
+    for cur_case in (HelpersTests, FlagCodeTests, AniDBLockTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
