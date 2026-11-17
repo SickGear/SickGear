@@ -62,6 +62,7 @@
 * Change web requests with no session, e.g. to TV info sources, to share kept alive connections
 * Change keep the AniDB session file in the cache folder instead of the sickgear.py folder
 * Change episode load from the DB to list a season folder once, instead of two disk checks per episode file
+* Change the XEM refresh check to read its DB table once a day per show, instead of a few times per episode load
 
 
 [develop]
