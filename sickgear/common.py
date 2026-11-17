@@ -13,6 +13,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
+
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.metadata', 'hachoir.metadata.metadata_item', 'hachoir.parser', 'hachoir.stream']
+
 from functools import reduce
 import operator
 import os.path
@@ -1037,3 +1042,9 @@ class DOWNLOAD_CLIENTS():
     REVERSE_IDS = {v: k for k,v in IDS.items()}
 
     TRUSTED_CLIENT_IDS = [SABNZBD]
+
+
+# `from sickgear.common import *` is used by templates. A star import copies each name that is listed here,
+# and a copy of a name of a lazy module loads that module. So this is every public name but those
+__all__ = [_name for _name in list(globals()) if not _name.startswith('_')
+           and _name not in ('createParser', 'extractMetadata', 'QUALITY_BEST', 'InputStreamError')]

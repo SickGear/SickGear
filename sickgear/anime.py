@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Sick Beard.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# adba is only for anime
+__lazy_modules__ = ['adba', 'adba.aniDBresponses']
+
 import os
 
 import adba

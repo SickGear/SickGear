@@ -17,6 +17,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # noinspection PyProtectedMember
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles
+__lazy_modules__ = ['subliminal']
+
 from mimetypes import MimeTypes
 from random import randint
 

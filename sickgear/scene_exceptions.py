@@ -14,6 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# rarfile, with cryptography, is only for rar files
+__lazy_modules__ = ['rarfile.rarfile']
+
 from collections import defaultdict
 
 import io

@@ -252,7 +252,25 @@ class LibImportTests(unittest.TestCase):
         self.assertEqual([], sorted(found))
 
 
+class LazyImportTests(unittest.TestCase):
+    @unittest.skipIf((3, 15) > sys.version_info[:2], 'lazy imports need Python 3.15 or newer')
+    def test_start_does_not_load_optional_packages(self):
+        # a name in a `__lazy_modules__` list must be the module name of its import statement, or it has no effect.
+        # A new process, because other tests in this one can have used these modules
+        root = abspath(join(dirname(__file__), '..'))
+        code = ('import sys; sys.path.insert(1, %r); sys.path.insert(1, %r); '
+                'import sickgear; from sickgear import anime, helpers, processTV, scene_exceptions, subtitles, tv, '
+                'webapi, webserve; '
+                # templates use this star import
+                "exec('from sickgear.common import *', {}); "
+                "print(sorted({_m.replace('lib.', '').split('.')[0] for _m in sys.modules} & {'hachoir', 'apprise', "
+                "'subliminal', 'guessit', 'enzyme', 'rarfile', 'cryptography', 'adba'}))"
+                ) % (root, join(root, 'lib'))
+        result = subprocess.run([sys.executable, '-W', 'ignore', '-c', code], capture_output=True, text=True)
+        self.assertEqual('[]', result.stdout.strip(), msg=result.stderr[-2000:])
+
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, LibImportTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, LibImportTests, LazyImportTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

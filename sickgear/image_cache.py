@@ -14,6 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.metadata', 'hachoir.metadata.metadata_item', 'hachoir.parser', 'hachoir.stream']
+
 import datetime
 import glob
 import os.path

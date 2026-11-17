@@ -16,6 +16,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 # noinspection PyProtectedMember
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles, rarfile, with cryptography, is only for rar files
+__lazy_modules__ = ['subliminal', 'rarfile.rarfile']
+
 from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
 from mimetypes import MimeTypes
 from urllib.parse import urljoin, quote as url_quote
