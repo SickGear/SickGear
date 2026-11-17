@@ -279,6 +279,43 @@ class TVLoadEpisodesTests(test.SickbeardTestDBCase):
         self.show_obj.load_episodes_from_tvinfo(tvinfo_data=self.tvinfo_show)
         self.assertIs(ep_obj, self.show_obj.sxe_ep_obj[1][2])
         self.assertEqual('New name 2', ep_obj.name)
+class TVEndEpisodeTests(test.SickbeardTestDBCase):
+    """ the first or latest aired episode of a show is found without a load of every episode """
+
+    def setUp(self):
+        super(TVEndEpisodeTests, self).setUp()
+        self.show_obj = TVShow(TVINFO_TVDB, 123456, 'en')
+        self.show_obj.sxe_ep_obj = {}
+        # season, episode, airdate. 1x1 has no airdate, 1x2 and 1x3 share the first one, 2x1 and 2x2 share the last one
+        episodes = [(0, 1, (2019, 1, 1)), (1, 1, None), (1, 2, (2020, 1, 1)), (1, 3, (2020, 1, 1)),
+                    (2, 1, (2021, 1, 1)), (2, 2, (2021, 1, 1)), (0, 2, (2022, 1, 1))]
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.mass_action([[
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, airdate)'
+                ' VALUES (?, 123456, ?, ?, ?, ?)',
+                [TVINFO_TVDB, 100 * season + episode, season, episode,
+                 (airdate and datetime.date(*airdate).toordinal()) or 1]] for season, episode, airdate in episodes])
+
+    def check(self, expected, ep_obj):
+        self.assertEqual(expected, (ep_obj.season, ep_obj.episode))
+        self.assertEqual(1, sum(len(_eps) for _eps in self.show_obj.sxe_ep_obj.values()))
+
+    def test_first_aired_episode(self):
+        self.check((0, 1), self.show_obj.first_aired_episode)
+
+    def test_first_aired_regular_episode(self):
+        self.check((1, 2), self.show_obj.first_aired_regular_episode)
+
+    def test_latest_aired_episode(self):
+        self.check((0, 2), self.show_obj.latest_aired_episode)
+
+    def test_latest_aired_regular_episode(self):
+        self.check((2, 1), self.show_obj.latest_aired_regular_episode)
+
+    def test_show_without_aired_episode(self):
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.action('UPDATE tv_episodes SET airdate = 1 WHERE showid = 123456')
+        self.assertIsNone(self.show_obj.first_aired_regular_episode)
 
 
 class TVCacheResultTests(test.SickbeardTestDBCase):
@@ -537,6 +574,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVLoadEpisodesTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVEndEpisodeTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVCacheResultTests)
