@@ -537,21 +537,26 @@ def wanted_episodes(show_obj,  # type: TVShow
 
     total_wanted = total_replacing = total_unaired = 0
 
-    if 0 < len(sql_result) and 2 < len(sql_result) - len(show_obj.sxe_ep_obj):
-        with db.DBConnection() as sg_db:
-            ep_sql_result = sg_db.select(
-                'SELECT * FROM tv_episodes'
-                ' WHERE indexer = ? AND showid = ?',
-                [show_obj.tvid, show_obj.prodid])
-    else:
-        ep_sql_result = None
-
     for result in sql_result:
-        ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_result=ep_sql_result)
-        cur_status, cur_quality = common.Quality.split_composite_status(ep_obj.status)
-        ep_obj.wanted_quality = get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=unaired)
-        if not ep_obj.wanted_quality:
+        season, episode = int(result['season']), int(result['episode'])
+        ep_obj = show_obj.sxe_ep_obj.get(season, {}).get(episode)
+        # the status of a loaded episode can be newer than its db row
+        cur_status, cur_quality = common.Quality.split_composite_status(
+            int(result['status'] if None is ep_obj else ep_obj.status))
+        wanted_quality = sickgear.WANTEDLIST_CACHE.get_wantedlist(
+            show_obj.quality, show_obj.upgrade_once, cur_quality, cur_status, unaired)
+        if not wanted_quality:
+            # no episode object is made for an episode that is not wanted, the show keeps its number instead
+            if None is ep_obj:
+                show_obj.unwanted_sxe.setdefault(season, set()).add(episode)
+            else:
+                ep_obj.wanted_quality = wanted_quality
             continue
+
+        show_obj.unwanted_sxe.get(season, set()).discard(episode)
+        if None is ep_obj:
+            ep_obj = show_obj.get_episode(season, episode)
+        ep_obj.wanted_quality = wanted_quality
 
         if make_dict:
             wanted.setdefault(ep_obj.scene_season if ep_obj.show_obj.is_scene else ep_obj.season, []).append(ep_obj)

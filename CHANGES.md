@@ -52,6 +52,7 @@
 * Change load hachoir and the growl, subtitle, rar, and AniDB libraries at first use on Python 3.15+, not at every start
 * Change group imports in PEP 8 order: Python standard library, then bundled libraries, then SickGear code
 * Change templates to import only the names they use from sickgear.common, instead of every name
+* Change recent and backlog search to load wanted episodes only, instead of every episode of every show
 
 
 [develop]
