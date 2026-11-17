@@ -25,9 +25,9 @@ import re
 import zlib
 
 import exceptions_helper
-from exceptions_helper import ex
 import sickgear
 import sg_helpers
+from exceptions_helper import ex
 from . import db, logger
 from .metadata.generic import GenericMetadata
 from .sgdatetime import SGDatetime

@@ -18,9 +18,9 @@ import datetime
 import os.path
 import re
 
+import sickgear
 from .. import db, common, logger
 from ..name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-import sickgear
 
 # noinspection PyUnreachableCode
 if False:

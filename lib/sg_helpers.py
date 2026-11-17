@@ -21,26 +21,24 @@ import threading
 import time
 import traceback
 import unicodedata
-
 from io import StringIO
 from html.parser import HTMLParser
 
-from exceptions_helper import ex, ConnectionSkipException
-from json_helper import json_loads
+import requests
 from cachecontrol import CacheControl, caches
 from dateutil.parser import parser
 # from tmdbsimple.configuration import Configuration
 # from tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
 from send2trash import send2trash
+from six import integer_types, moves, PY2, string_types, text_type
 
+from exceptions_helper import ex, ConnectionSkipException
+from json_helper import json_loads
 # noinspection PyPep8Naming
 from encodingKludge import SYS_ENCODING
-import requests
-
 from _23 import decode_bytes, html_unescape, list_range, \
     Popen, scandir, urlparse, urlsplit, urlunparse
-from six import integer_types, moves, PY2, string_types, text_type
 
 ACCEPT_ENCODING = "gzip,deflate"
 try:

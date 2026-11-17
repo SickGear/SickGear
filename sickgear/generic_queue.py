@@ -18,10 +18,11 @@ import copy
 import datetime
 import threading
 
+from six import integer_types
+
 from . import db, logger
 from .scheduler import Job
 from exceptions_helper import ex
-from six import integer_types
 
 # noinspection PyUnreachableCode
 if False:

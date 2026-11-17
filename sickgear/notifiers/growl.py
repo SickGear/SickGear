@@ -20,12 +20,12 @@ __lazy_modules__ = ['apprise.plugins.gntp']
 
 import re
 
+from apprise.plugins.gntp import notifier as growl_notifier
+from six import string_types
+
+import sickgear
 from .generic import Notifier, notify_strings
 from exceptions_helper import ex
-from apprise.plugins.gntp import notifier as growl_notifier
-import sickgear
-
-from six import string_types
 
 
 class GrowlNotifier(Notifier):

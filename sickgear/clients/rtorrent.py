@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from .generic import GenericClient
-from .. import logger
-import sickgear
 from rtorrent import RTorrent
 from rtorrent.compat import xmlrpclib
+
+import sickgear
+from .generic import GenericClient
+from .. import logger
 
 
 class RtorrentAPI(GenericClient):

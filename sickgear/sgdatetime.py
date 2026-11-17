@@ -20,10 +20,10 @@ import locale
 import re
 import sys
 
-import sickgear
 from dateutil import tz
-
 from six import integer_types, string_types
+
+import sickgear
 
 # noinspection PyUnreachableCode
 if False:

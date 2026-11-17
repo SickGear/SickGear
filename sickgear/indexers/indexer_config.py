@@ -1,6 +1,6 @@
+import api_tvdb.tvdb_api_v4
 from api_tvdb.tvdb_api import Tvdb
 from api_tvdb.tvdb_api_v4 import TvdbAPIv4
-import api_tvdb.tvdb_api_v4
 from api_trakt.indexerapiinterface import TraktIndexer
 from api_tvmaze.tvmaze_api import TvMaze
 from api_tmdb.tmdb_api import TmdbIndexer

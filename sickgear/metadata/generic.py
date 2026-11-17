@@ -14,27 +14,26 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import OrderedDict
-
 import datetime
 import io
 import os.path
 import re
+from collections import OrderedDict
 
+import fanart
+from fanart.core import Request as fanartRequest
+from lxml_etree import etree
+from six import string_types
+
+import sg_helpers
+import sickgear
 from . import helpers as metadata_helpers
 from .. import logger
-import sg_helpers
 from ..indexers import indexer_config
 from ..indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB
 from tvinfo_base import TVInfoImage, TVInfoImageType, TVInfoImageSize
 from tvinfo_base.exceptions import *
-import sickgear
 from exceptions_helper import ex
-from fanart.core import Request as fanartRequest
-import fanart
-from lxml_etree import etree
-
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

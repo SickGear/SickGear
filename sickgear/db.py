@@ -22,14 +22,11 @@ import sqlite3
 import threading
 import time
 
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import logger, sgdatetime
 from .sgdatetime import SGDatetime
-
 from sg_helpers import make_path, compress_file, remove_file_perm, scantree
-
 from _23 import scandir
 
 # noinspection PyUnreachableCode

@@ -23,6 +23,7 @@ from unittest import mock
 import test_lib as test  # sets the paths to sickgear and lib, used by the imports below
 
 from tornado.web import StaticFileHandler
+
 from sickgear.webserve import BaseStaticFileHandler
 
 root = abspath(join(dirname(__file__), '..', 'gui', 'slick'))

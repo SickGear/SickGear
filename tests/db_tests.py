@@ -18,8 +18,9 @@
 
 import unittest
 import test_lib as test
-from sickgear import cache_db, mainDB, failed_db
 from six import integer_types
+
+from sickgear import cache_db, mainDB, failed_db
 
 
 class DBBasicTests(test.SickbeardTestDBCase):

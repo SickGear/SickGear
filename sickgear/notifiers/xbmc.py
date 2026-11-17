@@ -17,14 +17,14 @@
 import socket
 import time
 
-from .generic import Notifier
-import sickgear
-from exceptions_helper import ex
-from json_helper import json_dumps, json_load
-
-from _23 import b64encodestring, decode_str, etree, quote, unquote, unquote_plus, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
+
+import sickgear
+from .generic import Notifier
+from exceptions_helper import ex
+from json_helper import json_dumps, json_load
+from _23 import b64encodestring, decode_str, etree, quote, unquote, unquote_plus, urlencode
 
 # noinspection PyUnreachableCode
 if False:

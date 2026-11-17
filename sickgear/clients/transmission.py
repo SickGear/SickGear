@@ -17,10 +17,9 @@
 
 import re
 
+import sickgear
 from .generic import GenericClient
 from .. import logger
-import sickgear
-
 from _23 import b64encodestring
 
 

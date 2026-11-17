@@ -16,13 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-# noinspection PyProtectedMember
 # modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
 # subliminal, with guessit and enzyme, is only for subtitles
 __lazy_modules__ = ['subliminal']
-
-from mimetypes import MimeTypes
-from random import randint
 
 import datetime
 import glob
@@ -31,16 +27,21 @@ import os
 import re
 import time
 import traceback
-from . import webserve
+# noinspection PyProtectedMember
+from mimetypes import MimeTypes
+from random import randint
 
-import exceptions_helper
-from exceptions_helper import ex
-from json_helper import is_orjson, json_dumps, JSON_INDENT, json_loads, JSONEncoder, ORJSON_OPTIONS
+import subliminal
+import dateutil.parser
 from tornado import gen
 from tornado.concurrent import run_on_executor
+from six import integer_types, string_types, text_type
 
+import exceptions_helper
 import sickgear
-import subliminal
+from . import webserve
+from exceptions_helper import ex
+from json_helper import is_orjson, json_dumps, JSON_INDENT, json_loads, JSONEncoder, ORJSON_OPTIONS
 from . import classes, db, helpers, history, image_cache, logger, network_timezones, processTV, search_queue, ui
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
@@ -56,10 +57,7 @@ from .show_updater import clean_ignore_require_words
 from .sgdatetime import SGDatetime
 from .tv import TVEpisode, TVShow,  TVidProdid
 from .webserve import AddShows
-import dateutil.parser
-
 from _23 import decode_str, unquote_plus
-from six import integer_types, string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:

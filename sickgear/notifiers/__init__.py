@@ -17,13 +17,12 @@
 import os
 import re
 
+import sickgear
 # import pushalot
 # import api_trakt
 from . import emby, kodi, plex, xbmc, \
     nmj, nmjv2, pushbullet, pushover, pytivo, synoindex, synologynotifier, \
     discord, emailnotify, libnotify, growl, prowl, slack, telegram
-
-import sickgear
 
 
 class NotifierFactory(object):

@@ -20,18 +20,16 @@ import re
 import stat
 import threading
 
+from six import string_types
+
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import common, db, failed_history, helpers, history, logger, notifiers, show_name_helpers
-
 from .anime import push_anidb_mylist
 from .indexers.indexer_config import TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-
 from _23 import decode_str
-from six import string_types
 from sg_helpers import long_path, cmdline_runner
 
 # noinspection PyUnreachableCode

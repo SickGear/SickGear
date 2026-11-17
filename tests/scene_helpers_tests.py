@@ -10,10 +10,9 @@ import sys
 from os.path import abspath, dirname, join
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 
+import sickgear
 from sickgear import show_name_helpers, scene_exceptions, common, name_cache
 from sickgear.indexers.indexer_config import TVINFO_TVDB
-
-import sickgear
 from sickgear import db
 from sickgear.tv import TVShow
 

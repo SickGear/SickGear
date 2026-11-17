@@ -16,16 +16,15 @@
 
 import re
 
+from xmlrpclib_to import ServerProxy
+from six import moves
+
 import sickgear
 from . import logger
 from .common import Quality
 from .helpers import try_float, try_int
 from .providers.generic import GenericProvider
-
-from xmlrpclib_to import ServerProxy
-
 from _23 import b64encodestring
-from six import moves
 
 # noinspection PyUnreachableCode
 if False:

@@ -23,9 +23,9 @@ import os
 
 import adba
 from adba.aniDBresponses import LoginFirstResponse
-from exceptions_helper import ex
 
 import sickgear
+from exceptions_helper import ex
 from . import db, logger
 from .classes import NZBDataSearchResult, NZBSearchResult, TorrentSearchResult
 from .helpers import get_system_temp_dir, make_path

@@ -17,10 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from six import string_types
+
 from . import generic
 from ..helpers import try_int
-
-from six import string_types
 
 
 class SpeedAppProvider(generic.TorrentProvider):

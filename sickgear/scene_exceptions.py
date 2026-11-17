@@ -18,13 +18,14 @@
 # rarfile, with cryptography, is only for rar files
 __lazy_modules__ = ['rarfile.rarfile']
 
-from collections import defaultdict
-
 import io
 import os
 import re
 import sys
 import traceback
+from collections import defaultdict
+
+import rarfile.rarfile as rarfile
 
 import sickgear
 from exceptions_helper import ex
@@ -35,9 +36,6 @@ from .classes import OrderedDefaultdict
 from .indexers.indexer_config import TVINFO_TVDB
 from .scheduler import Job
 from .sgdatetime import SGDatetime
-
-import rarfile.rarfile as rarfile
-
 from _23 import list_range
 
 # noinspection PyUnreachableCode

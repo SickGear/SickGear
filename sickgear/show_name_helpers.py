@@ -19,15 +19,13 @@ import os
 import copy
 import re
 
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import common, db, logger
 from .helpers import sanitize_scene_name
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .scene_exceptions import ReleaseMap
 from sg_helpers import scantree
-
 from _23 import quote_plus
 
 # noinspection PyUnreachableCode

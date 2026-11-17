@@ -23,7 +23,6 @@ import sys
 import threading
 import time
 import zipfile
-
 from logging.handlers import TimedRotatingFileHandler
 
 import sickgear

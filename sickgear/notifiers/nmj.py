@@ -16,18 +16,18 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+
+# noinspection PyUnresolvedReferences
+from six.moves import urllib
 try:
     import telnetlib
 except ImportError:
     import telnetlib313up as telnetlib
 
-from .generic import BaseNotifier
 import sickgear
+from .generic import BaseNotifier
 from exceptions_helper import ex
-
 from _23 import etree, urlencode
-# noinspection PyUnresolvedReferences
-from six.moves import urllib
 
 
 class NMJNotifier(BaseNotifier):

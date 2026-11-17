@@ -1,6 +1,5 @@
 import re
 import threading
-
 # noinspection PyProtectedMember,PyUnresolvedReferences
 from concurrent.futures.thread import _WorkItem
 

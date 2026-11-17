@@ -60,12 +60,6 @@ except (BaseException, Exception):
     pass
 
 try:
-    import _cleaner
-    from sickgear import piper
-except (BaseException, Exception):
-    pass
-
-try:
     import Cheetah
 except (BaseException, Exception):
     print('The Python module CT3 (Cheetah) is required')
@@ -79,6 +73,12 @@ except (BaseException, Exception):
     print('python sickgear.py')
     sys.exit(1)
 
+try:
+    import _cleaner
+    from sickgear import piper
+except (BaseException, Exception):
+    pass
+
 # Compatibility fixes for Windows
 if is_win:
     codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
@@ -87,16 +87,16 @@ if is_win:
 from multiprocessing import freeze_support
 
 from configobj import ConfigObj
+from six import integer_types
+
+import sickgear
 # noinspection PyPep8Naming
 from encodingKludge import SYS_ENCODING
 from exceptions_helper import ex
-import sickgear
 from sickgear import db, logger, name_cache, network_timezones
 from sickgear.event_queue import Events
 from sickgear.tv import TVShow
 from sickgear.webserveInit import WebServer
-
-from six import integer_types
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None

@@ -18,25 +18,23 @@
 # hachoir is 190 modules and 10 MB that a start of the app does not need
 __lazy_modules__ = ['hachoir.metadata', 'hachoir.metadata.metadata_item', 'hachoir.parser', 'hachoir.stream']
 
-from functools import reduce
 import operator
 import os.path
 import platform
 import re
 import traceback
 import uuid
-
-import sickgear
+from functools import reduce
 
 from six import integer_types, string_types
-
-from exceptions_helper import ex
-from sickgear import logger
-
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
 from hachoir.metadata.metadata_item import QUALITY_BEST
 from hachoir.stream import InputStreamError
+
+import sickgear
+from exceptions_helper import ex
+from sickgear import logger
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode

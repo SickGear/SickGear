@@ -19,9 +19,8 @@ import os
 import traceback
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, logger, network_timezones, properFinder, ui
 from .scheduler import Job
 from .config import backup_config, backup_btn_status

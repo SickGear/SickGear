@@ -13,9 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from collections import OrderedDict
-from threading import Lock
-
 import copy
 import datetime
 import io
@@ -25,14 +22,19 @@ import signal
 import socket
 import time
 import webbrowser
-
 # apparently py2exe won't build these unless they're imported somewhere
 import os.path
 import sys
 import threading
 import uuid
 import zlib
+from collections import OrderedDict
+from threading import Lock
 
+from configobj import ConfigObj
+from six import string_types
+
+import sg_helpers
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
     show_queue, show_updater, subtitles, version_checker, watchedstate_queue
@@ -48,16 +50,11 @@ from .providers.newznab import NewznabConstants
 from .tv import TVidProdid
 from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 from .webserve import History
-
 # noinspection PyProtectedMember
 from browser_ua import get_ua
-from configobj import ConfigObj
 from api_trakt import TraktAPI
-
 from _23 import b64encodestring, decode_bytes, scandir
 from sg_helpers import remove_file_perm
-from six import string_types
-import sg_helpers
 
 # noinspection PyUnreachableCode
 if False:

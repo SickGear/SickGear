@@ -20,13 +20,13 @@
 import re
 import time
 
+from six import string_types
+
+import sickgear
 from .generic import GenericClient
 from .. import logger
 from ..sgdatetime import SGDatetime
-import sickgear
-
 from _23 import unquote_plus
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

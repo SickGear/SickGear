@@ -22,12 +22,12 @@ __lazy_modules__ = ['subliminal']
 import datetime
 import os
 
+import subliminal
+
+import sickgear
 from . import db, helpers, logger
 from .common import Quality
 from .scheduler import Job
-
-import sickgear
-import subliminal
 
 SINGLE = 'und'
 

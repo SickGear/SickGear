@@ -22,19 +22,18 @@ import time
 import traceback
 from urllib.parse import quote
 
+from six import string_types
+
 import exceptions_helper
+import sickgear
 from exceptions_helper import ex
 from sg_helpers import write_file
-
-import sickgear
 from . import clients, common, db, failed_history, helpers, history, logger, \
     notifiers, nzbget, nzbSplitter, show_name_helpers, sab, ui
 from .common import (DOWNLOAD_CLIENTS, DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_EP_RESULT,
                      SEASON_RESULT, Quality)
 from .providers.generic import GenericProvider
 from .tv import TVEpisode, TVShow
-
-from six import string_types
 
 one_day_delta = datetime.timedelta(days=1)
 

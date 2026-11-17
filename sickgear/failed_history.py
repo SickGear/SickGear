@@ -15,15 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from sqlite3 import Cursor
 import datetime
 import re
+from sqlite3 import Cursor
 
 from . import db, logger
 from .common import DOWNLOAD_CLIENTS, FAILED, WANTED, Quality, statusStrings, VideoCodec
 from .history import dateFormat
 from exceptions_helper import EpisodeNotFoundException, ex
-
 from _23 import unquote
 
 # noinspection PyUnresolvedReferences

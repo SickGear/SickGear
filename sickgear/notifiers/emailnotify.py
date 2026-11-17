@@ -19,18 +19,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
-import re
-import smtplib
-
-from .generic import Notifier, notify_strings
-from .. import db
-import sickgear
-from exceptions_helper import ex
 
 from six import text_type
+
+import sickgear
+from .generic import Notifier, notify_strings
+from .. import db
+from exceptions_helper import ex
 
 
 class EmailNotifier(Notifier):

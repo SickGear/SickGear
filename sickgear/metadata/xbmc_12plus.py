@@ -16,16 +16,16 @@
 
 import datetime
 
-from . import generic
-from .. import logger
+from lxml_etree import etree
+from six import string_types
+
 import sg_helpers
-from tvinfo_base.exceptions import *
 import sickgear
 import exceptions_helper
+from . import generic
+from .. import logger
+from tvinfo_base.exceptions import *
 from exceptions_helper import ex
-from lxml_etree import etree
-
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

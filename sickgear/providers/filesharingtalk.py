@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime, timedelta, timezone
 import difflib
 import re
 import time
 import traceback
+from datetime import datetime, timedelta, timezone
 
 import sickgear
 from . import generic
@@ -26,7 +26,6 @@ from .. import classes, logger, show_name_helpers, tvcache
 from ..classes import NZBDataSearchResult
 from ..common import NeededQualities
 from ..tv import TVEpisode
-
 from bs4_parser import BS4Parser
 
 # noinspection PyUnreachableCode

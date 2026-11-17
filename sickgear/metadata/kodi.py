@@ -17,19 +17,19 @@ import datetime
 import io
 import os
 
+from lxml_etree import etree
+from six import string_types
+
+import sg_helpers
+import sickgear
+import exceptions_helper
 from . import generic
 from .. import logger
-import sg_helpers
 from ..indexers.indexer_config import TVINFO_IMDB, TVINFO_TVDB
 from tvinfo_base import RoleTypes
 from tvinfo_base.exceptions import *
-import sickgear
-import exceptions_helper
 from exceptions_helper import ex
-from lxml_etree import etree
-
 from _23 import decode_str
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

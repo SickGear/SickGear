@@ -14,19 +14,18 @@ from requests.adapters import HTTPAdapter
 # noinspection PyProtectedMember
 from tornado._locale_data import LOCALE_NAMES
 from urllib3.util.retry import Retry
-
-from sg_helpers import clean_data, enforce_type, get_url, try_int
 from dateutil.parser import parser
 # noinspection PyProtectedMember
 from dateutil.tz.tz import _datetime_to_timestamp
-from exceptions_helper import ConnectionSkipException, ex
 from pytvmaze import tvmaze
+from six import integer_types, string_types
+
+from sg_helpers import clean_data, enforce_type, get_url, try_int
+from exceptions_helper import ConnectionSkipException, ex
 from .tvmaze_exceptions import *
 from tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
     crew_type_names, TVInfoPerson, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoNetwork, TVInfoSeason, \
     PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB, TVINFO_CAST_LIMIT
-
-from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:

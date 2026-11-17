@@ -4,9 +4,10 @@ import os.path
 import glob
 import unittest
 import test_lib as test
-import sickgear
 from os.path import abspath, dirname, join
 from time import sleep
+
+import sickgear
 from sickgear import db, logger
 from sickgear.databases.mainDB import MIN_DB_VERSION, MAX_DB_VERSION
 

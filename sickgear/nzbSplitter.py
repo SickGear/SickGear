@@ -18,16 +18,14 @@ import os
 import re
 
 from lxml_etree import etree
-
-from exceptions_helper import ex
+from six import string_types
 
 import sickgear
+from exceptions_helper import ex
 from . import classes, helpers, logger
 from .common import Quality
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-
 from _23 import decode_str
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

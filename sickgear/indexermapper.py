@@ -18,15 +18,13 @@ import datetime
 import re
 import traceback
 
+from dateutil.parser import parse
+from six import moves, string_types
+
+import sickgear
 from . import classes, db, logger
 from .helpers import try_int
 from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVINFO_TVDB, TVINFO_TVMAZE
-
-import sickgear
-
-from dateutil.parser import parse
-
-from six import moves, string_types
 
 # noinspection PyUnreachableCode
 if False:

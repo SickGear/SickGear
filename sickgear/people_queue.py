@@ -18,7 +18,6 @@ import traceback
 
 # noinspection PyPep8Naming
 from exceptions_helper import ex
-
 from . import db, generic_queue, logger, helpers, ui
 
 # noinspection PyUnreachableCode

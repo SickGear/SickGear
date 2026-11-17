@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 
 import exceptions_helper
-
 import sickgear
 from . import logger, failed_history, history, search_queue, show_name_helpers
 from ._legacy_classes import LegacyFailedProcessor

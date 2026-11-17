@@ -18,10 +18,10 @@
 
 import unittest
 import test_lib as test
-from random import randint
-
 import datetime
 import copy
+from random import randint
+
 import sickgear
 from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
 from exceptions_helper import MultipleShowObjectsException

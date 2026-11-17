@@ -19,7 +19,6 @@
 # subliminal, with guessit and enzyme, is only for subtitles
 __lazy_modules__ = ['subliminal']
 
-from itertools import cycle
 import datetime
 import hashlib
 import os
@@ -29,7 +28,18 @@ import socket
 import time
 import uuid
 import sys
+from itertools import cycle
 from pathlib import Path
+from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
+
+import dateutil.parser
+import requests
+import requests.exceptions
+import subliminal
+from lxml_etree import etree, is_lxml
+from six import string_types, text_type
+# noinspection PyUnresolvedReferences
+from six.moves import zip
 
 import sickgear
 from . import db, logger, notifiers
@@ -38,19 +48,7 @@ from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrin
 from .sgdatetime import SGDatetime
 from tvinfo_base.exceptions import *
 from exceptions_helper import ex, MultipleShowObjectsException
-
-import dateutil.parser
-import requests
-import requests.exceptions
-import subliminal
-from lxml_etree import etree, is_lxml
-from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
-
 from _23 import decode_bytes, decode_str, scandir
-from six import string_types, text_type
-# noinspection PyUnresolvedReferences
-from six.moves import zip
-
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences

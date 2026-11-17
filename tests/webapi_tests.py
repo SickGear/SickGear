@@ -28,6 +28,8 @@ import requests
 
 warnings.filterwarnings('ignore', module=r'.*ssl_.*', message='.*SSLContext object.*')
 
+from six import integer_types, string_types
+
 import sickgear
 from exceptions_helper import ex
 from sickgear.classes import SearchResult
@@ -38,7 +40,6 @@ from sickgear.tv import TVEpisode, TVShow
 from sickgear.webserveInit import WebServer
 from sickgear import webapi, scheduler, search_backlog, search_queue, show_queue, history, db
 from sickgear.scene_numbering import set_scene_numbering_helper
-from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:

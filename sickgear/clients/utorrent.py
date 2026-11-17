@@ -17,9 +17,8 @@
 
 import re
 
-from .generic import GenericClient
 import sickgear
-
+from .generic import GenericClient
 from _23 import urlencode
 
 

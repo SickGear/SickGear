@@ -22,6 +22,7 @@ import re
 import time
 import threading
 
+from six import string_types, text_type
 try:
     import regex
     # noinspection PyUnresolvedReferences
@@ -29,16 +30,14 @@ try:
 except ImportError:
     regex = None
 
+import sickgear
 from . import regexes
 from exceptions_helper import ex
-import sickgear
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
 from tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
-
 from .._legacy_classes import LegacyParseResult
 from _23 import decode_str, list_range
-from six import string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:

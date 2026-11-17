@@ -19,15 +19,15 @@ import os.path
 import re
 import gzip
 
+from six import string_types
+
 import sickgear
 import sickgear.providers
 from . import db, helpers, logger, naming
 from api_trakt import TraktAPI
-
 from _23 import urlsplit, urlunsplit
 from sg_helpers import compress_file, copy_file, remove_file_perm, scantree, try_int
 from json_helper import json_load
-from six import string_types
 
 
 naming_ep_type = ('%(seasonnumber)dx%(episodenumber)02d',

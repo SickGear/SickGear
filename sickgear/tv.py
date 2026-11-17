@@ -20,30 +20,35 @@ __lazy_modules__ = ['subliminal']
 
 import random
 import weakref
+import datetime
+import glob
+import inspect
+import os.path
+import re
+import stat
+import threading
+import traceback
 from collections import Counter, OrderedDict
 from functools import reduce
 from itertools import chain
 from weakref import ReferenceType
 
-import datetime
-import glob
 import imdbpie
-import inspect
-import os.path
-import re
 import requests
-import stat
 import subliminal
-import threading
-import traceback
-
 from imdbpie import ImdbAPIError
 from lxml_etree import etree
+from dateutil import tz
+from dateutil.parser import parser as du_parser
+from six import integer_types, moves, string_types
+try:
+    from thefuzz import fuzz
+except ImportError as e:
+    from fuzzywuzzy import fuzz
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
 from .anime import AniGroupList
@@ -58,19 +63,10 @@ from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVI
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime
 from .tv_base import TVEpisodeBase, TVShowBase
-
-from dateutil import tz
-from dateutil.parser import parser as du_parser
-try:
-    from thefuzz import fuzz
-except ImportError as e:
-    from fuzzywuzzy import fuzz
 from tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
 from tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
-
-from six import integer_types, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
