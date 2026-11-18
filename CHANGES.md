@@ -56,6 +56,7 @@
 * Change show update to load each episode once from the DB and once from TV info, instead of twice from each
 * Change find the first or latest aired episode of a show with one DB query, instead of loading every episode
 * Change log one line per show when its episodes load or update, instead of up to thirteen lines per episode
+* Change log one line per show when a refresh checks its media files, instead of up to seven lines per file
 
 
 [develop]

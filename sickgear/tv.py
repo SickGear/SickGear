@@ -2190,7 +2190,6 @@ class TVShow(TVShowBase):
             parse_result = None
             ep_obj = None
 
-            logger.debug(f'{self.tvid_prodid}: Creating episode from {cur_media_file}')
             try:
                 ep_obj = self.ep_obj_from_file(os.path.join(self._location, cur_media_file))
             except (exceptions_helper.ShowNotFoundException, exceptions_helper.EpisodeNotFoundException) as e:
@@ -2233,6 +2232,8 @@ class TVShow(TVShowBase):
         if sql_l:
             with db.DBConnection() as sg_db:
                 sg_db.mass_action(sql_l)
+
+        logger.debug(f'{self.tvid_prodid}: Checked {len(file_list)} media files of [{self._name}]')
 
     def load_episodes_from_db(self, update=False):
         # type: (bool) -> Dict[int, Dict[int, TVEpisode]]
@@ -2508,8 +2509,6 @@ class TVShow(TVShowBase):
             logger.log(f'{self.tvid_prodid}: Not a real file... {path}')
             return None
 
-        logger.debug(f'{self.tvid_prodid}: Creating episode object from {path}')
-
         try:
             my_parser = NameParser(show_obj=self)
             parse_result = my_parser.parse(path)
@@ -2533,8 +2532,6 @@ class TVShow(TVShowBase):
         sql_l = []
         for cur_ep_num in episode_numbers:
             cur_ep_num = int(cur_ep_num)
-
-            logger.debug(f'{self.tvid_prodid}: {path} parsed to {self._name} {season_number}x{cur_ep_num}')
 
             check_quality_again = False
             same_file = False
@@ -2652,6 +2649,7 @@ class TVShow(TVShowBase):
                     sql_l.append(result)
 
         if sql_l:
+            logger.debug(f'{self.tvid_prodid}: Saving {len(sql_l)} changed episode(s) of file {path}')
             with db.DBConnection() as sg_db:
                 sg_db.mass_action(sql_l)
 
@@ -4859,7 +4857,6 @@ class TVEpisode(TVEpisodeBase):
         """
 
         if not self.dirty and not force_save:
-            logger.debug(f'{self._show_obj.tvid_prodid}: Not creating SQL queue - record is not dirty')
             return
 
         self.dirty = False
