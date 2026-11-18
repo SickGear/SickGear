@@ -1242,7 +1242,10 @@ class QueueItemRefresh(ShowQueueItem):
         logger.log(f'Performing refresh on {self.show_obj.unique_name}')
 
         self.show_obj.refresh_dir()
-        self.show_obj.write_metadata(force=self.force)
+        # the daily update forces the refresh of each show that it does not update, to get it into the queue.
+        # that is no reason to fetch the show from its TV info source and to write each of its metadata files
+        # again, every day. A metadata file that is missing is still made
+        self.show_obj.write_metadata(force=self.force and not self.scheduled_update)
         # if self.force:
         #    self.show_obj.update_metadata()
         self.show_obj.populate_cache(self.force_image_cache)
