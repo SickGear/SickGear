@@ -35,6 +35,7 @@ from hachoir.stream import InputStreamError
 import sickgear
 from exceptions_helper import ex
 from sickgear import logger
+from sickgear.video_size import video_size
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
@@ -404,21 +405,22 @@ class Quality(object):
                         except (AttributeError, ValueError):
                             pass
 
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
+                # a file that stays open cannot be moved or deleted on Windows
+                # noinspection PyProtectedMember
+                parser.stream._input.close()
 
-                    tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
-                    if None is not height and height >= tolerance(352, 5):
-                        if height <= tolerance(720, 2) and (None is width or width < tolerance(1280, 2)):
-                            return Quality.SDTV
-                        if 1100 < height or (None is not width and 2000 < width):
-                            return Quality.UHD4KWEB
-                        return (Quality.HDTV, Quality.FULLHDTV)[
-                            height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
-                else:
-                    # a file that stays open cannot be moved or deleted on Windows
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
+                if None is height:
+                    # ts, m2ts, mpg and vob files hold the picture size in their video data only
+                    width, height = video_size(filename)
+
+                tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
+                if None is not height and height >= tolerance(352, 5):
+                    if height <= tolerance(720, 2) and (None is width or width < tolerance(1280, 2)):
+                        return Quality.SDTV
+                    if 1100 < height or (None is not width and 2000 < width):
+                        return Quality.UHD4KWEB
+                    return (Quality.HDTV, Quality.FULLHDTV)[
+                        height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
         return Quality.UNKNOWN
 
     @staticmethod
