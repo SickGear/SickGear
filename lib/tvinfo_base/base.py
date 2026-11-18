@@ -107,28 +107,37 @@ class ShowContainer(dict):
         super(ShowContainer, self).__init__(**kwargs)
         # limit caching of TVInfoShow objects to 15 minutes
         self.max_age = 900  # type: integer_types
+        # limit caching to the newest shows, a show with its episodes, cast and images is about 1 MB,
+        # and e.g. a daily update fetches the shows that have a change one after the other
+        self.max_entries = 10  # type: integer_types
         self.lock = threading.RLock()
 
     def __setitem__(self, k, v):
+        is_new = k not in self
         super(ShowContainer, self).__setitem__(k, (v, time.time()))
+        if is_new:
+            self.cleanup_old()
 
     def __getitem__(self, k):
         return super(ShowContainer, self).__getitem__(k)[0]
 
     def cleanup_old(self):
         """
-        remove entries that are older than max_age
+        remove entries that are older than max_age, and the oldest entries when there are more than max_entries
         """
         acquired_lock = self.lock.acquire(False)
         if acquired_lock:
             try:
                 current_time = time.time()
-                for k, v in list(self.items()):
-                    if self.max_age < current_time - v[1]:
+                entries = sorted(self.items(), key=lambda _kv: _kv[1][1])
+                over = len(entries) - self.max_entries
+                for k, v in entries:
+                    if self.max_age < current_time - v[1] or (0 < over and v is not entries[-1][1]):
                         lock_acquired = self[k].lock.acquire(False)
                         if lock_acquired:
                             try:
                                 del self[k]
+                                over -= 1
                             except (BaseException, Exception):
                                 try:
                                     self[k].lock.release()

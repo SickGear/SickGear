@@ -31,6 +31,7 @@ from tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoI
     TVInfoNetwork as TVInfoNetwork_lib
 from tvinfo_base import TVInfoPerson, TVInfoImage, TVInfoSocialIDs, TVInfoCharacter, TVInfoShow, TVInfoIDs, CastList, \
     CrewList, RoleTypes, TVInfoEpisode, TVInfoSeason, TVInfoNetwork
+from tvinfo_base.base import ShowContainer
 
 # noinspection PyUnreachableCode
 if False:
@@ -801,7 +802,32 @@ class TVInfoTests(test.SickbeardTestDBCase):
                             raise e
 
 
+class ShowContainerTests(unittest.TestCase):
+
+    def test_number_of_cached_shows_is_limited(self):
+        container = ShowContainer()
+        for show_id in range(1, 41):
+            container[show_id] = TVInfoShow()
+            self.assertLessEqual(len(container), container.max_entries)
+        # the newest are kept
+        self.assertEqual(list(range(41 - container.max_entries, 41)), sorted(container))
+
+    def test_show_in_use_is_kept(self):
+        container = ShowContainer()
+        container[1] = TVInfoShow()
+        other_thread = threading.Thread(target=container[1].lock.acquire)
+        other_thread.start()
+        other_thread.join()
+        for show_id in range(2, 41):
+            container[show_id] = TVInfoShow()
+        self.assertIn(1, container)
+        self.assertLessEqual(len(container), 1 + container.max_entries)
+
+
 if '__main__' == __name__:
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(ShowContainerTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
 
     print('===============================')
     print('STARTING - TV Info TESTS')
