@@ -121,6 +121,19 @@ class TVEpisodeLoadTests(test.SickbeardTestDBCase):
         self.assertEqual(1001, self.ep_obj.epid)
         self.assertFalse(self.ep_obj.dirty)
 
+    def test_metadata_file_flags_load_from_db(self):
+        self.assertFalse(self.ep_obj.hasnfo)
+        self.assertFalse(self.ep_obj.hastbn)
+        with db.DBConnection() as sg_db:
+            sg_db.action('UPDATE tv_episodes SET hasnfo = 1, hastbn = 1 WHERE indexer = 1 AND showid = 123456')
+        ep_obj = TVShow(1, 123456, 'en').get_episode(1, 1)
+        self.assertTrue(ep_obj.hasnfo)
+        self.assertTrue(ep_obj.hastbn)
+        # the same values again are no change, as a check of the files on disk gives them
+        ep_obj.hasnfo = True
+        ep_obj.hastbn = True
+        self.assertFalse(ep_obj.dirty)
+
     def test_same_epid_is_no_change(self):
         self.ep_obj.epid = 1001
         self.assertFalse(self.ep_obj.dirty)

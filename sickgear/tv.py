@@ -4201,6 +4201,10 @@ class TVEpisode(TVEpisodeBase):
         self._description = self._description if not show_result['description'] else show_result['description']
         self._episode = episode
         self._file_size = try_int(show_result['file_size'])
+        # the flags for a metadata file and a thumbnail, or the first check for these files after a load
+        # finds a change that is none, and the episode is written to the DB again
+        self._hasnfo = bool(show_result['hasnfo'])
+        self._hastbn = bool(show_result['hastbn'])
         self._is_proper = self._is_proper if not show_result['is_proper'] else try_int(show_result['is_proper'])
         self._name = self._name if not show_result['name'] else show_result['name']
         self._network = show_result['network'] or self._show_obj.internal_network
