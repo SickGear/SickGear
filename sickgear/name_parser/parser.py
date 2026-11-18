@@ -428,7 +428,18 @@ class NameParser(object):
                         new_episode_numbers.extend(e)
                         new_season_numbers.append(s)
 
-                elif best_result.season_number and len(best_result.episode_numbers) and not self.testing:
+                    if not new_episode_numbers:
+                        # no episode has that absolute number, e.g. it is the year in `Show.2016.s01e02.Name.SD.TV`,
+                        # so use the best match that has a season and an episode number
+                        alt_result = max([_m for _m in matches if _m.season_number and _m.episode_numbers],
+                                         key=lambda x: x.score, default=None)
+                        if alt_result:
+                            alt_result.show_obj, alt_result.quality = show_obj, best_result.quality
+                            alt_result.ab_episode_numbers = []
+                            best_result = alt_result
+                            new_season_numbers, new_absolute_numbers = [], []
+
+                if not new_episode_numbers and best_result.season_number and len(best_result.episode_numbers)                         and not self.testing:
                     for epNo in best_result.episode_numbers:
                         s = best_result.season_number
                         e = epNo
