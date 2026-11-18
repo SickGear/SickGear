@@ -4,6 +4,7 @@
 * Fix an episode with a metadata file or thumbnail is written to the DB again at its first file check after a load
 * Fix daily show update writes the metadata files of every unchanged show again, each day
 * Fix media file is left open after its quality is read from a file that gives no metadata, e.g. some ts files
+* Fix shutdown and restart can wait without end for the AniDB connection after a failed AniDB command
 
 
 ### 3.36.12 (2026-11-16 19:27:00 UTC)
