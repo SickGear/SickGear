@@ -29,7 +29,7 @@ from functools import reduce
 from six import integer_types, string_types
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
-from hachoir.metadata.metadata_item import QUALITY_BEST
+from hachoir.metadata.metadata_item import QUALITY_NORMAL
 from hachoir.stream import InputStreamError
 
 import sickgear
@@ -388,7 +388,7 @@ class Quality(object):
                     parser.parse_exif = False
                     parser.parse_photoshop_content = False
                     parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)
+                    extract = extractMetadata(parser, quality=QUALITY_NORMAL, **args)
                 except (BaseException, Exception) as e:
                     logger.warning(msg % (filename, ex(e)))
                 if extract:
@@ -742,7 +742,7 @@ class VideoCodec:
                     parser.parse_exif = False
                     parser.parse_photoshop_content = False
                     parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: hachoir.
+                    extract = extractMetadata(parser, quality=QUALITY_NORMAL, **args)  # type: hachoir.
                 except (BaseException, Exception) as e:
                     logger.warning(msg % (filename, ex(e)))
                     try:
@@ -1057,4 +1057,4 @@ class DOWNLOAD_CLIENTS():
 # `from sickgear.common import *` is used by templates. A star import copies each name that is listed here,
 # and a copy of a name of a lazy module loads that module. So this is every public name but those
 __all__ = [_name for _name in list(globals()) if not _name.startswith('_')
-           and _name not in ('createParser', 'extractMetadata', 'QUALITY_BEST', 'InputStreamError')]
+           and _name not in ('createParser', 'extractMetadata', 'QUALITY_NORMAL', 'InputStreamError')]

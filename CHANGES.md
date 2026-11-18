@@ -68,6 +68,7 @@
 * Change load only the hachoir parsers that are used (video, image, torrent), to save 5.5 MB of memory
 * Change read the picture size of ts, m2ts, mpg, and vob files from their video data, to determine their quality
 * Change read the picture size of H.266, MPEG-4, and AV1 video in ts and m2ts, and of rm, rmvb, and wtv files
+* Change read an mkv file only up to its track list to determine quality and video codec, instead of every cluster
 
 
 [develop]

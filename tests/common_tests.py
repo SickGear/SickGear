@@ -210,6 +210,41 @@ class QualityTests(unittest.TestCase):
             self.assertEqual([], [cur_obj for cur_obj in gc.get_objects() if isinstance(cur_obj, io.BufferedReader)
                                   and not cur_obj.closed and filename == cur_obj.name])
 
+    def test_file_read_stops_at_first_cluster(self):
+        import tempfile
+
+        def element(ident, payload):
+            # an EBML element: id, size as a number of variable length, data
+            length = next(_n for _n in range(1, 9) if len(payload) < (1 << 7 * _n) - 1)
+            return bytes.fromhex(ident) + (1 << 7 * length | len(payload)).to_bytes(length, 'big') + payload
+
+        # an mkv file with a 1920 x 1080 H.264 track and 20 clusters
+        tracks = element('1654AE6B', element('AE', b''.join([
+            element('D7', bytes([1])), element('83', bytes([1])), element('86', b'V_MPEG4/ISO/AVC'),
+            element('E0', element('B0', (1920).to_bytes(2, 'big')) + element('BA', (1080).to_bytes(2, 'big')))])))
+        cluster = element('1F43B675', element('E7', bytes([0])) + element('A3', bytes([0x81, 0, 0, 0x80]) + bytes(60)))
+        mkv = element('1A45DFA3', element('4282', b'matroska')) + element('18538067', b''.join([
+            element('1549A966', element('2AD7B1', bytes([0x0F, 0x42, 0x40]))), tracks, 20 * cluster]))
+
+        parsers = []
+        org_create = common.createParser
+        common.createParser = lambda *args, **kwargs: parsers.append(org_create(*args, **kwargs)) or parsers[-1]
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                filename = join(temp_dir, 'test.mkv')
+                with open(filename, 'wb') as fh:
+                    fh.write(mkv)
+                self.assertEqual(Quality.FULLHDTV, Quality.file_quality(filename))
+                self.assertEqual(VideoCodec.VC_264, VideoCodec.get_file_video_codec(filename))
+        finally:
+            common.createParser = org_create
+
+        self.assertEqual(2, len(parsers))
+        for cur_parser in parsers:
+            # the track list comes before the clusters, and a read of each cluster is a seek and a read in the file
+            # so only the header, the tracks and the first cluster are read, not the 20 clusters
+            self.assertLess(cur_parser['Segment[0]'].current_length, 8)
+
     def test_reverse_parsing(self):
         self.check_quality_names(common.Quality.SDTV, ['Test Show - S01E02 - SD TV - GROUP'])
         self.check_quality_names(common.Quality.SDDVD, ['Test Show - S01E02 - SD DVD - GROUP'])
