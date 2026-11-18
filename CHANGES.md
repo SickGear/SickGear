@@ -1,4 +1,4 @@
-﻿### 3.36.13 (2026-11-18 19:41:00 UTC)
+﻿### 3.36.13 (2026-11-19 09:59:00 UTC)
 
 * Fix a show update writes every episode to the DB even when no episode data has changed
 * Fix an episode with a metadata file or thumbnail is written to the DB again at its first file check after a load
@@ -6,6 +6,7 @@
 * Fix media file is left open after its quality is read from a file that gives no metadata, e.g. some ts files
 * Fix shutdown and restart can wait without end for the AniDB connection after a failed AniDB command
 * Fix wrong country flag in show search results where a source gives a two letter origin country, e.g. Trakt
+* Fix flag is not found for a three letter country code that is not lower case
 
 
 ### 3.36.12 (2026-11-16 19:27:00 UTC)

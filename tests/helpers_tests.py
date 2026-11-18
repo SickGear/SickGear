@@ -83,22 +83,51 @@ class HelpersTests(unittest.TestCase):
 
 
 class FlagCodeTests(unittest.TestCase):
+    flags_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gui', 'slick', 'images', 'flags'))
+
+    def flag_of(self, name, lang_path=True):
+        """ the name of the flag file that the flag file handler of webserve sends for a requested name """
+        from os.path import basename, splitext
+        from sickgear.webserve import BaseStaticFileHandler
+
+        path = os.path.join(*([self.flags_dir] + ['svg', 'lang'] * lang_path + [f'{name}.png']))
+        return splitext(basename(BaseStaticFileHandler.flag_file_path(path)))[0]
+
     def test_country_code_for_the_language_flag_path(self):
-        # the flag file handler of webserve turns a name under /images/flags/svg/lang/ into a country like this
-        from sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
+        from os.path import isfile
+        from sg_lang_codes import alpha2_to_alpha3
 
-        def flag_of(name):
-            name = lang_to_country.get(name.lower(), name)
-            return alpha3_to_alpha2.get(name, name)
-
-        # a two letter country code that is also a language code gives the flag of another country
-        self.assertEqual('ne', flag_of('kr'))
-        self.assertEqual('ad', flag_of('ca'))
-        # the three letter code of every country gives the flag of that country
+        # a two letter name under /images/flags/svg/lang/ is read as a language first,
+        # so a two letter country code that is also a language code gives the flag of another country
+        self.assertEqual('ne', self.flag_of('kr'))
+        self.assertEqual('ad', self.flag_of('ca'))
+        # the three letter code of every country gives the flag of that country, in lower, upper and mixed case
+        checked = 0
         for cur_alpha2, cur_alpha3 in alpha2_to_alpha3.items():
-            self.assertEqual(cur_alpha2, flag_of(cur_alpha3))
+            if isfile(os.path.join(self.flags_dir, 'svg', f'{cur_alpha2}.svg')):
+                checked += 1
+                for cur_code in (cur_alpha3, cur_alpha3.upper(), cur_alpha3.title()):
+                    self.assertEqual(cur_alpha2, self.flag_of(cur_code), msg=cur_code)
+                    self.assertEqual(cur_alpha2, self.flag_of(cur_code, lang_path=False), msg=cur_code)
+        self.assertGreater(checked, 200)
         self.assertEqual('kor', alpha2_to_alpha3['kr'])
         self.assertEqual('deu', alpha2_to_alpha3['de'])
+
+    def test_flag_file_names(self):
+        # a two letter country code in upper case, on the plain address
+        self.assertEqual('us', self.flag_of('US', lang_path=False))
+        # a flag file with a name in mixed case is still found
+        self.assertEqual('Aragon', self.flag_of('Aragon', lang_path=False))
+        self.assertEqual('gb-sct', self.flag_of('gb-sct', lang_path=False))
+        # a name with no flag file
+        self.assertEqual('unknown', self.flag_of('zzz'))
+        self.assertEqual('unknown', self.flag_of('ZZZ', lang_path=False))
+
+    def test_other_paths_are_not_changed(self):
+        from sickgear.webserve import BaseStaticFileHandler
+
+        path = os.path.join(os.path.dirname(self.flags_dir), 'network', 'KOR.png')
+        self.assertEqual(path, BaseStaticFileHandler.flag_file_path(path))
 
 
 class AniDBLockTests(unittest.TestCase):

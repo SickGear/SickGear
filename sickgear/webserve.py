@@ -259,7 +259,13 @@ class BaseStaticFileHandler(StaticFileHandler):
             del kwargs['exc_info']
         return super(BaseStaticFileHandler, self).write_error(status_code, **kwargs)
 
-    def validate_absolute_path(self, root, absolute_path):
+    @staticmethod
+    def flag_file_path(absolute_path):
+        # type: (AnyStr) -> AnyStr
+        """
+        :param absolute_path: path of a requested file
+        :return: path of the flag image file to send for a path under images/flags, else the path as it came
+        """
         # the flag rewrites below use Windows separators, so match against a '\\' form of the path and
         # use the native form for file checks, else none of them apply where os.sep is '/'
         win_path = absolute_path.replace(os.sep, '\\')
@@ -275,7 +281,11 @@ class BaseStaticFileHandler(StaticFileHandler):
                         '\\images\\flags\\svg\\lang\\', '\\images\\flags\\svg\\'))
                 else:
                     absolute_path = re.sub(r'(\\[^\\]+)\.png$', r'\\svg\1.svg', absolute_path)
-                if (new_lang := alpha3_to_alpha2.get(cur_lang, cur_lang)):
+                # the codes of the tables and the names of the country flag files are lower case
+                new_lang = alpha3_to_alpha2.get(cur_lang.lower(), cur_lang)
+                if 2 == len(new_lang):
+                    new_lang = new_lang.lower()
+                if new_lang:
                     absolute_path = lang_match_regex.sub(f'\\1{new_lang}\\3', absolute_path)
                 if not os.path.isfile(absolute_path.replace('\\', os.sep)) and absolute_path.endswith('.svg'):
                     absolute_path = re.sub(r'svg\\([^\\]+)\.svg', '\\1.png', absolute_path)
@@ -283,7 +293,10 @@ class BaseStaticFileHandler(StaticFileHandler):
                 absolute_path = re.sub(r'\\images\\flags.+\.(?:png|svg)$',
                                        r'\\images\\flags\\svg\\unknown.svg', absolute_path)
             absolute_path = absolute_path.replace('\\', os.sep)
-        return super(BaseStaticFileHandler, self).validate_absolute_path(root, absolute_path)
+        return absolute_path
+
+    def validate_absolute_path(self, root, absolute_path):
+        return super(BaseStaticFileHandler, self).validate_absolute_path(root, self.flag_file_path(absolute_path))
 
     def data_received(self, *args):
         pass
@@ -4443,7 +4456,8 @@ class AddShows(Home):
             # the page asks for a flag by language code, and the flag file handler reads a two letter name as
             # a language first, e.g. `kr` as the language Kanuri, which gives the flag of Niger. It reads a
             # three letter name as a country, so give that for a country
-            return alpha2_to_alpha3.get(f'{country_code}'.lower(), country_code)
+            country_code = f'{country_code}'.lower()
+            return alpha2_to_alpha3.get(country_code, country_code)
 
         def _lang_cc(lang_name):
             cc = ''
