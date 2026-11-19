@@ -7,6 +7,7 @@
 * Fix shutdown and restart can wait without end for the AniDB connection after a failed AniDB command
 * Fix wrong country flag in show search results where a source gives a two letter origin country, e.g. Trakt
 * Fix flag is not found for a three letter country code that is not lower case
+* Fix file date stamping of a never aired episode tries to set year 1 and logs a warning at each show refresh
 
 
 ### 3.36.12 (2026-11-16 19:27:00 UTC)

@@ -5362,7 +5362,9 @@ class TVEpisode(TVEpisodeBase):
         Note: Also called from postProcessor
 
         """
-        has_timestamp = isinstance(self._timestamp, int) and 0 != self._timestamp
+        # a never aired episode can have a timestamp of year 1 that was made from its air date
+        has_timestamp = (isinstance(self._timestamp, int) and 0 != self._timestamp
+                         and 1 != getattr(self._airdate, 'year', None))
         if not has_timestamp and (not isinstance(self._airdate, datetime.date) or 1 == self._airdate.year):
             logger.debug(f'{self._show_obj.tvid_prodid}'
                          f': Did not change modify date of {os.path.basename(self.location)}'

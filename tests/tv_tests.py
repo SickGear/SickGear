@@ -93,6 +93,26 @@ class TVEpisodeTests(test.SickbeardTestDBCase):
         ep_obj.load_from_db(1, 1)
         self.assertEqual(ep_obj.name, 'asdasdasdajkaj')
 
+    def test_airdate_modify_stamp_never_aired(self):
+        ep_obj = TVEpisode(TVShow(1, 1, 'en'), 1, 1)
+        ep_obj.location = __file__
+        stamped = []
+        org_touch_file = sickgear.tv.helpers.touch_file
+        sickgear.tv.helpers.touch_file = lambda name, atime=None, dir_name=None: stamped.append(atime) or True
+        try:
+            # a never aired episode keeps the timestamp of year 1 that was made from its air date
+            ep_obj._airdate = datetime.date.fromordinal(1)
+            ep_obj._timestamp = -62135539200
+            ep_obj.airdate_modify_stamp()
+            self.assertEqual([], stamped)
+
+            ep_obj._airdate = datetime.date(2020, 1, 2)
+            ep_obj._timestamp = 1577923200
+            ep_obj.airdate_modify_stamp()
+            self.assertEqual(1, len(stamped))
+        finally:
+            sickgear.tv.helpers.touch_file = org_touch_file
+
 
 class TVEpisodeLoadTests(test.SickbeardTestDBCase):
     """ an episode that loads from the db is not marked as changed when TV info then gives it the same values """
