@@ -55,6 +55,7 @@ from browser_ua import get_ua
 from api_trakt import TraktAPI
 from _23 import b64encodestring, decode_bytes, scandir
 from sg_helpers import remove_file_perm
+from tvinfo_base.base import ShowContainer
 
 # noinspection PyUnreachableCode
 if False:
@@ -214,6 +215,7 @@ RESULTS_SORTBY = None
 
 TVINFO_DEFAULT = 0
 TVINFO_TIMEOUT = 20
+TVINFO_SHOW_CACHE_LIMIT = 10
 QUALITY_DEFAULT = SD
 WANTED_BEGIN_DEFAULT = 0
 WANTED_LATEST_DEFAULT = 0
@@ -654,6 +656,7 @@ def init_stage_1(console_logging):
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
+        TVINFO_SHOW_CACHE_LIMIT, \
         UPDATE_NOTIFY, UPDATE_AUTO, UPDATE_INTERVAL, NOTIFY_ON_UPDATE,\
         UPDATE_PACKAGES_NOTIFY, UPDATE_PACKAGES_AUTO, UPDATE_PACKAGES_MENU, UPDATE_PACKAGES_INTERVAL
     # Gen Config/Interface
@@ -911,6 +914,8 @@ def init_stage_1(console_logging):
     if TVINFO_DEFAULT and not TVInfoAPI(TVINFO_DEFAULT).config['active']:
         TVINFO_DEFAULT = TVINFO_TVDB
     TVINFO_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
+    TVINFO_SHOW_CACHE_LIMIT = minimax(check_setting_int(CFG, 'General', 'tvinfo_show_cache_limit', 10), 10, 1, 1000)
+    ShowContainer.max_entries = TVINFO_SHOW_CACHE_LIMIT
 
     PAUSE_DEFAULT = bool(check_setting_int(CFG, 'General', 'pause default', 0))
     SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
@@ -1915,6 +1920,7 @@ def _save_config(force=False, **kwargs):
     new_config['General']['results_sortby'] = str(RESULTS_SORTBY)
     new_config['General']['indexer_default'] = int(TVINFO_DEFAULT)
     new_config['General']['indexer_timeout'] = int(TVINFO_TIMEOUT)
+    new_config['General']['tvinfo_show_cache_limit'] = int(TVINFO_SHOW_CACHE_LIMIT)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
     new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
     new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)

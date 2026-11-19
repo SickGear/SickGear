@@ -17,6 +17,7 @@ import os.path
 import shutil
 from datetime import date as org_date, datetime as org_datetime
 from os.path import abspath, basename, dirname, join, splitext
+from unittest import mock
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 
 import requests
@@ -811,6 +812,14 @@ class ShowContainerTests(unittest.TestCase):
             self.assertLessEqual(len(container), container.max_entries)
         # the newest are kept
         self.assertEqual(list(range(41 - container.max_entries, 41)), sorted(container))
+
+    def test_limit_is_set_by_the_config(self):
+        # the app sets the limit for all containers from its config
+        with mock.patch.object(ShowContainer, 'max_entries', 3):
+            container = ShowContainer()
+            for show_id in range(1, 11):
+                container[show_id] = TVInfoShow()
+            self.assertEqual([8, 9, 10], sorted(container))
 
     def test_show_in_use_is_kept(self):
         container = ShowContainer()

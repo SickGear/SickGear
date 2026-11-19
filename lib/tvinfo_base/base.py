@@ -100,6 +100,9 @@ TVInfoShowContainer = {}  # type: Union[ShowContainer, Dict]
 
 
 class ShowContainer(dict):
+    # limit caching to the newest shows, a show with its episodes, cast and images is about 1 MB,
+    # and e.g. a daily update fetches the shows that have a change one after the other; set by the app config
+    max_entries = 10  # type: integer_types
     """Simple dict that holds a series of Show instances
     """
 
@@ -107,9 +110,6 @@ class ShowContainer(dict):
         super(ShowContainer, self).__init__(**kwargs)
         # limit caching of TVInfoShow objects to 15 minutes
         self.max_age = 900  # type: integer_types
-        # limit caching to the newest shows, a show with its episodes, cast and images is about 1 MB,
-        # and e.g. a daily update fetches the shows that have a change one after the other
-        self.max_entries = 10  # type: integer_types
         self.lock = threading.RLock()
 
     def __setitem__(self, k, v):
