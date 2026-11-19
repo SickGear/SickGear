@@ -8,6 +8,7 @@
 * Fix wrong country flag in show search results where a source gives a two letter origin country, e.g. Trakt
 * Fix flag is not found for a three letter country code that is not lower case
 * Fix file date stamping of a never aired episode tries to set year 1 and logs a warning at each show refresh
+* Fix wrong reason in the log when the modify date of a media file cannot be set, e.g. a read-only file
 
 
 ### 3.36.12 (2026-11-16 19:27:00 UTC)

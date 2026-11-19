@@ -5397,7 +5397,8 @@ class TVEpisode(TVEpisodeBase):
 
             result, loglevel = 'Changed', logger.MESSAGE
             if not helpers.touch_file(self.location, aired_epoch):
-                result, loglevel = 'Error changing', logger.WARNING
+                # touch_file logs the warning with the reason
+                result, loglevel = 'Error changing', logger.DEBUG
 
             logger.log(f'{self._show_obj.tvid_prodid}: {result} modify date of {os.path.basename(self.location)} '
                        f'to show air date {"n/a" if not aired_dt else aired_dt.strftime("%b %d,%Y (%H:%M)")}', loglevel)

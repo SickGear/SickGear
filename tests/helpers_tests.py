@@ -1,7 +1,10 @@
+import os.path
+import shutil
+import stat
+import sys
+import tempfile
 import threading
 import unittest
-import sys
-import os.path
 from unittest import mock
 
 sys.path.insert(1, os.path.abspath('..'))
@@ -130,6 +133,30 @@ class FlagCodeTests(unittest.TestCase):
         self.assertEqual(path, BaseStaticFileHandler.flag_file_path(path))
 
 
+class TouchFileTests(unittest.TestCase):
+    """ a file date that cannot be set is logged with the file and the reason """
+
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        self.file = os.path.join(self.tmp_dir, 'Show.s01e01.avi')
+        open(self.file, 'w').close()
+
+    def tearDown(self):
+        os.chmod(self.file, stat.S_IWRITE)
+        shutil.rmtree(self.tmp_dir)
+
+    def test_read_only_file(self):
+        os.chmod(self.file, stat.S_IREAD)
+        with self.assertLogs('sg.helper', 'WARNING') as cur_log:
+            self.assertFalse(helpers.touch_file(self.file, 1163122200))
+        self.assertIn(self.file, cur_log.output[0])
+        self.assertIn('Permission denied', cur_log.output[0])
+
+    def test_writable_file(self):
+        self.assertTrue(helpers.touch_file(self.file, 1163122200))
+        self.assertEqual(1163122200, int(os.path.getmtime(self.file)))
+
+
 class AniDBLockTests(unittest.TestCase):
     """ a command that raises gives the connection lock back, a kept lock blocks the shutdown of the app """
 
@@ -193,6 +220,6 @@ class AniDBLockTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, AniDBLockTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
