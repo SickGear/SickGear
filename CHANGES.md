@@ -59,6 +59,19 @@
 * Update soupsieve 2.10.0 (fc195cd) to 3.0.4 (628ec6b)
 
 
+### 3.36.13 (2026-11-19 09:59:00 UTC)
+
+* Fix a show update writes every episode to the DB even when no episode data has changed
+* Fix an episode with a metadata file or thumbnail is written to the DB again at its first file check after a load
+* Fix daily show update writes the metadata files of every unchanged show again, each day
+* Fix media file is left open after its quality is read from a file that gives no metadata, e.g. some ts files
+* Fix shutdown and restart can wait without end for the AniDB connection after a failed AniDB command
+* Fix wrong country flag in show search results where a source gives a two letter origin country, e.g. Trakt
+* Fix flag is not found for a three letter country code that is not lower case
+* Fix file date stamping of a never aired episode tries to set year 1 and logs a warning at each show refresh
+* Fix wrong reason in the log when the modify date of a media file cannot be set, e.g. a read-only file
+
+
 ### 3.36.12 (2026-11-16 19:27:00 UTC)
 
 * Fix the scene release check at predb, its api moved to api.predb.net, a nuke now rejects a release that srrdb lists

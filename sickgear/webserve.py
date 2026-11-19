@@ -110,7 +110,7 @@ import lib.rarfile.rarfile as rarfile
 
 from _23 import decode_bytes, decode_str, getargspec, \
     map_consume, map_none, quote_plus, unquote_plus, urlparse
-from lib.sg_lang_codes import alpha3_to_alpha2, lang_to_country
+from lib.sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
 from six import binary_type, integer_types, moves, string_types
 from lib.tvinfo_base import TVInfoShow
 
@@ -260,7 +260,13 @@ class BaseStaticFileHandler(StaticFileHandler):
             del kwargs['exc_info']
         return super(BaseStaticFileHandler, self).write_error(status_code, **kwargs)
 
-    def validate_absolute_path(self, root, absolute_path):
+    @staticmethod
+    def flag_file_path(absolute_path):
+        # type: (AnyStr) -> AnyStr
+        """
+        :param absolute_path: path of a requested file
+        :return: path of the flag image file to send for a path under images/flags, else the path as it came
+        """
         # the flag rewrites below use Windows separators, so match against a '\\' form of the path and
         # use the native form for file checks, else none of them apply where os.sep is '/'
         win_path = absolute_path.replace(os.sep, '\\')
@@ -276,7 +282,11 @@ class BaseStaticFileHandler(StaticFileHandler):
                         '\\images\\flags\\svg\\lang\\', '\\images\\flags\\svg\\'))
                 else:
                     absolute_path = re.sub(r'(\\[^\\]+)\.png$', r'\\svg\1.svg', absolute_path)
-                if (new_lang := alpha3_to_alpha2.get(cur_lang, cur_lang)):
+                # the codes of the tables and the names of the country flag files are lower case
+                new_lang = alpha3_to_alpha2.get(cur_lang.lower(), cur_lang)
+                if 2 == len(new_lang):
+                    new_lang = new_lang.lower()
+                if new_lang:
                     absolute_path = lang_match_regex.sub(f'\\1{new_lang}\\3', absolute_path)
                 if not os.path.isfile(absolute_path.replace('\\', os.sep)) and absolute_path.endswith('.svg'):
                     absolute_path = re.sub(r'svg\\([^\\]+)\.svg', '\\1.png', absolute_path)
@@ -284,7 +294,10 @@ class BaseStaticFileHandler(StaticFileHandler):
                 absolute_path = re.sub(r'\\images\\flags.+\.(?:png|svg)$',
                                        r'\\images\\flags\\svg\\unknown.svg', absolute_path)
             absolute_path = absolute_path.replace('\\', os.sep)
-        return super(BaseStaticFileHandler, self).validate_absolute_path(root, absolute_path)
+        return absolute_path
+
+    def validate_absolute_path(self, root, absolute_path):
+        return super(BaseStaticFileHandler, self).validate_absolute_path(root, self.flag_file_path(absolute_path))
 
     def data_received(self, *args):
         pass
@@ -4469,6 +4482,13 @@ class AddShows(Home):
             except (BaseException, Exception):
                 return ''
 
+        def _country_cc(country_code):
+            # the page asks for a flag by language code, and the flag file handler reads a two letter name as
+            # a language first, e.g. `kr` as the language Kanuri, which gives the flag of Niger. It reads a
+            # three letter name as a country, so give that for a country
+            country_code = f'{country_code}'.lower()
+            return alpha2_to_alpha3.get(country_code, country_code)
+
         def _lang_cc(lang_name):
             cc = ''
             if lang_name:
@@ -4498,7 +4518,7 @@ class AddShows(Home):
                        (show.get('genres') or show.get('genre') or '').replace('|', ', '),  # 12
                        show.get('language') or '',  # 13
                        (isinstance(show.get('origin_countries'), list) and show['origin_countries'] and
-                        show['origin_countries'][0]) or _lang_cc(show.get('language')),  # 14
+                        _country_cc(show['origin_countries'][0])) or _lang_cc(show.get('language')),  # 14
                        re.sub(r'([,.!][^,.!]*?)$', '...',
                               re.sub(r'([.!?])(?=\w)', r'\1 ',
                                      helpers.xhtml_escape((show.get('overview') or '')[:250:].strip()))),  # 15

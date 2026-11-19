@@ -412,6 +412,10 @@ class Quality(object):
                             return Quality.UHD4KWEB
                         return (Quality.HDTV, Quality.FULLHDTV)[
                             height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
+                else:
+                    # a file that stays open cannot be moved or deleted on Windows
+                    # noinspection PyProtectedMember
+                    parser.stream._input.close()
         return Quality.UNKNOWN
 
     @staticmethod

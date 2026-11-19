@@ -30,6 +30,8 @@ alpha3_to_alpha2 = {
     # non-standard code on imdb for west germany
     'xwg': 'de',
 }
+# two letter country code to three letter country code
+alpha2_to_alpha3 = {_a2: _a3 for _a3, _a2 in alpha3_to_alpha2.items() if 'xwg' != _a3}
 lang_to_country = {
     "aa": "dj",
     "af": "za",

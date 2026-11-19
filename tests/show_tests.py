@@ -17,12 +17,13 @@
 
 import datetime
 import unittest
+from unittest import mock
 
 import test_lib as test  # must be before import sickgear
 import sickgear
 from sickgear import db
 from sickgear.common import Quality, UNAIRED, SKIPPED, WANTED, WantedQualities, statusStrings
-from sickgear.show_queue import QueueItemAdd
+from sickgear.show_queue import QueueItemAdd, QueueItemRefresh
 from sickgear.tv import TVEpisode, TVShow
 
 # noinspection DuplicatedCode
@@ -456,10 +457,36 @@ class ShowAddTests(test.SickbeardTestDBCase):
                                       statusStrings[expected]))
 
 
+class ShowRefreshTests(unittest.TestCase):
+
+    def test_metadata_is_forced_by_a_user_only(self):
+        org_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem')
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {1: []}
+        try:
+            for cur_force, cur_scheduled, cur_expect in [
+                # the daily update forces the refresh of each show that it does not update
+                (True, True, False),
+                # a refresh that a user forces writes the metadata files again
+                (True, False, True),
+                (False, True, False),
+                (False, False, False),
+            ]:
+                show_obj = mock.Mock(tvid=1, prodid=123, unique_name='Show')
+                QueueItemRefresh(show_obj, force=cur_force, scheduled_update=cur_scheduled).run()
+                show_obj.write_metadata.assert_called_once_with(force=cur_expect)
+                show_obj.refresh_dir.assert_called_once()
+        finally:
+            if None is org_xem:
+                sickgear.scene_exceptions.MEMCACHE.pop('release_map_xem')
+            else:
+                sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = org_xem
+
+
 if '__main__' == __name__:
     print('==================')
     print('STARTING - SHOW TESTS')
     print('==================')
     print('######################################################################')
-    suite = unittest.TestLoader().loadTestsFromTestCase(ShowAddTests)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    for cur_case in (ShowAddTests, ShowRefreshTests):
+        suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
+        unittest.TextTestRunner(verbosity=2).run(suite)

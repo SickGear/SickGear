@@ -1,10 +1,17 @@
-import unittest
+import os
+import shutil
+import stat
 import sys
+import tempfile
+import threading
+import unittest
 from os.path import abspath, dirname, join
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
+import adba
 from sickgear import helpers
 from sickgear.common import ARCHIVED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, \
     DOWNLOADED, SKIPPED, IGNORED, UNAIRED, UNKNOWN, WANTED, Quality
@@ -76,6 +83,141 @@ class HelpersTests(unittest.TestCase):
             self.assertEqual(t['result'], helpers.encrypt(*t['param']))
 
 
+class FlagCodeTests(unittest.TestCase):
+    flags_dir = abspath(join(dirname(__file__), '..', 'gui', 'slick', 'images', 'flags'))
+
+    def flag_of(self, name, lang_path=True):
+        """ the name of the flag file that the flag file handler of webserve sends for a requested name """
+        from os.path import basename, splitext
+        from sickgear.webserve import BaseStaticFileHandler
+
+        path = join(*([self.flags_dir] + ['svg', 'lang'] * lang_path + [f'{name}.png']))
+        return splitext(basename(BaseStaticFileHandler.flag_file_path(path)))[0]
+
+    def test_country_code_for_the_language_flag_path(self):
+        from os.path import isfile
+        from sg_lang_codes import alpha2_to_alpha3
+
+        # a two letter name under /images/flags/svg/lang/ is read as a language first,
+        # so a two letter country code that is also a language code gives the flag of another country
+        self.assertEqual('ne', self.flag_of('kr'))
+        self.assertEqual('ad', self.flag_of('ca'))
+        # the three letter code of every country gives the flag of that country, in lower, upper and mixed case
+        checked = 0
+        for cur_alpha2, cur_alpha3 in alpha2_to_alpha3.items():
+            if isfile(join(self.flags_dir, 'svg', f'{cur_alpha2}.svg')):
+                checked += 1
+                for cur_code in (cur_alpha3, cur_alpha3.upper(), cur_alpha3.title()):
+                    self.assertEqual(cur_alpha2, self.flag_of(cur_code), msg=cur_code)
+                    self.assertEqual(cur_alpha2, self.flag_of(cur_code, lang_path=False), msg=cur_code)
+        self.assertGreater(checked, 200)
+        self.assertEqual('kor', alpha2_to_alpha3['kr'])
+        self.assertEqual('deu', alpha2_to_alpha3['de'])
+
+    def test_flag_file_names(self):
+        # a two letter country code in upper case, on the plain address
+        self.assertEqual('us', self.flag_of('US', lang_path=False))
+        # a flag file with a name in mixed case is still found
+        self.assertEqual('Aragon', self.flag_of('Aragon', lang_path=False))
+        self.assertEqual('gb-sct', self.flag_of('gb-sct', lang_path=False))
+        # a name with no flag file
+        self.assertEqual('unknown', self.flag_of('zzz'))
+        self.assertEqual('unknown', self.flag_of('ZZZ', lang_path=False))
+
+    def test_other_paths_are_not_changed(self):
+        from sickgear.webserve import BaseStaticFileHandler
+
+        path = join(dirname(self.flags_dir), 'network', 'KOR.png')
+        self.assertEqual(path, BaseStaticFileHandler.flag_file_path(path))
+
+
+class TouchFileTests(unittest.TestCase):
+    """ a file date that cannot be set is logged with the file and the reason """
+
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        self.file = join(self.tmp_dir, 'Show.s01e01.avi')
+        open(self.file, 'w').close()
+
+    def tearDown(self):
+        os.chmod(self.file, stat.S_IWRITE)
+        shutil.rmtree(self.tmp_dir)
+
+    def test_read_only_file(self):
+        os.chmod(self.file, stat.S_IREAD)
+        with self.assertLogs('sg.helper', 'WARNING') as cur_log:
+            self.assertFalse(helpers.touch_file(self.file, 1163122200))
+        self.assertIn(self.file, cur_log.output[0])
+        self.assertIn('Permission denied', cur_log.output[0])
+
+    def test_writable_file(self):
+        self.assertTrue(helpers.touch_file(self.file, 1163122200))
+        self.assertEqual(1163122200, int(os.path.getmtime(self.file)))
+
+
+class AniDBLockTests(unittest.TestCase):
+    """ a command that raises gives the connection lock back, a kept lock blocks the shutdown of the app """
+
+    def setUp(self):
+        # no __init__, it opens a network socket
+        self.conn = adba.Connection.__new__(adba.Connection)
+        self.conn.lock = threading.RLock()
+        self.conn.mode = 1
+        self.conn.keepAlive = False
+        self.conn.counter = self.conn.counterAge = 0
+        self.conn.link = mock.Mock(session=None)
+
+    def lock_is_free(self):
+        result = []
+        other_thread = threading.Thread(target=lambda: result.append(self.conn.lock.acquire(timeout=2)))
+        other_thread.start()
+        other_thread.join()
+        return result[0]
+
+    def test_handle_releases_lock_on_error(self):
+        self.conn.link.request.side_effect = OSError('network is down')
+        with self.assertRaises(OSError):
+            self.conn.handle(mock.Mock(command='LOGOUT'), None)
+        self.assertTrue(self.lock_is_free())
+
+    def test_stop_ends_keep_alive_thread(self):
+        threading.Thread.__init__(self.conn, daemon=True)
+        self.conn.keepAlive = True
+        self.conn._keep_alive_stop = threading.Event()
+        self.conn._keep_alive = mock.Mock()
+        self.conn.logout = mock.Mock()
+        self.conn.start()
+        self.conn.stop()
+        self.conn.join(2)
+        self.assertFalse(self.conn.is_alive())
+        self.conn.logout.assert_called_once()
+
+    def test_stop_ends_link_thread(self):
+        self.conn._keep_alive_stop = threading.Event()
+        for cur_logout in (mock.Mock(), mock.Mock(side_effect=OSError('network is down'))):
+            # a logout that does nothing, as with a session that is not logged in, and a logout that fails
+            self.conn.logout = cur_logout
+            self.conn.link = mock.Mock(_quiting=False)
+            try:
+                self.conn.stop()
+            except OSError:
+                pass
+            self.conn.link.stop.assert_called_once()
+
+        # a logout that did stop the link thread
+        self.conn.logout = mock.Mock()
+        self.conn.link = mock.Mock(_quiting=True)
+        self.conn.stop()
+        self.conn.link.stop.assert_not_called()
+
+    def test_authed_releases_lock_on_error(self):
+        self.conn._reAuthenticate = mock.Mock(side_effect=OSError('network is down'))
+        with self.assertRaises(OSError):
+            self.conn.authed(reAuthenticate=True)
+        self.assertTrue(self.lock_is_free())
+
+
 if '__main__' == __name__:
-    suite = unittest.TestLoader().loadTestsFromTestCase(HelpersTests)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests):
+        suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
+        unittest.TextTestRunner(verbosity=2).run(suite)

@@ -194,6 +194,20 @@ class QualityTests(unittest.TestCase):
         for q, l in quality_tests.items():
             self.check_quality_names(q, l)
 
+    def test_file_quality_closes_file(self):
+        import gc
+        import io
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # a transport stream of null packets has a parser and gives no metadata
+            filename = join(temp_dir, 'test.ts')
+            with open(filename, 'wb') as fh:
+                fh.write((bytes([0x47, 0x1F, 0xFF, 0x10]) + bytes([0xFF]) * 184) * 8)
+            self.assertEqual(Quality.UNKNOWN, Quality.file_quality(filename))
+            self.assertEqual([], [cur_obj for cur_obj in gc.get_objects() if isinstance(cur_obj, io.BufferedReader)
+                                  and not cur_obj.closed and filename == cur_obj.name])
+
     def test_reverse_parsing(self):
         self.check_quality_names(common.Quality.SDTV, ['Test Show - S01E02 - SD TV - GROUP'])
         self.check_quality_names(common.Quality.SDDVD, ['Test Show - S01E02 - SD DVD - GROUP'])
