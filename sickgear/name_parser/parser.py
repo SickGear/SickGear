@@ -562,13 +562,14 @@ class NameParser(object):
 
         return number
 
-    def parse(self, name, cache_result=True, release_group=None):
-        # type: (AnyStr, bool, AnyStr) -> ParseResult
+    def parse(self, name, cache_result=True, release_group=None, log_result=True):
+        # type: (AnyStr, bool, AnyStr, bool) -> ParseResult
         """
 
         :param name:
         :param cache_result:
         :param release_group: Name to use if anime and no group, otherwise pick_best_result will fail
+        :param log_result: False for no debug line of the result, e.g. for each media file of a show refresh
         :return:
         """
         name = self._unicodify(name)
@@ -653,7 +654,8 @@ class NameParser(object):
                 and any('anime' in wr for wr in final_result.which_regex) == bool(final_result.show_obj.is_anime):
             name_parser_cache.add(name, final_result)
 
-        logger.debug(f'Parsed {name} into {final_result}')
+        if log_result:
+            logger.debug(f'Parsed {name} into {final_result}')
         return final_result
 
 

@@ -2208,7 +2208,7 @@ class TVShow(TVShowBase):
             try:
                 parse_result = None
                 np = NameParser(False, show_obj=self)
-                parse_result = np.parse(ep_file_name)
+                parse_result = np.parse(ep_file_name, log_result=False)
             except (InvalidNameException, InvalidShowException):
                 pass
 
@@ -2511,7 +2511,7 @@ class TVShow(TVShowBase):
 
         try:
             my_parser = NameParser(show_obj=self)
-            parse_result = my_parser.parse(path)
+            parse_result = my_parser.parse(path, log_result=False)
         except InvalidNameException:
             logger.debug(f'Unable to parse the filename {path} into a valid episode')
             return None

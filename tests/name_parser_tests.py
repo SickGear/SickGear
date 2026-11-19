@@ -3,6 +3,7 @@ import test_lib as test
 import sys
 import unittest
 from os.path import abspath, dirname, join, normpath
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
@@ -950,6 +951,22 @@ class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
                 self.assertEqual(n_ep, case[3])
 
 
+class ParseLogTests(unittest.TestCase):
+    """ a show refresh parses each media file and asks for no debug line of the result """
+
+    def parse_lines(self, name, **kwargs):
+        np = parser.NameParser(testing=True, show_obj=TVShowTest(name='Show Name'))
+        with mock.patch.object(parser.logger, 'debug') as cur_debug:
+            np.parse(name, cache_result=False, **kwargs)
+        return [cur_call.args[0] for cur_call in cur_debug.call_args_list if cur_call.args[0].startswith('Parsed ')]
+
+    def test_result_is_logged(self):
+        self.assertEqual(1, len(self.parse_lines('Show.Name.S01E02.720p.HDTV.x264-GRP')))
+
+    def test_result_is_not_logged(self):
+        self.assertEqual([], self.parse_lines('Show.Name.S01E03.720p.HDTV.x264-GRP', log_result=False))
+
+
 class OrderedDefaultdictTests(unittest.TestCase):
 
     def test_ordereddefaultdict(self):
@@ -999,4 +1016,7 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(DupeNameTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(ParseLogTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
