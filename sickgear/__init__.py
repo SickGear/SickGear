@@ -49,7 +49,6 @@ from .tv import TVidProdid
 from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 from .webserve import History
 
-from adba.aniDBerrors import AniDBError
 # noinspection PyProtectedMember
 from browser_ua import get_ua
 from configobj import ConfigObj
@@ -1771,21 +1770,28 @@ def halt():
             for p in provider_ping_thread_pool:
                 try:
                     provider_ping_thread_pool[p].join(10)
-                    logger.log(f'Thread {provider_ping_thread_pool[p].name} has exit')
+                    # a join that timed out returns with no error, so ask the thread
+                    logger.log(f'Thread {provider_ping_thread_pool[p].name} '
+                               + ('has exit', 'did not exit in 10 seconds')[provider_ping_thread_pool[p].is_alive()])
                 except RuntimeError:
                     logger.log(f'Fail, thread {provider_ping_thread_pool[p].name} did not exit')
                     pass
 
             if ADBA_CONNECTION:
-                try:
-                    ADBA_CONNECTION.logout()
-                except AniDBError:
-                    pass
+                # stop ends the keep alive thread and logs out,
+                # logout waits for a reply of AniDB, a shutdown must not wait for that without end
+                logout_thread = threading.Thread(target=ADBA_CONNECTION.stop, name='ANIDB-LOGOUT', daemon=True)
+                logout_thread.start()
+                logout_thread.join(10)
+                if logout_thread.is_alive():
+                    logger.log('Fail, AniDB logout did not end in 10 seconds')
                 try:
                     ADBA_CONNECTION.join(10)
-                    logger.log(f'Thread {ADBA_CONNECTION.name} has exit')
-                except (BaseException, Exception):
-                    logger.log(f'Fail, thread {ADBA_CONNECTION.name} did not exit')
+                except RuntimeError:
+                    # the keep alive thread was never started
+                    pass
+                logger.log(f'Thread {ADBA_CONNECTION.name} '
+                           + ('has exit', 'did not exit in 10 seconds')[ADBA_CONNECTION.is_alive()])
 
             for thread in enabled_schedulers():  # type: scheduler.Scheduler
                 try:
@@ -1801,7 +1807,7 @@ def halt():
             for thread in enabled_schedulers():  # type: threading.Thread
                 try:
                     thread.join(10)
-                    logger.log(f'Thread {thread.name} has exit')
+                    logger.log(f'Thread {thread.name} ' + ('has exit', 'did not exit in 10 seconds')[thread.is_alive()])
                 except RuntimeError:
                     # this just means it's the current thread, can be ignored
                     logger.log(f'Thread {thread.name} is exiting')

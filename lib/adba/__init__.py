@@ -20,7 +20,7 @@ import os
 import sys
 import threading
 from datetime import timedelta
-from time import sleep, time
+from time import time
 
 from configparser import ConfigParser
 
@@ -65,12 +65,22 @@ class Connection(threading.Thread):
         self._password = user
 
         self._iamALIVE = False
+        # set to end the keep alive thread at once, with no wait for the end of its sleep
+        self._keep_alive_stop = threading.Event()
 
         self.counter = 0
         self.counterAge = 0
 
     def stop(self):
-        self.logout(cutConnection=True)
+        # end the keep alive thread first, or it can log in again after the logout
+        self.keepAlive = False
+        self._keep_alive_stop.set()
+        try:
+            self.logout(cutConnection=True)
+        finally:
+            # logout stops the link thread only when the session was logged in and the logout command did not fail
+            if not self.link._quiting:
+                self.cut()
 
     def cut(self):
         self.link.stop()
@@ -83,8 +93,12 @@ class Connection(threading.Thread):
                 self.handle(response.req, response.req.callback)
 
     def handle(self, command, callback):
+        # `with` gives the lock back when a command raises,
+        # a lock that is kept blocks every later command and the shutdown of the app
+        with self.lock:
+            return self._handle(command, callback)
 
-        self.lock.acquire()
+    def _handle(self, command, callback):
 
         if self.counterAge < (time() - 120):  # the last request was older then 2 min reset delay and counter
             self.counter = 0
@@ -118,26 +132,21 @@ class Connection(threading.Thread):
             try:
                 command.resp
             except:
-                self.lock.release()
                 if self.link.banned:
                     raise AniDBBannedError("User is banned")
                 else:
                     raise AniDBCommandTimeoutError("Command has timed out")
 
             self.handle_response(command.resp)
-            self.lock.release()
             return command.resp
-        else:
-            self.lock.release()
 
     def authed(self, reAuthenticate=False):
-        self.lock.acquire()
-        authed = (self.link.session not in (None, ''))
-        if not authed and (reAuthenticate or self.keepAlive):
-            self._reAuthenticate()
+        with self.lock:
             authed = (self.link.session not in (None, ''))
-        self.lock.release()
-        return authed
+            if not authed and (reAuthenticate or self.keepAlive):
+                self._reAuthenticate()
+                authed = (self.link.session not in (None, ''))
+            return authed
 
     def _reAuthenticate(self):
         if self._username and self._password:
@@ -171,7 +180,7 @@ class Connection(threading.Thread):
     def run(self):
         while self.keepAlive:
             self._keep_alive()
-            sleep(120)
+            self._keep_alive_stop.wait(120)
 
     def auth(self, username, password, nat=None, mtu=None, callback=None):
         """

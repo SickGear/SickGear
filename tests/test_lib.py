@@ -123,6 +123,7 @@ def _fake_specify_ep(self, season, episode, show_sql=None, existing_only=False, 
     pass
 
 
+org_specify_episode = sickgear.tv.TVEpisode.specify_episode
 sickgear.tv.TVEpisode.specify_episode = _fake_specify_ep
 
 

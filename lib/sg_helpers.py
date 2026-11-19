@@ -1311,8 +1311,8 @@ def touch_file(name, atime=None, dir_name=None):
             with open(name, 'a'):
                 os.utime(name, (atime, atime))
             return True
-        except (BaseException, Exception):
-            logger.debug('File air date stamping not available on your OS')
+        except (BaseException, Exception) as e:
+            logger.warning(f'Unable to set the modify date of {name}: {getattr(e, "strerror", None) or e}')
 
     return False
 
