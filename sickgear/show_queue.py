@@ -785,6 +785,12 @@ class ShowQueueItem(generic_queue.QueueItem):
         generic_queue.QueueItem.__init__(self, ShowQueueActions.names[action_id], action_id, uid=uid)
         self.show_obj = show_obj  # type: sickgear.tv.TVShow
         self.scheduled_update = scheduled_update  # type: bool
+        self.started = None  # type: Optional[float]
+
+    def run(self):
+        # a clock that a change of the time of day does not move
+        self.started = time.monotonic()
+        super(ShowQueueItem, self).run()
 
     def is_in_queue(self):
         """
@@ -807,6 +813,14 @@ class ShowQueueItem(generic_queue.QueueItem):
     def finish(self):
         if self.scheduled_update:
             sickgear.show_queue_scheduler.action.count_daily_update(self.action_id)
+        elif self.show_obj and self.started and self.action_id in (
+                ShowQueueActions.REFRESH, ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
+                ShowQueueActions.WEBFORCEUPDATE):
+            # the daily update logs its end once, an update or refresh of one show logs its own end; an update queues
+            # the refresh of its show, so the end of the refresh is the end of an update of a show
+            seconds = int(round(time.monotonic() - self.started))
+            task = ('update', 'refresh')[ShowQueueActions.REFRESH == self.action_id]
+            logger.log(f'Finished {task} of {self.show_obj.unique_name} in {seconds} second{maybe_plural(seconds)}')
         # a show task loads every episode of its show, release the episode objects that are no longer used
         if self.show_obj:
             released = self.show_obj.release_episodes()

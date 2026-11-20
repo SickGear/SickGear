@@ -16,6 +16,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import time
 import unittest
 from unittest import mock
 
@@ -509,6 +510,29 @@ class DailyUpdateEndTests(test.SickbeardTestDBCase):
             self.assertFalse(queue.daily_update_running)
         finally:
             sickgear.update_show_scheduler, show_queue.logger.log = org_scheduler, org_log
+
+    def test_end_of_one_show_task_is_logged(self):
+        from sickgear import show_queue
+        show_obj = mock.Mock(unique_name='Test Show', release_episodes=mock.Mock(return_value=0))
+        org_log = show_queue.logger.log
+        lines = []
+        show_queue.logger.log = lambda msg, *args, **kwargs: lines.append(msg)
+        try:
+            for cur_action, cur_scheduled, cur_line in (
+                    (show_queue.ShowQueueActions.REFRESH, False, 'Finished refresh of Test Show in 3 seconds'),
+                    (show_queue.ShowQueueActions.FORCEUPDATE, False, 'Finished update of Test Show in 3 seconds'),
+                    # an item of the daily update is counted, its end is in the one line of the daily update
+                    (show_queue.ShowQueueActions.REFRESH, True, None),
+                    # other tasks have no line
+                    (show_queue.ShowQueueActions.RENAME, False, None)):
+                lines.clear()
+                item = show_queue.ShowQueueItem(cur_action, show_obj, scheduled_update=cur_scheduled)
+                item.started = time.monotonic() - 3
+                with mock.patch.object(sickgear, 'show_queue_scheduler', create=True):
+                    item.finish()
+                self.assertEqual([cur_line] if cur_line else [], lines, msg=f'{cur_action}')
+        finally:
+            show_queue.logger.log = org_log
 
 
 if '__main__' == __name__:
