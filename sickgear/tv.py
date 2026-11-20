@@ -1369,6 +1369,8 @@ class TVShow(TVShowBase):
         # noinspection PyTypeChecker
         self.release_groups = None  # type: AniGroupList
         self.sxe_ep_obj = {}  # type: Dict
+        # numbers of episodes that a search found are not wanted, and that have no episode object
+        self.unwanted_sxe = {}  # type: Dict[int, Set[int]]
         self.aired_in_season = {}  # type: Dict
         self.aired_in_scene_season = {}  # type: Dict
         self.aired_in_season_update_time = datetime.datetime(2000, 1, 1)  # type: datetime.datetime
@@ -3616,6 +3618,7 @@ class TVShow(TVShowBase):
                 pass
             self._cast_list = None
             self.sxe_ep_obj = {}
+            self.unwanted_sxe = {}
             self.ids[old_tvid]['status'] = MapStatus.NONE
             self.ids[self.tvid]['status'] = MapStatus.SOURCE
             self.ids[self.tvid]['id'] = self.prodid
@@ -3772,6 +3775,10 @@ class TVShow(TVShowBase):
         if not multi_ep:
             try:
                 wq = getattr(self.sxe_ep_obj.get(season, {}).get(episode, {}), 'wanted_quality', None)
+                if None is wq and episode in self.unwanted_sxe.get(season, ()):
+                    logger.debug('None of the conditions were met,'
+                                 ' ignoring found episode')
+                    return False
                 if None is not wq:
                     if quality in wq:
                         cur_status, cur_quality = Quality.split_composite_status(self.sxe_ep_obj[season][episode].status)
