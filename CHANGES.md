@@ -65,6 +65,7 @@
 * Change the XEM refresh check to read its DB table once a day per show, instead of a few times per episode load
 * Change replace the iso639 library with a table of language names and codes, to save 7.7 MB of memory
 * Change release episode objects from memory when a show task ends, e.g. update, refresh, rename, or add show
+* Change load only the hachoir parsers that are used (video, image, torrent), to save 5.5 MB of memory
 
 
 [develop]
