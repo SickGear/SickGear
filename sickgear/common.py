@@ -29,7 +29,7 @@ from functools import reduce
 from six import integer_types, string_types
 from hachoir.parser import createParser
 from hachoir.metadata import extractMetadata
-from hachoir.metadata.metadata_item import QUALITY_BEST
+from hachoir.metadata.metadata_item import QUALITY_NORMAL
 from hachoir.stream import InputStreamError
 
 import sickgear
@@ -88,6 +88,60 @@ multiEpStrings = {NAMING_REPEAT: 'Repeat',
                   NAMING_EXTEND: 'Extend',
                   NAMING_LIMITED_EXTEND: 'Extend (Limited)',
                   NAMING_LIMITED_EXTEND_E_PREFIXED: 'Extend (Limited, E-prefixed)'}
+
+# the metadata of the last file read, a refresh or post processing asks for the codec and the quality of one file
+_last_file_metadata = (None, None)
+
+
+def _file_metadata(filename):
+    """
+    the metadata that hachoir reads from a media file, the file is closed after the read
+
+    :param filename: filename
+    :type filename: AnyStr
+    :return: metadata, or None for a file with no parser or no metadata
+    """
+    global _last_file_metadata
+    try:
+        cur_stat = os.stat(filename)
+        # a file rewritten with the same size within one tick of the clock keeps its size and time, its start differs
+        with open(filename, 'rb') as fh:
+            head = fh.read(4096)
+    except OSError:
+        return None
+    # a file that is replaced or changed has another size, time or start, so it is read again
+    key = (filename, cur_stat.st_size, cur_stat.st_mtime_ns, hash(head))
+    if key == _last_file_metadata[0]:
+        return _last_file_metadata[1]
+
+    parser = extract = None
+    msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
+    try:
+        parser = createParser(filename)
+    except InputStreamError as e:
+        logger.warning(msg % (filename, ex(e)))
+    except (BaseException, Exception) as e:
+        logger.error(msg % (filename, ex(e)))
+        logger.error(traceback.format_exc())
+
+    if parser:
+        try:
+            args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
+            parser.parse_exif = False
+            parser.parse_photoshop_content = False
+            parser.parse_comments = False
+            extract = extractMetadata(parser, quality=QUALITY_NORMAL, **args)
+        except (BaseException, Exception) as e:
+            logger.warning(msg % (filename, ex(e)))
+        # a file that stays open cannot be moved or deleted on Windows
+        try:
+            # noinspection PyProtectedMember
+            parser.stream._input.close()
+        except (BaseException, Exception):
+            pass
+
+    _last_file_metadata = (key, extract)
+    return extract
 
 
 class Quality(object):
@@ -371,43 +425,21 @@ class Quality(object):
         """
         if os.path.isfile(filename):
 
-            parser = height = width = None
-            msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
-            try:
-                parser = createParser(filename)
-            except InputStreamError as e:
-                logger.warning(msg % (filename, ex(e)))
-            except (BaseException, Exception) as e:
-                logger.error(msg % (filename, ex(e)))
-                logger.error(traceback.format_exc())
-
-            if parser:
-                extract = None
+            height = width = None
+            extract = _file_metadata(filename)
+            if extract:
                 try:
-                    args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
-                    parser.parse_exif = False
-                    parser.parse_photoshop_content = False
-                    parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)
-                except (BaseException, Exception) as e:
-                    logger.warning(msg % (filename, ex(e)))
-                if extract:
+                    height = extract.get('height')
+                    width = extract.get('width')
+                except (AttributeError, ValueError):
                     try:
-                        height = extract.get('height')
-                        width = extract.get('width')
+                        for metadata in extract.iterGroups():
+                            if re.search('(?i)video', metadata.header):
+                                height = metadata.get('height')
+                                width = metadata.get('width')
+                                break
                     except (AttributeError, ValueError):
-                        try:
-                            for metadata in extract.iterGroups():
-                                if re.search('(?i)video', metadata.header):
-                                    height = metadata.get('height')
-                                    width = metadata.get('width')
-                                    break
-                        except (AttributeError, ValueError):
-                            pass
-
-                # a file that stays open cannot be moved or deleted on Windows
-                # noinspection PyProtectedMember
-                parser.stream._input.close()
+                        pass
 
             if None is height:
                 # ts, m2ts, mpg, vob, rm, rmvb and wtv files hold the picture size where hachoir does not read it
@@ -711,84 +743,29 @@ class VideoCodec:
         """
         if not os.path.isfile(filename):
             return None
-        else:
 
-            parser, vc = None, None
-            msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
+        extract, vc = _file_metadata(filename), None
+        if not extract:
+            return None
+        try:
+            file_data = extract.exportDictionary()
+            # a file with no video stream, or with no codec name for it, gives None
+            vc = next((v for k, v in file_data.items() if k.startswith('Video')), {}).get('Compression')
+        except (AttributeError, ValueError):
             try:
-                parser = createParser(filename)
-            except InputStreamError as e:
-                logger.warning(msg % (filename, ex(e)))
-                try:
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
-                except (BaseException, Exception):
-                    pass
-                return None
-            except (BaseException, Exception) as e:
-                logger.error(msg % (filename, ex(e)))
-                logger.error(traceback.format_exc())
-                try:
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
-                except (BaseException, Exception):
-                    pass
+                for metadata in extract.iterGroups():
+                    if re.search('(?i)video', metadata.header):
+                        vc = metadata.get('Compression')
+                        break
+            except (AttributeError, ValueError):
                 return None
 
-            if parser:
-                extract = None
-                try:
-                    args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
-                    parser.parse_exif = False
-                    parser.parse_photoshop_content = False
-                    parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: hachoir.
-                except (BaseException, Exception) as e:
-                    logger.warning(msg % (filename, ex(e)))
-                    try:
-                        # noinspection PyProtectedMember
-                        parser.stream._input.close()
-                    except (BaseException, Exception):
-                        pass
-                    return None
-                if extract:
-                    try:
-                        file_data = extract.exportDictionary()
-                        # a file with no video stream, or with no codec name for it, gives None
-                        vc = next((v for k, v in file_data.items() if k.startswith('Video')), {}).get('Compression')
-                    except (AttributeError, ValueError):
-                        try:
-                            for metadata in extract.iterGroups():
-                                if re.search('(?i)video', metadata.header):
-                                    vc = metadata.get('Compression')
-                                    break
-                        except (AttributeError, ValueError):
-                            try:
-                                # noinspection PyProtectedMember
-                                parser.stream._input.close()
-                            except (BaseException, Exception):
-                                pass
-                            return None
-
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
-                    if not vc:
-                        return None
-                    for _current_vc_type, _current_vc in VideoCodec.compiled_vc_ident_regex.items():
-                        if _current_vc.search(f'{vc}'):
-                            return _current_vc_type
-                else:
-                    # a file that stays open cannot be moved or deleted on Windows
-                    try:
-                        # noinspection PyProtectedMember
-                        parser.stream._input.close()
-                    except (BaseException, Exception):
-                        pass
-                    return None
-            else:
-                return None
-
-            return (None, VideoCodec.VC_UNKNOWN)[bool(vc)]
+        if not vc:
+            return None
+        for _current_vc_type, _current_vc in VideoCodec.compiled_vc_ident_regex.items():
+            if _current_vc.search(f'{vc}'):
+                return _current_vc_type
+        return VideoCodec.VC_UNKNOWN
 
 
 class WantedQualities(dict):
@@ -1057,4 +1034,4 @@ class DOWNLOAD_CLIENTS():
 # `from sickgear.common import *` is used by templates. A star import copies each name that is listed here,
 # and a copy of a name of a lazy module loads that module. So this is every public name but those
 __all__ = [_name for _name in list(globals()) if not _name.startswith('_')
-           and _name not in ('createParser', 'extractMetadata', 'QUALITY_BEST', 'InputStreamError')]
+           and _name not in ('createParser', 'extractMetadata', 'QUALITY_NORMAL', 'InputStreamError')]
