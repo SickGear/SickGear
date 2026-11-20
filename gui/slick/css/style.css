@@ -5628,6 +5628,163 @@ fancybox.css Overrides
 	height: 16px;
 	line-height: 16px;
 }
+.ep-link-holder{
+	display: block;
+	line-height: 1.5;
+}
+/* person page of browse shows: the detail of a card opens in the card */
+#browse-list div.browse-image{
+	position:relative
+}
+#browse-list .card-toggle{
+	position:absolute;
+	left:0;
+	bottom:0;
+	width:100%;
+	margin:0;
+	border:0;
+	min-height:32px;
+	padding:4px 6px;
+	cursor:pointer;
+	font-family:inherit;
+	line-height:inherit;
+	background:rgba(0, 0, 0, 0.65);
+	color:#fff;
+	font-size:12px;
+	text-align:center;
+	text-decoration:none
+}
+@media (pointer:coarse){
+	#browse-list .card-toggle{
+		min-height:44px
+	}
+}
+#browse-list .card-toggle:hover,
+#browse-list .card-toggle:focus{
+	background:rgba(0, 0, 0, 0.85);
+	color:#fff
+}
+#browse-list .card-toggle[aria-expanded="true"]{
+	background:rgba(0, 0, 0, 0.85);
+	box-shadow:inset 0 2px 0 var(--green-text)
+}
+/* a ring of shadow, as the UI removes every outline (html *) */
+#browse-list .card-toggle:focus-visible{
+	box-shadow:inset 0 0 0 2px #fff
+}
+#browse-list .card-toggle[aria-expanded="true"]:focus-visible{
+	box-shadow:inset 0 2px 0 var(--green-text), inset 0 0 0 2px #fff
+}
+#browse-list .card-toggle i{
+	top:1px;
+	padding-left:6px;
+	font-size:10px
+}
+#browse-list .card-detail{
+	display:none
+}
+#browse-list .skip-to-cards{
+	position:absolute;
+	left:-9999px;
+	top:8px;
+	z-index:3000;
+	padding:8px 14px;
+	background:#000;
+	color:#fff;
+	border-radius:4px
+}
+#browse-list .skip-to-cards:focus{
+	left:8px;
+	box-shadow:inset 0 0 0 2px #fff
+}
+#browse-list .show-card.expanded{
+	/* two columns of the grid (2 x 188 + 12 gutter, less border and margin), less on a narrow page */
+	width:382px;
+	max-width:calc(100% - 6px);
+	z-index:2
+}
+#browse-list .show-card.expanded .show-card-inner{
+	width:186px;
+	background-color:inherit
+}
+#browse-list .show-card.expanded.open-left{
+	width:188px
+}
+#browse-list .show-card.expanded.open-left .card-detail{
+	/* over the card to the left, so the open card keeps its place in the last column */
+	left:auto;
+	right:100%;
+	width:193px;
+	top:-1px;
+	bottom:-1px;
+	border:1px solid #111;
+	border-radius:6px 0 0 6px;
+	box-shadow:-4px 4px 12px rgba(0, 0, 0, 0.4)
+}
+#browse-list .show-card.expanded .show-toggle-hide{
+	/* stays at the poster, as on a card that is not open */
+	right:calc(100% - 186px)
+}
+#browse-list .show-card.expanded .card-detail{
+	display:block;
+	position:absolute;
+	top:0;
+	bottom:0;
+	left:187px;
+	right:0;
+	overflow-y:auto;
+	/* the open card is two grid columns, so the text gets its room from a narrow padding, not a wider pane */
+	padding:6px 6px 6px 8px;
+	border-left:1px solid #111;
+	background-color:inherit
+}
+#browse-list .card-detail p{
+	/* the padding of a line of a card face is not for the detail */
+	padding-left:0;
+	font-size:12px;
+	white-space:normal;
+	max-height:none !important;
+	overflow:visible !important
+}
+/* the pane is read, not glanced at as the popup was, so its text is not smaller than 12px */
+#browse-list .card-detail .credit,
+#browse-list .card-detail .role,
+#browse-list .card-detail .ep-link,
+#browse-list .card-detail [style*="font-size:0.9em"]{
+	font-size:12px !important
+}
+#browse-list .card-detail .role{
+	display:block;
+	clear:both;
+	margin-top:4px;
+	font-weight:bold;
+	color:var(--green-text)
+}
+#browse-list .card-detail .ep-link-holder{
+	/* one episode to a line, a margin at the side made the pane scroll sideways */
+	display:block;
+	white-space:nowrap
+}
+/* 6. a taller target for an episode link */
+#browse-list .card-detail .ep-link{
+	display:inline-block;
+	padding:3px 0
+}
+/* 1. the title is under the poster beside the detail, the detail does not repeat it */
+#browse-list .card-detail .browse-title{
+	display:none
+}
+/* 2. the genre is a quiet line under the roles, not the boldest text of the detail */
+#browse-list .card-detail .genre{
+	font-weight:normal !important;
+	font-size:12px
+}
+#browse-list .card-detail .genre em{
+	font-style:normal
+}
+#browse-list .card-detail .role-eps{
+	white-space:nowrap
+}
 
 .profile-menu {
 	display:inline;

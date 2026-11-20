@@ -1,7 +1,7 @@
 #import sickgear
 #import re
 #from sickgear import WEB_ROOT, THEME_NAME
-#from sickgear.helpers import anon_url, try_float
+#from sickgear.helpers import anon_url, try_float, maybe_plural
 #from tvinfo_base import RoleTypes
 #from _23 import quote
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
@@ -36,6 +36,7 @@ var saved_showsort_view = "$saved_showsort_view";
 var browse_cat = "$browse_cat";
 var all_tag_classes = $all_classes;
 var persistent_tag_button_states = $persistent_tag_button_states;
+const ep_base_link = "$ep_base_link";
 var sg_root = "$sg_root";
 var browse_type = "$browse_type";
 //-->
@@ -49,7 +50,54 @@ var browse_person = #if $p_ref#true#else#false#end if#;
 <script charset="utf-8">
 <!--
 #raw
-	var addQTip = (function(){
+	var fetchShowInfo = (function(showcardEl, holderEl){
+		// a one time fetch of the show info that a source does not give with its list
+		if ('1' !== showcardEl.attr('data-ajax'))
+			return;
+		var premiereEl = holderEl.find('.premiere'),
+			genreEl = holderEl.find('.genre'),
+			overviewEl = holderEl.find('.overview'),
+			oldestEl = $('#oldest'),
+			newestEl = $('#newest');
+
+		// Set initial text
+		overviewEl.html('Fetching overview...');
+		$.getJSON($.SickGear.Root + '/add-shows/tvi-get-showinfo', {
+			tvid_prodid: showcardEl.attr('data-id'),
+			oldest_dt: $('#oldest').attr('data-oldest-dt'),
+			newest_dt: $('#newest').attr('data-newest-dt'),
+			},
+			function (data) {
+				if (undefined !== data.overview) {
+					showcardEl.attr('data-ajax', '0'); // mark one time fetch as completed
+					if (undefined !== data.oldest) {
+						oldestEl.attr('data-oldest-dt', data.oldest_dt)
+						oldestEl.html(data.oldest);
+					} else if (undefined !== data.newest) {
+						newestEl.attr('data-newest-dt', data.newest_dt)
+						newestEl.html(data.newest);
+					}
+					var premiere = '';
+					if (data.str_premiered.length) {
+						showcardEl.attr('data-premiered', data.ord_premiered);
+						premiere = "<span style='font-weight:bold;font-size:0.9em;color:#888'><em>First air" + (data.started_past ? 'ed' : 's') + ": " + data.str_premiered + "</em></span>";
+					}
+					if (data.genres) {
+						genreEl.css('display', 'block');
+						genreEl.find('em').html(data.genres);
+					}
+					overviewEl.html(data.overview);
+					if (data.network.length) {
+						premiere += "<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>On: " + data.network + "</em></span>";
+					}
+					premiereEl.html(premiere);
+				} else {
+					overviewEl.html('Failed to fetch TVmaze overview' );
+				}
+			}
+		)
+	}),
+	addQTip = (function(){
 		$(this).css('cursor', 'help');
 		$(this).qtip({
 			show: {solo:true},
@@ -60,57 +108,49 @@ var browse_person = #if $p_ref#true#else#false#end if#;
 					// Grab the tooltip element from the API
 					var tooltip = api.elements.tooltip
 					tooltip.bind('tooltipshow', function(event, api) {
-						var showcardEl = $(api.target).closest('div.show-card')
-						if ('1' === showcardEl.attr('data-ajax')) { // do a one time fetch
-							var qtipEl = $(this).find('.qtip-content'),
-								premiereEl = qtipEl.find('.premiere'),
-								genreEl = qtipEl.find('.genre'),
-								overviewEl = qtipEl.find('.overview'),
-								oldestEl = $('#oldest'),
-								newestEl = $('#newest');
-
-							// Set initial text
-							overviewEl.html('Fetching overview...');
-							$.getJSON($.SickGear.Root + '/add-shows/tvi-get-showinfo', {
-								tvid_prodid: showcardEl.attr('data-id'),
-								oldest_dt: $('#oldest').attr('data-oldest-dt'),
-								newest_dt: $('#newest').attr('data-newest-dt'),
-								},
-								function (data) {
-									if (undefined !== data.overview) {
-										showcardEl.attr('data-ajax', '0'); // mark one time fetch as completed
-										if (undefined !== data.oldest) {
-											oldestEl.attr('data-oldest-dt', data.oldest_dt)
-											oldestEl.html(data.oldest);
-										} else if (undefined !== data.newest) {
-											newestEl.attr('data-newest-dt', data.newest_dt)
-											newestEl.html(data.newest);
-										}
-										var premiere = '';
-										if (data.str_premiered.length) {
-											showcardEl.attr('data-premiered', data.ord_premiered);
-											premiere = "<span style='font-weight:bold;font-size:0.9em;color:#888'><em>First air" + (data.started_past ? 'ed' : 's') + ": " + data.str_premiered + "</em></span>";
-										}
-										if (data.genres) {
-											genreEl.css('display', 'block');
-											genreEl.find('em').html(data.genres);
-										}
-										overviewEl.html(data.overview);
-										if (data.network.length) {
-											premiere += "<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#888'><em>On: " + data.network + "</em></span>";
-										}
-										premiereEl.html(premiere);
-									} else {
-										overviewEl.html('Failed to fetch TVmaze overview' );
-									}
-								}
-							)
-						}
+						fetchShowInfo($(api.target).closest('div.show-card'), $(this).find('.qtip-content'));
 					})
 				}
 			},
 			position: {viewport:$(window), my:'left center', adjust:{y: -10,x: 2 }},
 			style: {tip: {corner:true, method:'polygon'}, classes:'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'}
+		});
+	}),
+	toggleCard = (function(cardEl, open){
+		// a person page opens the detail of a card in the card, one card at a time, in place of a popup
+		$('.show-card.expanded').not(cardEl).removeClass('expanded').find('.card-toggle').attr('aria-expanded', 'false')
+			.find('i').removeClass('glyphicon-chevron-left').addClass('glyphicon-chevron-right');
+		$('.show-card.open-left').not(cardEl).removeClass('open-left');
+		// a card in the last column has no column to its right, it opens its detail over the card to its left,
+		// so that no card moves
+		cardEl.toggleClass('open-left', open && isLastColumn(cardEl));
+		cardEl.toggleClass('expanded', open);
+		cardEl.find('.card-toggle').attr('aria-expanded', open ? 'true' : 'false');
+		if (open)
+			fetchShowInfo(cardEl, cardEl.find('.card-detail'));
+		if (open) {
+			$.iso.one('layoutComplete', function(){
+				var top = cardEl.offset().top, view = $(window).scrollTop();
+				if (top < view || top + cardEl.outerHeight() > view + $(window).height())
+					$('html, body').animate({scrollTop: top - 60}, 200);
+				try {llUpdate()} catch (error) {}
+			});
+		}
+		$.iso.isotope('layout');
+		// at once for the open card, and again when isotope has moved the other cards to their new places
+		setChevrons();
+		setTimeout(setChevrons, 600);
+	}),
+	isLastColumn = (function(cardEl){
+		// the place that isotope gives the card, not where a move to it has got to
+		return parseFloat(cardEl[0].style.left) + 2 * cardEl.outerWidth(true) > $('#container').width();
+	}),
+	setChevrons = (function(){
+		// a chevron points to the side the detail opens to, and back to the poster when it is open
+		$('.card-toggle').each(function(){
+			var cardEl = $(this).closest('div.show-card'), open = cardEl.hasClass('expanded'),
+				left = open ? !cardEl.hasClass('open-left') : isLastColumn(cardEl);
+			$(this).find('i').toggleClass('glyphicon-chevron-left', left).toggleClass('glyphicon-chevron-right', !left);
 		});
 	}),
 	llUpdate = (function(){
@@ -345,7 +385,92 @@ $(function() {
 		}
 	});
 
-	$('.service, a.browse-image').each(addQTip);
+	if (browse_person) {
+		$('.service').each(addQTip);
+		$('a.browse-image').each(function(){
+			// the popup text of the poster is the detail that opens in the card
+			var detailEl = $(this).closest('div.show-card').find('.card-detail').html($(this).attr('title'));
+			// the poster has the link to the source, not the detail
+			detailEl.children('span').filter(function(){return /^Click for more/.test($(this).text())}).remove();
+			// the roles, why the card is opened, come first
+			detailEl.prepend(detailEl.find('.role').first().closest('p'));
+			// a qtip shows the hint at once, a title of the browser shows it after a delay
+			$(this).attr('title', 'Click for more at <span class="boldest">' + browse_type + '</span>').qtip({
+				show: {solo:true},
+				position: {viewport:$(window), my:'left center', adjust:{y: -10,x: 2 }},
+				style: {tip: {corner:true, method:'polygon'}, classes:'qtip-rounded qtip-bootstrap qtip-shadow ui-tooltip-sb'}
+			});
+		});
+		// a new width of the page can move a card into or out of the last column
+		// the first stop of Tab skips the menu and the filters, to the button of the first card;
+		// the menu has tabindex from 4 up, which comes before any tabindex 0, so this link has 1
+		$('<a class="skip-to-cards" href="#container" tabindex="1">Skip to shows</a>').prependTo('body').on('click', function(e){
+			e.preventDefault();
+			$('.show-card:visible .card-toggle').first().trigger('focus');
+		});
+		// arrow keys move the focus to the button of the card beside, above or below
+		$('#container').on('keydown', '.card-toggle', function(e){
+			var step = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]}[e.key];
+			if (!step || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey)
+				return;
+			var place = function(el){return {x: parseFloat(el.style.left), y: parseFloat(el.style.top), el: el}},
+				cur = place($(this).closest('div.show-card')[0]),
+				cards = $('.show-card:visible').filter(function(){return !!$(this).find('.card-toggle').length})
+					.map(function(){return place(this)}).get(), best = null;
+			cards.sort(function(a, b){return a.y - b.y || a.x - b.x});
+			if (step[0]) {
+				// left and right go through the cards in reading order
+				best = cards[cards.findIndex(function(c){return c.el === cur.el}) + step[0]];
+			} else {
+				// up and down go to the nearest card of the same column
+				cards.forEach(function(c){
+					if (Math.abs(c.x - cur.x) < 100 && 0 < (c.y - cur.y) * step[1]
+							&& (!best || Math.abs(c.y - cur.y) < Math.abs(best.y - cur.y)))
+						best = c;
+				});
+			}
+			if (best) {
+				e.preventDefault();
+				$(best.el).find('.card-toggle').trigger('focus');
+			}
+		});
+		// a click on a card, away from its links, buttons and detail, gives its button the focus, so the arrow keys work
+		var lastCardButton = null;
+		$('#container').on('focusin', '.card-toggle', function(){lastCardButton = this});
+		$('#container').on('click', '.show-card', function(e){
+			if (!$(e.target).closest('a, button, input, select, textarea, .card-detail').length)
+				$(this).find('.card-toggle')[0].focus({preventScroll: true});
+		});
+		// with no focus on the page, left and right pick up at the card button used last, or the first card;
+		// up and down stay with the browser to scroll the page
+		$(document).on('keydown', function(e){
+			if (('ArrowLeft' === e.key || 'ArrowRight' === e.key) && !(e.altKey || e.ctrlKey || e.metaKey || e.shiftKey)
+					&& (!document.activeElement || document.body === document.activeElement)) {
+				var btn = lastCardButton && $(lastCardButton).is(':visible') ? lastCardButton
+					: $('.show-card:visible .card-toggle')[0];
+				if (btn) {
+					e.preventDefault();
+					btn.focus();
+				}
+			}
+		});
+		$.iso.on('layoutComplete', setChevrons);
+		$(window).on('resize', function(){setTimeout(setChevrons, 500)});
+		setChevrons();
+		$('#container').on('click', '.card-toggle', function(){
+			var cardEl = $(this).closest('div.show-card');
+			toggleCard(cardEl, !cardEl.hasClass('expanded'));
+		});
+		$(document).on('keydown', function(e){
+			var cardEl = $('.show-card.expanded');
+			if ('Escape' === e.key && cardEl.length && !$(e.target).is('input, select, textarea')) {
+				toggleCard(cardEl, !1);
+				cardEl.find('.card-toggle').trigger('focus');
+			}
+		});
+	} else {
+		$('.service, a.browse-image').each(addQTip);
+	}
 
 	if (config.homeSearchFocus) {
 		$('#search_show_name').focus();
@@ -631,7 +756,7 @@ $(function() {
         #set $cur_src = int(re.search(r'(\d+):', $p_ref).group(1))
         #set $title_pre = $browse_title.split($sickgear.TVInfoAPI($cur_src).name)[0]
         #set $title_post = $browse_title.split($sickgear.TVInfoAPI($cur_src).name)[1]
-$title_pre<a href="$p_link" target="_blank"><span class="tvsrc" style="background:url($sbRoot/images/$sickgear.TVInfoAPI($cur_src).config['icon']) no-repeat 0 0">&nbsp;$browse_type</span></a> $title_post#slurp#
+$title_pre<a title="Credits at IMDb" href="$p_link" target="_blank"><span class="tvsrc" style="background:url($sbRoot/images/$sickgear.TVInfoAPI($cur_src).config['icon']) no-repeat 0 0">&nbsp;$browse_type</span></a> $title_post#slurp#
     #else
 $browse_title
     #end if
@@ -682,9 +807,27 @@ $browse_title
             #set $data_rating = $try_float($this_show['rating'])
         #end if
         #if 'favorite_actors' not in $mode
-	<div class="show-card $this_show.get('tag_classes', '') ${exclude_show}${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-id="$show_id" data-ajax="$this_show.get('overview_ajax', '0')" data-nroles="#echo len($this_show.get('p_chars', []))#" #if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['ord_premiered']"#if $use_returning# data-returning="$this_show['ord_returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
+            #set $credit_count = 0
+            #for $char in $this_show.get('p_chars') or []
+                #if $char[3]
+                    #set $credit_count += $char[3]
+                #end if
+            #end for
+	<div class="show-card $this_show.get('tag_classes', '') ${exclude_show}${hide}${known}inlibrary" data-name="#echo re.sub(r'([\'\"])', r'', $this_show['title'])#" data-id="$show_id" data-ajax="$this_show.get('overview_ajax', '0')" data-nroles="#echo len($this_show.get('p_chars', []))#" data-ncredit="#echo $credit_count#" #if $use_ratings# data-rating="$data_rating"#end if##if $use_votes# data-votes="$this_show['votes']"#end if# data-premiered="$this_show['ord_premiered']"#if $use_returning# data-returning="$this_show['ord_returning']"#end if# data-order="$this_show['order']"#if $use_network# data-network="$this_show['network']"#end if#>
 		<div class="show-card-inner">
 			<div class="browse-image">
+#if $p_ref
+            #set $n_roles = len($this_show.get('p_chars') or [])
+            #if $n_roles
+                #set $card_label = '%s role%s' % ($n_roles, $maybe_plural($n_roles))
+                #if $credit_count and 'tvmaze' not in $browse_type.lower()
+                    #set $card_label += ', %s ep%s' % ($credit_count, $maybe_plural($credit_count))
+                #end if
+            #else
+                #set $card_label = 'Details'
+            #end if
+				<button type="button" class="card-toggle" aria-expanded="false" aria-controls="card-detail-$poster_id" aria-label="$card_label of $title_html, show detail">$card_label<i class="glyphicon glyphicon-chevron-right" aria-hidden="true"></i></button>
+#end if
 				<a class="browse-image" href="<%= anon_url(this_show['url_src_db']) %>" target="_blank"
 					title="<span class='browse-title'>$re.sub(r'(?m)\s+\((?:19|20)\d\d\)\s*$', '', $title_html)</span>
 
@@ -701,16 +844,43 @@ $browse_title
 					</p>
             #end if
             #if $this_show.get('p_chars')
-					<p style='overflow-y:auto;max-height:152px'>
+					<p style='overflow-y:auto;max-height:152px'>#slurp#
+                #if 250 <= $credit_count and 'tvmaze' not in $browse_type.lower()
+						<span class='credit'>The episode list here stops at 250, <a href='<%= anon_url(this_show['url_src_db']) %>' onclick='window.open(this.href, &quot;_blank&quot;); return false;'>all at $browse_type</a>.</span>
+                #end if
                 #for $char in $this_show['p_chars']
                     #if 'IMDb' == $browse_type#
-                        #set $cast_type = '(' + str($char[3]) + ' eps)'
+                        #set $cast_type = ('', '(%s eps)' % $char[3])[bool($char[3])]
                     #elif $RoleTypes.ActorMain != $char[1]
                         #set $cast_type =  '(' + str($char[2]) + '/' + str($char[3]) + ' eps)'
                     #else
                         #set $cast_type =  ''
                     #end if
-						<span style='display:block;clear:both;font-weight:bold;font-size:0.9em;color:#393'>as $char[0] $cast_type</span>
+						<span class='role'>$char[0]#if $cast_type# <span class='role-eps'>$cast_type</span>#end if#</span>
+                    #if $sg_var('USE_IMDB_INFO')
+                        #for $ep_data in $this_show.get('ep_list', {}).get(char[0]) or []:
+                            #set $season, $episode = $ep_data.get('season'), $ep_data.get('episode')
+                            #if $season and $episode
+                                #set $sxxeyy = 's%02de%02d' % ($season, $episode)
+                            #elif $season and not $episode
+                                #set $sxxeyy = 's%02de_?' % ($season)
+                            #elif not $season and $episode
+                                #set $sxxeyy = 's_?e%02d' % ($episode)
+                            #else
+                                #set $sxxeyy = 's_?e_? (tbd)'
+                            #end if
+                            #set $title = "title='title: %s'" % ($ep_data.get('title') or "unknown")
+                            #set $ep_date = ("", " (%s)" % $ep_data.get('releaseDate'))[bool($ep_data.get('releaseDate'))]
+						<span class='ep-link-holder' $title>#slurp#
+                            #if $ep_data.get('ep_id')
+                            #set $ep_base = $ep_base_link.replace('{ep_id}', $ep_data.get('ep_id'))
+							<a class='ep-link' href='#echo $anon_url($ep_base)#' onclick='window.open(this.href, &quot;_blank&quot;); return false;'>$sxxeyy$ep_date</a>
+                            #else
+							$sxxeyy $ep_date
+                            #end if
+						</span>
+                        #end for
+                    #end if
                 #end for
 					</p>
             #end if
@@ -729,6 +899,9 @@ $browse_title
             #end if
 				</a>
 			</div>
+#if $p_ref
+			<div class="card-detail" id="card-detail-$poster_id" role="region" aria-label="Detail of $title_html"></div>
+#end if
 
 			<div class="show-title">
 				#echo ((re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', $this_show['title']), $this_show['title'])[$sg_var('SORT_ARTICLE')], '<span>&nbsp;</span>')['' == $this_show['title']]#

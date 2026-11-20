@@ -3,6 +3,7 @@
 	--link-hover:#09a2ff;
 	--text:#000;
 	--deselect-text:#eee;
+	--green-text:#393;
 }
 /* =======================================================================
 inc_top.tmpl
@@ -386,6 +387,15 @@ home_browseShows.tmpl
 #browse-list .show-card{
 	background-color:#dfdacf;
 	border:1px solid #111
+}
+
+#browse-list .card-detail .role{
+	color:#256325
+}
+
+#browse-list .card-detail [style*="color:#888"],
+#browse-list .card-detail .genre{
+	color:#5a5a5a !important
 }
 
 .browse-image{

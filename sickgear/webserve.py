@@ -5031,7 +5031,7 @@ class AddShows(Home):
                 items, end_cursor, total, list_info = t.get_watchlist(kwargs['acc_id'], **kwargs)
             elif 'person' == api_method:
                 items = []
-                p_item = t.get_person_tvshow_filmography(get_ep_list=True, **kwargs)  # type: TVInfoPerson
+                p_item = t.get_person_tvshow_filmography(get_ep_list=sickgear.USE_IMDB_INFO, **kwargs)  # type: TVInfoPerson
                 if p_item:
                     p_ref = f'{TVINFO_IMDB}:{p_item.id}'
                     dup = {}  # type: Dict[int, TVInfoShow]
@@ -5084,6 +5084,7 @@ class AddShows(Home):
         oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
         use_networks = False
         all_classes = set()
+        ch_ep_dict = {}
         for cur_show_info in items:  # type: TVInfoShow
             if cur_show_info.id in dedupe or not cur_show_info.seriesname:
                 continue
@@ -5130,7 +5131,7 @@ class AddShows(Home):
                     ids=cur_show_info.ids.__dict__,
                     images=images,
                     network=network_name,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     rating=0 < (cur_show_info.rating or 0) and
                            ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
                     title=(cur_show_info.seriesname or '').strip(),
@@ -5143,7 +5144,24 @@ class AddShows(Home):
                 ))
                 if p_ref:
                     p_chars = self._make_char_person_list(cur_show_info)
+                    if p_chars:
+                        ch_ep_dict[f'{cur_show_info.id}'] = {
+                            ch.name: ch.episode_list for r_t in cur_show_info.cast or []
+                            for ch in cur_show_info.cast[r_t] if ch.name}
+
+                        # convert release_date as per user settings var "date_presets"
+                        for show_id, ep_list in ch_ep_dict[f'{cur_show_info.id}'].items():
+                            for episode in ep_list:
+                                if rd := episode.get('releaseDate'):
+                                    try:
+                                        episode['releaseDate'] = SGDatetime.sbfdate(
+                                            datetime(rd['year'], rd['month'], rd['day']))
+                                    except (BaseException, Exception):
+                                        episode['releaseDate'] = ''
+
                     filtered[-1].update(dict(
+                        ep_base_link="https://www.imdb.com/title/{ep_id}",
+                        ep_list=ch_ep_dict.get(f'{cur_show_info.id}', {}),
                         p_name=p_item.name,
                         p_ref=p_ref,
                         p_chars=p_chars,
@@ -5814,7 +5832,7 @@ class AddShows(Home):
                             ).lower(),
                     ids=cur_show_info.ids.__dict__,
                     images=images,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     title=cur_show_info.seriesname,
                     language=language,
                     language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
@@ -6045,7 +6063,7 @@ class AddShows(Home):
                     ids=cur_show_info.ids.__dict__,
                     images=images,
                     network=network_name,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     rating=0 < (cur_show_info.rating or 0) and
                            ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
                     title=(cur_show_info.seriesname or '').strip(),
@@ -6475,7 +6493,7 @@ class AddShows(Home):
                             ).lower(),
                     ids=ids,
                     images=images,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     overview_ajax=(0, 1)[overview_ajax],
                     title=cur_show_info.seriesname,
                     language=language,
@@ -6539,9 +6557,13 @@ class AddShows(Home):
 
     @private_call
     @staticmethod
-    def clean_overview(info=None):
-        # type (AnyStr, TVInfoShow) -> AnyStr
+    def clean_overview(info=None, limit=250):
+        # type (AnyStr, TVInfoShow, Optional[int]) -> AnyStr
         text = info if isinstance(info, str) else info.overview
+        if text and None is limit:
+            # the detail of a person card has room for all of it
+            result = helpers.xhtml_escape(re.sub(r'[\r\n]+', ' ', text)).strip('*').strip()
+            return re.sub(r'([!?.])(?=\w)', r'\1 ', result)
         if text:
             result = helpers.xhtml_escape(re.sub(r'[\r\n]+', ' ', text[:250:])).strip('*').strip()
             result = re.sub(r'([!?.])(?=\w)', r'\1 ', result)
@@ -6959,6 +6981,7 @@ class AddShows(Home):
         t.browse_type = browse_type
         t.browse_title = browse_title if ('person' != kwargs.get('mode') or not shows) \
             else f'{shows[0].get("p_name", "")} (Person) on {browse_type}'
+        t.ep_base_link = (shows and shows[0].get("ep_base_link", "")) or ''
         t.p_ref = (0 < len(shows) and shows[0].get('p_ref')) or None
         t.p_link = (0 < len(shows) and shows[0].get('p_link')) or None
         t.saved_showfilter = sickgear.BROWSELIST_MRU.get(browse_type, {}).get('showfilter', '')

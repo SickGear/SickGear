@@ -74,6 +74,9 @@
 * Change keep fetched TV info of the newest 10 shows in memory instead of every show fetched in 15 minutes
 * Add option "Keep TV info in memory of" a number of shows fetched last, to Config/General/Misc, default 10
 * Change free the page data of a web page when it is made, instead of at a later full garbage collection
+* Change person cards of browse shows to show roles, episode counts and episode links at IMDb in the card, not a popup
+* Change fetch the episode list of the roles of a person only when Use IMDb info is on, at Config/General/Interface
+* Change add the title Credits at IMDb to the link of a person at IMDb on browse shows
 
 
 [develop]
