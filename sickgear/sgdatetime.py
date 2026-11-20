@@ -19,11 +19,13 @@ import functools
 import locale
 import re
 import sys
+import time
 
 from dateutil import tz
 from six import integer_types, string_types
 
 import sickgear
+from sg_helpers import maybe_plural
 
 # noinspection PyUnreachableCode
 if False:
@@ -99,6 +101,35 @@ is_win = 'win32' == sys.platform
 
 # helper decorator class
 # noinspection PyPep8Naming
+class Stopwatch(object):
+    """
+    the time of a task, on a clock that a change of the time of day does not move (daylight saving, a clock set by
+    a time server), so a task that runs over such a change is not an hour long or less than nothing
+    """
+
+    def __init__(self):
+        self.start = time.monotonic()
+
+    @property
+    def seconds(self):
+        # type: (...) -> float
+        return time.monotonic() - self.start
+
+    def text(self):
+        # type: (...) -> str
+        """
+        :return: the time for a log line as a person would say it, e.g. "3 seconds", "20 minutes", "1h 9 mins", "2h"
+        """
+        seconds = int(round(self.seconds))
+        if 60 > seconds:
+            return f'{seconds} second{maybe_plural(seconds)}'
+        minutes = int(round(seconds / 60.0))
+        if 60 > minutes:
+            return f'{minutes} minute{maybe_plural(minutes)}'
+        hours, minutes = divmod(minutes, 60)
+        return f'{hours}h' + ('', f' {minutes} min{maybe_plural(minutes)}')[0 < minutes]
+
+
 class static_or_instance(object):
     def __init__(self, func):
         self.func = func

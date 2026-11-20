@@ -37,7 +37,7 @@ from . import common, db, failed_history, failedProcessor, helpers, history, log
 from .common import SNATCHED_ANY
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-from .sgdatetime import SGDatetime
+from .sgdatetime import SGDatetime, Stopwatch
 from sg_helpers import long_path, scantree
 
 # noinspection PyUnreachableCode
@@ -1046,6 +1046,7 @@ class ProcessTVShow(object):
                                  (cur_video_file_path, parent))
                 continue
 
+            watch = Stopwatch()
             try:
                 processor = postProcessor.PostProcessor(
                     cur_video_file_path, nzb_name, process_method, force_replace,
@@ -1064,7 +1065,7 @@ class ProcessTVShow(object):
                 self._buffer(processor.log.strip('\n'))
 
             if file_success:
-                self._log_helper(f'Successfully processed {cur_video_file}', logger.MESSAGE)
+                self._log_helper(f'Successfully processed {cur_video_file} in {watch.text()}', logger.MESSAGE)
             elif self.any_vid_processed:
                 self._log_helper(f'Warning fail for {cur_video_file_path}{process_fail_message}', logger.WARNING)
             else:
