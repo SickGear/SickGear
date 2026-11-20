@@ -11,17 +11,18 @@ import logging
 import os
 import re
 
-from bs4_parser import BS4Parser
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from dateutil.parser import parser
+from six import integer_types, PY3, string_types
 
+from bs4_parser import BS4Parser
 from .tvdb_exceptions import TvdbError, TvdbTokenFailure, TvdbPersonNotFound
 from exceptions_helper import ex
-from lib.dateutil.parser import parser
 # noinspection PyProtectedMember
-from lib.exceptions_helper import ConnectionSkipException
-from lib.tvinfo_base import (
+from exceptions_helper import ConnectionSkipException
+from tvinfo_base import (
     CastList, CrewList, PersonGenders, RoleTypes,
     TVInfoBase, TVInfoCharacter, TVInfoEpisode, TVInfoIDs, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoNetwork,
     TVInfoPerson, TVInfoSeason, TVInfoSeasonTypes, TVInfoShow, TVInfoSocialIDs,
@@ -29,8 +30,6 @@ from lib.tvinfo_base import (
     TVINFO_MID_SEASON_FINALE, TVINFO_SEASON_FINALE, TVINFO_SERIES_FINALE, TVINFO_TIKTOK, TVINFO_TMDB, TVINFO_TVDB,
     TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_X, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE, TVINFO_CAST_LIMIT)
 from sg_helpers import clean_data, clean_str, enforce_type, get_url, try_date, try_int
-
-from six import integer_types, PY3, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union

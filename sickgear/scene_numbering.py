@@ -22,9 +22,8 @@
 import traceback
 from sqlite3 import Row
 
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, logger
 from .helpers import try_int
 from .sgdatetime import SGDatetime

@@ -16,9 +16,9 @@
 
 import os
 
-from . import generic, xbmc_12plus
 import sg_helpers
 import sickgear
+from . import generic, xbmc_12plus
 
 # noinspection PyUnreachableCode
 if False:

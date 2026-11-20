@@ -1,19 +1,18 @@
 import copy
 import datetime
-import diskcache
 import itertools
 import logging
 import threading
 import shutil
 import time
 from collections import deque
-from exceptions_helper import ex
-
-from six import integer_types, iteritems, iterkeys, string_types, text_type
 from typing import Callable
 
+import diskcache
+from six import integer_types, iteritems, iterkeys, string_types, text_type
 
-from lib.tvinfo_base.exceptions import *
+from exceptions_helper import ex
+from tvinfo_base.exceptions import *
 from sg_helpers import calc_age, make_path
 
 # noinspection PyUnreachableCode

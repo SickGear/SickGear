@@ -1,6 +1,8 @@
 import os
+import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import threading
@@ -12,6 +14,7 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import adba
+
 from sickgear import helpers
 from sickgear.common import ARCHIVED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, \
     DOWNLOADED, SKIPPED, IGNORED, UNAIRED, UNKNOWN, WANTED, Quality
@@ -217,7 +220,58 @@ class AniDBLockTests(unittest.TestCase):
         self.assertTrue(self.lock_is_free())
 
 
+class LibImportTests(unittest.TestCase):
+    # a module that is imported as both `lib.x` and `x` is two modules, each with its own classes and state,
+    # e.g. `except x.SomeError` does not handle a raised `lib.x.SomeError`.
+    # the rule is one name for each bundled module: `x`, never `lib.x`
+
+    def test_lib_modules_are_loaded_once(self):
+        from sickgear import webapi, webserve
+        self.assertTrue(webapi and webserve)
+        self.assertEqual([], sorted(_name for _name in list(sys.modules) if _name.startswith('lib.')))
+
+    def test_no_import_has_a_lib_prefix(self):
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        is_lib_import = re.compile(r"""^\s*#?\s*(from\s+lib[.\s]|import\s+lib\b)|__import__\(f?['"]lib\.""", re.M)
+        try:
+            # the files of the repo only, else a local file that is not in the repo fails the test
+            names = subprocess.run(['git', 'ls-files', '-z', '--', '*.py', '*.tmpl'], cwd=base,
+                                   capture_output=True, check=True).stdout.decode('utf-8').split('\0')
+        except (OSError, subprocess.CalledProcessError):
+            names = []
+            for cur_dir, dir_names, file_names in os.walk(base):
+                dir_names[:] = [_d for _d in dir_names if not _d.startswith('.') and '__pycache__' != _d]
+                names += [os.path.relpath(os.path.join(cur_dir, _n), base) for _n in file_names
+                          if _n.endswith(('.py', '.tmpl'))]
+        found = []
+        for cur_name in filter(None, names):
+            cur_file = os.path.join(base, cur_name)
+            if os.path.isfile(cur_file):
+                with open(cur_file, encoding='utf-8', errors='replace') as fh:
+                    if is_lib_import.search(fh.read()):
+                        found.append(os.path.normpath(cur_name))
+        self.assertEqual([], sorted(found))
+
+
+class LazyImportTests(unittest.TestCase):
+    @unittest.skipIf((3, 15) > sys.version_info[:2], 'lazy imports need Python 3.15 or newer')
+    def test_start_does_not_load_optional_packages(self):
+        # a name in a `__lazy_modules__` list must be the module name of its import statement, or it has no effect.
+        # A new process, because other tests in this one can have used these modules
+        root = abspath(join(dirname(__file__), '..'))
+        code = ('import sys; sys.path.insert(1, %r); sys.path.insert(1, %r); '
+                'import sickgear; from sickgear import anime, helpers, processTV, scene_exceptions, subtitles, tv, '
+                'webapi, webserve; '
+                # templates use this star import
+                "exec('from sickgear.common import *', {}); "
+                "print(sorted({_m.replace('lib.', '').split('.')[0] for _m in sys.modules} & {'hachoir', 'apprise', "
+                "'subliminal', 'guessit', 'enzyme', 'rarfile', 'cryptography', 'adba'}))"
+                ) % (root, join(root, 'lib'))
+        result = subprocess.run([sys.executable, '-W', 'ignore', '-c', code], capture_output=True, text=True)
+        self.assertEqual('[]', result.stdout.strip(), msg=result.stderr[-2000:])
+
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, LibImportTests, LazyImportTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

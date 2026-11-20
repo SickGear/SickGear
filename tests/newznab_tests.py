@@ -15,12 +15,12 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 from lxml_etree import etree
-from lib.dateutil import parser
+from dateutil import parser
+
+import sickgear
 from sickgear.indexers.indexer_config import *
 from sickgear.network_timezones import SG_TIMEZONE
 from sickgear.providers import newznab
-
-import sickgear
 
 sickgear.SYS_ENCODING = 'UTF-8'
 

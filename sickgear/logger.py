@@ -23,7 +23,6 @@ import sys
 import threading
 import time
 import zipfile
-
 from logging.handlers import TimedRotatingFileHandler
 
 import sickgear
@@ -37,7 +36,7 @@ if False:
 
 try:
     # noinspection PyUnresolvedReferences
-    from lib.send2trash import send2trash
+    from send2trash import send2trash
 except ImportError:
     pass
 

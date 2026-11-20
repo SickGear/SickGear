@@ -17,11 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+from requests.exceptions import RequestException
+
+import sickgear
 from .generic import GenericClient
 from .. import logger
-import sickgear
-from lib.requests.exceptions import RequestException
-
 from _23 import b64encodestring
 
 

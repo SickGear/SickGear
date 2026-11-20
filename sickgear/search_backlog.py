@@ -17,6 +17,8 @@
 import datetime
 from math import ceil
 
+from six import moves
+
 import sickgear
 from . import db, logger, scheduler, search_queue, ui
 from .helpers import find_show_by_id
@@ -25,8 +27,6 @@ from .scheduler import Job
 from .search import wanted_episodes
 from .sgdatetime import SGDatetime
 from .tv import TVidProdid, TVEpisode, TVShow
-
-from six import moves
 
 # noinspection PyUnreachableCode
 if False:

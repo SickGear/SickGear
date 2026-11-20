@@ -14,30 +14,41 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles
+__lazy_modules__ = ['subliminal']
+
 import random
 import weakref
-from collections import Counter, OrderedDict
-from functools import reduce
-from itertools import chain
-from weakref import ReferenceType
-
 import datetime
 import glob
 import inspect
 import os.path
 import re
-import requests
 import stat
 import threading
 import traceback
+from collections import Counter, OrderedDict
+from functools import reduce
+from itertools import chain
+from weakref import ReferenceType
 
+import imdbpie
+import requests
+import subliminal
 from imdbpie import ImdbAPIError
 from lxml_etree import etree
+from dateutil import tz
+from dateutil.parser import parser as du_parser
+from six import integer_types, moves, string_types
+try:
+    from thefuzz import fuzz
+except ImportError as e:
+    from fuzzywuzzy import fuzz
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
 from .anime import AniGroupList
@@ -52,26 +63,16 @@ from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVI
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime
 from .tv_base import TVEpisodeBase, TVShowBase
-
-from lib import imdbpie, subliminal
-from lib.dateutil import tz
-from lib.dateutil.parser import parser as du_parser
-try:
-    from lib.thefuzz import fuzz
-except ImportError as e:
-    from lib.fuzzywuzzy import fuzz
-from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
+from tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
-
-from six import integer_types, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Text, Tuple, Union
     from sqlite3 import Row
-    from lib.tvinfo_base import CastList, TVInfoCharacter, TVInfoPerson, \
+    from tvinfo_base import CastList, TVInfoCharacter, TVInfoPerson, \
         TVInfoEpisode, TVInfoShow
 
 coreid_warnings = False

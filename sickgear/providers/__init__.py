@@ -17,10 +17,10 @@
 import importlib
 import sys
 
+import sickgear
 from . import generic, newznab
 from .newznab import NewznabConstants
 from .. import logger
-import sickgear
 
 # noinspection PyUnreachableCode
 if False:

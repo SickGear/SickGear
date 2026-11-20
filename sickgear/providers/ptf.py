@@ -15,11 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import OrderedDict
-
 import re
 import time
 import traceback
+from collections import OrderedDict
 
 from . import generic
 from .. import logger

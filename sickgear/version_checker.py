@@ -23,19 +23,18 @@ import sys
 import tarfile
 import time
 import traceback
-from . import gh_api as github
-
-from exceptions_helper import ex
-
-import sickgear
-from . import logger, notifiers, ui
-from .scheduler import (Scheduler, Job)
-from .piper import check_pip_outdated
-from sg_helpers import cmdline_runner, get_url, tar_check_sanity
 
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 from six import string_types
+
+import sickgear
+from . import gh_api as github
+from exceptions_helper import ex
+from . import logger, notifiers, ui
+from .scheduler import (Scheduler, Job)
+from .piper import check_pip_outdated
+from sg_helpers import cmdline_runner, get_url, tar_check_sanity
 
 # noinspection PyUnreachableCode
 if False:

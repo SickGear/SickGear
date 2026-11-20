@@ -19,7 +19,6 @@ import itertools
 import time
 
 from exceptions_helper import AuthException, ex, MultipleShowObjectsException
-
 from . import db, helpers, logger, show_name_helpers
 from .classes import SearchResult
 from .common import Quality

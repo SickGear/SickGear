@@ -1,15 +1,17 @@
 import datetime
 import logging
 import re
+
+from dateutil.parser import parser
+
 from .exceptions import TraktException, TraktAuthException, TraktMethodNotExisting, TraktPersonNotFound
 from exceptions_helper import ConnectionSkipException, ex
 from .trakt import TraktAPI
-from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
-from lib.tvinfo_base import PersonGenders, TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
+from tvinfo_base.exceptions import BaseTVinfoShownotfound
+from tvinfo_base import PersonGenders, TVInfoBase, TVINFO_TRAKT, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_IMDB, \
     TVINFO_SLUG, TVInfoPerson, TVINFO_X, TVINFO_FACEBOOK, TVINFO_WIKIPEDIA, TVINFO_INSTAGRAM, TVInfoCharacter, \
     TVInfoShow, TVInfoIDs, TVInfoSocialIDs, TVINFO_TRAKT_SLUG, TVInfoEpisode, TVInfoSeason, RoleTypes
 from sg_helpers import clean_data, enforce_type, try_int
-from lib.dateutil.parser import parser
 
 # noinspection PyUnreachableCode
 if False:

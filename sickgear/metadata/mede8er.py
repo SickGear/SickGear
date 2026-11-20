@@ -15,14 +15,15 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import datetime
 
-from . import mediabrowser
-from .. import logger
+from lxml_etree import etree
+
 import sg_helpers
-from lib.tvinfo_base.exceptions import *
 import sickgear
 import exceptions_helper
+from . import mediabrowser
+from .. import logger
+from tvinfo_base.exceptions import *
 from exceptions_helper import ex
-from lxml_etree import etree
 
 # noinspection PyUnreachableCode
 if False:

@@ -20,10 +20,9 @@ import re
 import threading
 import traceback
 
+import sickgear
 # noinspection PyPep8Naming
 from exceptions_helper import ex
-
-import sickgear
 from . import common, db, failed_history, generic_queue, helpers, \
     history, logger, network_timezones, properFinder, search, ui
 from .classes import Proper, SimpleNamespace

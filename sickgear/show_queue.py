@@ -18,13 +18,13 @@ import datetime
 import os
 import traceback
 
-from lib.dateutil.parser import parser
-from lib.tvinfo_base.exceptions import *
+from dateutil.parser import parser
+from six import integer_types
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from tvinfo_base.exceptions import *
+from exceptions_helper import ex
 from . import logger, ui, db, generic_queue, name_cache
 from .anime import AniGroupList
 from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
@@ -35,14 +35,12 @@ from .name_parser.parser import NameParser
 from .tv import TVidProdid, TVShow, TVSWITCH_DUPLICATE_SHOW, TVSWITCH_EP_DELETED, TVSWITCH_ID_CONFLICT, \
     TVSWITCH_NO_NEW_ID, TVSWITCH_NORMAL, TVSWITCH_NOT_FOUND_ERROR, TVSWITCH_SAME_ID, TVSWITCH_SOURCE_NOT_FOUND_ERROR, \
     TVSWITCH_VERIFY_ERROR
-
-from six import integer_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
-    from lib.tvinfo_base import TVInfoShow
+    from tvinfo_base import TVInfoShow
     from .tv import TVEpisode
 
 # Define special priority of tv source switch tasks, higher than anything else except newly added shows

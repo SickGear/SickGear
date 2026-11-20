@@ -17,26 +17,24 @@ import logging
 import os
 import random
 import re
-import requests
-import requests.exceptions
 import tempfile
 import time
 import warnings
+from collections import OrderedDict
+
+import requests
+import requests.exceptions
+from cachecontrol import CacheControl, caches
+from dateutil.parser import parse
+from six import integer_types, PY2, string_types
 
 from bs4_parser import BS4Parser
-from collections import OrderedDict
 from sg_helpers import clean_data, get_url, try_int
-
-from lib.cachecontrol import CacheControl, caches
-from lib.dateutil.parser import parse
-from lib.exceptions_helper import ConnectionSkipException
-from lib.tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, RoleTypes, \
+from exceptions_helper import ConnectionSkipException
+from tvinfo_base import CastList, TVInfoCharacter, CrewList, TVInfoPerson, RoleTypes, \
     TVINFO_TVDB, TVINFO_TVDB_SLUG, TVInfoBase, TVInfoIDs, TVInfoNetwork, TVInfoShow
-
 from .tvdb_exceptions import TvdbError, TvdbShownotfound, TvdbTokenexpired
 from .tvdb_ui import BaseUI, ConsoleUI
-
-from six import integer_types, PY2, string_types
 
 # noinspection PyUnreachableCode
 if False:

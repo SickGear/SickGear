@@ -7,7 +7,9 @@ import unittest
 import test_lib as test
 import os.path
 import datetime
-from lib.dateutil import tz
+
+from dateutil import tz
+
 import sickgear
 from sickgear import network_timezones, helpers
 

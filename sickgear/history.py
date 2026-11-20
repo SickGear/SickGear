@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from . import db
 import datetime
 
+import sickgear
+from . import db
 from . import helpers, logger
 from .common import DOWNLOAD_CLIENTS, FAILED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, SUBTITLED, Quality
 from .name_parser.parser import NameParser
-import sickgear
 
 # noinspection PyUnreachableCode
 if False:

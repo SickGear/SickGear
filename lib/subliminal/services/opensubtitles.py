@@ -24,7 +24,7 @@ from ..videos import Episode, Movie
 import gzip
 import logging
 import os.path
-import lib.xmlrpclib_to as xmlrpclib
+import xmlrpclib_to as xmlrpclib
 
 
 logger = logging.getLogger("subliminal")

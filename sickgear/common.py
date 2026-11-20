@@ -13,25 +13,28 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from functools import reduce
+
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.metadata', 'hachoir.metadata.metadata_item', 'hachoir.parser', 'hachoir.stream']
+
 import operator
 import os.path
 import platform
 import re
 import traceback
 import uuid
-
-import sickgear
+from functools import reduce
 
 from six import integer_types, string_types
+from hachoir.parser import createParser
+from hachoir.metadata import extractMetadata
+from hachoir.metadata.metadata_item import QUALITY_BEST
+from hachoir.stream import InputStreamError
 
+import sickgear
 from exceptions_helper import ex
 from sickgear import logger
-
-from lib.hachoir.parser import createParser
-from lib.hachoir.metadata import extractMetadata
-from lib.hachoir.metadata.metadata_item import QUALITY_BEST
-from lib.hachoir.stream import InputStreamError
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
@@ -734,7 +737,7 @@ class VideoCodec:
                     parser.parse_exif = False
                     parser.parse_photoshop_content = False
                     parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: lib.hachoir.
+                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)  # type: hachoir.
                 except (BaseException, Exception) as e:
                     logger.warning(msg % (filename, ex(e)))
                     try:
@@ -1037,3 +1040,9 @@ class DOWNLOAD_CLIENTS():
     REVERSE_IDS = {v: k for k,v in IDS.items()}
 
     TRUSTED_CLIENT_IDS = [SABNZBD]
+
+
+# `from sickgear.common import *` is used by templates. A star import copies each name that is listed here,
+# and a copy of a name of a lazy module loads that module. So this is every public name but those
+__all__ = [_name for _name in list(globals()) if not _name.startswith('_')
+           and _name not in ('createParser', 'extractMetadata', 'QUALITY_BEST', 'InputStreamError')]

@@ -1,12 +1,10 @@
 import unittest
-
 import sys
 from os.path import abspath, dirname, join
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 from requests.models import PreparedRequest, Response
-
 from cfscrape import CloudflareScraper
 
 

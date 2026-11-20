@@ -6,7 +6,6 @@ warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certi
 
 import test_lib as test
 
-from datetime import date as org_date, datetime as org_datetime
 import datetime
 import gc
 import hashlib
@@ -16,20 +15,22 @@ import sys
 import unittest
 import os.path
 import shutil
+from datetime import date as org_date, datetime as org_datetime
 from os.path import abspath, basename, dirname, join, splitext
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+
+import requests
 
 import sickgear
 from sickgear.indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TRAKT, TVINFO_IMDB, \
     TVINFO_TVDB_SLUG, TVINFO_TRAKT_SLUG
-from lib.tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
+from tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
     TVInfoSocialIDs as TVInfoSocialIDs_lib, TVInfoCharacter as TVInfoCharacter_lib, TVInfoShow as TVInfoShow_lib, \
     TVInfoIDs as TVInfoIDs_lib, CastList as CastList_lib, CrewList as CrewList_lib, \
     TVInfoEpisode as TVInfoEpisode_lib, TVInfoSeason as TVInfoSeason_lib, \
     TVInfoNetwork as TVInfoNetwork_lib
 from tvinfo_base import TVInfoPerson, TVInfoImage, TVInfoSocialIDs, TVInfoCharacter, TVInfoShow, TVInfoIDs, CastList, \
     CrewList, RoleTypes, TVInfoEpisode, TVInfoSeason, TVInfoNetwork
-import requests
 
 # noinspection PyUnreachableCode
 if False:

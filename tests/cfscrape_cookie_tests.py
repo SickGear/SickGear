@@ -8,7 +8,6 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import requests
 from requests.models import Response
-
 from cfscrape import CloudflareScraper
 
 FS_URL = 'http://flaresolverr.test:8191'

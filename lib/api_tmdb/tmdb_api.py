@@ -8,12 +8,13 @@ __api_version__ = '1.0.0'
 import datetime
 import logging
 import re
-import requests
 
-from lib import tmdbsimple
-from lib.dateutil.parser import parser
-from lib.exceptions_helper import ConnectionSkipException, ex
-from lib.tvinfo_base import CastList, PersonGenders, RoleTypes, \
+import requests
+import tmdbsimple
+from dateutil.parser import parser
+
+from exceptions_helper import ConnectionSkipException, ex
+from tvinfo_base import CastList, PersonGenders, RoleTypes, \
     TVInfoBase, TVInfoIDs, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoNetwork, TVInfoSocialIDs, \
     TVInfoCharacter, TVInfoPerson, TVInfoShow, TVInfoEpisode, TVInfoSeason, \
     TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, \

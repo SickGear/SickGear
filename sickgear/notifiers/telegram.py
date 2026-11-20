@@ -18,11 +18,10 @@
 import os
 import re
 
+import sickgear
 from ..common import USER_AGENT
 from .generic import Notifier
-
 from exceptions_helper import ex
-import sickgear
 from sickgear.image_cache import ImageCache
 from sg_helpers import get_url
 

@@ -48,6 +48,10 @@
 * Change the add show options template to separate files for the folder, filter and fansub group options, instead of parts chosen by a variable
 * Change the tests to run from any folder, e.g. one at a time in an IDE
 * Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
+* Fix bundled modules loaded twice under two names, e.g. a TV info source did not handle a skipped connection
+* Change load hachoir and the growl, subtitle, rar, and AniDB libraries at first use on Python 3.15+, not at every start
+* Change group imports in PEP 8 order: Python standard library, then bundled libraries, then SickGear code
+* Change templates to import only the names they use from sickgear.common, instead of every name
 
 
 [develop]

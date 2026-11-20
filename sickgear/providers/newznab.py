@@ -14,13 +14,16 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
+import re
+import time
 # from collections import OrderedDict
 from io import BytesIO
 from math import ceil
 
-import datetime
-import re
-import time
+from dateutil import parser
+from lxml_etree import etree
+from six import string_types
 
 import sickgear
 from . import generic
@@ -35,13 +38,8 @@ from ..search import get_aired_in_season, get_wanted_qualities
 from ..show_name_helpers import get_show_names
 from ..scene_exceptions import ReleaseMap
 from ..tv import TVEpisode, TVShow
-
-from lib.dateutil import parser
-from lib.sg_helpers import md5_for_text, try_int
+from sg_helpers import md5_for_text, try_int
 from exceptions_helper import AuthException, ex, MultipleShowObjectsException
-from lxml_etree import etree
-
-from six import string_types
 from _23 import urlencode
 
 # noinspection PyUnreachableCode

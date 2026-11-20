@@ -14,6 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.metadata', 'hachoir.metadata.metadata_item', 'hachoir.parser', 'hachoir.stream']
+
 import datetime
 import glob
 import os.path
@@ -21,9 +25,9 @@ import re
 import zlib
 
 import exceptions_helper
-from exceptions_helper import ex
 import sickgear
 import sg_helpers
+from exceptions_helper import ex
 from . import db, logger
 from .metadata.generic import GenericMetadata
 from .sgdatetime import SGDatetime
@@ -36,10 +40,10 @@ if False:
     from six import integer_types
     from .metadata.generic import ShowInfosDict
 
-from lib.hachoir.parser import createParser, guessParser
-from lib.hachoir.metadata import extractMetadata
-from lib.hachoir.metadata.metadata_item import QUALITY_BEST
-from lib.hachoir.stream import StringInputStream
+from hachoir.parser import createParser, guessParser
+from hachoir.metadata import extractMetadata
+from hachoir.metadata.metadata_item import QUALITY_BEST
+from hachoir.stream import StringInputStream
 
 cache_img_base = {'tvmaze': TVINFO_TVMAZE, 'themoviedb': TVINFO_TMDB, 'thetvdb': TVINFO_TVDB, 'imdb': TVINFO_IMDB}
 cache_img_src = {TVINFO_TMDB: 'tmdb', TVINFO_TVDB: 'tvdb', TVINFO_TVMAZE: 'tvmaze', TVINFO_IMDB: 'imdb'}

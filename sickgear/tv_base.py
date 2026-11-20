@@ -16,13 +16,13 @@
 
 import datetime
 
+from six import string_types
+
 import sickgear
 from . import logger
 from ._legacy_classes import LegacyTVShow, LegacyTVEpisode
 from .common import UNKNOWN
 from .name_cache import build_name_cache
-
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

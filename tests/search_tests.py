@@ -9,9 +9,8 @@ from os.path import abspath, dirname, join
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
-from sickgear import properFinder, search
-
 import sickgear
+from sickgear import properFinder, search
 import test_lib as test
 
 sickgear.SYS_ENCODING = 'UTF-8'

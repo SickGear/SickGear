@@ -15,18 +15,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
+import socket
+import sys
+import time
+import traceback
+from os import path, sep
+# noinspection PyUnresolvedReferences,PyProtectedMember
+from ssl import _create_unverified_context
 try:
     import json as json
 except (BaseException, Exception):
     import simplejson as json
-from os import path, sep
-import datetime
-import socket
-# noinspection PyUnresolvedReferences,PyProtectedMember
-from ssl import _create_unverified_context
-import sys
-import time
-import traceback
 
 # these are Kodi specific libs, so block the error reports in pycharm
 # noinspection PyUnresolvedReferences

@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from base64 import b64decode
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.parser', 'hachoir.stream']
+
 import codecs
 import datetime
 import itertools
@@ -26,10 +29,18 @@ import time
 import threading
 import socket
 import zlib
+from base64 import b64decode
 
-from exceptions_helper import SickGearException, AuthException, ex
+import requests
+import requests.cookies
+from cfscrape import CloudflareScraper
+from hachoir.parser import guessParser
+from hachoir.stream import FileInputStream
+from lxml_etree import etree
+from six import string_types
 
 import sickgear
+from exceptions_helper import SickGearException, AuthException, ex
 from .. import classes, db, helpers, logger, tvcache
 from ..classes import NZBSearchResult, TorrentSearchResult, SearchResult
 from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
@@ -39,16 +50,7 @@ from ..scene_exceptions import ReleaseMap
 from ..show_name_helpers import get_show_names_all_possible
 from ..sgdatetime import SGDatetime
 from ..tv import TVEpisode, TVShow
-
-from cfscrape import CloudflareScraper
-from lib.hachoir.parser import guessParser
-from lib.hachoir.stream import FileInputStream
-from lxml_etree import etree
-import requests
-import requests.cookies
-
 from _23 import decode_bytes, make_btih, quote, quote_plus, urlparse
-from six import string_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode

@@ -15,10 +15,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-# import cgi
 
-from .generic import Notifier
 import sickgear
+# import cgi
+from .generic import Notifier
 
 
 def diagnose():

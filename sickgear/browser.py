@@ -18,7 +18,6 @@ import os
 import string
 
 from exceptions_helper import ex
-
 from . import logger
 from sg_helpers import scantree
 

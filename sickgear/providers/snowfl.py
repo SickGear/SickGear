@@ -24,7 +24,6 @@ from . import generic
 from .. import logger
 from ..helpers import try_int
 from json_helper import json_loads
-
 from _23 import b64encodestring, quote
 
 # noinspection PyUnreachableCode

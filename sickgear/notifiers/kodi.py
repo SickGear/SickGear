@@ -17,13 +17,12 @@
 
 import time
 
-from .generic import Notifier
-from .. import logger
 import sickgear
 import sickgear.helpers
+from .generic import Notifier
+from .. import logger
 from exceptions_helper import ex
 from json_helper import json_dumps
-
 from _23 import decode_str, etree, quote, unquote, unquote_plus
 
 

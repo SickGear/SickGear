@@ -13,19 +13,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from collections import OrderedDict
-
 import copy
 import datetime
 import os
 import re
 import threading
+from collections import OrderedDict
+
+from six import integer_types, string_types
 
 import sickgear
 from ._legacy_classes import LegacySearchResult, LegacyProper
 from .common import Quality, VideoCodec
-
-from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:

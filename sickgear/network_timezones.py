@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from itertools import chain
 import datetime
 import json
 import os
@@ -23,16 +22,16 @@ import shutil
 import sys
 import tarfile
 import threading
+from itertools import chain
+
+from dateutil import tz
+from tzlocal import get_localzone, get_localzone_name
+from six import integer_types, string_types
 
 import sickgear
 from . import db, helpers, logger
 from sg_helpers import int_to_time
-
-from lib.dateutil import tz
-from lib.tzlocal import get_localzone, get_localzone_name
-
 from sg_helpers import remove_file_perm, scantree
-from six import integer_types, string_types
 
 # noinspection PyUnreachableCode
 if False:

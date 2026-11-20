@@ -18,15 +18,15 @@
 import re
 import time
 
+from requests.cookies import cookiejar_from_dict
+from six import string_types
+
 import sickgear
 from . import generic
 from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
-from requests.cookies import cookiejar_from_dict
-
 from _23 import quote, unquote
-from six import string_types
 
 class SpeedCDProvider(generic.TorrentProvider):
 

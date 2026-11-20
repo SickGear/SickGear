@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from itertools import cycle
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles
+__lazy_modules__ = ['subliminal']
+
 import datetime
 import hashlib
 import os
@@ -25,28 +28,27 @@ import socket
 import time
 import uuid
 import sys
+from itertools import cycle
 from pathlib import Path
-
-import sickgear
-from . import db, logger, notifiers
-from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
-    ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
-from .sgdatetime import SGDatetime
-from lib.tvinfo_base.exceptions import *
-from exceptions_helper import ex, MultipleShowObjectsException
+from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
 
 import dateutil.parser
 import requests
 import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
-from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
-
-from _23 import decode_bytes, decode_str, scandir
 from six import string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
 
+import sickgear
+from . import db, logger, notifiers
+from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
+    ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
+from .sgdatetime import SGDatetime
+from tvinfo_base.exceptions import *
+from exceptions_helper import ex, MultipleShowObjectsException
+from _23 import decode_bytes, decode_str, scandir
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
@@ -638,7 +640,7 @@ def create_https_certificates(ssl_cert, ssl_key):
     """
 
     try:
-        from lib.certgen import generate_key, generate_local_cert
+        from certgen import generate_key, generate_local_cert
     except (BaseException, Exception):
         return False
 

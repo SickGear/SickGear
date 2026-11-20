@@ -1,4 +1,4 @@
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 
 
 class TraktException(BaseTVinfoException):

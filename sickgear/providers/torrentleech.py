@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 import re
+from datetime import datetime
 
 from . import generic
 from ..helpers import anon_url, try_int

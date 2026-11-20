@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from .. import logger
 import sg_helpers
+from .. import logger
 
 # noinspection PyUnreachableCode
 if False:

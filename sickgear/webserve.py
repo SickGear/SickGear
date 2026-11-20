@@ -15,10 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-# noinspection PyProtectedMember
-from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
-from mimetypes import MimeTypes
-from urllib.parse import urljoin, quote as url_quote
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles, rarfile, with cryptography, is only for rar files
+__lazy_modules__ = ['subliminal', 'rarfile.rarfile']
 
 import base64
 import copy
@@ -34,14 +33,10 @@ import threading
 import time
 import traceback
 import zipfile
-
-from exceptions_helper import ex, MultipleShowObjectsException
-import exceptions_helper
-from json_helper import json_dumps, json_loads, json_dump, json_load, is_orjson, JSONEncoder
-import sg_helpers
-from sg_helpers import copy_file, remove_file, scantree, is_virtualenv, strip_html_tags
-
-from sg_futures import SgThreadPoolExecutor
+# noinspection PyProtectedMember
+from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
+from mimetypes import MimeTypes
+from urllib.parse import urljoin, quote as url_quote
 try:
     from multiprocessing import cpu_count
 except ImportError:
@@ -49,7 +44,37 @@ except ImportError:
     def cpu_count():
         return None
 
+import subliminal
+import dateutil.parser
+import rarfile.rarfile as rarfile
+# noinspection PyPackageRequirements
+from Cheetah.Template import Template
+from unidecode import unidecode
+from tornado import gen, iostream
+from tornado.escape import utf8
+from tornado.web import RequestHandler, StaticFileHandler, authenticated
+from tornado.concurrent import run_on_executor
+from tornado.ioloop import IOLoop
+# import requests
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+from iso639 import Lang
+from cfscrape import CloudflareScraper
+from dateutil import tz
+from dateutil.relativedelta import relativedelta
+from six import binary_type, integer_types, moves, string_types
+try:
+    from thefuzz import fuzz
+except ImportError as e:
+    from fuzzywuzzy import fuzz
+
+import exceptions_helper
+import sg_helpers
 import sickgear
+from exceptions_helper import ex, MultipleShowObjectsException
+from json_helper import json_dumps, json_loads, json_dump, json_load, is_orjson, JSONEncoder
+from sg_helpers import copy_file, remove_file, scantree, is_virtualenv, strip_html_tags
+from sg_futures import SgThreadPoolExecutor
 from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
@@ -70,49 +95,19 @@ from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
 from .sgdatetime import SGDatetime
 from .show_name_helpers import abbr_showname
-
 from .show_updater import clean_ignore_require_words
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
     TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
-
 from bs4_parser import BS4Parser
-# noinspection PyPackageRequirements
-from Cheetah.Template import Template
-from unidecode import unidecode
-import dateutil.parser
-
-from tornado import gen, iostream
-from tornado.escape import utf8
-from tornado.web import RequestHandler, StaticFileHandler, authenticated
-from tornado.concurrent import run_on_executor
-from tornado.ioloop import IOLoop
-
-# from lib import requests
-from lib.urllib3.util.retry import Retry
-from lib.requests.adapters import HTTPAdapter
-from lib.iso639 import Lang
-
-from lib import subliminal
-from lib.cfscrape import CloudflareScraper
-from lib.dateutil import tz
-from lib.dateutil.relativedelta import relativedelta
-try:
-    from lib.thefuzz import fuzz
-except ImportError as e:
-    from lib.fuzzywuzzy import fuzz
-from lib.api_trakt.exceptions import TraktException, TraktAuthException
-from lib.api_imdb.imdb_exceptions import IMDbException
-from lib.tvinfo_base import TVInfoEpisode, RoleTypes
-from lib.tvinfo_base.base import tv_src_names
-from lib.tvinfo_base.exceptions import *
-
-import lib.rarfile.rarfile as rarfile
-
+from api_trakt.exceptions import TraktException, TraktAuthException
+from api_imdb.imdb_exceptions import IMDbException
+from tvinfo_base import TVInfoEpisode, RoleTypes
+from tvinfo_base.base import tv_src_names
+from tvinfo_base.exceptions import *
 from _23 import decode_bytes, decode_str, getargspec, \
     map_consume, map_none, quote_plus, unquote_plus, urlparse
-from lib.sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
-from six import binary_type, integer_types, moves, string_types
-from lib.tvinfo_base import TVInfoShow
+from sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
+from tvinfo_base import TVInfoShow
 
 if is_orjson:
     def orjson_default(obj):
@@ -145,7 +140,7 @@ if False:
     from typing import Any, AnyStr, Callable, Dict, List, Optional, Set, Tuple, Union
     from sickgear.providers.generic import TorrentProvider
     # prevent pyc TVInfoBase resolution by typing the derived used class to TVInfoAPI instantiation
-    from lib.tvinfo_base import TVInfoBase, TVInfoCharacter, TVInfoPerson
+    from tvinfo_base import TVInfoBase, TVInfoCharacter, TVInfoPerson
     # from api_imdb.imdb_api import IMDbIndexer
     from api_tmdb.tmdb_api import TmdbIndexer
     from api_trakt.indexerapiinterface import TraktIndexer
@@ -8898,7 +8893,7 @@ class History(MainHandler):
         if sickgear.USE_PLEX and hosts:
             logger.debug('Updating Plex watched episode states')
 
-            from lib.plex import Plex
+            from plex import Plex
 
             plex = Plex(dict(username=sickgear.PLEX_USERNAME, password=sickgear.PLEX_PASSWORD,
                              section_filter_path=sickgear.ROOT_DIRS.split('|')[1:] +

@@ -1,15 +1,15 @@
 import os
-from sys import exc_info
 import threading
+from sys import exc_info
 
 from tornado.ioloop import IOLoop
 from tornado.routing import AnyMatches, Rule
 # noinspection PyProtectedMember
 from tornado.web import Application, _ApplicationRouter
 
+import sickgear
 from . import logger, webapi, webserve
 from .helpers import create_https_certificates, re_valid_hostname
-import sickgear
 
 # noinspection PyUnreachableCode
 if False:

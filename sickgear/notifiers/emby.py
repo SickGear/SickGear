@@ -17,10 +17,9 @@
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, SO_BROADCAST, SHUT_RDWR
 
+import sickgear
 from .generic import Notifier
 from json_helper import json_loads
-import sickgear
-
 from _23 import decode_bytes, decode_str
 
 # noinspection PyUnreachableCode

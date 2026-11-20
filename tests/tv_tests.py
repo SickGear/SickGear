@@ -18,10 +18,10 @@
 
 import unittest
 import test_lib as test
-from random import randint
-
 import datetime
 import copy
+from random import randint
+
 import sickgear
 from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
 from exceptions_helper import MultipleShowObjectsException
@@ -30,7 +30,7 @@ from sickgear import db, indexermapper
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 from sickgear.scene_exceptions import ReleaseMap
-from lib.tvinfo_base import TVInfoEpisode
+from tvinfo_base import TVInfoEpisode
 
 # noinspection PyUnreachableCode
 if False:

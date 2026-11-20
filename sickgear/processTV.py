@@ -14,29 +14,31 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime, timezone
-from functools import partial
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# rarfile, with cryptography, is only for rar files
+__lazy_modules__ = ['rarfile.rarfile']
+
 import os
 import re
 import shutil
 import stat
 import sys
+from datetime import datetime, timezone
+from functools import partial
+
+import rarfile.rarfile as rarfile
+from six import string_types, text_type
 
 import exceptions_helper
+import sickgear
 from exceptions_helper import ex, MultipleShowObjectsException
 from json_helper import json_dumps, json_loads
-
-import sickgear
 from . import common, db, failed_history, failedProcessor, helpers, history, logger, notifiers, postProcessor
 from .common import SNATCHED_ANY
 from .history import reset_status
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime
-
-from six import string_types, text_type
 from sg_helpers import long_path, scantree
-
-import lib.rarfile.rarfile as rarfile
 
 # noinspection PyUnreachableCode
 if False:
