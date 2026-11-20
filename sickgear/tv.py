@@ -1379,12 +1379,18 @@ class TVShow(TVShowBase):
 
     def _get_end_episode(self, last=False, exclude_specials=False):
         # type: (bool, bool) -> Optional[TVEpisode]
-        eps = self.get_all_episodes()
-        if eps:
-            ed = datetime.date(1900, 1, 1)
-            return next(iter(sorted(
-                (_ep for _ep in eps if _ep.airdate > ed and (not exclude_specials or _ep.season != 0)),
-                key=lambda a: a.airdate, reverse=last)), None)
+        # find the episode in the db, then load that one episode instead of every episode of the show
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(
+                f"""
+                SELECT season, episode
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND airdate > ?{('', ' AND season != 0')[exclude_specials]}
+                ORDER BY airdate {('ASC', 'DESC')[last]}, season ASC, episode ASC
+                LIMIT 1
+                """, [self.tvid, self.prodid, datetime.date(1900, 1, 1).toordinal()])
+        if sql_result:
+            return self.get_episode(int(sql_result[0]['season']), int(sql_result[0]['episode']))
 
     @property
     def first_aired_episode(self):
