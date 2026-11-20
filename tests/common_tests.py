@@ -236,10 +236,23 @@ class QualityTests(unittest.TestCase):
                     fh.write(mkv)
                 self.assertEqual(Quality.FULLHDTV, Quality.file_quality(filename))
                 self.assertEqual(VideoCodec.VC_264, VideoCodec.get_file_video_codec(filename))
+                # the codec comes from the read for the quality, the file is parsed once
+                self.assertEqual(1, len(parsers))
+                # a file that is changed is read again
+                with open(filename, 'ab') as fh:
+                    fh.write(cluster)
+                self.assertEqual(VideoCodec.VC_264, VideoCodec.get_file_video_codec(filename))
+                # also a file rewritten with the same size and the same modify time, e.g. within one tick of the clock
+                stamp = os.stat(filename).st_mtime_ns
+                with open(filename, 'wb') as fh:
+                    fh.write(mkv.replace((1920).to_bytes(2, 'big'), (1280).to_bytes(2, 'big'), 1)
+                             .replace((1080).to_bytes(2, 'big'), (720).to_bytes(2, 'big'), 1) + cluster)
+                os.utime(filename, ns=(stamp, stamp))
+                self.assertEqual(Quality.HDTV, Quality.file_quality(filename))
         finally:
             common.createParser = org_create
 
-        self.assertEqual(2, len(parsers))
+        self.assertEqual(3, len(parsers))
         for cur_parser in parsers:
             # the track list comes before the clusters, and a read of each cluster is a seek and a read in the file
             # so only the header, the tracks and the first cluster are read, not the 20 clusters
@@ -3434,6 +3447,8 @@ class QualityTests(unittest.TestCase):
                 common.extractMetadata = lambda *args, **kwargs: None if None is cur_data else type(
                     'FakeMetadata', (), {'exportDictionary': staticmethod(lambda: cur_data)})()
                 closed.clear()
+                # each case reads the same file, so the metadata of the case before must not be used
+                common._last_file_metadata = (None, None)
                 self.assertEqual(cur_vc, VideoCodec.get_file_video_codec(__file__), msg=f'{cur_data}')
                 # the file is closed in every case
                 self.assertEqual([1], closed, msg=f'{cur_data}')
