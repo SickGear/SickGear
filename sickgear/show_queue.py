@@ -16,7 +16,6 @@
 
 import datetime
 import os
-import time
 import traceback
 
 from dateutil.parser import parser
@@ -33,6 +32,7 @@ from .helpers import should_delete_episode, find_show_by_id, split_word_str
 from .indexermapper import clean_show_name, map_indexers_to_show
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
 from .name_parser.parser import NameParser
+from .sgdatetime import Stopwatch
 from .tv import TVidProdid, TVShow, TVSWITCH_DUPLICATE_SHOW, TVSWITCH_EP_DELETED, TVSWITCH_ID_CONFLICT, \
     TVSWITCH_NO_NEW_ID, TVSWITCH_NORMAL, TVSWITCH_NOT_FOUND_ERROR, TVSWITCH_SAME_ID, TVSWITCH_SOURCE_NOT_FOUND_ERROR, \
     TVSWITCH_VERIFY_ERROR
@@ -62,16 +62,15 @@ class ShowQueue(generic_queue.GenericQueue):
         generic_queue.GenericQueue.__init__(self, cache_db_tables=['show_queue'], main_db_tables=['tv_src_switch'])
         self.queue_name = 'SHOWQUEUE'
         self.daily_update_running = False
-        self.daily_update_started = None  # type: Optional[float]
+        self.daily_update_watch = None  # type: Optional[Stopwatch]
         self.daily_update_done = {}  # type: Dict[int, int]
         with db.DBConnection() as sg_db:
             if not sg_db.has_flag('kodi_nfo_uid'):
                 self.add_event(DAILY_SHOW_UPDATE_FINISHED_EVENT, sickgear.metadata.kodi.set_nfo_uid_updated)
 
     def start_daily_update(self):
-        # the start, on a clock that a change of the time of day does not move, and a new count of the shows that the
-        # daily update has updated and refreshed
-        self.daily_update_started = time.monotonic()
+        # the start, and a new count of the shows that the daily update has updated and refreshed
+        self.daily_update_watch = Stopwatch()
         self.daily_update_done = {}
 
     def count_daily_update(self, action_id):
@@ -84,10 +83,9 @@ class ShowQueue(generic_queue.GenericQueue):
             self.execute_events(DAILY_SHOW_UPDATE_FINISHED_EVENT)
             self.daily_update_running = False
             # an update of a show queues its refresh, so this is when the last of them has ended
-            minutes = int(round((time.monotonic() - (self.daily_update_started or time.monotonic())) / 60))
             updated = self.daily_update_done.get(ShowQueueActions.UPDATE, 0)
             refreshed = self.daily_update_done.get(ShowQueueActions.REFRESH, 0)
-            logger.log(f'Daily show update finished in {minutes} minute{maybe_plural(minutes)}:'
+            logger.log(f'Daily show update finished in {(self.daily_update_watch or Stopwatch()).text()}:'
                        f' {updated} show{maybe_plural(updated)} updated, {refreshed} refreshed')
 
     def load_queue(self):
@@ -785,11 +783,10 @@ class ShowQueueItem(generic_queue.QueueItem):
         generic_queue.QueueItem.__init__(self, ShowQueueActions.names[action_id], action_id, uid=uid)
         self.show_obj = show_obj  # type: sickgear.tv.TVShow
         self.scheduled_update = scheduled_update  # type: bool
-        self.started = None  # type: Optional[float]
+        self.watch = None  # type: Optional[Stopwatch]
 
     def run(self):
-        # a clock that a change of the time of day does not move
-        self.started = time.monotonic()
+        self.watch = Stopwatch()
         super(ShowQueueItem, self).run()
 
     def is_in_queue(self):
@@ -813,14 +810,13 @@ class ShowQueueItem(generic_queue.QueueItem):
     def finish(self):
         if self.scheduled_update:
             sickgear.show_queue_scheduler.action.count_daily_update(self.action_id)
-        elif self.show_obj and self.started and self.action_id in (
+        elif self.show_obj and self.watch and self.action_id in (
                 ShowQueueActions.REFRESH, ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
                 ShowQueueActions.WEBFORCEUPDATE):
             # the daily update logs its end once, an update or refresh of one show logs its own end; an update queues
             # the refresh of its show, so the end of the refresh is the end of an update of a show
-            seconds = int(round(time.monotonic() - self.started))
             task = ('update', 'refresh')[ShowQueueActions.REFRESH == self.action_id]
-            logger.log(f'Finished {task} of {self.show_obj.unique_name} in {seconds} second{maybe_plural(seconds)}')
+            logger.log(f'Finished {task} of {self.show_obj.unique_name} in {self.watch.text()}')
         # a show task loads every episode of its show, release the episode objects that are no longer used
         if self.show_obj:
             released = self.show_obj.release_episodes()

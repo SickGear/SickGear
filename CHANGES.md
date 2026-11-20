@@ -80,6 +80,7 @@
 * Change add the title Credits at IMDb to the link of a person at IMDb on browse shows
 * Add a log line at the end of the daily show update, with its time and the number of shows updated and refreshed
 * Add a log line at the end of an update or refresh of one show, with its time
+* Change log how long the post-processing of a file takes, in its line "Successfully processed <file> in N seconds"
 
 
 [develop]

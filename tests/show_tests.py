@@ -16,7 +16,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
-import time
 import unittest
 from unittest import mock
 
@@ -24,6 +23,7 @@ import test_lib as test  # must be before import sickgear
 import sickgear
 from sickgear import db
 from sickgear.common import Quality, UNAIRED, SKIPPED, WANTED, WantedQualities, statusStrings
+from sickgear.sgdatetime import Stopwatch
 from sickgear.show_queue import QueueItemAdd, QueueItemRefresh
 from sickgear.tv import TVEpisode, TVShow
 
@@ -495,7 +495,7 @@ class DailyUpdateEndTests(test.SickbeardTestDBCase):
         show_queue.logger.log = lambda msg, *args, **kwargs: msg.startswith('Daily show update') and lines.append(msg)
         try:
             queue.start_daily_update()
-            queue.daily_update_started -= 41 * 60
+            queue.daily_update_watch.start -= 41 * 60
             for cur_action in [show_queue.ShowQueueActions.UPDATE] * 2 + [show_queue.ShowQueueActions.REFRESH] * 3:
                 queue.count_daily_update(cur_action)
             # no line while the daily update is not running
@@ -527,7 +527,8 @@ class DailyUpdateEndTests(test.SickbeardTestDBCase):
                     (show_queue.ShowQueueActions.RENAME, False, None)):
                 lines.clear()
                 item = show_queue.ShowQueueItem(cur_action, show_obj, scheduled_update=cur_scheduled)
-                item.started = time.monotonic() - 3
+                item.watch = Stopwatch()
+                item.watch.start -= 3
                 with mock.patch.object(sickgear, 'show_queue_scheduler', create=True):
                     item.finish()
                 self.assertEqual([cur_line] if cur_line else [], lines, msg=f'{cur_action}')
@@ -535,11 +536,26 @@ class DailyUpdateEndTests(test.SickbeardTestDBCase):
             show_queue.logger.log = org_log
 
 
+class StopwatchTests(unittest.TestCase):
+
+    def test_text(self):
+        watch = Stopwatch()
+        self.assertEqual('0 seconds', watch.text())
+        for cur_seconds, cur_text in (
+                (1, '1 second'), (3.4, '3 seconds'), (59, '59 seconds'), (60, '1 minute'), (89, '1 minute'),
+                (20 * 60, '20 minutes'), (41 * 60 + 20, '41 minutes'), (59 * 60 + 29, '59 minutes'),
+                (59 * 60 + 31, '1h'), (60 * 60, '1h'), (61 * 60, '1h 1 min'), (69 * 60, '1h 9 mins'),
+                (2 * 3600 + 5, '2h')):
+            watch.start = watch.start - cur_seconds
+            self.assertEqual(cur_text, watch.text(), msg=f'{cur_seconds}')
+            watch.start = watch.start + cur_seconds
+
+
 if '__main__' == __name__:
     print('==================')
     print('STARTING - SHOW TESTS')
     print('==================')
     print('######################################################################')
-    for cur_case in (ShowAddTests, ShowRefreshTests, DailyUpdateEndTests):
+    for cur_case in (ShowAddTests, ShowRefreshTests, DailyUpdateEndTests, StopwatchTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
