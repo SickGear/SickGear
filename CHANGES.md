@@ -58,6 +58,7 @@
 * Change log one line per show when its episodes load or update, instead of up to thirteen lines per episode
 * Change log one line per show when a refresh checks its media files, instead of up to seven lines per file
 * Change log no line per media file for the file name parse of a show refresh
+* Change reuse a session's kept alive connection for web requests, instead of a new connection per request
 
 
 [develop]
