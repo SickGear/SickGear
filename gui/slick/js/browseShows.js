@@ -429,9 +429,10 @@ function init_buttons(){
 		width:  $(window).width(),
 		height:  $(window).height(),
 		beforeClose: tag_dialog_close,
-		create: disableScroll,
+		// the page under the open dialog does not scroll; create runs at page load, so it is not used for this
 		close: enableScroll,
 		open: function(){
+			disableScroll();
 			$(this).dialog("option", "height", $(window).height());
 			$(this).dialog("option", "width", $(window).width());
 		},
