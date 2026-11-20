@@ -169,6 +169,16 @@ def get_class_methods(class_to_check, required_baseclass):
     return m_l
 
 
+def release_template(template):
+    """ break the reference cycles of a template and of the templates that it includes, e.g. inc_top.tmpl,
+    which share its search list and its filter """
+    for cur_t in getattr(template, '_CHEETAH__cheetahIncludes', {}).values():
+        release_template(cur_t)
+    # by the class, a page can have a page value of the same name, e.g. `shutdown` of the restart page
+    if isinstance(template, Template):
+        Template.shutdown(template)
+
+
 # noinspection PyAbstractClass
 class PageTemplate(Template):
 
@@ -226,6 +236,17 @@ class PageTemplate(Template):
             self.tvinfo_switch_running = sickgear.show_queue_scheduler.action.is_switch_running()
 
         super(PageTemplate, self).__init__(*args, **kwargs)
+
+        # a template object is in its own search list and filter, so only a full garbage collection frees it
+        # with all its page data, e.g. the lines of the log page; each page is made once, so break the cycle then
+        respond = self.respond
+
+        def respond_and_release():
+            try:
+                return respond()
+            finally:
+                release_template(self)
+        self.respond = respond_and_release
 
     def compile(self, *args, **kwargs):
         if not os.path.exists(os.path.join(sickgear.CACHE_DIR, 'cheetah')):
