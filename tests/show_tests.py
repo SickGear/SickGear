@@ -482,11 +482,40 @@ class ShowRefreshTests(unittest.TestCase):
                 sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = org_xem
 
 
+class DailyUpdateEndTests(test.SickbeardTestDBCase):
+
+    def test_end_of_daily_update_is_logged(self):
+        from sickgear import show_queue
+        queue = show_queue.ShowQueue()
+        org_scheduler, org_log = getattr(sickgear, 'update_show_scheduler', None), show_queue.logger.log
+        sickgear.update_show_scheduler = mock.Mock(is_running_job=False)
+        lines = []
+        # only the line of the end, the finish event writes to the DB, which logs too
+        show_queue.logger.log = lambda msg, *args, **kwargs: msg.startswith('Daily show update') and lines.append(msg)
+        try:
+            queue.start_daily_update()
+            queue.daily_update_started -= 41 * 60
+            for cur_action in [show_queue.ShowQueueActions.UPDATE] * 2 + [show_queue.ShowQueueActions.REFRESH] * 3:
+                queue.count_daily_update(cur_action)
+            # no line while the daily update is not running
+            queue.check_events()
+            self.assertEqual([], lines)
+            queue.daily_update_running = True
+            with mock.patch.object(queue, 'is_show_update_running', return_value=True):
+                queue.check_events()
+            self.assertEqual([], lines)
+            queue.check_events()
+            self.assertEqual(['Daily show update finished in 41 minutes: 2 shows updated, 3 refreshed'], lines)
+            self.assertFalse(queue.daily_update_running)
+        finally:
+            sickgear.update_show_scheduler, show_queue.logger.log = org_scheduler, org_log
+
+
 if '__main__' == __name__:
     print('==================')
     print('STARTING - SHOW TESTS')
     print('==================')
     print('######################################################################')
-    for cur_case in (ShowAddTests, ShowRefreshTests):
+    for cur_case in (ShowAddTests, ShowRefreshTests, DailyUpdateEndTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
