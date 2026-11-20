@@ -16,11 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import shutil
 import unittest
 import test_lib as test
 import datetime
 import copy
 from random import randint
+from unittest import mock
 
 import sickgear
 from exceptions_helper import MultipleShowObjectsException
@@ -186,6 +189,84 @@ class TVEpisodeLoadTests(test.SickbeardTestDBCase):
             self.assertTrue(ep_obj.dirty)
             ep_obj.save_to_db()
             self.assertFalse(load(cur_network).dirty, msg=f'show network "{cur_network}"')
+
+
+class TVEpisodeLoadDiskTests(test.SickbeardTestDBCase):
+    """ episodes that load from the db get their file size from one list of the folder, not from a call for each """
+
+    def setUp(self):
+        super(TVEpisodeLoadDiskTests, self).setUp()
+        sickgear.showList = []
+        sickgear.showDict = {}
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        self.ep_dir = os.path.join(test.TESTDIR, 'disk check')
+        os.makedirs(self.ep_dir, exist_ok=True)
+        # episode 1 and 2 have a file, with a size that is not the size in the db, the file of episode 3 is gone
+        for cur_ep_num in (1, 2):
+            self.make_file(cur_ep_num)
+        for cur_ep_num in (1, 2, 3):
+            self.add_row(cur_ep_num)
+        self.show_obj = TVShow(1, 123456, 'en')
+
+    def tearDown(self):
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        shutil.rmtree(self.ep_dir, ignore_errors=True)
+        super(TVEpisodeLoadDiskTests, self).tearDown()
+
+    def ep_file(self, ep_num):
+        return os.path.join(self.ep_dir, f'disk check 1x0{ep_num}.mkv')
+
+    def make_file(self, ep_num):
+        with open(self.ep_file(ep_num), 'wb') as fh:
+            fh.write(b'12345' * ep_num)
+
+    def add_row(self, ep_num):
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.action(
+                'INSERT INTO tv_episodes'
+                ' (indexer, showid, indexerid, season, episode, status, airdate, subtitles, location, file_size)'
+                ' VALUES (1, 123456, ?, 1, ?, ?, 1, "", ?, 700)',
+                [1000 + ep_num, ep_num, sickgear.common.SKIPPED, self.ep_file(ep_num)])
+
+    def test_sizes_come_from_one_folder_list(self):
+        with mock.patch('os.scandir', wraps=os.scandir) as scandir:
+            with mock.patch('os.path.getsize', wraps=os.path.getsize) as getsize:
+                sizes = [self.show_obj.get_episode(1, _ep_num).file_size for _ep_num in (1, 2, 3)]
+        self.assertEqual([5, 10, 0], sizes)
+        self.assertEqual(1, scandir.call_count)
+        getsize.assert_not_called()
+
+    def test_loaded_episode_is_not_changed(self):
+        ep_obj = self.show_obj.get_episode(1, 1)
+        self.assertEqual(os.path.normpath(self.ep_file(1)), ep_obj.location)
+        self.assertFalse(ep_obj.dirty)
+
+    def test_file_that_is_new_since_the_list(self):
+        self.show_obj.get_episode(1, 1)
+        self.make_file(4)
+        self.add_row(4)
+        self.assertEqual(20, self.show_obj.get_episode(1, 4).file_size)
+
+    def test_folder_is_listed_again_after_30_seconds(self):
+        self.show_obj.get_episode(1, 1)
+        self.show_obj._ep_dir_time -= 31
+        with mock.patch('os.scandir', wraps=os.scandir) as scandir:
+            self.show_obj.get_episode(1, 2)
+        self.assertEqual(1, scandir.call_count)
+
+    def test_folder_that_is_gone(self):
+        shutil.rmtree(self.ep_dir)
+        self.assertEqual(0, self.show_obj.get_episode(1, 1).file_size)
+
+    def test_location_setter_reads_the_size(self):
+        ep_obj = self.show_obj.get_episode(1, 3)
+        ep_obj.location = self.ep_file(1)
+        self.assertEqual(5, ep_obj.file_size)
 
 
 class TVTests(test.SickbeardTestDBCase):
@@ -568,6 +649,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeLoadTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeLoadDiskTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
