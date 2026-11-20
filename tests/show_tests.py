@@ -16,6 +16,7 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
+import time
 import unittest
 from unittest import mock
 
@@ -482,11 +483,63 @@ class ShowRefreshTests(unittest.TestCase):
                 sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = org_xem
 
 
+class DailyUpdateEndTests(test.SickbeardTestDBCase):
+
+    def test_end_of_daily_update_is_logged(self):
+        from sickgear import show_queue
+        queue = show_queue.ShowQueue()
+        org_scheduler, org_log = getattr(sickgear, 'update_show_scheduler', None), show_queue.logger.log
+        sickgear.update_show_scheduler = mock.Mock(is_running_job=False)
+        lines = []
+        # only the line of the end, the finish event writes to the DB, which logs too
+        show_queue.logger.log = lambda msg, *args, **kwargs: msg.startswith('Daily show update') and lines.append(msg)
+        try:
+            queue.start_daily_update()
+            queue.daily_update_started -= 41 * 60
+            for cur_action in [show_queue.ShowQueueActions.UPDATE] * 2 + [show_queue.ShowQueueActions.REFRESH] * 3:
+                queue.count_daily_update(cur_action)
+            # no line while the daily update is not running
+            queue.check_events()
+            self.assertEqual([], lines)
+            queue.daily_update_running = True
+            with mock.patch.object(queue, 'is_show_update_running', return_value=True):
+                queue.check_events()
+            self.assertEqual([], lines)
+            queue.check_events()
+            self.assertEqual(['Daily show update finished in 41 minutes: 2 shows updated, 3 refreshed'], lines)
+            self.assertFalse(queue.daily_update_running)
+        finally:
+            sickgear.update_show_scheduler, show_queue.logger.log = org_scheduler, org_log
+
+    def test_end_of_one_show_task_is_logged(self):
+        from sickgear import show_queue
+        show_obj = mock.Mock(unique_name='Test Show', release_episodes=mock.Mock(return_value=0))
+        org_log = show_queue.logger.log
+        lines = []
+        show_queue.logger.log = lambda msg, *args, **kwargs: lines.append(msg)
+        try:
+            for cur_action, cur_scheduled, cur_line in (
+                    (show_queue.ShowQueueActions.REFRESH, False, 'Finished refresh of Test Show in 3 seconds'),
+                    (show_queue.ShowQueueActions.FORCEUPDATE, False, 'Finished update of Test Show in 3 seconds'),
+                    # an item of the daily update is counted, its end is in the one line of the daily update
+                    (show_queue.ShowQueueActions.REFRESH, True, None),
+                    # other tasks have no line
+                    (show_queue.ShowQueueActions.RENAME, False, None)):
+                lines.clear()
+                item = show_queue.ShowQueueItem(cur_action, show_obj, scheduled_update=cur_scheduled)
+                item.started = time.monotonic() - 3
+                with mock.patch.object(sickgear, 'show_queue_scheduler', create=True):
+                    item.finish()
+                self.assertEqual([cur_line] if cur_line else [], lines, msg=f'{cur_action}')
+        finally:
+            show_queue.logger.log = org_log
+
+
 if '__main__' == __name__:
     print('==================')
     print('STARTING - SHOW TESTS')
     print('==================')
     print('######################################################################')
-    for cur_case in (ShowAddTests, ShowRefreshTests):
+    for cur_case in (ShowAddTests, ShowRefreshTests, DailyUpdateEndTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

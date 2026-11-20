@@ -153,6 +153,7 @@ class ShowUpdater(Job):
                     logger.error(traceback.format_exc())
 
             logger.log('Doing full update on all shows')
+            sickgear.show_queue_scheduler.action.start_daily_update()
 
             # clean out cache directory, remove everything > 12 hours old
             try:
