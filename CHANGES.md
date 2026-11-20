@@ -2,6 +2,7 @@
 
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
 * Update browser_ua from user-agents 2.1.38 (a78437e) to v2.1.246 (53a8923)
+* Update CacheControl 0.14.3 (116113c) to 0.15.0 (2123e7b)
 * Update dateutil 2.9.0.post0 (0353b78) to 4.0.0 (a78cbd8)
 * Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
 * Update hachoir 3.3.0 (b1c8b57) to 3.4.0 (3880742)
