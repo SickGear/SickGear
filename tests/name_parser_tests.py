@@ -951,6 +951,34 @@ class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
                 self.assertEqual(n_ep, case[3])
 
 
+class AnimeYearInNameTests(test.SickbeardTestDBCase):
+
+    def tearDown(self):
+        super(AnimeYearInNameTests, self).tearDown()
+        sickgear.showList = []
+        sickgear.showDict = {}
+        name_cache.nameCache = {}
+
+    def test_year_is_not_an_absolute_number(self):
+        # the year of the show name is read as an absolute episode number where a quality as `HD` or `SD` follows,
+        # no episode has that number, so the season and the episode of the name must be used
+        tvs = TVShowTest(True, 'Berserk (2016)', 2, 1, 2016)
+        tvs.sxe_ep_obj = {1: {1: TVEpisodeTest('The Branded Swordsman'), 4: TVEpisodeTest('Revelations')}}
+        sickgear.showList = [tvs]
+        sickgear.showDict = {tvs.sid_int: tvs}
+        name_cache.nameCache = {}
+        name_cache.build_name_cache()
+
+        for name, season, episodes in [
+            ('Berserk.2016.s01e01.The.Branded.Swordsman.HD.TV.mp4', 1, [1]),
+            ('Berserk.2016.s01e04.Revelations.SD.TV.mkv', 1, [4]),
+            ('Berserk.2016.s01e01.The.Branded.Swordsman.mkv', 1, [1]),
+        ]:
+            result = parser.NameParser(show_obj=tvs).parse(name, cache_result=False)
+            self.assertEqual((season, episodes), (result.season_number, result.episode_numbers), msg=name)
+            self.assertEqual([], result.ab_episode_numbers, msg=name)
+
+
 class ParseLogTests(unittest.TestCase):
     """ a show refresh parses each media file and asks for no debug line of the result """
 
@@ -995,6 +1023,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(ComboTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(AnimeYearInNameTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(UnicodeTests)
