@@ -554,14 +554,17 @@ class VideoCodec:
     videocodec_ident_regex = {
         VC_264: r'(?:264|avc1?)',
         VC_265: r'(?:265|hevc|hvc1|hev1)',
-        VC_DivXvid: r'(?:divx|xvid)',
+        # MPEG-4 part 2, by its fourcc and by the names that mkv, mp4 and ts give it
+        VC_DivXvid: r'(?:divx|xvid|dx50|fmp4|mp4[sv]|m4s2|3iv[x2]|mpeg-?4 visual|mpeg4/is[o0]/(?:a?sp|ap)|14496-2)',
         VC_VP9: r'vp.?9',
-        VC_VC1: r'(?<!a)vc.?1',
-        VC_AV1: r'av0?1',
+        # Windows Media Video 9 is VC-1
+        VC_VC1: r'(?:wvc1|wmv3|wmva|windows media video v?9|(?<![a-z])vc[-_ ]?1)',
+        # AV1X is Avid 1:1
+        VC_AV1: r'av0?1(?!x)',
         VC_AV2: r'av0?2',
         VC_VVC: r'(?:266|vvc)',
-        VC_MPEG1: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?1).*$',
-        VC_MPEG2: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?2|h.?222|h.?262).*$'
+        VC_MPEG1: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?1|mpg1|mp1v|m1v).*$',
+        VC_MPEG2: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?2|mpg2|mp2v|m2v|h.?222|h.?262).*$'
     }
 
     compiled_vc_ident_regex = {_c_k: re.compile(f'{_c_vc}', flags=re.I)
@@ -749,7 +752,8 @@ class VideoCodec:
                 if extract:
                     try:
                         file_data = extract.exportDictionary()
-                        vc = next(v for k,v in file_data.items() if 'Video stream' in k)['Compression']
+                        # a file with no video stream, or with no codec name for it, gives None
+                        vc = next((v for k, v in file_data.items() if k.startswith('Video')), {}).get('Compression')
                     except (AttributeError, ValueError):
                         try:
                             for metadata in extract.iterGroups():
@@ -769,9 +773,15 @@ class VideoCodec:
                     if not vc:
                         return None
                     for _current_vc_type, _current_vc in VideoCodec.compiled_vc_ident_regex.items():
-                        if _current_vc.search(vc):
+                        if _current_vc.search(f'{vc}'):
                             return _current_vc_type
                 else:
+                    # a file that stays open cannot be moved or deleted on Windows
+                    try:
+                        # noinspection PyProtectedMember
+                        parser.stream._input.close()
+                    except (BaseException, Exception):
+                        pass
                     return None
             else:
                 return None
