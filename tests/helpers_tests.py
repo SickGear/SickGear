@@ -87,6 +87,18 @@ class HelpersTests(unittest.TestCase):
             self.assertEqual(t['result'], helpers.encrypt(*t['param']))
 
 
+class LanguageCodeTests(unittest.TestCase):
+    def test_language_to_alpha2(self):
+        # the table was made from, and replaces, the iso639 package: a name or three letter code to a two letter code
+        from sg_lang_codes import language_to_alpha2
+        for cur_value, cur_code in (('English', 'en'), ('eng', 'en'), ('en', 'en'), ('Castilian', 'es'),
+                                    ('Norwegian Bokm\u00e5l', 'nb'), ('chi', 'zh'), ('zho', 'zh'), ('Punjabi', 'pa')):
+            self.assertEqual(cur_code, language_to_alpha2.get(cur_value))
+        # a language with no two letter code, a name that is not a reference name, and a wrong case, are not in it
+        for cur_value in ('Filipino', 'fil', 'Greek', 'english'):
+            self.assertNotIn(cur_value, language_to_alpha2)
+
+
 class FlagCodeTests(unittest.TestCase):
     flags_dir = abspath(join(dirname(__file__), '..', 'gui', 'slick', 'images', 'flags'))
 
@@ -298,7 +310,6 @@ class AniDBSessionFileTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests,
-                     LibImportTests, LazyImportTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
