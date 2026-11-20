@@ -64,6 +64,7 @@
 * Change episode load from the DB to list a season folder once, instead of two disk checks per episode file
 * Change the XEM refresh check to read its DB table once a day per show, instead of a few times per episode load
 * Change replace the iso639 library with a table of language names and codes, to save 7.7 MB of memory
+* Change release episode objects from memory when a show task ends, e.g. update, refresh, rename, or add show
 
 
 [develop]

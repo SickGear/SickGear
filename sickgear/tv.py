@@ -1372,6 +1372,8 @@ class TVShow(TVShowBase):
         self.sxe_ep_obj = {}  # type: Dict
         # numbers of episodes that a search found are not wanted, and that have no episode object
         self.unwanted_sxe = {}  # type: Dict[int, Set[int]]
+        # episode objects that were released from memory, each one stays here for as long as other code uses it
+        self._released_ep_obj = weakref.WeakValueDictionary()  # type: weakref.WeakValueDictionary
         # file sizes of episode folders, and the time that the first of these folders was listed
         self._ep_dir_sizes = {}  # type: Dict[AnyStr, Dict[AnyStr, int]]
         self._ep_dir_time = 0  # type: float
@@ -1690,6 +1692,28 @@ class TVShow(TVShowBase):
 
     location = property(_get_location, _set_location)
 
+    def release_episodes(self):
+        # type: (...) -> int
+        """
+        Release episode objects from memory, an episode loads from the DB again when it is next needed.
+
+        An episode is kept when it has a change that is not saved, is wanted by a search, or is a multi-episode.
+        A released episode that other code still uses is given back by get_episode.
+
+        :return: number of released episode objects
+        """
+        released = 0
+        for cur_season, cur_eps in list(self.sxe_ep_obj.items()):
+            for cur_episode, cur_ep_obj in list(cur_eps.items()):
+                if None is cur_ep_obj or cur_ep_obj.dirty or cur_ep_obj.wanted_quality or cur_ep_obj.related_ep_obj:
+                    continue
+                self._released_ep_obj[(cur_season, cur_episode)] = cur_ep_obj
+                # a loaded episode that has no wanted quality is refused by want_episode, keep that for its number
+                self.unwanted_sxe.setdefault(cur_season, set()).add(cur_episode)
+                del cur_eps[cur_episode]
+                released += 1
+        return released
+
     # delete references to anything that's not in the internal lists
     def flush_episodes(self):
 
@@ -1849,6 +1873,12 @@ class TVShow(TVShowBase):
             self.sxe_ep_obj[season] = {}
 
         if episode not in self.sxe_ep_obj[season] or None is self.sxe_ep_obj[season][episode]:
+            # take back a released episode that other code still uses, so that an episode never has two objects
+            ep_obj = self._released_ep_obj.pop((season, episode), None)
+            if None is not ep_obj:
+                self.sxe_ep_obj[season][episode] = ep_obj
+                return ep_obj
+
             if no_create:
                 return
 
@@ -3671,6 +3701,7 @@ class TVShow(TVShowBase):
             self._cast_list = None
             self.sxe_ep_obj = {}
             self.unwanted_sxe = {}
+            self._released_ep_obj.clear()
             self.ids[old_tvid]['status'] = MapStatus.NONE
             self.ids[self.tvid]['status'] = MapStatus.SOURCE
             self.ids[self.tvid]['id'] = self.prodid
