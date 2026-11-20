@@ -7,7 +7,7 @@
 * Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
 * Update hachoir 3.3.0 (b1c8b57) to 3.4.0 (3880742)
 * Update SimpleJSON 4.0.0 (1608c05) to 4.3.0 (d88746d)
-* Update soupsieve 2.9.2 (78661a6) to 3.0.4 (628ec6b)
+* Update soupsieve 2.9.2 (78661a6) to 4.1.3 (3587fb1)
 * Update Tornado Web Server 6.5.8 (a55abe3) to 6.6.1 (fb0e3df)
 * Update tzlocal 2.1b1 (dd79171) to 5.4.5 (ab833e7)
 * Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
@@ -87,6 +87,7 @@
 * Update Tornado Web Server 6.5.10 (143a06b) to 6.6.1 (fb0e3df)
 * Update SimpleJSON 4.2.0 (0ace7d1) to 4.3.0 (d88746d)
 * Update soupsieve 2.10.0 (fc195cd) to 3.0.4 (628ec6b)
+* Update soupsieve 3.0.4 (628ec6b) to 4.1.3 (3587fb1)
 * Fix video codec read from a file for Dolby Vision in mp4 and H.266 in ts, and an error for a file with no video
 * Fix video codec read from a file is unknown or wrong for Xvid, DivX, VC-1, MPEG-1, MPEG-2, and codecs in flv
 * Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
