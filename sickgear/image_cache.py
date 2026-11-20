@@ -280,7 +280,6 @@ class ImageCache(object):
         result = []
         for filename in glob.glob(image_file):
             result.append(os.path.isfile(filename) and filename)
-            logger.debug(f'Found cached {filename}')
 
         not any(result) and logger.debug(f'No cache for {image_file}')
         return any(result)

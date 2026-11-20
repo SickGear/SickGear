@@ -147,69 +147,46 @@ class GenericMetadata(object):
 
     def _has_show_metadata(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
-        result = os.path.isfile(self.get_show_file_path(show_obj))
-        logger.debug(f'Checking if {self.get_show_file_path(show_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_show_file_path(show_obj))
 
     def has_episode_metadata(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> bool
-        result = os.path.isfile(self.get_episode_file_path(ep_obj))
-        logger.debug(f'Checking if {self.get_episode_file_path(ep_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_episode_file_path(ep_obj))
 
     def _has_fanart(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
-        result = os.path.isfile(self.get_fanart_path(show_obj))
-        logger.debug(f'Checking if {self.get_fanart_path(show_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_fanart_path(show_obj))
 
     def _has_poster(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
-        result = os.path.isfile(self.get_poster_path(show_obj))
-        logger.debug(f'Checking if {self.get_poster_path(show_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_poster_path(show_obj))
 
     def _has_banner(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
-        result = os.path.isfile(self.get_banner_path(show_obj))
-        logger.debug(f'Checking if {self.get_banner_path(show_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_banner_path(show_obj))
 
     def has_episode_thumb(self, ep_obj):
         # type: (sickgear.tv.TVEpisode) -> bool
         location = self.get_episode_thumb_path(ep_obj)
-        result = None is not location and os.path.isfile(location)
-        if location:
-            logger.debug(f'Checking if {location} exists: {result}')
-        return result
+        return None is not location and os.path.isfile(location)
 
     def _has_season_poster(self, show_obj, season):
         # type: (sickgear.tv.TVShow,int) -> bool
         location = self.get_season_poster_path(show_obj, season)
-        result = None is not location and os.path.isfile(location)
-        if location:
-            logger.debug(f'Checking if {location} exists: {result}')
-        return result
+        return None is not location and os.path.isfile(location)
 
     def _has_season_banner(self, show_obj, season):
         # type: (sickgear.tv.TVShow,int) -> bool
         location = self.get_season_banner_path(show_obj, season)
-        result = None is not location and os.path.isfile(location)
-        if location:
-            logger.debug(f'Checking if {location} exists: {result}')
-        return result
+        return None is not location and os.path.isfile(location)
 
     def _has_season_all_poster(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
-        result = os.path.isfile(self.get_season_all_poster_path(show_obj))
-        logger.debug(f'Checking if {self.get_season_all_poster_path(show_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_season_all_poster_path(show_obj))
 
     def _has_season_all_banner(self, show_obj):
         # type: (sickgear.tv.TVShow) -> bool
-        result = os.path.isfile(self.get_season_all_banner_path(show_obj))
-        logger.debug(f'Checking if {self.get_season_all_banner_path(show_obj)} exists: {result}')
-        return result
+        return os.path.isfile(self.get_season_all_banner_path(show_obj))
 
     @staticmethod
     def get_show_year(show_obj, show_info, year_only=True):
