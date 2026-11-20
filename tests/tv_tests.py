@@ -23,14 +23,14 @@ import copy
 from random import randint
 
 import sickgear
-from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
 from exceptions_helper import MultipleShowObjectsException
-from sickgear.helpers import find_show_by_id
 from sickgear import db, indexermapper
+from sickgear.helpers import find_show_by_id
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 from sickgear.scene_exceptions import ReleaseMap
-from tvinfo_base import TVInfoEpisode
+from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
+from tvinfo_base import TVInfoEpisode, TVInfoSeason, TVInfoShow
 
 # noinspection PyUnreachableCode
 if False:
@@ -209,6 +209,76 @@ class TVTests(test.SickbeardTestDBCase):
         show_obj.save_to_db()
         sickgear.showList = [show_obj]
         sickgear.showDict = {show_obj.sid_int: show_obj}
+
+
+class TVLoadEpisodesTests(test.SickbeardTestDBCase):
+    """ a show update loads each episode once from the DB and once from TV info """
+
+    def setUp(self):
+        super(TVLoadEpisodesTests, self).setUp()
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        self.loaders = {}
+        self.calls = []
+        for cur_name in ('load_from_db', 'load_from_tvinfo'):
+            self.loaders[cur_name] = getattr(TVEpisode, cur_name)
+            setattr(TVEpisode, cur_name, self.counted(cur_name))
+
+        self.show_obj = TVShow(TVINFO_TVDB, 123456, 'en')
+        self.show_obj.sxe_ep_obj = {}
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.mass_action([[
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, name, status, airdate,'
+                ' subtitles) VALUES (?, 123456, ?, 1, ?, ?, ?, ?, "")',
+                [TVINFO_TVDB, 1000 + ep_num, ep_num, f'Old name {ep_num}', sickgear.common.SKIPPED,
+                 datetime.date(2020, 1, ep_num).toordinal()]] for ep_num in (1, 2)])
+
+        self.tvinfo_show = TVInfoShow()
+        self.tvinfo_show.id = 123456
+        self.tvinfo_show[1] = TVInfoSeason(show=self.tvinfo_show, number=1)
+        for ep_num in (1, 2, 3):
+            ep_info = TVInfoEpisode(season=self.tvinfo_show[1], show=self.tvinfo_show)
+            ep_info.id = 1000 + ep_num
+            ep_info.episodename = f'New name {ep_num}'
+            ep_info.firstaired = f'2020-01-0{ep_num}'
+            self.tvinfo_show[1][ep_num] = ep_info
+
+    def tearDown(self):
+        for cur_name, cur_loader in self.loaders.items():
+            setattr(TVEpisode, cur_name, cur_loader)
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        super(TVLoadEpisodesTests, self).tearDown()
+
+    def counted(self, name):
+        loader = self.loaders[name]
+
+        def count(ep_obj, *args, **kwargs):
+            self.calls.append((name, ep_obj.season, ep_obj.episode))
+            return loader(ep_obj, *args, **kwargs)
+        return count
+
+    def names(self):
+        return {_ep_num: _ep_obj.name for _ep_num, _ep_obj in self.show_obj.sxe_ep_obj[1].items()}
+
+    def test_load_episodes_from_tvinfo_loads_each_episode_once(self):
+        self.show_obj.load_episodes_from_tvinfo(tvinfo_data=self.tvinfo_show)
+
+        self.assertEqual({1: 'New name 1', 2: 'New name 2', 3: 'New name 3'}, self.names())
+        for cur_call in [(_name, 1, _ep_num) for _name in self.loaders for _ep_num in (1, 2, 3)]:
+            self.assertEqual(1, self.calls.count(cur_call), cur_call)
+        # each episode loads from its own db row, the status of episode 2 is not the default
+        self.assertEqual(sickgear.common.SKIPPED, self.show_obj.sxe_ep_obj[1][2].status)
+
+    def test_load_episodes_from_tvinfo_updates_a_loaded_episode(self):
+        ep_obj = self.show_obj.get_episode(1, 2)
+        self.assertEqual('Old name 2', ep_obj.name)
+        self.show_obj.load_episodes_from_tvinfo(tvinfo_data=self.tvinfo_show)
+        self.assertIs(ep_obj, self.show_obj.sxe_ep_obj[1][2])
+        self.assertEqual('New name 2', ep_obj.name)
 
 
 class TVCacheResultTests(test.SickbeardTestDBCase):
@@ -464,6 +534,9 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVLoadEpisodesTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVCacheResultTests)

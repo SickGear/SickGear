@@ -2298,6 +2298,8 @@ class TVShow(TVShowBase):
             logger.debug(f'Loading episode {season}x{episode} for [{self.name}] from the DB')
 
             try:
+                # an episode object that is made here is loaded from this row, only an existing object needs a reload
+                is_new = None is self.get_episode(season, episode, no_create=True)
                 ep_obj = self.get_episode(season, episode, ep_result=[cur_row])  # type: TVEpisode
 
                 # if we found out that the ep is no longer on TVDB then delete it from our database too
@@ -2305,7 +2307,8 @@ class TVShow(TVShowBase):
                     sql_l.extend(ep_obj.delete_episode(return_sql=True))
                 else:
 
-                    ep_obj.load_from_db(season, episode, show_result=[cur_row], scene_result=scene_sql_result)
+                    if not is_new:
+                        ep_obj.load_from_db(season, episode, show_result=[cur_row], scene_result=scene_sql_result)
                     ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=cached_show)
                     # in case media processing is set to untouched for removed episodes
                     if (non_quality_status := 100 > ep_obj._status and None is not ep_obj._video_codec) or (
@@ -2391,6 +2394,8 @@ class TVShow(TVShowBase):
                 FROM tv_episodes 
                 WHERE indexer = ? AND showid = ?
                 """, [self.tvid, self.prodid])
+        # an episode object loads from the first row that it is given, so give it the row of its own number
+        ep_rows = {(_r['season'], _r['episode']): [_r] for _r in sql_result}
         sql_l = []
         for cur_season in show_obj:
             scanned_eps[cur_season] = {}
@@ -2399,26 +2404,24 @@ class TVShow(TVShowBase):
                 if 0 == cur_episode:
                     continue
                 try:
-                    ep_obj = self.get_episode(cur_season, cur_episode, ep_result=sql_result)  # type: TVEpisode
+                    ep_obj = self.get_episode(cur_season, cur_episode,
+                                              ep_result=ep_rows.get((cur_season, cur_episode)))  # type: TVEpisode
                 except exceptions_helper.EpisodeNotFoundException:
                     logger.log(f'{self.tvid_prodid}: {sickgear.TVInfoAPI(self.tvid).name}'
                                f' object for {cur_season}x{cur_episode} from [{self._name}] is incomplete,'
                                f' skipping this episode')
                     continue
-                else:
-                    try:
-                        ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=show_obj, switch=switch,
-                                                old_tvid=old_tvid, old_prodid=old_prodid, switch_list=sql_l)
-                    except exceptions_helper.EpisodeDeletedException:
-                        logger.log(f'The episode from [{self._name}] was deleted, skipping the rest of the load')
-                        continue
 
                 with ep_obj.lock:
                     logger.debug(f'{self.tvid_prodid}: Loading info from {sickgear.TVInfoAPI(self.tvid).name}'
                                  f' for episode {cur_season}x{cur_episode} from [{self._name}]')
-                    ep_obj.load_from_tvinfo(cur_season, cur_episode, tvapi=t, update=update, cached_show=show_obj,
-                                            switch=switch, old_tvid=old_tvid, old_prodid=old_prodid,
-                                            switch_list=sql_l)
+                    try:
+                        ep_obj.load_from_tvinfo(cur_season, cur_episode, tvapi=t, update=update,
+                                                cached_show=show_obj, switch=switch, old_tvid=old_tvid,
+                                                old_prodid=old_prodid, switch_list=sql_l)
+                    except exceptions_helper.EpisodeDeletedException:
+                        logger.log(f'The episode from [{self._name}] was deleted, skipping the rest of the load')
+                        continue
 
                     result = ep_obj.get_sql()
                     if None is not result:

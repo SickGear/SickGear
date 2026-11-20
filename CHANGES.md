@@ -53,6 +53,7 @@
 * Change group imports in PEP 8 order: Python standard library, then bundled libraries, then SickGear code
 * Change templates to import only the names they use from sickgear.common, instead of every name
 * Change recent and backlog search to load wanted episodes only, instead of every episode of every show
+* Change show update to load each episode once from the DB and once from TV info, instead of twice from each
 
 
 [develop]
