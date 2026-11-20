@@ -101,7 +101,7 @@ from bs4_parser import BS4Parser
 from api_trakt.exceptions import TraktException, TraktAuthException
 from api_imdb.imdb_exceptions import IMDbException
 from tvinfo_base import TVInfoEpisode, RoleTypes
-from tvinfo_base.base import tv_src_names
+from tvinfo_base.base import ShowContainer, tv_src_names
 from tvinfo_base.exceptions import *
 from _23 import decode_bytes, decode_str, getargspec, \
     map_consume, map_none, quote_plus, unquote_plus, urlparse
@@ -9252,7 +9252,7 @@ class ConfigGeneral(Config):
     def save_general(self, launch_browser=None, update_shows_on_start=None, show_update_hour=None,
                      trash_remove_show=None, trash_rotate_logs=None,
                      log_dir=None, web_log=None,
-                     indexer_default=None, indexer_timeout=None,
+                     indexer_default=None, indexer_timeout=None, tvinfo_show_cache_limit=None,
                      show_dirs_with_dots=None,
                      update_notify=None, update_auto=None, update_interval=None, notify_on_update=None,
                      update_packages_notify=None, update_packages_auto=None, update_packages_menu=None,
@@ -9297,6 +9297,9 @@ class ConfigGeneral(Config):
                 sickgear.TVINFO_DEFAULT = TVINFO_TVDB
         if indexer_timeout:
             sickgear.TVINFO_TIMEOUT = config.to_int(indexer_timeout)
+        if tvinfo_show_cache_limit:
+            sickgear.TVINFO_SHOW_CACHE_LIMIT = config.minimax(tvinfo_show_cache_limit, 10, 1, 1000)
+            ShowContainer.max_entries = sickgear.TVINFO_SHOW_CACHE_LIMIT
         sickgear.SHOW_DIRS_WITH_DOTS = config.checkbox_to_value(show_dirs_with_dots)
 
         # Updates

@@ -71,6 +71,8 @@
 * Change read an mkv file only up to its track list to determine quality and video codec, instead of every cluster
 * Change read a media file once for both its quality and video codec
 * Fix file of an anime show is ignored where its name has the show year, a season and episode, and HD or SD quality
+* Change keep fetched TV info of the newest 10 shows in memory instead of every show fetched in 15 minutes
+* Add option "Keep TV info in memory of" a number of shows fetched last, to Config/General/Misc, default 10
 
 
 [develop]
