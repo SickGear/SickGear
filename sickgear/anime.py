@@ -205,6 +205,9 @@ def set_up_anidb_connection():
     if not sickgear.ADBA_CONNECTION:
         # anidb_logger = (lambda x: logger.debug('ANIDB: ' + str(x)))
         sickgear.ADBA_CONNECTION = adba.Connection(keepAlive=True)  # , log=anidb_logger)
+        # keep the session file with the AniDB cache files, the default of the library is the folder of sickgear.py
+        if cache_dir := anidb_cache_dir():
+            sickgear.ADBA_CONNECTION.SessionFile = os.path.join(cache_dir, 'session.cfg')
 
     auth = False
     try:

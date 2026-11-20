@@ -15,7 +15,8 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import adba
 
-from sickgear import helpers
+import sickgear
+from sickgear import anime, helpers
 from sickgear.common import ARCHIVED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, \
     DOWNLOADED, SKIPPED, IGNORED, UNAIRED, UNKNOWN, WANTED, Quality
 
@@ -271,7 +272,33 @@ class LazyImportTests(unittest.TestCase):
         self.assertEqual('[]', result.stdout.strip(), msg=result.stderr[-2000:])
 
 
+class AniDBSessionFileTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_session_file_is_in_cache_folder(self):
+        with mock.patch.multiple(sickgear, USE_ANIDB=True, ANIDB_USERNAME='user', ANIDB_PASSWORD='pw',
+                                 ADBA_CONNECTION=None, CACHE_DIR=self.temp_dir):
+            with mock.patch.object(adba, 'Connection'):
+                anime.set_up_anidb_connection()
+                self.assertEqual(os.path.join(self.temp_dir, 'anidb', 'session.cfg'),
+                                 sickgear.ADBA_CONNECTION.SessionFile)
+
+    def test_logout_with_no_session_file(self):
+        # no __init__, it opens a network socket
+        conn = adba.Connection.__new__(adba.Connection)
+        conn.SessionFile = os.path.join(self.temp_dir, 'session.cfg')
+        conn.handle = mock.Mock()
+        self.assertIsNone(conn.logout())
+        conn.handle.assert_not_called()
+
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, LibImportTests, LazyImportTests):
+    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests,
+                     LibImportTests, LazyImportTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
