@@ -11,19 +11,24 @@ NOSTRICT = 0x00004
 
 RE_PATTERN_LINE_SPLIT = re.compile(r'(?:\r\n|(?!\r\n)[\n\r])|$')
 
-UC_A = ord('A')
-UC_Z = ord('Z')
+ASCII_LOWER = str.maketrans('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')
+
+
+def ascii_lower(string: str) -> str:
+    """
+    Lower ASCII letters only, without caching.
+
+    Use this for document text, such as attribute values, which can be large and should not be held by a cache.
+    """
+
+    return string.lower() if string.isascii() else string.translate(ASCII_LOWER)
 
 
 @lru_cache(maxsize=512)
 def lower(string: str) -> str:
-    """Lower."""
+    """Lower ASCII letters only."""
 
-    new_string = []
-    for c in string:
-        o = ord(c)
-        new_string.append(chr(o + 32) if UC_A <= o <= UC_Z else c)
-    return ''.join(new_string)
+    return ascii_lower(string)
 
 
 class SelectorSyntaxError(Exception):

@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum
 import copyreg
 from .pretty import pretty
+from . import util
 from typing import Any, Iterator, Pattern, Iterable, Mapping, TypeVar, overload
 
 __all__ = (
@@ -29,6 +30,8 @@ SEL_IN_RANGE = 0x80
 SEL_OUT_OF_RANGE = 0x100
 SEL_DEFINED = 0x200
 SEL_PLACEHOLDER_SHOWN = 0x400
+SEL_EDITABLE = 0x800
+SEL_CHECKED = 0x1000
 
 
 def _repr_expand(value: Any) -> bool:  # pragma: no cover
@@ -236,13 +239,14 @@ class SelectorTag(Immutable):
 class SelectorAttribute(Immutable):
     """Selector attribute rule."""
 
-    __slots__ = ("attribute", "prefix", "pattern", "xml_type_pattern", "inverse", "_hash")
+    __slots__ = ("attribute", "prefix", "pattern", "xml_type_pattern", "inverse", "ignore_case", "_hash")
 
     attribute: str
     prefix: str
     pattern: Pattern[str] | None
     xml_type_pattern: Pattern[str] | None
     inverse: bool
+    ignore_case: bool
 
     def __init__(
         self,
@@ -250,16 +254,23 @@ class SelectorAttribute(Immutable):
         prefix: str,
         pattern: Pattern[str] | None,
         xml_type_pattern: Pattern[str] | None,
-        inverse: bool
+        inverse: bool,
+        ignore_case: bool = False
     ) -> None:
-        """Initialize."""
+        """
+        Initialize.
+
+        When `ignore_case` is set, `pattern` matches the attribute value converted to ASCII lowercase.
+        `xml_type_pattern` is always case sensitive.
+        """
 
         super().__init__(
             attribute=attribute,
             prefix=prefix,
             pattern=pattern,
             xml_type_pattern=xml_type_pattern,
-            inverse=inverse
+            inverse=inverse,
+            ignore_case=ignore_case
         )
 
 
@@ -466,7 +477,7 @@ class CustomSelectors(ImmutableDict[str, SelectorList]):
             if not isinstance(k, str):
                 raise TypeError(f'{self.__class__.__name__} keys must be strings')
             # Validate key
-            k = cp.css_unescape(k).lower()
+            k = util.lower(cp.css_unescape(k))
             if k in self._d:
                 raise KeyError(f'Custom selector {k} was defined twice')
             if cp.RE_CUSTOM.match(k) is None:

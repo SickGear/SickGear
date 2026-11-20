@@ -96,6 +96,18 @@ PSEUDO_SIMPLE_NO_MATCH = {
     ':visited'
 }
 
+# Attributes whose values are matched case insensitively on HTML elements in HTML documents
+# https://html.spec.whatwg.org/multipage/semantics-other.html#case-sensitivity-of-selectors
+HTML_CASE_INSENSITIVE_ATTRIBUTES = frozenset(
+    (
+        'accept', 'accept-charset', 'align', 'alink', 'axis', 'bgcolor', 'charset', 'checked', 'clear',
+        'codetype', 'color', 'compact', 'declare', 'defer', 'dir', 'direction', 'disabled', 'enctype',
+        'face', 'frame', 'hreflang', 'http-equiv', 'lang', 'language', 'link', 'media', 'method',
+        'multiple', 'nohref', 'noresize', 'noshade', 'nowrap', 'readonly', 'rel', 'rev', 'rules', 'scope',
+        'scrolling', 'selected', 'shape', 'target', 'text', 'type', 'valign', 'valuetype', 'vlink'
+    )
+)
+
 # Complex pseudo classes that take selector lists
 PSEUDO_COMPLEX = {
     ':contains',
@@ -192,9 +204,13 @@ PAT_PSEUDO_NTH_TYPE = fr'''
 # Pseudo class language (`:lang("*-de", en)`)
 PAT_PSEUDO_LANG = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<values>{VALUE}(?:{WSC}*+,{WSC}*+{VALUE})*+){WSC}*+\)'
 # Pseudo class direction (`:dir(ltr)`)
-PAT_PSEUDO_DIR = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<dir>ltr|rtl){WSC}*+\)'
-# Combining characters (`>`, `~`, ` `, `+`, `,`)
-PAT_COMBINE = fr'{COMMENTS}*+(?={WS}|[,+>~]){WSC}*+(?P<relation>[,+>~])?+{WSC}*+'
+PAT_PSEUDO_DIR = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<dir>{IDENTIFIER}){WSC}*+\)'
+# Combining characters (`>`, `~`, ` `, `+`, `,`) along with any comments and whitespace around them.
+# A run of comments and whitespace is matched all at once. `ws` captures whether the run has whitespace
+# before the relation, as a run of only comments does not combine selectors.
+PAT_COMBINE = fr'''
+(?=[,+>~]|{WS}|/\*){COMMENTS}*+(?:(?P<ws>{WS}){WSC}*+)?+(?P<relation>[,+>~])?+{WSC}*+
+'''
 # Extra: Contains (`:contains(text)`)
 PAT_PSEUDO_CONTAINS = fr'{PAT_PSEUDO_CLASS_SPECIAL}(?P<values>{VALUE}(?:{WSC}*+,{WSC}*+{VALUE})*+){WSC}*+\)'
 
@@ -208,8 +224,6 @@ RE_NTH = re.compile(fr'(?P<s1>[-+])?+(?P<a>[0-9]++n?+|n)(?:(?<=n){WSC}*+(?P<s2>[
 RE_VALUES = re.compile(fr'(?:(?P<value>{VALUE})|(?P<split>{WSC}*+,{WSC}*+))', re.X)
 # Whitespace checks
 RE_WS = re.compile(WS)
-RE_WS_BEGIN = re.compile(fr'^{WSC}*+')
-RE_WS_END = re.compile(fr'^(?:[ \t]|(?>\n\r|[\n\f\r])|{COMMENTS})*+')
 RE_CUSTOM = re.compile(fr'^{PAT_PSEUDO_CLASS_CUSTOM}$', re.X)
 RE_PSEUDO_CLASS_SPECIAL = re.compile(PAT_PSEUDO_CLASS_SPECIAL, re.I | re.X | re.U)
 RE_PSEUDO_IGNORE = re.compile(PAT_PSEUDO_CLASS, re.X | re.I | re.U)
@@ -234,6 +248,8 @@ FLG_IN_RANGE = 0x80
 FLG_OUT_OF_RANGE = 0x100
 FLG_PLACEHOLDER_SHOWN = 0x200
 FLG_FORGIVE = 0x400
+FLG_EDITABLE = 0x800
+FLG_CHECKED = 0x1000
 
 # Maximum cached patterns to store
 _MAXCACHE = 500
@@ -337,7 +353,13 @@ def escape(ident: str) -> str:
 
 
 class SelectorPattern:
-    """Selector pattern."""
+    """
+    Selector pattern.
+
+    Patterns are shared by all parsers, so they must not hold any per-match state.
+    `match` returns the token name along with the match; a name of `None` means the
+    match is consumed without being processed further.
+    """
 
     def __init__(self, name: str, pattern: str) -> None:
         """Initialize."""
@@ -355,15 +377,37 @@ class SelectorPattern:
                 self._re_pattern = re.compile(self.pattern, re.I | re.X | re.U)
         return self._re_pattern
 
-    def get_name(self) -> str:
-        """Get name."""
-
-        return self.name
-
-    def match(self, selector: str, index: int, flags: int) -> Match[str] | None:
+    def match(self, selector: str, index: int, flags: int) -> tuple[str | None, Match[str]] | None:
         """Match the selector."""
 
-        return self.re_pattern.match(selector, index)
+        m = self.re_pattern.match(selector, index)
+        return None if m is None else (self.name, m)
+
+
+class SelectorPatternCombinator(SelectorPattern):
+    """
+    A run of comments and whitespace might be a combinator or might just be consumed.
+
+    Process all combinators except whitespace at the start or end, and runs of only comments.
+    """
+
+    def match(self, selector: str, index: int, flags: int) -> tuple[str | None, Match[str]] | None:
+        """
+        Match the selector.
+
+        If we match at the start or end of the string and have a non-whitespace combinator, the match is bogus.
+        If we are at the start or end and the combinator is white space, then it can be consumed with no further
+        processing. Comments are not whitespace, so a run of only comments is consumed as well.
+        """
+
+        m = self.re_pattern.match(selector, index)
+        # An unterminated comment matches nothing, which must not be consumed or the parser would never advance.
+        if m is None or m.end(0) == index:
+            return None
+        relation = m.group('relation')
+        if m.start(0) == 0 or m.end(0) == len(selector):
+            return None if relation else (None, m)
+        return (self.name if relation or m.group('ws') else None), m
 
 
 class SpecialPseudoPattern(SelectorPattern):
@@ -379,27 +423,15 @@ class SpecialPseudoPattern(SelectorPattern):
             for pseudo in p[1]:
                 self.patterns[pseudo] = pattern
 
-        self.matched_name: SelectorPattern | None = None
-
-    def get_name(self) -> str:
-        """Get name."""
-
-        return '' if self.matched_name is None else self.matched_name.get_name()
-
-    def match(self, selector: str, index: int, flags: int) -> Match[str] | None:
+    def match(self, selector: str, index: int, flags: int) -> tuple[str | None, Match[str]] | None:
         """Match the selector."""
 
-        pseudo = None
         m = RE_PSEUDO_CLASS_SPECIAL.match(selector, index)
         if m:
-            name = util.lower(css_unescape(m.group('name')))
-            pattern = self.patterns.get(name)
+            pattern = self.patterns.get(util.lower(css_unescape(m.group('name'))))
             if pattern:
-                pseudo = pattern.match(selector, index, flags)
-                if pseudo:
-                    self.matched_name = pattern
-
-        return pseudo
+                return pattern.match(selector, index, flags)
+        return None
 
 
 class _Selector:
@@ -522,6 +554,8 @@ class _SelectorContext:
         self.is_out_of_range = bool(flags & FLG_OUT_OF_RANGE)
         self.is_placeholder_shown = bool(flags & FLG_PLACEHOLDER_SHOWN)
         self.is_forgive = bool(flags & FLG_FORGIVE)
+        self.is_editable = bool(flags & FLG_EDITABLE)
+        self.is_checked = bool(flags & FLG_CHECKED)
 
         # The algorithm for relative selectors require an initial selector in the selector list
         if self.is_relative:
@@ -532,7 +566,7 @@ class _SelectorContext:
 
         for name in (
             'is_pseudo', 'is_open', 'is_relative', 'is_not', 'is_html', 'is_default', 'is_indeterminate',
-            'is_in_range', 'is_out_of_range', 'is_placeholder_shown', 'is_forgive'
+            'is_in_range', 'is_out_of_range', 'is_placeholder_shown', 'is_forgive', 'is_editable', 'is_checked'
         ):
             if getattr(self, name):
                 print(f'    {name}: True')
@@ -566,25 +600,45 @@ class PseudoSelectorMap(UserDict[str, CSSPattern | ct.SelectorList]):
         return value
 
 
+# An `input` is in the Text state when its `type` is missing, `text`, or not one of
+# the other keywords, so an invalid value like `type="foo"` is a text input:
+# https://html.spec.whatwg.org/multipage/input.html#attr-input-type
+INPUT_TEXT_STATE = (
+    ':not([type=hidden], [type=search], [type=tel], [type=url], [type=email], [type=password], '
+    '[type=date], [type=month], [type=week], [type=time], [type=datetime-local], [type=number], '
+    '[type=range], [type=color], [type=checkbox], [type=radio], [type=file], [type=submit], '
+    '[type=image], [type=reset], [type=button])'
+)
+
 # CSS pattern for `:link` and `:any-link`
 CSS_LINK = CSSPattern('html|*:is(a, area)[href]', FLG_PSEUDO | FLG_HTML)
 # CSS pattern for `:checked`
 CSS_CHECKED = CSSPattern(
     '''
-    html|*:is(input[type=checkbox], input[type=radio])[checked], html|option[selected]
-    ''',
-    FLG_PSEUDO | FLG_HTML
-)
-# CSS pattern for `:default` (must compile CSS_CHECKED first)
-CSS_DEFAULT = CSSPattern(
-    '''
-    :checked,
+    html|input[type=checkbox][checked],
 
     /*
     This pattern must be at the end.
     Special logic is applied to the last selector.
     */
-    html|form html|*:is(button, input)[type="submit"]
+    html|*:is(input[type=radio][checked], option)
+    ''',
+    FLG_PSEUDO | FLG_HTML | FLG_CHECKED
+)
+# CSS pattern for `:default`
+CSS_DEFAULT = CSSPattern(
+    '''
+    html|*:is(input[type=checkbox], input[type=radio])[checked],
+    html|option[selected],
+
+    /*
+    This pattern must be at the end.
+    Special logic is applied to the last selector.
+    */
+    html|*:is(
+        button:is([type=submit], :not([type=button], [type=reset], [commandfor], [command])),
+        input:is([type=submit], [type=image])
+    )
     ''',
     FLG_PSEUDO | FLG_HTML | FLG_DEFAULT
 )
@@ -606,52 +660,71 @@ CSS_INDETERMINATE = CSSPattern(
 # CSS pattern for `:disabled`
 CSS_DISABLED = CSSPattern(
     '''
-    html|*:is(input:not([type=hidden]), button, select, textarea, fieldset, optgroup, option, fieldset)[disabled],
+    html|*:is(input, button, select, textarea, fieldset, optgroup, option, fieldset)[disabled],
     html|optgroup[disabled] > html|option,
-    html|fieldset[disabled] > html|*:is(input:not([type=hidden]), button, select, textarea, fieldset),
+    html|fieldset[disabled] > html|*:is(input, button, select, textarea, fieldset),
     html|fieldset[disabled] >
-        html|*:not(legend:nth-of-type(1)) html|*:is(input:not([type=hidden]), button, select, textarea, fieldset)
+        html|*:not(legend:nth-of-type(1)) html|*:is(input, button, select, textarea, fieldset),
+    html|*:is(
+        html|select[disabled],
+        html|fieldset[disabled] > html|select,
+        html|fieldset[disabled] > html|*:not(legend:nth-of-type(1)) html|select
+    ) html|*:is(optgroup, option)
     ''',
     FLG_PSEUDO | FLG_HTML
 )
 # CSS pattern for `:enabled`
 CSS_ENABLED = CSSPattern(
     '''
-    html|*:is(input:not([type=hidden]), button, select, textarea, fieldset, optgroup, option, fieldset):not(:disabled)
+    html|*:is(input, button, select, textarea, fieldset, optgroup, option, fieldset):not(:disabled)
     ''',
     FLG_PSEUDO | FLG_HTML
 )
 # CSS pattern for `:required`
-CSS_REQUIRED = CSSPattern('html|*:is(input, textarea, select)[required]', FLG_PSEUDO | FLG_HTML)
+# The `required` attribute does not apply to `input` elements of these types.
+INPUT_REQUIRED_NOT_APPLIES = (
+    '[type=hidden], [type=range], [type=color], [type=submit], [type=image], [type=reset], [type=button]'
+)
+CSS_REQUIRED = CSSPattern(
+    f'''
+    html|input:not({INPUT_REQUIRED_NOT_APPLIES})[required],
+    html|*:is(textarea, select)[required]
+    ''',
+    FLG_PSEUDO | FLG_HTML
+)
 # CSS pattern for `:optional`
-CSS_OPTIONAL = CSSPattern('html|*:is(input, textarea, select):not([required])', FLG_PSEUDO | FLG_HTML)
+CSS_OPTIONAL = CSSPattern(
+    f'''
+    html|*:is(input, textarea, select):not([required]),
+    html|input:is({INPUT_REQUIRED_NOT_APPLIES})
+    ''',
+    FLG_PSEUDO | FLG_HTML
+)
 # CSS pattern for `:placeholder-shown`
 CSS_PLACEHOLDER_SHOWN = CSSPattern(
-    '''
-    html|input:is(
-        :not([type]),
-        [type=""],
-        [type=text],
-        [type=search],
-        [type=url],
-        [type=tel],
-        [type=email],
-        [type=password],
-        [type=number]
-    )[placeholder]:not([placeholder='']):is(:not([value]), [value=""]),
-    html|textarea[placeholder]:not([placeholder=''])
+    f'''
+    html|*:is(
+        input:is(
+            {INPUT_TEXT_STATE},
+            [type=search],
+            [type=url],
+            [type=tel],
+            [type=email],
+            [type=password],
+            [type=number]
+        ),
+        textarea
+    )[placeholder]:not([placeholder=''])
     ''',
     FLG_PSEUDO | FLG_HTML | FLG_PLACEHOLDER_SHOWN
 )
 # CSS pattern for `:read-write` (CSS_DISABLED must be compiled first)
 CSS_READ_WRITE = CSSPattern(
-    '''
+    f'''
     html|*:is(
         textarea,
         input:is(
-            :not([type]),
-            [type=""],
-            [type=text],
+            {INPUT_TEXT_STATE},
             [type=search],
             [type=url],
             [type=tel],
@@ -665,48 +738,42 @@ CSS_READ_WRITE = CSSPattern(
             [type=week]
         )
     ):not([readonly], :disabled),
-    html|*:is([contenteditable=""], [contenteditable="true" i])
+    html|*:not(input, textarea, [contenteditable="false" i])
     ''',
-    FLG_PSEUDO | FLG_HTML
+    FLG_PSEUDO | FLG_HTML | FLG_EDITABLE
 )
 # CSS pattern for `:read-only`
 CSS_READ_ONLY = CSSPattern('html|*:not(:read-write)', FLG_PSEUDO | FLG_HTML)
+# `:in-range` and `:out-of-range` only consider an input that has range limitations and is a candidate
+# for constraint validation. See `CSSMatch.match_range()` for the full rules and where they follow
+# browsers instead of the letter of the HTML spec.
+#
+# - A `range` input always has range limitations: its minimum and maximum default to 0 and 100.
+#   The other types need a `min` or `max`; `match_range()` rejects one that does not parse.
+# - An input that is disabled (including through a disabled `fieldset`, outside its first `legend`),
+#   `readonly`, or inside a `datalist` is barred from constraint validation and matches neither.
+#   The spec says `readonly` does not apply to `range` and so does not bar it, but all browsers
+#   treat a `readonly` `range` input as barred, so we do too.
+RANGE_INPUT = """
+    html|input:is(
+        :is(
+            [type="date"],
+            [type="month"],
+            [type="week"],
+            [type="time"],
+            [type="datetime-local"],
+            [type="number"]
+        ):is(
+            [min],
+            [max]
+        ),
+        [type="range"]
+    ):not(:disabled, [readonly], html|datalist html|*)
+"""
 # CSS pattern for `:in-range`
-CSS_IN_RANGE = CSSPattern(
-    '''
-    html|input:is(
-        [type="date"],
-        [type="month"],
-        [type="week"],
-        [type="time"],
-        [type="datetime-local"],
-        [type="number"],
-        [type="range"]
-    ):is(
-        [min],
-        [max]
-    )
-    ''',
-    FLG_PSEUDO | FLG_HTML | FLG_IN_RANGE
-)
+CSS_IN_RANGE = CSSPattern(RANGE_INPUT, FLG_PSEUDO | FLG_HTML | FLG_IN_RANGE)
 # CSS pattern for `:out-of-range`
-CSS_OUT_OF_RANGE = CSSPattern(
-    '''
-    html|input:is(
-        [type="date"],
-        [type="month"],
-        [type="week"],
-        [type="time"],
-        [type="datetime-local"],
-        [type="number"],
-        [type="range"]
-    ):is(
-        [min],
-        [max]
-    )
-    ''',
-    FLG_PSEUDO | FLG_HTML | FLG_OUT_OF_RANGE
-)
+CSS_OUT_OF_RANGE = CSSPattern(RANGE_INPUT, FLG_PSEUDO | FLG_HTML | FLG_OUT_OF_RANGE)
 # CSS pattern for :open
 CSS_OPEN = CSSPattern('html|*:is(details, dialog)[open]', FLG_PSEUDO | FLG_HTML)
 # CSS pattern for :muted
@@ -743,7 +810,7 @@ class CSSParser:
         SelectorPattern("class", PAT_CLASS),
         SelectorPattern("tag", PAT_TAG),
         SelectorPattern("attribute", PAT_ATTR),
-        SelectorPattern("combine", PAT_COMBINE)
+        SelectorPatternCombinator("combine", PAT_COMBINE)
     )
 
     # Pseudos that expand to selectors
@@ -785,7 +852,9 @@ class CSSParser:
         self.debug = self.flags & util.DEBUG
         self.nostrict = self.flags & util.NOSTRICT
         self.custom = custom
-        self.ignore = frozenset([] if ignore is None else ignore)
+        # Names are compared as the parser recognizes pseudo-classes: with CSS escapes resolved and ASCII letters in
+        # lowercase. Otherwise, writing a name with an escape, such as `:h\61 s()`, would get past it.
+        self.ignore = frozenset([] if ignore is None else (util.lower(css_unescape(name)) for name in ignore))
         self.count = 0
         self.maxsel = max_selectors
 
@@ -803,65 +872,74 @@ class CSSParser:
         case = util.lower(m.group('case')) if m.group('case') else None
         ns = css_unescape(m.group('attr_ns')[:-1]) if m.group('attr_ns') else ''
         attr = css_unescape(m.group('attr_name'))
-        is_type = False
+        html_insensitive = False
+        pattern = None
         pattern2 = None
-        value = ''
         inverse = False
 
         if case:
-            flags = (re.I if case == 'i' else 0) | re.DOTALL
-        elif util.lower(attr) == 'type':
-            flags = re.I | re.DOTALL
-            is_type = True
+            ignore_case = case == 'i'
+        elif util.lower(attr) in HTML_CASE_INSENSITIVE_ATTRIBUTES:
+            ignore_case = True
+            html_insensitive = True
         else:
-            flags = re.DOTALL
+            ignore_case = False
 
         if op:
             value = css_unescape(m.group('value'))
-
-        if not op:
-            # Attribute name
-            pattern = None
-        elif op.startswith('^'):
-            # Value start with
-            # `^=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
-            value = r'(?!)' if not value else re.escape(value)
-            pattern = re.compile(r'^%s.*' % value, flags)
-        elif op.startswith('$'):
-            # Value ends with
-            # `$=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
-            value = r'(?!)' if not value else re.escape(value)
-            pattern = re.compile(r'.*?%s$' % value, flags)
-        elif op.startswith('*'):
-            # Value contains
-            # `*=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
-            value = r'(?!)' if not value else re.escape(value)
-            pattern = re.compile(r'.*?%s.*' % value, flags)
-        elif op.startswith('~'):
-            # Value contains word within space separated list
-            # `*~` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
-            value = r'(?!)' if not value or RE_WS.search(value) else re.escape(value)
-            pattern = re.compile(r'.*?(?:(?<=^)|(?<=[ \t\r\n\f]))%s(?=(?:[ \t\r\n\f]|$)).*' % value, flags)
-        elif op.startswith('|'):
-            # Value starts with word in dash separated list
-            pattern = re.compile(r'^%s(?:-.*)?$' % re.escape(value), flags)
-        elif op.startswith('!'):
-            # Value does not matches
-            pattern = re.compile(r'^(?!%s).*$' % re.escape(value), flags)
-            inverse = True
-        else:
-            # Value matches
-            pattern = re.compile(r'^%s$' % re.escape(value), flags)
-
-        if is_type and pattern:
-            pattern2 = re.compile(pattern.pattern)
+            pattern = self.parse_attribute_pattern(op, util.lower(value) if ignore_case else value)
+            if html_insensitive:
+                # Outside HTML, the value is matched case sensitive.
+                pattern2 = self.parse_attribute_pattern(op, value)
+            inverse = op.startswith('!')
 
         # Append the attribute selector
-        sel_attr = ct.SelectorAttribute(attr, ns, pattern, pattern2, inverse)
+        sel_attr = ct.SelectorAttribute(attr, ns, pattern, pattern2, inverse, ignore_case)
         sel.attributes.append(sel_attr)
 
         has_selector = True
         return has_selector
+
+    @staticmethod
+    def parse_attribute_pattern(op: str, value: str) -> re.Pattern[str]:
+        """
+        Create the pattern for an attribute selector's value.
+
+        The pattern is applied with `search()`, so it must not need a leading `.*?` to find the value, which would make
+        the regular expression engine retry the value at every position instead of scanning for it as a literal.
+
+        A case insensitive pattern is compiled case sensitive for the value converted to ASCII lowercase and is matched
+        against the attribute value converted the same way. We purposely avoid using `re.I` as the regular expression
+        engine cannot then scan as a literal, making the search take quadratic time depending on the pattern.
+        """
+
+        if op.startswith('^'):
+            # Value start with
+            # `^=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            source = r'^(?!)' if not value else fr'^{re.escape(value)}'
+        elif op.startswith('$'):
+            # Value ends with
+            # `$=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            source = r'(?!)' if not value else fr'{re.escape(value)}\Z'
+        elif op.startswith('*'):
+            # Value contains
+            # `*=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            source = r'(?!)' if not value else re.escape(value)
+        elif op.startswith('~'):
+            # Value contains word within space separated list
+            # `~=` should match nothing if the value is empty, so use `(?!)` which cannot be matched.
+            value = r'(?!)' if not value or RE_WS.search(value) else re.escape(value)
+            source = fr'(?:(?<=^)|(?<=[ \t\r\n\f])){value}(?=(?:[ \t\r\n\f]|\Z))'
+        elif op.startswith('|'):
+            # Value starts with word in dash separated list
+            source = fr'^{re.escape(value)}(?:-.*)?\Z'
+        elif op.startswith('!'):
+            # Value does not matches
+            source = fr'^(?!{re.escape(value)}\Z)'
+        else:
+            # Value matches
+            source = fr'^{re.escape(value)}\Z'
+        return re.compile(source, re.DOTALL)
 
     def parse_tag_pattern(self, sel: _Selector, m: Match[str], has_selector: bool) -> bool:
         """Parse tag pattern from regex match."""
@@ -899,9 +977,8 @@ class CSSParser:
         sel: _Selector,
         m: Match[str],
         has_selector: bool,
-        is_html: bool,
         is_relative: bool
-    ) -> tuple[bool, bool, _SelectorContext | None]:
+    ) -> tuple[bool, _SelectorContext | None]:
         """
         Parse pseudo class.
 
@@ -921,7 +998,6 @@ class CSSParser:
                 sel.flags |= ct.SEL_ROOT
             elif pseudo == ':defined':
                 sel.flags |= ct.SEL_DEFINED
-                is_html = True
             elif pseudo == ':scope':
                 sel.flags |= ct.SEL_SCOPE
             elif pseudo == ':empty':
@@ -974,7 +1050,7 @@ class CSSParser:
                 m.start(0)
             )
 
-        return has_selector, is_html, context
+        return has_selector, context
 
     def parse_pseudo_nth(
         self,
@@ -1023,8 +1099,16 @@ class CSSParser:
                 _s2 = '-'
             if nth_parts.group('b'):
                 _s2 += nth_parts.group('b')
-            s1 = int(_s1, 10) if _s1 else 0
-            s2 = int(_s2, 10) if _s2 else 0
+            try:
+                s1 = int(_s1, 10) if _s1 else 0
+                s2 = int(_s2, 10) if _s2 else 0
+            except ValueError as e:
+                # `int()` refuses strings with more digits than `sys.get_int_max_str_digits()`.
+                raise SelectorSyntaxError(
+                    f"Value in '{mdict['name']}' is too large",
+                    self.pattern,
+                    m.start(0)
+                ) from e
 
         pseudo_sel = mdict['name']
         if postfix == '_child':
@@ -1237,8 +1321,14 @@ class CSSParser:
     def parse_pseudo_dir(self, sel: _Selector, m: Match[str], has_selector: bool) -> bool:
         """Parse pseudo direction."""
 
-        value = ct.SEL_DIR_LTR if util.lower(m.group('dir')) == 'ltr' else ct.SEL_DIR_RTL
-        sel.flags |= value
+        value = util.lower(css_unescape(m.group('dir')))
+        if value == 'ltr':
+            sel.flags |= ct.SEL_DIR_LTR
+        elif value == 'rtl':
+            sel.flags |= ct.SEL_DIR_RTL
+        else:
+            # Any other identifier is valid, but does not match anything.
+            sel.no_match = True
         has_selector = True
         return has_selector
 
@@ -1267,7 +1357,7 @@ class CSSParser:
             # Handle parts
             if self.ignore:
                 mi = RE_PSEUDO_IGNORE.match(m.group(0))
-                if mi is not None and mi.group('name').lower() in self.ignore:
+                if mi is not None and util.lower(css_unescape(mi.group('name'))) in self.ignore:
                     raise SelectorSyntaxError(
                         f"The selector '{mi.group('name')}' at position {m.start(0)}, has been disallowed",
                         self.pattern,
@@ -1281,9 +1371,7 @@ class CSSParser:
             elif key == 'pseudo_class_custom':
                 ctx.has_selector = self.parse_pseudo_class_custom(ctx.sel, m, ctx.has_selector)
             elif key == 'pseudo_class':
-                ctx.has_selector, ctx.is_html, child = self.parse_pseudo_class(
-                    ctx.sel, m, ctx.has_selector, ctx.is_html, ctx.is_relative
-                )
+                ctx.has_selector, child = self.parse_pseudo_class(ctx.sel, m, ctx.has_selector, ctx.is_relative)
             elif key == 'pseudo_element':
                 raise NotImplementedError(f"Pseudo-element found at position {m.start(0)}")
             elif key == 'pseudo_contains':
@@ -1294,8 +1382,6 @@ class CSSParser:
                 ctx.has_selector = self.parse_pseudo_lang(ctx.sel, m, ctx.has_selector)
             elif key == 'pseudo_dir':
                 ctx.has_selector = self.parse_pseudo_dir(ctx.sel, m, ctx.has_selector)
-                # Currently only supports HTML
-                ctx.is_html = True
             elif key == 'pseudo_close':
                 if not ctx.has_selector:
                     if not ctx.is_forgive:
@@ -1410,6 +1496,10 @@ class CSSParser:
             selectors[-1].flags = ct.SEL_OUT_OF_RANGE
         if ctx.is_placeholder_shown:
             selectors[-1].flags = ct.SEL_PLACEHOLDER_SHOWN
+        if ctx.is_editable:
+            selectors[-1].flags = ct.SEL_EDITABLE
+        if ctx.is_checked:
+            selectors[-1].flags = ct.SEL_CHECKED
 
         # Return selector list
         return ct.SelectorList([s.freeze() for s in selectors], ctx.is_not, ctx.is_html, self.count - ctx.count)
@@ -1417,27 +1507,24 @@ class CSSParser:
     def selector_iter(self, pattern: str) -> Iterator[tuple[str, Match[str]]]:
         """Iterate selector tokens."""
 
-        # Ignore whitespace and comments at start and end of pattern
-        m = RE_WS_BEGIN.search(pattern)
-        index = m.end(0) if m else 0
-        m = RE_WS_END.search(pattern[::-1])
-        offset = m.end(0) if m else 0
-        end = len(pattern) - (1 + offset)
+        index = 0
+        end = len(pattern) - 1
 
         if self.debug:  # pragma: no cover
             print(f'## PARSING: {pattern!r}')
         while index <= end:
-            m = None
+            token = None
             for v in self.CSS_TOKENS:
-                m = v.match(pattern, index, self.flags)
-                if m:
-                    name = v.get_name()
+                token = v.match(pattern, index, self.flags)
+                if token is not None:
+                    name, m = token
                     if self.debug:  # pragma: no cover
-                        print(f"TOKEN: '{name}' --> {m.group(0)!r} at position {m.start(0)}")
+                        print(f"TOKEN: '{name or 'consumed'}' --> {m.group(0)!r} at position {m.start(0)}")
                     index = m.end(0)
-                    yield name, m
+                    if name is not None:
+                        yield name, m
                     break
-            if m is None:
+            if token is None:
                 c = pattern[index]
                 # If the character represents the start of one of the known selector types,
                 # throw an exception mentioning that the known selector type is in error;
