@@ -37,6 +37,14 @@ pre .log-stop{
 	background-color:rgba(183, 184, 44, 0.16)
 }
 
+.yes-no.is-yes{
+	color:#2a6e1f
+}
+
+.yes-no.is-no{
+	color:#7a7466
+}
+
 .shows-not-found.nnnn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nnnn{
 	color:#ff6d5e
