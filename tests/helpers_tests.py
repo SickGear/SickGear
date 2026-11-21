@@ -147,6 +147,32 @@ class FlagCodeTests(unittest.TestCase):
         self.assertEqual(path, BaseStaticFileHandler.flag_file_path(path))
 
 
+class MediaStatsTests(unittest.TestCase):
+    """ one walk of a show folder gives the media stats and the size of all its files """
+
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        for name, size in (('Season 1/a.mkv', 100), ('Season 1/b.mkv', 300), ('Season 1/b.nfo', 7), ('poster.jpg', 50)):
+            path = join(self.tmp_dir, name)
+            os.makedirs(dirname(path), exist_ok=True)
+            with open(path, 'wb') as fh:
+                fh.write(b'x' * size)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+    def test_folder(self):
+        self.assertEqual((2, 100, 300, 200, 457), helpers.get_media_stats(self.tmp_dir))
+
+    def test_no_media(self):
+        os.remove(join(self.tmp_dir, 'Season 1', 'a.mkv'))
+        os.remove(join(self.tmp_dir, 'Season 1', 'b.mkv'))
+        self.assertEqual((0, 0, 0, 0, 57), helpers.get_media_stats(self.tmp_dir))
+
+    def test_missing_folder(self):
+        self.assertEqual((0, 0, 0, 0, 0), helpers.get_media_stats(join(self.tmp_dir, 'gone')))
+
+
 class TouchFileTests(unittest.TestCase):
     """ a file date that cannot be set is logged with the file and the reason """
 
@@ -329,6 +355,6 @@ class HachoirParserTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests, HachoirParserTests):
+    for cur_case in (HelpersTests, FlagCodeTests, MediaStatsTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests, HachoirParserTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

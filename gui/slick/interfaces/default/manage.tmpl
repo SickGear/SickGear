@@ -1,7 +1,7 @@
 #import sickgear
 #import re
 #from sickgear.common import qualityPresets, qualityPresetStrings
-#from sickgear.helpers import get_size, human
+#from sickgear.helpers import human
 ##
 #set global $title = 'Bulk Change'
 #set global $header = 'Bulk Change'
@@ -148,7 +148,7 @@ $xsrf_form_html
 		<tr style="height:70px">  <!-- must inline this css -->
 			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check"></th>
 			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
-			<th class="sort-size col-legend narrow dir-none"><div class="rotate-holder"><div class="rotate-body">Size</div></div></th>
+			<th class="sort-size col-legend narrow dir-none" title="#echo ('size of media files that SickGear knows', 'size of all show folder files')['folder' == $sizes_from]#"><div class="rotate-holder"><div class="rotate-body">Size</div></div></th>
 			<th class="narrow sort-size-type" data-type="E" title="total"><div class="sort-size-type-body">&Sigma;</div><span class="sort-size-type-image" style="display:none; margin-top:8px"><i class="spinner"></i></span></th>
 #if $enable_tvinfo
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">TV Info</div></div></th>
@@ -186,7 +186,7 @@ $xsrf_form_html
 #set $max = $high + 100
 #for $cur_show_obj in $shows + $shows_no_loc
     #set $show_loc = $cur_show_obj.path
-    #set $show_size = $max if not $show_loc else $get_size($show_loc)
+    #set $show_size = $max if not $show_loc else $sizes.get($cur_show_obj.tvid_prodid, 0)
     #set $option_state = '<input type="checkbox"%s class="%s-check"%s>'
     ##
     #set $curUpdate_disabled = $sickgear.show_queue_scheduler.action.is_being_updated($cur_show_obj)\
@@ -226,7 +226,7 @@ $xsrf_form_html
 			<td><input type="checkbox" class="edit-check"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
-			<td colspan=2>#if 0 <= $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#end if#</td>
+			<td colspan=2>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
     #if $enable_tvinfo
 			<td><i class="icon16 $sickgear.TVInfoAPI($cur_show_obj.tvid).config['slug']" data-tvid="$cur_show_obj.tvid"></i></td>
     #end if
@@ -261,6 +261,7 @@ $xsrf_form_html
 </table>
 <div id="tfoot">
 	<span style="width:20%" class="pull-left"><input class="btn pull-left" type="button" value="Edit Selected" id="bulk-change-edit"></span>
+	<span class="pull-left"><button type="button" class="btn" id="read-folder-sizes" title="#echo ('sizes are of media files that SickGear knows, read the size of all show folder files', 'sizes are of all show folder files, read again')['folder' == $sizes_from]#">Read folder sizes</button></span>
 	<span class="stats grey-text"></span>
 	<span style="width:20%" class="pull-right"><input class="btn pull-right" type="button" value="Submit" id="bulk-change-submit"></span>
 </div>

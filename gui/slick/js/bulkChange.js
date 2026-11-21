@@ -161,6 +161,54 @@ $(function(){
 					: '<span class="filter-rows">' + data.filteredRows + '</span> of <span class="total-rows">' + data.totalRows + '</span>  shows (' + (data.totalRows - data.filteredRows) + ' filtered)'));
 		});
 
+	// read the size of every show folder, slow on a large or network drive, so only when asked for
+	function readSizes(refresh){
+		var url = $.SickGear.Root + '/home/media_stats';
+		return $.getJSON(url, refresh ? {refresh: 1} : {}).then(function(content){
+			var read = content._read;
+			delete content._read;
+			if (read){
+				displayPNotify('success', 'Folder sizes',
+					read.shows + ' show folders ' + (read.ago
+						? 'were read ' + read.ago + ' ago in ' + read.took
+						: 'read in ' + read.took));
+				$('.sort-size').attr('title', 'size of all show folder files');
+			}
+			return content;
+		}, function(xhr, status, error){
+			console.log('data fetch error', url, status + ': ' + error);
+			displayPNotify('error', 'Folder sizes', 'The show folders could not be read');
+		});
+	}
+
+	function showSizes(content, key){
+		var html, val, el$;
+		$.each(content, function(tvidProdid, data){
+			html = '---';
+			val = '-10';
+			el$ = $('tr[data-tvid_prodid="' + tvidProdid + '"][data-size]');
+			if (/undefined/.test(data.message) || 'Size' === key){
+				html = data['h' + key];
+				val = data['b' + key];
+			}
+			el$.find('.ui-size').removeClass('grey-text').removeAttr('title').html(html);
+			el$.attr('data-size', val);
+		});
+		$('#bulk-change-table').trigger('updateAll', [!0]);
+	}
+
+	$('#read-folder-sizes').on('click', function(){
+		var button$ = $(this).prop('disabled', !0).html('<i class="spinner"></i> Reading folders');
+		readSizes(!0).then(function(content){
+			showSizes(content, 'Size');
+			var type$ = $('.sort-size-type');
+			type$.attr('title', 'total').attr('data-type', 'E').find('.sort-size-type-body').html('&Sigma;');
+			button$.attr('title', 'sizes are of all show folder files, read again');
+		}).always(function(){
+			button$.prop('disabled', !1).html('Read folder sizes');
+		});
+	});
+
 	$('.sort-size-type').on('click', function(){
 		$('.sort-size-type-body').hide();
 		$('.sort-size-type-image').show();
@@ -182,30 +230,12 @@ $(function(){
 			key = 'Smallest';
 		}
 
-		var url = $.SickGear.Root + '/home/media_stats';
-		$.getJSON(url).then(function(content){
-			// on success...
-			var html, val, el$;
-			$.each(content, function(tvidProdid, data){
-				html = '---';
-				val = '-10';
-				el$ = $('tr[data-tvid_prodid="' + tvidProdid + '"][data-size]');
-				if (/undefined/.test(data.message) || 'E' === dataType){
-					html = data['h' + key];
-					val = data['b' + key];
-				}
-				el$.find('.ui-size').html(html);
-				el$.attr('data-size', val);
-			});
+		readSizes(!1).then(function(content){
+			showSizes(content, key);
 			that.attr('title', title);
 			that.attr('data-type', dataType);
 			that.find('.sort-size-type-body').html(htmlType);
-			$('#bulk-change-table').trigger('updateAll', [!0]);
-			$('.sort-size-type-image').hide();
-			$('.sort-size-type-body').show();
-		}, function(xhr, status, error){
-			// on failure...
-			console.log('data fetch error', url, status + ': ' + error);
+		}).always(function(){
 			$('.sort-size-type-image').hide();
 			$('.sort-size-type-body').show();
 		});
