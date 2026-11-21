@@ -3748,14 +3748,14 @@ class TVShow(TVShowBase):
                     logger.error(f'Unable to update this show. {ex(e)}')
 
     def save_to_db(self, force_save=False):
-        # type: (bool) -> None
+        # type: (bool) -> bool
         """
 
         :param force_save:
+        :return: True when the show is saved, False when it has no change to save
         """
         if not self.dirty and not force_save:
-            logger.debug(f'{self.tvid_prodid}: Not saving show to db - record is not dirty')
-            return
+            return False
 
         logger.debug(f'{self.tvid_prodid}: Saving show info to database')
 
@@ -3807,6 +3807,7 @@ class TVShow(TVShowBase):
                 new_value_dict = self._imdb_info
 
                 sg_db.upsert('imdb_info', new_value_dict, control_value_dict)
+        return True
 
     def __ne__(self, o):
         # type: (TVShow) -> bool
