@@ -96,6 +96,11 @@
 * Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
 
 
+### 3.36.15 (2026-11-21 08:20:00 UTC)
+
+* Update certifi 2026.10.23 to 2026.11.20
+
+
 ### 3.36.14 (2026-11-20 16:05:00 UTC)
 
 * Fix arrow keys do not scroll a page of show cards until its Filters dialog has been opened and closed
