@@ -1,14 +1,19 @@
 /** @namespace $.SickGear.Root */
 /** @namespace $.SickGear.Host */
 /** @namespace $.SickGear.Port */
+/** @namespace $.SickGear.ListenPort */
 /** @namespace $.SickGear.UseHttps */
 /** @namespace $.SickGear.PID */
 /** @namespace data.msg */
 
 var sgRoot = $.SickGear.Root,
 	browserUrl = window.location.protocol + '//' + window.location.host + sgRoot,
-	baseUrl = 'http' + ($.SickGear.UseHttps ? 's' : '') + '://' + $.SickGear.Host + ':'
-		+ (('' == sgRoot) ? $.SickGear.Port : location.port) + sgRoot,
+	browserPort = window.location.port || ('https:' == window.location.protocol ? '443' : '80'),
+	// a browser at the port that SickGear listens on follows a change of its port or https in the settings, a browser
+	// that came in at another port (docker port mapping, a proxy), or with no port known, goes back to its address
+	baseUrl = ('' != $.SickGear.ListenPort && $.SickGear.ListenPort == browserPort)
+		? 'http' + ($.SickGear.UseHttps ? 's' : '') + '://' + $.SickGear.Host + ':' + $.SickGear.Port + sgRoot
+		: browserUrl,
 	isAliveUrl = sgRoot + '/home/is-alive/',
 	timeoutId;
 $.SickGear.numRestartWaits = 0;
