@@ -2256,6 +2256,11 @@ class Home(MainHandler):
 
         t = PageTemplate(web_handler=self, file='restart.tmpl')
         t.shutdown = False
+        # the port that SickGear listens on, a browser that used another port came through docker or a proxy
+        try:
+            t.sg_listen_port = self.request.connection.stream.socket.getsockname()[1]
+        except (BaseException, Exception):
+            t.sg_listen_port = ''
 
         sickgear.restart(soft=False, update_pkg=bool(helpers.try_int(update_pkg)))
 
