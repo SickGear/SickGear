@@ -1681,7 +1681,9 @@ class TVShow(TVShowBase):
 
     def _set_location(self, new_location):
         # type: (AnyStr) -> None
-        logger.debug(f'Setter sets location to {new_location}')
+        if self._location and new_location != self._location:
+            # not when a show loads at startup or is added, a line for each show hid the lines before a restart
+            logger.debug(f'Setter sets location to {new_location}')
         # Don't validate dir if user wants to add shows without creating a dir
         if sickgear.ADD_SHOWS_WO_DIR or os.path.isdir(new_location):
             self.dirty_setter('_location')(self, new_location)

@@ -84,6 +84,7 @@
 * Change log one line at startup with shows loaded by status and with no IMDb info, not a line for each show
 * Change log a warning at startup for each show that its TV info source has not found
 * Fix a show with no IMDb info is saved at shutdown with no change
+* Change log the folder of a show only when it changes, not for each show at startup
 
 
 [develop]
