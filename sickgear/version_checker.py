@@ -38,7 +38,19 @@ from sg_helpers import cmdline_runner, get_url, tar_check_sanity
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Tuple
+    from typing import AnyStr, Optional, Tuple
+
+
+def log_output(output):
+    # type: (Optional[AnyStr]) -> AnyStr
+    """
+    the output of a command as one log line, a list of all remote branches had a log line for each branch, which hid the
+    lines before a restart on the log page, the log page shows the joined lines as lines again
+
+    :param output: output of a command
+    :return: the output lines joined by logger.JOINED_LINES
+    """
+    return logger.JOINED_LINES.join(_l.rstrip() for _l in (output or '').splitlines() if _l.strip())
 
 
 class PackagesUpdater(Job):
@@ -359,7 +371,7 @@ class GitUpdateManager(UpdateManager):
         try:
             logger.debug(f'Executing {cmd} with your shell in {sickgear.PROG_DIR}')
             output, err, exit_status = cmdline_runner([git_path] + arg_list, env={'LANG': 'en_US.UTF-8'})
-            logger.debug(f'git output: {output}')
+            logger.debug(f'git output: {log_output(output)}')
 
         except OSError:
             logger.log(f'Failed command: {cmd}')

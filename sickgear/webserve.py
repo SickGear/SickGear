@@ -10695,7 +10695,17 @@ class EventLogs(MainHandler):
                         if 'https://' in cur_line or 'http://' in cur_line:
                             cur_line = logger.RedactingFilter.mask_text(cur_line)
 
+                        # the output of a command is one line in the file, show its lines as they were before
+                        joined = None
+                        if logger.JOINED_LINES in cur_line and ':: git output: ' in cur_line:
+                            cur_line, *joined = cur_line.rstrip('\r\n').split(logger.JOINED_LINES)
+                            cur_line += '\n'
                         final_data.append(cur_line)
+                        if joined:
+                            final_data += (['<code><span class="prelight">']
+                                           + ['<span class="prelight-num">%02s)</span> %s<br>' % (n + 1, x)
+                                              for n, x in enumerate(joined)]
+                                           + ['</span></code><br>'])
                         if any(normal_data):
                             final_data += ['<code><span class="prelight">'] + \
                                           ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
