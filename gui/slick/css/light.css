@@ -28,6 +28,15 @@ pre .prelight-num{
 	color:#eaab52
 }
 
+pre .log-start,
+pre .log-run{
+	color:#66670f
+}
+
+pre .log-stop{
+	background-color:rgba(183, 184, 44, 0.16)
+}
+
 .shows-not-found.nnnn .snf .sgicon-warning,
 .navbar-default .navbar-nav .logger.errors.nnnn{
 	color:#ff6d5e

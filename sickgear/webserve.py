@@ -92,7 +92,7 @@ from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_nu
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
-from .sgdatetime import SGDatetime
+from .sgdatetime import SGDatetime, Stopwatch
 from .show_name_helpers import abbr_showname
 from .show_updater import clean_ignore_require_words
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
@@ -10527,6 +10527,82 @@ class EventLogs(MainHandler):
     def download_log(self):
         self.redirect('/logfile/sickgear.log')
 
+    @staticmethod
+    def mark_runs(lines):
+        # type: (List[AnyStr]) -> List[AnyStr]
+        """
+        mark each start of SickGear in log lines that are newest first, so a restart stands out from the lines of a run:
+        a divider that says restart or shutdown and how long it was down, and a band on the lines of the shutdown
+
+        :param lines: log lines, newest first, html escaped
+        :return: the lines with the marks
+        """
+        rxc_line = re.compile(r'^(\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2})\s*[A-Z]+\s*(\S+)\s+:{2}\s*(.*)')
+        # a masked program name in an older log line reads e.g. "Sick****"
+        rxc_start = re.compile(r'Starting Sick\S* on ')
+        rxc_ev_type = re.compile(r'Shutdown ev_type:(\w+)')
+        result = []
+        run = None
+
+        def end_run():
+            if run['stopped']:
+                label = '%s, down %s' % (run['kind'] or 'shutdown',
+                                         Stopwatch.duration_text((run['start'] - run['first']).total_seconds()))
+            else:
+                # a start with no shutdown before it, e.g. the process ended or the computer lost power
+                label = 'start, no shutdown logged'
+                for _n, _line in run['band']:
+                    result[_n] = _line
+                if run['band']:
+                    result[run['divider']], run['divider'] = '', run['at_start']
+            result[run['divider']] = '<span class="log-run"><span>%s</span></span>' % label
+
+        for cur_line in lines:
+            match = rxc_line.match(cur_line)
+            if not match:
+                result.append(cur_line)
+                continue
+            when, thread, msg = match.groups()
+            when = datetime.strptime(re.sub(r'\s+', ' ', when), '%Y-%m-%d %H:%M:%S')
+            is_start = rxc_start.match(msg)
+            if run and is_start:
+                end_run()
+                run = None
+            if is_start:
+                result.append('<span class="log-start">%s</span>' % cur_line.rstrip('\r\n'))
+                run = dict(start=when, first=when, divider=len(result), at_start=len(result), kind=None, stopped=False,
+                           band=[])
+                result.append('')
+                continue
+            is_trigger = msg.startswith('Trigger event ')
+            if run and run['stopped'] and 'EVENT-QUEUE' != thread and not is_trigger:
+                end_run()
+                run = None
+            if not run or ('EVENT-QUEUE' != thread and not is_trigger):
+                result.append(cur_line)
+                continue
+            # a line of the shutdown, the event queue does the shutdown and logs it, a web page or job asks for it
+            if not run['band']:
+                # the divider goes between the processes, a line that the new process logs before its start line,
+                # e.g. a port from the command line, stays with the new run
+                result[run['divider']], run['divider'] = '', len(result)
+                result.append('')
+            run['band'].append((len(result), cur_line))
+            result.append('<span class="log-stop">%s</span>' % cur_line.rstrip('\r\n'))
+            run['first'] = when
+            if msg.startswith('Exiting threads'):
+                run['stopped'] = True
+            ev_type = rxc_ev_type.match(msg)
+            if ev_type:
+                run['kind'] = ev_type.group(1).lower()
+            if is_trigger:
+                run['kind'] = msg.split()[-1].lower()
+                end_run()
+                run = None
+        if run:
+            end_run()
+        return result
+
     def view_log(self, min_level=logger.MESSAGE, max_lines=500):
 
         t = PageTemplate(web_handler=self, file='viewlogs.tmpl')
@@ -10584,9 +10660,6 @@ class EventLogs(MainHandler):
                             cur_line = logger.RedactingFilter.mask_text(cur_line)
 
                         final_data.append(cur_line)
-                        if 'Starting SickGear' in cur_line:
-                            final_data[-1].replace(' Starting SickGear',
-                                                   ' <span class="prelight2">Starting SickGear</span>')
                         if any(normal_data):
                             final_data += ['<code><span class="prelight">'] + \
                                           ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
@@ -10600,7 +10673,7 @@ class EventLogs(MainHandler):
                 if num_lines >= max_lines:
                     break
 
-        result = ''.join(final_data)
+        result = ''.join(self.mark_runs(final_data))
 
         t.logLines = result
         t.min_level = min_level

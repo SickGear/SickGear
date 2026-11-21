@@ -120,7 +120,16 @@ class Stopwatch(object):
         """
         :return: the time for a log line as a person would say it, e.g. "3 seconds", "20 minutes", "1h 9 mins", "2h"
         """
-        seconds = int(round(self.seconds))
+        return self.duration_text(self.seconds)
+
+    @staticmethod
+    def duration_text(seconds):
+        # type: (float) -> str
+        """
+        :param seconds: a length of time
+        :return: the time as a person would say it, e.g. "3 seconds", "20 minutes", "1h 9 mins", "2h"
+        """
+        seconds = int(round(seconds))
         if 60 > seconds:
             return f'{seconds} second{maybe_plural(seconds)}'
         minutes = int(round(seconds / 60.0))
