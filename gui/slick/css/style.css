@@ -4810,6 +4810,30 @@ pre{
 	border:1px solid
 }
 
+/* a yes or no in a table cell, a check for yes and a short dash for no, so that a yes stands out */
+.yes-no{
+	display:inline-block;
+	width:14px;
+	height:14px;
+	vertical-align:middle
+}
+
+.yes-no.is-yes{
+	background-color:currentColor;
+	-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.5l3.5 3.5 7.5-8' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+	mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.5 8.5l3.5 3.5 7.5-8' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat
+}
+
+.yes-no.is-no::before{
+	content:"";
+	display:block;
+	width:8px;
+	height:2px;
+	margin:6px auto 0;
+	border-radius:1px;
+	background-color:currentColor
+}
+
 /* view log, the start of a run, the lines of the shutdown before it, and a divider between the two */
 pre .log-start,
 pre .log-stop{

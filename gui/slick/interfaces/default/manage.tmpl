@@ -62,7 +62,7 @@
     #set $column += 1
     #set void = $headers.append('\t\t\t%s: {sorter:%s, filter:%s}' % ($column, $sort, $filter))
     #if $img_extract
-        #set void = $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('img').attr('alt')}"))
+        #set void = $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('.yes-no').attr('title')}"))
     #end if
 #end for
 
@@ -181,8 +181,8 @@ $xsrf_form_html
 #set $disabled = ' disabled="disabled"'
 #set $disabled_inprogress_tip = ' action is currently in progress for this show'
 #set $disabled_subtitles_tip = ' title="Use edit to enable subtitle search for this show"'
-#set $no = 'no16.png" title="No" alt="No'
-#set $yes = 'yes16.png" title="Yes" alt="Yes'
+#set $no = '<span class="yes-no is-no" role="img" title="No" aria-label="No"></span>'
+#set $yes = '<span class="yes-no is-yes" role="img" title="Yes" aria-label="Yes"></span>'
 #set $max = $high + 100
 #for $cur_show_obj in $shows + $shows_no_loc
     #set $show_loc = $cur_show_obj.path
@@ -236,16 +236,16 @@ $xsrf_form_html
 			<td><span class="quality Custom">Custom</span></td>
     #end if
     #if $has_any_sports
-			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_sports) then $yes else $no#" width="16" height="16"></td>
+			<td>#if 1 == int($cur_show_obj.is_sports) then $yes else $no#</td>
     #end if
-			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_scene) then $yes else $no#" width="16" height="16"></td>
+			<td>#if 1 == int($cur_show_obj.is_scene) then $yes else $no#</td>
     #if $has_any_anime
-			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.is_anime) then $yes else $no#" width="16" height="16"></td>
+			<td>#if 1 == int($cur_show_obj.is_anime) then $yes else $no#</td>
     #end if
     #if $has_any_flat_folders
-			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.flatten_folders) then $yes else $no#" width="16" height="16"></td>
+			<td>#if 1 == int($cur_show_obj.flatten_folders) then $yes else $no#</td>
     #end if
-			<td><img src="$sbRoot/images/#if 1 == int($cur_show_obj.paused) then $yes else $no#" width="16" height="16"></td>
+			<td>#if 1 == int($cur_show_obj.paused) then $yes else $no#</td>
 			<td>$cur_show_obj.status</td>
 			<td$curUpdate[0]>$curUpdate[1]</td>
 			<td$curRefresh[0]>$curRefresh[1]</td>
