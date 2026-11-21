@@ -881,6 +881,17 @@ input, textarea, select, .uneditable-input{
 	color:#000
 }
 
+/* the sizes of the dark theme, so a change of theme does not change the height of a table row or a filter box */
+input[type="checkbox"], input[type="radio"]{
+	color-scheme:light;
+	width:16px;
+	height:16px
+}
+
+input[type="search"]{
+	border:1px solid #ccc
+}
+
 .btn.hover-red:hover,
 .btn.hover-gold:hover,
 .btn.hover-green:hover
