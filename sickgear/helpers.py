@@ -1139,7 +1139,8 @@ def get_media_stats(start_path='.'):
     if os.path.isdir(start_path):
         total, sizes = 0, []
         try:
-            for cur_entry in scantree(start_path):
+            # files only, a folder entry has a size of its own on some file systems, e.g. 4096 bytes on Linux
+            for cur_entry in scantree(start_path, filter_kind=False):
                 size = cur_entry.stat(follow_symlinks=False).st_size
                 total += size
                 if has_media_ext(cur_entry.name):
