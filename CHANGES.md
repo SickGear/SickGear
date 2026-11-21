@@ -92,6 +92,8 @@
 * Change bulk change page to show sizes from the database, with a button to read the show folders for their size
 * Fix a change of theme changes the height of table rows, light theme checkboxes and search boxes now match dark
 * Change the yes and no marks of the bulk change page to a check for yes and a quiet dash for no, not red crosses
+* Change log the output of a git command as one line in the log file, the log page shows its lines as before
+* Change the log page to show the newest 1000 lines of the log file, not 500
 
 
 [develop]

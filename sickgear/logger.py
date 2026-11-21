@@ -48,6 +48,8 @@ DEBUG = logging.DEBUG
 DB = 5
 
 reverseNames = {'ERROR': ERROR, 'WARNING': WARNING, 'INFO': MESSAGE, 'DEBUG': DEBUG, 'DB': DB}
+# joins the lines of a command output in one log line, the log page shows them as lines again
+JOINED_LINES = ' \\n '
 
 
 # suppress output with this handler

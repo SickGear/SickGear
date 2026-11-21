@@ -10639,14 +10639,14 @@ class EventLogs(MainHandler):
             end_run()
         return result
 
-    def view_log(self, min_level=logger.MESSAGE, max_lines=500):
+    def view_log(self, min_level=logger.MESSAGE, max_lines=1000):
 
         t = PageTemplate(web_handler=self, file='viewlogs.tmpl')
         t.submenu = self.error_logs_menu
 
         min_level = int(min_level)
         # a value given in the url is a string
-        max_lines = helpers.try_int(max_lines, 500)
+        max_lines = helpers.try_int(max_lines, 1000)
 
         regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*(\S+)\s+:{2}\s*(.*\r?\n)$')
 
@@ -10695,7 +10695,17 @@ class EventLogs(MainHandler):
                         if 'https://' in cur_line or 'http://' in cur_line:
                             cur_line = logger.RedactingFilter.mask_text(cur_line)
 
+                        # the output of a command is one line in the file, show its lines as they were before
+                        joined = None
+                        if logger.JOINED_LINES in cur_line and ':: git output: ' in cur_line:
+                            cur_line, *joined = cur_line.rstrip('\r\n').split(logger.JOINED_LINES)
+                            cur_line += '\n'
                         final_data.append(cur_line)
+                        if joined:
+                            final_data += (['<code><span class="prelight">']
+                                           + ['<span class="prelight-num">%02s)</span> %s<br>' % (n + 1, x)
+                                              for n, x in enumerate(joined)]
+                                           + ['</span></code><br>'])
                         if any(normal_data):
                             final_data += ['<code><span class="prelight">'] + \
                                           ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
