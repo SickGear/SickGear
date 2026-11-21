@@ -83,6 +83,7 @@
 * Change log how long the post-processing of a file takes, in its line "Successfully processed <file> in N seconds"
 * Change log one line at startup with shows loaded by status and with no IMDb info, not a line for each show
 * Change log a warning at startup for each show that its TV info source has not found
+* Fix a show with no IMDb info is saved at shutdown with no change
 
 
 [develop]

@@ -2848,6 +2848,8 @@ class TVShow(TVShowBase):
                 self._imdb_info['is_mini_series'] = bool(self._imdb_info['is_mini_series'])
         elif sickgear.USE_IMDB_INFO:
             # counted in the startup line of shows loaded, the next show update will attempt to find IMDb info
+            # loaded as stored, so nothing to save, the show update that finds IMDb info saves the show
+            self.dirty = False
             return
 
         self.dirty = False
