@@ -1,4 +1,9 @@
-﻿### 3.36.15 (2026-11-21 08:20:00 UTC)
+﻿### 3.36.16 (2026-11-21 15:10:00 UTC)
+
+* Fix restart returns the browser to the port that SickGear listens on, not the one it used, e.g. a docker mapped port
+
+
+### 3.36.15 (2026-11-21 08:20:00 UTC)
 
 * Update certifi 2026.10.23 to 2026.11.20
 

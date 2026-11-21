@@ -1,11 +1,12 @@
 ##
 #from sickgear import WEB_PORT, WEB_ROOT, PID, ENABLE_HTTPS, THEME_NAME
-#set sg_host = $getVar('sbHost', 'localhost')
-#set sg_port = str($getVar('sbHttpPort', WEB_PORT))
-#set sg_root = $getVar('sbRoot', WEB_ROOT)
-#set sg_pid = $getVar('sbPID', str(PID))
-#set sg_use_https = $getVar('sbHttpsEnabled', ENABLE_HTTPS)
-#set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+#set sg_host = $getVar('sg_host', 'localhost')
+#set sg_port = str($getVar('sg_http_port', WEB_PORT))
+#set sg_listen_port = str($getVar('sg_listen_port', ''))
+#set sg_root = $getVar('sg_root', WEB_ROOT)
+#set sg_pid = $getVar('sg_pid', str(PID))
+#set sg_use_https = $getVar('sg_https_enabled', ENABLE_HTTPS)
+#set theme_suffix = ('', '-dark')['dark' == $getVar('sg_theme_name', THEME_NAME)]
 #set do_shutdown = bool($getVar('shutdown', False))  ## can be None so must enforce bool
 ##
 <!DOCTYPE html>
@@ -41,9 +42,10 @@
 	\$.SickGear = {
 		Host: '$sg_host',
 		Port: '$sg_port',
+		ListenPort: '$sg_listen_port',
 		Root: '$sg_root',
 		UseHttps: #echo ('!1', '!0')[False != $sg_use_https and 0 != $sg_use_https]#,
-		PID: '$sbPID'
+		PID: '$sg_pid'
 	};
 //-->
 </script>
