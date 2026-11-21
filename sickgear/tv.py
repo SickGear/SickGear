@@ -2825,9 +2825,6 @@ class TVShow(TVShowBase):
 
         self.release_groups = self._anime and AniGroupList(self.tvid, self.prodid, self.tvid_prodid) or None
 
-        logger.log('Loaded.. {: <9} {: <8} {}'.format(
-            sickgear.TVInfoAPI(self.tvid).config.get('name') + ',', f'{self.prodid},', self.name))
-
         # Get IMDb_info from database
         if not imdb_info_result or \
                 self.tvid != imdb_info_result['indexer'] or self.prodid != imdb_info_result['indexer_id']:
@@ -2850,7 +2847,7 @@ class TVShow(TVShowBase):
             if 'is_mini_series' in self._imdb_info:
                 self._imdb_info['is_mini_series'] = bool(self._imdb_info['is_mini_series'])
         elif sickgear.USE_IMDB_INFO:
-            logger.debug(f'{self.tvid_prodid}: The next show update will attempt to find IMDb info for [{self.name}]')
+            # counted in the startup line of shows loaded, the next show update will attempt to find IMDb info
             return
 
         self.dirty = False
