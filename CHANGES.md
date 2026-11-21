@@ -6,6 +6,7 @@
 * Update dateutil 2.9.0.post0 (0353b78) to 4.0.0 (a78cbd8)
 * Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
 * Update hachoir 3.3.0 (b1c8b57) to 3.4.0 (3880742)
+* Update PNotify library 3.0.0 (175af26) to 3.2.1 (56d7a34)
 * Update SimpleJSON 4.0.0 (1608c05) to 4.3.0 (d88746d)
 * Update soupsieve 2.9.2 (78661a6) to 4.1.3 (3587fb1)
 * Update Tornado Web Server 6.5.8 (a55abe3) to 6.6.1 (fb0e3df)
