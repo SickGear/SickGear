@@ -71,7 +71,9 @@ class RedactingFilter(logging.Filter):
         if time.time() < cls._expires:
             return
         try:
-            auths = [_a for _a in sickgear.GenericProvider.dedupe_auths(True) if _a]
+            # the program name is in every start line and file path, so a login or key that is the name, or a part of it,
+            # would mask the name everywhere and show the pattern of the secret, and hiding it hides nothing
+            auths = [_a for _a in sickgear.GenericProvider.dedupe_auths(True) if _a and _a.lower() not in 'sickgear']
         except (BaseException, Exception):
             auths = []
         # retry soon while nothing is loaded yet, otherwise rely on reset() plus a 60s safety net

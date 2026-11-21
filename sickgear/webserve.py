@@ -1094,9 +1094,6 @@ class LogfileHandler(BaseHandler):
             self.set_header('Content-Description', 'Logfile Download')
             self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
             # self.set_header('Content-Length', os.path.getsize(logfile_name))
-            auths = sickgear.GenericProvider.dedupe_auths(True)
-            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
-            replacements = dict([(_a, starify(_a)) for _a in auths])
             data_to_write = ''
             with io.open(logfile_name, 'rt', encoding='utf8') as logfile:
                 while 1:
@@ -1108,10 +1105,7 @@ class LogfileHandler(BaseHandler):
                     for l_n, cur_line in enumerate(data_lines, 1):
                         # noinspection HttpUrlsUsage
                         if 'https://' in cur_line or 'http://' in cur_line:
-                            for cur_change in rxc_auths.finditer(cur_line):
-                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
-                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
-                                                       cur_line[cur_change.end():])
+                            cur_line = logger.RedactingFilter.mask_text(cur_line)
                         data_to_write += cur_line
                         if 10000 < len(data_to_write) or l_n == line_count:
                             try:
@@ -10550,9 +10544,6 @@ class EventLogs(MainHandler):
         repeated = None
         num_lines = 0
         if os.path.isfile(logger.sb_log_instance.log_file_path):
-            auths = sickgear.GenericProvider.dedupe_auths(True)
-            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
-            replacements = dict([(_a, starify(_a)) for _a in auths])
             for cur_line in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
                 cur_line = helpers.xhtml_escape(decode_str(cur_line, errors='replace'), False)
@@ -10590,10 +10581,7 @@ class EventLogs(MainHandler):
 
                         # noinspection HttpUrlsUsage
                         if 'https://' in cur_line or 'http://' in cur_line:
-                            for cur_change in rxc_auths.finditer(cur_line):
-                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
-                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
-                                                       cur_line[cur_change.end():])
+                            cur_line = logger.RedactingFilter.mask_text(cur_line)
 
                         final_data.append(cur_line)
                         if 'Starting SickGear' in cur_line:

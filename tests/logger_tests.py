@@ -50,6 +50,11 @@ class RedactingFilterTests(unittest.TestCase):
         self.assertNotIn('sh0rtkey', classes.ErrorViewer.errors[0].message)
         self.assertIn('sh0r****', classes.ErrorViewer.errors[0].message)
 
+    def test_program_name_not_masked(self):
+        self.set_auths(['SickGear', 'gear', 'sh0rtkey'])
+        self.assertEqual('Starting SickGear with sickgear.py, sh0r****',
+                         logger.RedactingFilter.mask_text('Starting SickGear with sickgear.py, sh0rtkey'))
+
     def test_no_secrets_loaded(self):
         self.set_auths([])
         self.assertEqual('startup line', logger.RedactingFilter.mask_text('startup line'))

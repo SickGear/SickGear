@@ -99,6 +99,7 @@
 * Fix video codec read from a file for Dolby Vision in mp4 and H.266 in ts, and an error for a file with no video
 * Fix video codec read from a file is unknown or wrong for Xvid, DivX, VC-1, MPEG-1, MPEG-2, and codecs in flv
 * Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
+* Fix log filter masks the program name when a stored login or key is the name or a part of it
 
 
 ### 3.36.16 (2026-11-21 15:10:00 UTC)
