@@ -81,6 +81,11 @@
 * Add a log line at the end of the daily show update, with its time and the number of shows updated and refreshed
 * Add a log line at the end of an update or refresh of one show, with its time
 * Change log how long the post-processing of a file takes, in its line "Successfully processed <file> in N seconds"
+* Change log one line at startup with shows loaded by status and with no IMDb info, not a line for each show
+* Change log a warning at startup for each show that its TV info source has not found
+* Fix a show with no IMDb info is saved at shutdown with no change
+* Change log the folder of a show only when it changes, not for each show at startup
+* Change log one line at shutdown with the number of shows saved, not a line for each show with no change
 
 
 [develop]

@@ -1832,8 +1832,10 @@ def save_all():
 
         # write all shows
         logger.log('Saving all shows to the database')
-        for show_obj in showList:  # type: tv.TVShow
-            show_obj.save_to_db()
+        saved = sum(bool(show_obj.save_to_db()) for show_obj in showList)  # type: int
+        # one line, not a line for each show with no change, which hid the lines before a restart
+        logger.log(f'Saved {saved} of {len(showList)} show{sg_helpers.maybe_plural(len(showList))} to the database,'
+                   f' the others have no change')
 
     # save config
     logger.log('Saving config file to disk')

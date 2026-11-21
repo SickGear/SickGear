@@ -1681,7 +1681,9 @@ class TVShow(TVShowBase):
 
     def _set_location(self, new_location):
         # type: (AnyStr) -> None
-        logger.debug(f'Setter sets location to {new_location}')
+        if self._location and new_location != self._location:
+            # not when a show loads at startup or is added, a line for each show hid the lines before a restart
+            logger.debug(f'Setter sets location to {new_location}')
         # Don't validate dir if user wants to add shows without creating a dir
         if sickgear.ADD_SHOWS_WO_DIR or os.path.isdir(new_location):
             self.dirty_setter('_location')(self, new_location)
@@ -2825,9 +2827,6 @@ class TVShow(TVShowBase):
 
         self.release_groups = self._anime and AniGroupList(self.tvid, self.prodid, self.tvid_prodid) or None
 
-        logger.log('Loaded.. {: <9} {: <8} {}'.format(
-            sickgear.TVInfoAPI(self.tvid).config.get('name') + ',', f'{self.prodid},', self.name))
-
         # Get IMDb_info from database
         if not imdb_info_result or \
                 self.tvid != imdb_info_result['indexer'] or self.prodid != imdb_info_result['indexer_id']:
@@ -2850,7 +2849,9 @@ class TVShow(TVShowBase):
             if 'is_mini_series' in self._imdb_info:
                 self._imdb_info['is_mini_series'] = bool(self._imdb_info['is_mini_series'])
         elif sickgear.USE_IMDB_INFO:
-            logger.debug(f'{self.tvid_prodid}: The next show update will attempt to find IMDb info for [{self.name}]')
+            # counted in the startup line of shows loaded, the next show update will attempt to find IMDb info
+            # loaded as stored, so nothing to save, the show update that finds IMDb info saves the show
+            self.dirty = False
             return
 
         self.dirty = False
@@ -3747,14 +3748,14 @@ class TVShow(TVShowBase):
                     logger.error(f'Unable to update this show. {ex(e)}')
 
     def save_to_db(self, force_save=False):
-        # type: (bool) -> None
+        # type: (bool) -> bool
         """
 
         :param force_save:
+        :return: True when the show is saved, False when it has no change to save
         """
         if not self.dirty and not force_save:
-            logger.debug(f'{self.tvid_prodid}: Not saving show to db - record is not dirty')
-            return
+            return False
 
         logger.debug(f'{self.tvid_prodid}: Saving show info to database')
 
@@ -3806,6 +3807,7 @@ class TVShow(TVShowBase):
                 new_value_dict = self._imdb_info
 
                 sg_db.upsert('imdb_info', new_value_dict, control_value_dict)
+        return True
 
     def __ne__(self, o):
         # type: (TVShow) -> bool
