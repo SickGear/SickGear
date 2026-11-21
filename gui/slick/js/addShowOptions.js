@@ -35,11 +35,7 @@ $(function(){
 			default_anime: $('#anime').prop('checked')
 		});
 
-		new PNotify({
-			title: 'Saving Defaults',
-			text: 'Saving your "add show" defaults.',
-			shadow: false
-		});
+		displayPNotify('notice', 'Saving Defaults', 'Saving your "add show" defaults.');
 
 		savedDefaults = defaultsState();
 		$(this).attr('disabled', true);
