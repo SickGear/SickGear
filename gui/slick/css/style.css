@@ -4810,6 +4810,37 @@ pre{
 	border:1px solid
 }
 
+/* view log, the start of a run, the lines of the shutdown before it, and a divider between the two */
+pre .log-start,
+pre .log-stop{
+	display:block;
+	margin:0 -9px;
+	padding:0 9px
+}
+
+pre .log-start{
+	font-weight:bold
+}
+
+pre .log-run{
+	display:flex;
+	align-items:center;
+	gap:12px;
+	margin:4px 0;
+	font-size:12px;
+	font-weight:bold;
+	letter-spacing:0.02em;
+	text-transform:uppercase
+}
+
+pre .log-run::before,
+pre .log-run::after{
+	content:"";
+	flex:1;
+	border-top:1px solid;
+	opacity:0.45
+}
+
 .alert{
 	padding:10px;
 	clear: both;
