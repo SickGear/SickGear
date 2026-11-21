@@ -2795,19 +2795,33 @@ class Home(MainHandler):
                 TVidProdid(tvid_prodid).list + [int(season), int(episode)])
         return 'Episode not found.' if not sql_result else (sql_result[0]['description'] or '')[:250:]
 
-    @staticmethod
-    def media_stats(tvid_prodid=None):
+    # media stats of all shows read from their folders, kept so that a page of all shows does not read every folder
+    # shortcut: a file added or removed in a show folder shows at the next read, after 30 minutes or by the button
+    media_stats_cache = {'read': 0, 'shows': {}, 'took': ''}  # type: Dict[AnyStr, Any]
 
+    @staticmethod
+    def media_stats(tvid_prodid=None, refresh=None):
+        """
+        :param tvid_prodid: one show, or all shows when None
+        :param refresh: read the folders of all shows even when the kept stats are recent
+        :return: json of stats by show, and for all shows an item "_read" that says when and how long the read took
+        """
+
+        cache = Home.media_stats_cache
         if None is tvid_prodid:
+            age = time.time() - cache['read']
+            if not helpers.try_int(refresh) and 1800 > age and cache['shows']:
+                return json_dumps(dict(cache['shows'], _read=dict(
+                    took=cache['took'], ago=Stopwatch.duration_text(age), shows=len(cache['shows']))))
             shows = sickgear.showList
         else:
             shows = [helpers.find_show_by_id(tvid_prodid)]
 
+        watch = Stopwatch()
         response = {}
         for cur_show_obj in shows:
             if cur_show_obj and cur_show_obj.path:
-                loc_size = helpers.get_size(cur_show_obj.path)
-                num_files, smallest, largest, average_size = get_media_stats(cur_show_obj.path)
+                num_files, smallest, largest, average_size, loc_size = get_media_stats(cur_show_obj.path)
                 response[cur_show_obj.tvid_prodid] = {'message': 'No media files'} if not num_files else \
                     {
                         'nFiles': num_files,
@@ -2819,6 +2833,9 @@ class Home(MainHandler):
                 response[cur_show_obj.tvid_prodid].update({
                     'path': cur_show_obj.path, 'bSize': loc_size, 'hSize': helpers.human(loc_size)})
 
+        if None is tvid_prodid:
+            cache.update(read=time.time(), shows=response, took=watch.text())
+            response = dict(response, _read=dict(took=cache['took'], ago='', shows=len(response)))
         return json_dumps(response)
 
     @staticmethod
@@ -7375,6 +7392,25 @@ class Manage(MainHandler):
         t.has_any_flat_folders = False
         t.shows = []
         t.shows_no_loc = []
+        # the size of a show from its media files in the database, reading every show folder took seconds, the folder
+        # size is used when the folders have been read in the last 30 minutes, or when the page button reads them
+        cache = Home.media_stats_cache
+        if cache['shows'] and 1800 > time.time() - cache['read']:
+            t.sizes = {_k: _v['bSize'] for _k, _v in cache['shows'].items()}
+            t.sizes_from = 'folder'
+        else:
+            with db.DBConnection() as sg_db:
+                # a file of more than one episode is on each of its episodes, so count each file once
+                sql_result = sg_db.select(
+                    """
+                    SELECT indexer, showid, SUM(file_size) AS size
+                    FROM (SELECT DISTINCT indexer, showid, location, file_size
+                     FROM tv_episodes
+                     WHERE location != '' AND file_size > 0)
+                    GROUP BY indexer, showid
+                    """)
+            t.sizes = {f'{_r["indexer"]}:{_r["showid"]}': _r['size'] for _r in sql_result}
+            t.sizes_from = 'database'
         for cur_show_obj in sorted(sickgear.showList, key=lambda _x: _x.name.lower()):
             t.has_any_sports |= bool(cur_show_obj.sports)
             t.has_any_anime |= bool(cur_show_obj.anime)

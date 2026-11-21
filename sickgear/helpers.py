@@ -1127,25 +1127,35 @@ def get_size(start_path='.'):
 
 
 def get_media_stats(start_path='.'):
-    # type: (AnyStr) -> Tuple[int, int, int, int]
+    # type: (AnyStr) -> Tuple[int, int, int, int, int]
     """
     return recognised media stats for a folder as...
 
-    number of media files, smallest size in bytes, largest size in bytes, average size in bytes
+    number of media files, smallest size in bytes, largest size in bytes, average size in bytes,
+    and the size in bytes of all files in the folder, read in the same walk of the folder
 
     :param start_path: path to scan
     """
     if os.path.isdir(start_path):
-        sizes = sorted(map(lambda y: y.stat(follow_symlinks=False).st_size,
-                           filter(lambda x: has_media_ext(x.name), scantree(start_path))))
+        total, sizes = 0, []
+        try:
+            for cur_entry in scantree(start_path):
+                size = cur_entry.stat(follow_symlinks=False).st_size
+                total += size
+                if has_media_ext(cur_entry.name):
+                    sizes.append(size)
+        except OSError:
+            pass
         if sizes:
-            return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes))
+            sizes.sort()
+            return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes)), total
+        return 0, 0, 0, 0, total
 
     elif os.path.isfile(start_path):
         size = os.path.getsize(start_path)
-        return 1, size, size, size
+        return 1, size, size, size, size
 
-    return 0, 0, 0, 0
+    return 0, 0, 0, 0, 0
 
 
 def remove_article(text=''):
