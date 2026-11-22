@@ -35,6 +35,7 @@ import traceback
 import zipfile
 # noinspection PyProtectedMember
 from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
+from functools import cmp_to_key
 from mimetypes import MimeTypes
 from urllib.parse import urljoin, quote as url_quote
 try:
@@ -7391,8 +7392,6 @@ class Manage(MainHandler):
         t.has_any_sports = False
         t.has_any_anime = False
         t.has_any_flat_folders = False
-        t.shows = []
-        t.shows_no_loc = []
         # the size of a show from its media files in the database, reading every show folder took seconds, the folder
         # size is used when the folders have been read in the last 30 minutes, or when the page button reads them
         cache = Home.media_stats_cache
@@ -7419,14 +7418,15 @@ class Manage(MainHandler):
                                                             int(_r['size'] / _r['files']))
                        for _r in sql_result}
             t.sizes_from = 'database'
-        for cur_show_obj in sorted(sickgear.showList, key=lambda _x: _x.name.lower()):
+        # in the order the table script sorts the names, shows with no folder last, so the rows do not move when it starts
+        def sort_name(show_obj):
+            return ('0_', '1_')[not show_obj.path] + getattr(show_obj, 'unique_name', show_obj.name).lower()
+
+        t.shows = sorted(sickgear.showList, key=lambda _so: cmp_to_key(helpers.natural_cmp)(sort_name(_so)))
+        for cur_show_obj in t.shows:
             t.has_any_sports |= bool(cur_show_obj.sports)
             t.has_any_anime |= bool(cur_show_obj.anime)
             t.has_any_flat_folders |= bool(cur_show_obj.flatten_folders)
-            if not cur_show_obj.path:
-                t.shows_no_loc += [cur_show_obj]
-            else:
-                t.shows += [cur_show_obj]
 
         return t.respond()
 

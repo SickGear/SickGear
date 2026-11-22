@@ -1171,6 +1171,61 @@ def remove_article(text=''):
     return re.sub(r'(?i)^(?:A(?!\s+to)n?|The)\s(\w)', r'\1', text)
 
 
+_js_float = re.compile(r'[+-]?(?:Infinity|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)', re.ASCII)
+_ts_hex = re.compile(r'^0x[0-9a-f]+$', re.I | re.ASCII)
+_ts_chunk = re.compile(r'(^([+\-]?(?:\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)?$|^0x[0-9a-f]+$|\d+)', re.I | re.ASCII)
+_ts_chunk_ends = re.compile(r'(^\\0|\\0$)')
+
+
+def _js_number(text):
+    # the Number() of JavaScript, None for NaN
+    text = text.strip()
+    if not text:
+        return 0
+    if _ts_hex.search(text):
+        return int(text, 16)
+    return float(text) if _js_float.fullmatch(text) else None
+
+
+def _ts_chunk_value(chunk):
+    # a chunk that is not a number stays text, a missing chunk or a number that does not parse is 0
+    if None is chunk:
+        return 0
+    if None is _js_number(chunk):
+        return chunk
+    number = _js_float.match(chunk.lstrip())
+    return number and float(number.group()) or 0
+
+
+def natural_cmp(a, b):
+    """
+    compare two texts as the natural sort of the tablesorter script does, so a page can send rows in the order the
+    script sorts them, and they do not move when it starts
+
+    :param a: text
+    :type a: AnyStr
+    :param b: text
+    :type b: AnyStr
+    :return: -1, 0 or 1 as a sorts before, the same as, or after b
+    :rtype: int
+    """
+    if a == b:
+        return 0
+    if _ts_hex.search(b):
+        x, y = _ts_hex.search(a), int(b, 16)
+        if x and int(x.group(), 16) != y:
+            return (1, -1)[int(x.group(), 16) < y]
+    chunks_a, chunks_b = [_ts_chunk_ends.sub('', _ts_chunk.sub(lambda _m: '\\0%s\\0' % (_m.group(1) or ''), _t),
+                                             count=1).split('\\0') for _t in (a, b)]
+    for index in range(max(len(chunks_a), len(chunks_b))):
+        x, y = [_ts_chunk_value(_c[index] if index < len(_c) else None) for _c in (chunks_a, chunks_b)]
+        if isinstance(x, str) != isinstance(y, str):
+            return (-1, 1)[isinstance(x, str)]
+        if x != y:
+            return (1, -1)[x < y]
+    return 0
+
+
 def re_valid_hostname(with_allowed=True):
     this_host = socket.gethostname()
     return re.compile(r'(?i)(%slocalhost|.*\.local%s%s)$' % (

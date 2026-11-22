@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from functools import cmp_to_key
 from os.path import abspath, dirname, join
 from unittest import mock
 
@@ -171,6 +172,20 @@ class MediaStatsTests(unittest.TestCase):
 
     def test_missing_folder(self):
         self.assertEqual((0, 0, 0, 0, 0), helpers.get_media_stats(join(self.tmp_dir, 'gone')))
+
+
+class NaturalCmpTests(unittest.TestCase):
+    """ names sort as the natural sort of the tablesorter script, numbers by value, and text after numbers """
+
+    def test_order(self):
+        names = ['24: legacy', 'abc 10', '11.22.63', "'til death", '9-1-1', 'abc 2', '24', '$#*! my dad says', '8 out',
+                 '90210', 'abc', '8 simple rules', '']
+        self.assertEqual(['', '8 out', '8 simple rules', '9-1-1', '11.22.63', '24', '24: legacy', '90210',
+                          '$#*! my dad says', "'til death", 'abc', 'abc 2', 'abc 10'],
+                         sorted(names, key=cmp_to_key(helpers.natural_cmp)))
+
+    def test_same(self):
+        self.assertEqual(0, helpers.natural_cmp('abc', 'abc'))
 
 
 class TouchFileTests(unittest.TestCase):

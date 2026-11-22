@@ -117,6 +117,7 @@
 * Change the bulk change header, Delete and Remove say what they do, sort fill covers slanted labels, clearer filters
 * Change the bulk change header filter boxes to show their edge and focus, and a hover fill on sortable columns
 * Change the bulk change table to keep its columns and rows in place while the page loads
+* Change the bulk change page to send its rows in the order the table sorts them, so show names do not move on load
 
 
 [develop]
