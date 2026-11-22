@@ -168,12 +168,15 @@
 .tip-average{border-top:1px solid #echo ('#999', '#666')[not $theme_suffix]#}
 .tip-average,.tip-average i{display:inline-block; line-height:8px}
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img,.spinner{display:inline-block;width:16px;height:16px}.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+## the skip link shows over the table header when it has the keyboard focus, and does not move the table
+#skip-to-filters:focus{position:absolute; z-index:4; margin-top:4px; padding:4px 8px; background:#fff; color:#000; border-radius:2px}
 </style>
 <div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif"></div>
 
 <form name="bulkChangeForm" method="post" action="bulk_change">
 $xsrf_form_html
 
+<a href="#" id="skip-to-filters" class="sr-only sr-only-focusable">Skip to the filters, or press /</a>
 <table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0">
 	<thead>
 		<tr style="height:86px">  <!-- must inline this css -->
@@ -196,7 +199,7 @@ $xsrf_form_html
 #end if
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
+			<th width="1%" class="sort-action col-actions-start"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
 			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rescan</span></div></div><input type="checkbox" class="bulk-check" id="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"></th>
 			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rename</span></div></div><input type="checkbox" class="bulk-check" id="rename-check" title="Tick all for Rename" aria-label="Tick all for Rename"></th>
 #if $sickgear.USE_SUBTITLES

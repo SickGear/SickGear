@@ -1413,6 +1413,12 @@ thead.tablesorter-stickyHeader{
 	border-bottom:0
 }
 
+/* a line of 3:1 on the header sets the action columns, Update to Remove, apart from the columns before them */
+#bulk-change-table thead th.col-actions-start,
+#bulk-change-table-sticky thead th.col-actions-start{
+	border-left:1px solid #888
+}
+
 /* the space kept for the filter row before the table script adds it, in the colour of the row */
 #bulk-change-table:not(.hasFilters) thead th{
 	border-bottom:29px solid #d7d7d7

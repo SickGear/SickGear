@@ -125,6 +125,7 @@
 * Change the bulk change table to say when a filter matches no show, with a button to clear it, and a clear in each box
 * Change the bulk change header to mark the sorted column by a label tag and a larger arrow, not a fill, clearer hover
 * Change the bulk change header tick all boxes to stand upright under their slanted labels, as the Edit box does
+* Change the bulk change header to set the action columns apart by a 3:1 line, add a skip link and / key to the filters
 
 
 [develop]

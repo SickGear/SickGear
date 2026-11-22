@@ -180,6 +180,22 @@ $(function(){
 		table$.trigger('updateCache');
 	}
 
+	// the filters are past 20 header stops for the keyboard, a skip link and the / key go to the name filter
+	function focusFilters(){
+		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
+	}
+	$('#skip-to-filters').on('click', function(e){
+		e.preventDefault();
+		focusFilters();
+	});
+	$(document).on('keydown', function(e){
+		if ('/' === e.key && !e.ctrlKey && !e.altKey && !e.metaKey
+			&& !$(e.target).closest('input, select, textarea, button, [contenteditable], .modal').length){
+			e.preventDefault();
+			focusFilters();
+		}
+	});
+
 	$('#clear-filters').on('click', function(){
 		$('#bulk-change-table').trigger('filterReset');
 		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
