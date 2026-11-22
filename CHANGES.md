@@ -108,6 +108,7 @@
 * Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
 * Change bulk change page to tint the row and the column of the cell under the pointer, as on the history page
 * Change bulk change page to tick the Edit checkbox of a row with a click anywhere on the row, shift for a range
+* Change the Subtitle column of the bulk change page to a dash where search is off, and fix its tick all box and Submit
 
 
 [develop]

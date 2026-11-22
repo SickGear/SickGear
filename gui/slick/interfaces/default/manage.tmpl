@@ -170,7 +170,8 @@ $xsrf_form_html
 			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="refresh-check"><span>Rescan</span></label></div></div></th>
 			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="rename-check"><span>Rename</span></label></div></div></th>
 #if $sickgear.USE_SUBTITLES
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="subtitleCheck"><span>Subtitle</span></label></div></div></th>
+			#set $subtitles_on = len([_s for _s in $shows + $shows_no_loc if _s.subtitles])
+			<th width="1%" title="Subtitle search is on for $subtitles_on of #echo len($shows + $shows_no_loc)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="subtitle-check"><span>Subtitle</span></label></div></div></th>
 #end if
 			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="delete-check"><span>Delete</span></label></div></div></th>
 			<th width="1%"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="remove-check"><span>Remove</span></label></div></div></th>
@@ -180,7 +181,7 @@ $xsrf_form_html
 	<tbody>
 #set $disabled = ' disabled="disabled"'
 #set $disabled_inprogress_tip = ' action is currently in progress for this show'
-#set $disabled_subtitles_tip = ' title="Use edit to enable subtitle search for this show"'
+#set $disabled_subtitles_tip = ' title="Subtitle search is off for this show, turn it on with Edit"'
 #set $no = '<span class="yes-no is-no" role="img" title="No" aria-label="No"></span>'
 #set $yes = '<span class="yes-no is-yes" role="img" title="Yes" aria-label="Yes"></span>'
 #set $max = $high + 100
@@ -210,6 +211,10 @@ $xsrf_form_html
     #set $tip = (' title="Search subtitle"', (' title="Search subtitle%s"' % $disabled_inprogress_tip,
                                               $disabled_subtitles_tip)[not $cur_show_obj.subtitles])[$subtitles_disabled]
     #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip))
+    #if not $cur_show_obj.subtitles
+        ## no box to tick, a dash as in the yes and no columns, the cell title says why
+        #set $curSubtitle = ($tip, '<span class="yes-no is-no" role="img" aria-label="Subtitle search off"></span>')
+    #end if
     ##
     #set $curDelete_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\

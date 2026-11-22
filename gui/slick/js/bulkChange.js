@@ -60,7 +60,8 @@ $(function(){
 
 	var updateButtons = function(){
 		var editBtn$ = $('#bulk-change-edit'), submitBtn$ = $('#bulk-change-submit'), numEdits = $('.edit-check:checked').length,
-			numToDo = $('.update-check:checked, .refresh-check:checked, .rename-check:checked, .delete-check:checked, .remove-check:checked').length;
+			numToDo = $('.update-check:checked, .refresh-check:checked, .rename-check:checked, .subtitle-check:checked,'
+				+ ' .delete-check:checked, .remove-check:checked').length;
 		if(!!numEdits){
 			editBtn$.attr('disabled', !1);
 			editBtn$.val('Edit ' + numEdits + ' selected');
@@ -87,7 +88,7 @@ $(function(){
 		updateButtons();
 	});
 
-	['.edit-check', '.update-check', '.refresh-check', '.rename-check', '.delete-check', '.remove-check'].forEach(function(name){
+	['.edit-check', '.update-check', '.refresh-check', '.rename-check', '.subtitle-check', '.delete-check', '.remove-check'].forEach(function(name){
 		var lastCheck = null;
 
 		$(name).click(function(event){
