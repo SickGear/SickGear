@@ -137,31 +137,13 @@ $(function(){
 		$(el$).parent().attr('title', 'multiselect = ctrl/shift + left click');
 	})
 
-	$.SickGear.onRefreshSize = !1;
-	function presortTable(table$){
-		var asc = $('.sort-size.tablesorter-headerAsc').length,
-			desc = $('.sort-size.tablesorter-headerDesc').length,
-			value;
-
-		if (!!(asc + desc) || !!$.SickGear.onRefreshSize){
-			$('[data-size]').each(function(i, el){
-				value = parseInt($(el).attr('data-size'), 10);
-				$(el).attr('data-size', (!!desc !== !!$.SickGear.onRefreshSize) /* xor */
-					? ((value < 0) ? (-1 * value) + $.SickGear.high : value)
-					: ((value > $.SickGear.high) ? -1 * (value - $.SickGear.high) : value))
-			});
-		}
-		// an action box sorts by its state now, it was read when the page loaded
+	function refreshSortCache(table$){
+		// a size, or an action box, sorts by its value now, not as it was when the page loaded
 		table$.trigger('updateCache');
 	}
 
 	$('#bulk-change-table')
-		.bind('refreshComplete', function(){
-			$.SickGear.onRefreshSize = !0;
-		})
 		.bind('sortEnd', function(){
-			$.SickGear.onRefreshSize = !1;
-
 			var el$ = $('.sort-size-type');
 			if (!!($('.sort-size.tablesorter-headerAsc').length + $('.sort-size.tablesorter-headerDesc').length)){
 				el$.removeClass('tablesorter-headerUnSorted').addClass('tablesorter-headerSorted');
@@ -170,7 +152,7 @@ $(function(){
 			}
 		})
 		.bind('sortStart', function(e, t){
-			presortTable($(t));
+			refreshSortCache($(t));
 		})
 		.bind('filterInit filterEnd', function(e, data){
 			$('#tfoot').find('.stats').html(

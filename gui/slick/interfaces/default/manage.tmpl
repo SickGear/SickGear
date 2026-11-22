@@ -81,7 +81,8 @@
 		textExtraction: {
 #raw
 			1: function(node) {return ((!!$(node).find('i.img-warning-16').length ? '1_' : '0_') + $(node).text().toLowerCase())},
-			2: function(node) {return parseInt($(node).closest('[data-tvid_prodid]').attr('data-size') || -100, 10)},
+			// no size, i.e. no media files, a failed folder read or no folder, is empty, the sort keeps it at the bottom
+			2: function(node) {var size = parseInt($(node).closest('[data-tvid_prodid]').attr('data-size'), 10); return 0 < size && size < $.SickGear.high ? size : ''},
 #end raw
 #if $enable_tvinfo
 			4: function(node) {return \$(node).find('i').attr('data-tvid')},

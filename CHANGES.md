@@ -126,6 +126,7 @@
 * Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
 * Fix log filter masks the program name when a stored login or key is the name or a part of it
 * Fix folder sizes of the bulk change page count the size of a folder entry, 4096 bytes each on Linux
+* Fix sort by size on the bulk change page puts shows with no size first, keep them last both ways
 
 
 ### 3.36.17 (2026-11-24 01:50:00 UTC)
