@@ -148,13 +148,15 @@ $(function(){
 					shiftKey: event.shiftKey, ctrlKey: event.ctrlKey}));
 		});
 
-	// a name for each filter box, from its column header, again after a table update, as the filter widget then makes
-	// the filter boxes anew, a change of size type does
+	// a name for each filter box in use, from its column header, a box of a column with no filter is hidden from all,
+	// again after a table update, as the filter widget then makes the filter boxes anew, a change of size type does
 	function nameFilters(){
 		$('#bulk-change-table .tablesorter-filter').each(function(){
 			var name = $.trim($('#bulk-change-table thead tr:first th').eq($(this).attr('data-column')).text());
-			if (name)
+			if (name && !this.disabled)
 				$(this).attr('aria-label', 'Filter ' + name).attr('placeholder', 'Filter');
+			else
+				$(this).removeAttr('aria-label').attr({'aria-hidden': 'true', tabindex: '-1'});
 		});
 	}
 	nameFilters();
