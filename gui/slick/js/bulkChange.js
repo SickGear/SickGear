@@ -116,6 +116,22 @@ $(function(){
 		});
 	});
 
+	// a click on a row, not on a link or a control, ticks the Edit checkbox of the row, with shift as on the checkbox
+	$('#bulk-change-table tbody')
+		.on('mousedown', 'tr', function(event){
+			// a shift click selects rows, not the text between them
+			if (event.shiftKey && !$(event.target).closest('a, input, button, select, label, textarea').length)
+				event.preventDefault();
+		})
+		.on('click', 'tr', function(event){
+			if ($(event.target).closest('a, input, button, select, label, textarea').length)
+				return;
+			var check = $(this).find('.edit-check')[0];
+			if (check && !check.disabled)
+				check.dispatchEvent(new MouseEvent('click', {bubbles: !0, cancelable: !0,
+					shiftKey: event.shiftKey, ctrlKey: event.ctrlKey}));
+		});
+
 	$('#edit-check, .edit-check').each(function(i, el$){
 		$(el$).parent().attr('title', 'multiselect = ctrl/shift + left click');
 	})

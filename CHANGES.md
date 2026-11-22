@@ -107,6 +107,7 @@
 * Add DNS resolver setting to Config/Search/Search Tasks, e.g. doh+cloudflare:// for provider connections
 * Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
 * Change bulk change page to tint the row and the column of the cell under the pointer, as on the history page
+* Change bulk change page to tick the Edit checkbox of a row with a click anywhere on the row, shift for a range
 
 
 [develop]

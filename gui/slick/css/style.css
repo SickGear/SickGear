@@ -4835,6 +4835,11 @@ pre{
 	z-index:1
 }
 
+/* bulk change, a click on a row ticks its Edit checkbox */
+#bulk-change-table tbody tr{
+	cursor:pointer
+}
+
 /* a yes or no in a table cell, a check for yes and a short dash for no, so that a yes stands out */
 .yes-no{
 	display:inline-block;
