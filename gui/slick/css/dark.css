@@ -40,6 +40,12 @@ pre .log-stop{
 	color:#7ac143
 }
 
+/* the hint in a filter box of the bulk change header, the browser grey hardly shows on the box */
+#bulk-change-table .tablesorter-filter-row input[type="search"]::placeholder,
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]::placeholder{
+	color:rgba(255, 255, 255, 0.55)
+}
+
 #bulk-change-table.hover-highlight tbody > tr:hover > td{
 	background-color:#282828
 }
@@ -1417,10 +1423,6 @@ thead.tablesorter-stickyHeader{
 .ui-state-default.row-even,
 .tablesorter tr.even, .sickbeardTable tr.even{
 	background-color:#2e2e2e
-}
-
-.sort-size-type.tablesorter-headerSorted{
-	background-color:#2c6590
 }
 
 .tablesorter tr.tablesorter-filter-row,

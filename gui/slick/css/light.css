@@ -1310,10 +1310,6 @@ thead.tablesorter-stickyHeader{
 	background-color:#dfdacf
 }
 
-.sort-size-type.tablesorter-headerSorted{
-	background-color:#4a4a4a
-}
-
 .tablesorter tr.tablesorter-filter-row,
 .tablesorter tr.tablesorter-filter-row td{
 	text-align:center;

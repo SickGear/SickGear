@@ -4835,6 +4835,28 @@ pre{
 	z-index:1
 }
 
+/* bulk change header, the page draws no outline, so a ring shows the keyboard focus */
+#bulk-change-table thead th:focus-visible{
+	box-shadow:inset 0 0 0 2px #fff
+}
+
+#bulk-change-table thead input:focus-visible,
+#bulk-change-table thead button:focus-visible,
+#bulk-change-table thead select:focus-visible{
+	box-shadow:0 0 0 2px #fff
+}
+
+/* the size type menu of the bulk change header, total, average, largest or smallest size, compact in the header */
+#bulk-change-table select.size-type,
+#bulk-change-table-sticky select.size-type{
+	width:auto;
+	height:24px;
+	margin-bottom:4px;
+	padding:0 2px;
+	font-size:12px;
+	font-weight:normal
+}
+
 /* bulk change, a click on a row ticks its Edit checkbox */
 #bulk-change-table tbody tr{
 	cursor:pointer
@@ -5241,7 +5263,6 @@ tablesorter.css
 	vertical-align:middle
 }
 
-.tablesorter thead .sort-size-type.tablesorter-headerSorted,
 #display-show .tablesorter .tablesorter-header,
 #display-show .tablesorter thead .tablesorter-headerDesc,
 #display-show .tablesorter thead .tablesorter-headerAsc{background-image:none}

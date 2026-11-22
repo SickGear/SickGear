@@ -41,7 +41,7 @@
 #set $column_headers = [
     ("'digit'", '!1', 'action'),
     ("'showNames'", '!0', False),
-    ("'size'", '!1', False), ('!1', '!1', False),
+    ("'size'", '!1', False),
     ((None, "'tvinfo'")[$enable_tvinfo], '!1', False),
     ("'quality'", '!0', False),
     ((None, "'sports'")[$has_any_sports], '!1', True),
@@ -72,6 +72,14 @@
 
 \$(function()
 {
+	## the Size column is named by the menu choice, not by the text of all its options
+	var setAriaLabel = \$.tablesorter.setColumnAriaLabel;
+	\$.tablesorter.setColumnAriaLabel = function(config, header){
+		setAriaLabel.apply(this, arguments);
+		if (header.hasClass('sort-size'))
+			header.attr('aria-label', header.attr('aria-label').replace(/^[^:]*/, header.find('option:selected').text()));
+	};
+
 	\$('#bulk-change-table:has(tbody tr)').tablesorter({
 		widgets: ['zebra','stickyHeaders', 'filter'],
 		sortList: [[1,0]],
@@ -85,9 +93,9 @@
 			2: function(node) {var size = parseInt($(node).closest('[data-tvid_prodid]').attr('data-size'), 10); return 0 < size && size < $.SickGear.high ? size : ''},
 #end raw
 #if $enable_tvinfo
-			4: function(node) {return \$(node).find('i').attr('data-tvid')},
+			3: function(node) {return \$(node).find('i').attr('data-tvid')},
 #end if
-			#echo ('5','4')[not $enable_tvinfo]#: function(node) {return \$(node).find('span').text().toLowerCase()},
+			#echo ('4','3')[not $enable_tvinfo]#: function(node) {return \$(node).find('span').text().toLowerCase()},
 #echo ',\n'.join($text_extract)#
 		}
 	});
@@ -110,7 +118,7 @@
 .tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:center left; padding: 4px 4px 4px 18px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:10px 54px /*28px 45px*/}
 .tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:30px 54px}
-.tablesorter.rotate th.tablesorter-header.sort-size{background-position:26px 54px; padding:4px 14px 4px 14px}
+.tablesorter.rotate th.tablesorter-header.sort-size{background-position:center 56px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:20px 54px}
 .tablesorter.rotate th.tablesorter-header.sort-action{background-position:21px 56px; padding-right:18px}
 .tablesorter th.tablesorter-header.col-checkbox{background-position:center 56px; padding:4px}
@@ -134,10 +142,9 @@
 .tablesorter-sticky-wrapper{margin-top:50px}
 .tablesorter-filter-row input[disabled]{display:none}
 .tablesorter-filter-row input[type="search"]{background:rgba(255,255,255,0.2); padding:0 3px; border:0; border-radius:4px; color:inherit}
-.tablesorter .tablesorter-header.sort-size-type{padding:0; width:16px; cursor:pointer}
-th.sort-size-type{font-weight:normal}
-.average{border-top:1px solid white; width:9px; margin:0 auto}
-.average i{display:block; line-height:10px; margin-right:1px}
+## the menu sits in the Size cell before the table script runs, else it shows at the page edge while the page loads
+#bulk-change-table th.sort-size, #bulk-change-table-sticky th.sort-size{width:1%; padding:4px; vertical-align:bottom; text-align:center}
+#bulk-change-table th.sort-size select.size-type, #bulk-change-table-sticky th.sort-size select.size-type{margin-bottom:14px}
 
 #set $theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
 .tip,.tip-average{margin:0 2px}
@@ -153,10 +160,9 @@ $xsrf_form_html
 <table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0">
 	<thead>
 		<tr style="height:70px">  <!-- must inline this css -->
-			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check"></th>
+			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check" title="Tick all for Edit" aria-label="Tick all for Edit"></th>
 			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
-			<th class="sort-size col-legend narrow dir-none" title="#echo ('size of media files that SickGear knows', 'size of all show folder files')['folder' == $sizes_from]#"><div class="rotate-holder"><div class="rotate-body">Size</div></div></th>
-			<th class="narrow sort-size-type" data-type="E" title="total"><div class="sort-size-type-body">&Sigma;</div></th>
+			<th class="sort-size narrow dir-none" title="#echo ('Total size: all media files of a show; average, largest and smallest file: one of its media files', 'Total size: all files in a show folder; average, largest and smallest file: one of its media files')['folder' == $sizes_from]#"><select class="size-type form-control form-control-inline input-sm" aria-label="Size measure" title="Choose the size to show and sort by"><option value="Size" title="All the media files of a show, or all the files in its folder after Read folder sizes">Total size</option><option value="AverageSize" title="The average size of one media file of a show">Average file</option><option value="Largest" title="The largest media file of a show">Largest file</option><option value="Smallest" title="The smallest media file of a show">Smallest file</option></select></th>
 #if $enable_tvinfo
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">TV Info</div></div></th>
 #end if
@@ -173,15 +179,15 @@ $xsrf_form_html
 #end if
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="update-check" title="Tick all"><span>Update</span></div></div></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="refresh-check" title="Tick all"><span>Rescan</span></div></div></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="rename-check" title="Tick all"><span>Rename</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="update-check" title="Tick all for Update" aria-label="Tick all for Update"><span>Update</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"><span>Rescan</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="rename-check" title="Tick all for Rename" aria-label="Tick all for Rename"><span>Rename</span></div></div></th>
 #if $sickgear.USE_SUBTITLES
 			#set $subtitles_on = len([_s for _s in $shows + $shows_no_loc if _s.subtitles])
-			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows + $shows_no_loc)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="subtitle-check" title="Tick all"><span>Subtitle</span></div></div></th>
+			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows + $shows_no_loc)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"><span>Subtitle</span></div></div></th>
 #end if
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="delete-check" title="Tick all"><span>Delete</span></div></div></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="remove-check" title="Tick all"><span>Remove</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="delete-check" title="Tick all for Delete" aria-label="Tick all for Delete"><span>Delete</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"><span>Remove</span></div></div></th>
 		</tr>
 	</thead>
 
@@ -238,7 +244,7 @@ $xsrf_form_html
 			<td><input type="checkbox" class="edit-check"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
-			<td colspan=2>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
+			<td>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
     #if $enable_tvinfo
 			<td><i class="icon16 $sickgear.TVInfoAPI($cur_show_obj.tvid).config['slug']" data-tvid="$cur_show_obj.tvid"></i></td>
     #end if

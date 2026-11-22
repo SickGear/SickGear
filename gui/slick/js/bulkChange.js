@@ -148,6 +148,27 @@ $(function(){
 					shiftKey: event.shiftKey, ctrlKey: event.ctrlKey}));
 		});
 
+	// a name for each filter box, from its column header, again after a table update, as the filter widget then makes
+	// the filter boxes anew, a change of size type does
+	function nameFilters(){
+		$('#bulk-change-table .tablesorter-filter').each(function(){
+			var name = $.trim($('#bulk-change-table thead tr:first th').eq($(this).attr('data-column')).text());
+			if (name)
+				$(this).attr('aria-label', 'Filter ' + name).attr('placeholder', 'Filter');
+		});
+	}
+	nameFilters();
+	$('#bulk-change-table').on('updateComplete filterInit', nameFilters);
+
+	// the sticky header is a copy for the pointer, a keyboard or screen reader uses the table header, not both
+	function hideStickyCopy(){
+		$('#bulk-change-table-sticky').attr('aria-hidden', 'true')
+			.find('input, button, select, a, [tabindex]').attr('tabindex', '-1')
+			.end().find('.tablesorter-filter').attr('placeholder', 'Filter');
+	}
+	hideStickyCopy();
+	$('#bulk-change-table').on('updateComplete sortEnd filterEnd', hideStickyCopy);
+
 	$('#edit-check, .edit-check').each(function(i, el$){
 		$(el$).parent().attr('title', 'multiselect = ctrl/shift + left click');
 	})
@@ -158,14 +179,6 @@ $(function(){
 	}
 
 	$('#bulk-change-table')
-		.bind('sortEnd', function(){
-			var el$ = $('.sort-size-type');
-			if (!!($('.sort-size.tablesorter-headerAsc').length + $('.sort-size.tablesorter-headerDesc').length)){
-				el$.removeClass('tablesorter-headerUnSorted').addClass('tablesorter-headerSorted');
-			} else {
-				el$.removeClass('tablesorter-headerSorted');
-			}
-		})
 		.bind('sortStart', function(e, t){
 			refreshSortCache($(t));
 		})
@@ -200,7 +213,7 @@ $(function(){
 			delete content._read;
 			if (read){
 				displayPNotify('success', 'Folder sizes', read.shows + ' show folders read in ' + read.took);
-				$('.sort-size').attr('title', 'size of all show folder files');
+				$('.sort-size').attr('title', 'Total size: all files in a show folder; average, largest and smallest file: one of its media files');
 			}
 			return content;
 		}, function(xhr, status, error){
@@ -243,8 +256,8 @@ $(function(){
 		var button$ = $(this).prop('disabled', !0).html('<i class="spinner"></i> Reading folders');
 		readSizes().then(function(content){
 			keepSizes(content);
-			$('.sort-size-type').attr('title', 'total').attr('data-type', 'E').find('.sort-size-type-body').html('&Sigma;');
 			showSizes('Size');
+			$('select.size-type').val('Size');
 			button$.attr('title', 'sizes are of all show folder files, read again');
 		}).always(function(){
 			button$.prop('disabled', !1).html('Read folder sizes');
@@ -252,29 +265,12 @@ $(function(){
 	});
 
 	// on the document, the sticky header of the table is a copy that tablesorter makes after this script runs
-	$(document).on('click', '.sort-size-type', function(){
-		var that = $('.sort-size-type'), title = 'total', htmlType = '&Sigma;', dataType = 'E', key = 'Size';
-		if(dataType === $(this).attr('data-type')){
-			title = 'average';
-			htmlType = '<div class="average"><i>x</i></div>';
-			dataType = 'x';
-			key = 'AverageSize';
-		} else if('x' === $(this).attr('data-type')){
-			title = 'largest';
-			htmlType = '&gt';
-			dataType = '>';
-			key = 'Largest';
-		} else if('>' === $(this).attr('data-type')){
-			title = 'smallest';
-			htmlType = '&lt';
-			dataType = '<';
-			key = 'Smallest';
-		}
-		// before the sizes, as their table update makes the sticky header copy again from the table header
-		that.attr('title', title);
-		that.attr('data-type', dataType);
-		that.find('.sort-size-type-body').html(htmlType);
+	$(document).on('change', 'select.size-type', function(){
+		var key = $(this).val();
 		showSizes(key);
+		$.tablesorter.setColumnAriaLabel($('#bulk-change-table')[0].config, $('#bulk-change-table th.sort-size'));
+		// both menus after the sizes, as their table update makes the sticky header copy again, with no menu choice
+		$('select.size-type').val(key);
 	});
 
 });

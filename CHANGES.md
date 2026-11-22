@@ -113,6 +113,7 @@
 * Change the size type column of the bulk change page to switch the sizes on the page, not read every show folder
 * Fix the size type column of the bulk change page cannot be clicked once its header sticks under the menu bar
 * Fix a tick all box of the bulk change page flips each row, it now ticks or clears all and shows when part ticked
+* Change the bulk change header for the keyboard, a focus ring, a size type menu, names on its boxes and filters
 
 
 [develop]
