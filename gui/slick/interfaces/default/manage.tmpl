@@ -208,7 +208,8 @@ $xsrf_form_html
 #set $no = '<span class="yes-no is-no" role="img" title="No" aria-label="No"></span>'
 #set $yes = '<span class="yes-no is-yes" role="img" title="Yes" aria-label="Yes"></span>'
 #set $max = $high + 100
-#for $cur_show_obj in $shows
+## a row has the stripe the table script gives it, as the rows are in its order, so the colours show before it runs
+#for $row, $cur_show_obj in enumerate($shows)
     #set $show_loc = $cur_show_obj.path
     #set $show_size = $max if not $show_loc else $sizes.get($cur_show_obj.tvid_prodid, 0)
     #set $option_state = '<input type="checkbox"%s class="%s-check"%s>'
@@ -250,7 +251,7 @@ $xsrf_form_html
                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
     #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
-		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
+		<tr class="#echo ('odd', 'even')[$row % 2]#" data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
 			<td><input type="checkbox" class="edit-check"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
