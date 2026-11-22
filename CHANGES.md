@@ -120,6 +120,7 @@
 * Change the bulk change page to send its rows in the order the table sorts them, so show names do not move on load
 * Fix sort by show name on the bulk change page to leave out A, An and The when the sort with articles setting is off
 * Change the bulk change page to send its rows with their alternate colours, not only once the table script runs
+* Change pages to load the fonts of the first view with the style sheets, so the menu under the top bar does not move
 
 
 [develop]

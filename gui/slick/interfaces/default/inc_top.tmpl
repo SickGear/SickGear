@@ -43,6 +43,10 @@
 	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
 	<meta name="theme-color" content="#echo '#%s' % ('333', '15528F')['dark' == $sg_str('THEME_NAME', 'dark')]#">
 
+	## fonts of the first view load with the style sheets, so text and icons are drawn at their size and do not move
+	<link rel="preload" href="$sbRoot/css/fonts/OpenSans-Regular-webfont.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="$sbRoot/css/fonts/OpenSans-Semibold-webfont.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="$sbRoot/css/fonts/sgicons.woff?v4" as="font" type="font/woff" crossorigin>
 	<link rel="stylesheet" href="$sbRoot/css/lib/bootstrap.min.css?v=$sbPID">
 	<link rel="stylesheet" href="$sbRoot/css/lib/bootstrap-theme.min.css?v=$sbPID">
 	<link rel="stylesheet" href="$sbRoot/css/browser.css?v=$sbPID">
