@@ -112,6 +112,7 @@
 * Change bulk change page to sort the Edit and action columns by their boxes, ticked first, then those that can be ticked
 * Change the size type column of the bulk change page to switch the sizes on the page, not read every show folder
 * Fix the size type column of the bulk change page cannot be clicked once its header sticks under the menu bar
+* Fix a tick all box of the bulk change page flips each row, it now ticks or clears all and shows when part ticked
 
 
 [develop]

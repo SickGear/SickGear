@@ -79,12 +79,25 @@ $(function(){
 	}
 	updateButtons();
 
-	$('.bulk-check').click(function(){
-
-		$('.' + $(this).attr('id')).each(function(){
-			if (!this.disabled)
-				this.checked = !this.checked
+	// a header box shows whether all the boxes of its column that can be ticked are ticked, or part ticked when some are
+	// the table header and its sticky copy have the same box, so both are set
+	function syncTickAll(name){
+		var boxes$ = $('.' + name).filter(function(){return !this.disabled}), ticked = boxes$.filter(':checked').length;
+		$('[id="' + name + '"]').each(function(){
+			this.checked = !!boxes$.length && ticked === boxes$.length;
+			this.indeterminate = !!ticked && ticked < boxes$.length;
 		});
+	}
+
+	// on the document, as the sticky header copy is made after this script runs, ticks or clears all boxes of the
+	// column that can be ticked, it no longer flips each box, which reversed a selection made by hand
+	$(document).on('click', '.bulk-check', function(){
+		var name = $(this).attr('id'), on = this.checked;
+		$('.' + name).each(function(){
+			if (!this.disabled)
+				this.checked = on;
+		});
+		syncTickAll(name);
 		updateButtons();
 	});
 
@@ -114,7 +127,9 @@ $(function(){
 				});
 			}
 			updateButtons();
+			syncTickAll(name.slice(1));
 		});
+		syncTickAll(name.slice(1));
 	});
 
 	// a click on a row, not on a link or a control, ticks the Edit checkbox of the row, with shift as on the checkbox
