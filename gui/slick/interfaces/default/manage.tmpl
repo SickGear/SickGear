@@ -155,7 +155,7 @@ $xsrf_form_html
 			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check"></th>
 			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
 			<th class="sort-size col-legend narrow dir-none" title="#echo ('size of media files that SickGear knows', 'size of all show folder files')['folder' == $sizes_from]#"><div class="rotate-holder"><div class="rotate-body">Size</div></div></th>
-			<th class="narrow sort-size-type" data-type="E" title="total"><div class="sort-size-type-body">&Sigma;</div><span class="sort-size-type-image" style="display:none; margin-top:8px"><i class="spinner"></i></span></th>
+			<th class="narrow sort-size-type" data-type="E" title="total"><div class="sort-size-type-body">&Sigma;</div></th>
 #if $enable_tvinfo
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">TV Info</div></div></th>
 #end if
@@ -233,7 +233,7 @@ $xsrf_form_html
                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
     #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
-		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size">
+		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
 			<td><input type="checkbox" class="edit-check"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>

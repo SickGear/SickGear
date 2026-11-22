@@ -180,16 +180,29 @@ $(function(){
 		});
 
 	// read the size of every show folder, slow on a large or network drive, so only when asked for
-	function readSizes(refresh){
+	// a size as the server writes it, e.g. 443 KB, 4.3 MB, 4.43 GB
+	function human(size){
+		if (1 === size)
+			return '1 byte';
+		var units = [['bytes', 0], ['KB', 0], ['MB', 1], ['GB', 2], ['TB', 2], ['PB', 2]], n = 0, num = size, text;
+		while (1024 <= num && n < units.length - 1){
+			num /= 1024;
+			n++;
+		}
+		if (!units[n][1])
+			return Math.floor(num) + ' ' + units[n][0];
+		text = String(Math.round(num * Math.pow(10, units[n][1])) / Math.pow(10, units[n][1]));
+		return (/\./.test(text) ? text : text + '.0') + ' ' + units[n][0];
+	}
+
+	// read the size of every show folder, slow on a large or network drive, so only when the button asks for it
+	function readSizes(){
 		var url = $.SickGear.Root + '/home/media_stats';
-		return $.getJSON(url, refresh ? {refresh: 1} : {}).then(function(content){
+		return $.getJSON(url, {refresh: 1}).then(function(content){
 			var read = content._read;
 			delete content._read;
 			if (read){
-				displayPNotify('success', 'Folder sizes',
-					read.shows + ' show folders ' + (read.ago
-						? 'were read ' + read.ago + ' ago in ' + read.took
-						: 'read in ' + read.took));
+				displayPNotify('success', 'Folder sizes', read.shows + ' show folders read in ' + read.took);
 				$('.sort-size').attr('title', 'size of all show folder files');
 			}
 			return content;
@@ -199,28 +212,42 @@ $(function(){
 		});
 	}
 
-	function showSizes(content, key){
-		var html, val, el$;
+	// each row keeps its total size and its media file stats, files,smallest,largest,average, from the database or
+	// a folder read, so the size type column changes what the size column shows without asking the server
+	function keepSizes(content){
 		$.each(content, function(tvidProdid, data){
-			html = '---';
-			val = '-10';
-			el$ = $('tr[data-tvid_prodid="' + tvidProdid + '"][data-size]');
-			if (/undefined/.test(data.message) || 'Size' === key){
-				html = data['h' + key];
-				val = data['b' + key];
-			}
-			el$.find('.ui-size').removeClass('grey-text').removeAttr('title').html(html);
-			el$.attr('data-size', val);
+			$('tr[data-tvid_prodid="' + tvidProdid + '"][data-size]')
+				.attr('data-total', data.bSize)
+				.attr('data-stats', [data.nFiles || 0, data.bSmallest || 0, data.bLargest || 0, data.bAverageSize || 0].join(','));
 		});
-		$('#bulk-change-table').trigger('updateAll', [!0]);
+	}
+
+	function showSizes(key){
+		$('tr[data-tvid_prodid][data-stats]').each(function(){
+			var row$ = $(this), size$ = row$.find('.ui-size'), stats = row$.attr('data-stats').split(',').map(Number),
+				val = {Size: Number(row$.attr('data-total')), Smallest: stats[1], Largest: stats[2], AverageSize: stats[3]}[key];
+			if (!size$.length)
+				return;
+			if (0 < val && ('Size' === key || 0 < stats[0])){
+				size$.removeClass('grey-text').removeAttr('title').html(human(val));
+				row$.attr('data-size', val);
+			} else {
+				size$.addClass('grey-text').attr('title', 'no media files').html('---');
+				row$.attr('data-size', -10);
+			}
+		});
+		// the sort values and the sort only, a table update makes the filter boxes anew, clears a filter, and filters
+		// again, after which the sticky header scrolls the page up to the top of the table
+		var table$ = $('#bulk-change-table');
+		table$.trigger('updateCache').trigger('sorton', [table$[0].config.sortList]);
 	}
 
 	$('#read-folder-sizes').on('click', function(){
 		var button$ = $(this).prop('disabled', !0).html('<i class="spinner"></i> Reading folders');
-		readSizes(!0).then(function(content){
-			showSizes(content, 'Size');
-			var type$ = $('.sort-size-type');
-			type$.attr('title', 'total').attr('data-type', 'E').find('.sort-size-type-body').html('&Sigma;');
+		readSizes().then(function(content){
+			keepSizes(content);
+			$('.sort-size-type').attr('title', 'total').attr('data-type', 'E').find('.sort-size-type-body').html('&Sigma;');
+			showSizes('Size');
 			button$.attr('title', 'sizes are of all show folder files, read again');
 		}).always(function(){
 			button$.prop('disabled', !1).html('Read folder sizes');
@@ -228,8 +255,6 @@ $(function(){
 	});
 
 	$('.sort-size-type').on('click', function(){
-		$('.sort-size-type-body').hide();
-		$('.sort-size-type-image').show();
 		var that = $(this), title = 'total', htmlType = '&Sigma;', dataType = 'E', key = 'Size';
 		if(dataType === $(this).attr('data-type')){
 			title = 'average';
@@ -247,16 +272,10 @@ $(function(){
 			dataType = '<';
 			key = 'Smallest';
 		}
-
-		readSizes(!1).then(function(content){
-			showSizes(content, key);
-			that.attr('title', title);
-			that.attr('data-type', dataType);
-			that.find('.sort-size-type-body').html(htmlType);
-		}).always(function(){
-			$('.sort-size-type-image').hide();
-			$('.sort-size-type-body').show();
-		});
+		showSizes(key);
+		that.attr('title', title);
+		that.attr('data-type', dataType);
+		that.find('.sort-size-type-body').html(htmlType);
 	});
 
 });

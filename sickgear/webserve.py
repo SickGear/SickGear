@@ -7396,21 +7396,28 @@ class Manage(MainHandler):
         # the size of a show from its media files in the database, reading every show folder took seconds, the folder
         # size is used when the folders have been read in the last 30 minutes, or when the page button reads them
         cache = Home.media_stats_cache
+        # with the number of media files, the smallest, largest and average size, for the size type column of the page
         if cache['shows'] and 1800 > time.time() - cache['read']:
             t.sizes = {_k: _v['bSize'] for _k, _v in cache['shows'].items()}
+            t.stats = {_k: (_v.get('nFiles', 0), _v.get('bSmallest', 0), _v.get('bLargest', 0), _v.get('bAverageSize', 0))
+                       for _k, _v in cache['shows'].items()}
             t.sizes_from = 'folder'
         else:
             with db.DBConnection() as sg_db:
                 # a file of more than one episode is on each of its episodes, so count each file once
                 sql_result = sg_db.select(
                     """
-                    SELECT indexer, showid, SUM(file_size) AS size
+                    SELECT indexer, showid, SUM(file_size) AS size, COUNT(*) AS files,
+                     MIN(file_size) AS smallest, MAX(file_size) AS largest
                     FROM (SELECT DISTINCT indexer, showid, location, file_size
                      FROM tv_episodes
                      WHERE location != '' AND file_size > 0)
                     GROUP BY indexer, showid
                     """)
             t.sizes = {f'{_r["indexer"]}:{_r["showid"]}': _r['size'] for _r in sql_result}
+            t.stats = {f'{_r["indexer"]}:{_r["showid"]}': (_r['files'], _r['smallest'], _r['largest'],
+                                                            int(_r['size'] / _r['files']))
+                       for _r in sql_result}
             t.sizes_from = 'database'
         for cur_show_obj in sorted(sickgear.showList, key=lambda _x: _x.name.lower()):
             t.has_any_sports |= bool(cur_show_obj.sports)
