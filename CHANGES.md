@@ -118,6 +118,7 @@
 * Change the bulk change header filter boxes to show their edge and focus, and a hover fill on sortable columns
 * Change the bulk change table to keep its columns and rows in place while the page loads
 * Change the bulk change page to send its rows in the order the table sorts them, so show names do not move on load
+* Fix sort by show name on the bulk change page to leave out A, An and The when the sort with articles setting is off
 
 
 [develop]

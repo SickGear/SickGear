@@ -7420,7 +7420,8 @@ class Manage(MainHandler):
             t.sizes_from = 'database'
         # in the order the table script sorts the names, shows with no folder last, so the rows do not move when it starts
         def sort_name(show_obj):
-            return ('0_', '1_')[not show_obj.path] + getattr(show_obj, 'unique_name', show_obj.name).lower()
+            name = getattr(show_obj, 'unique_name', show_obj.name)
+            return ('0_', '1_')[not show_obj.path] + (remove_article(name), name)[sickgear.SORT_ARTICLE].lower()
 
         t.shows = sorted(sickgear.showList, key=lambda _so: cmp_to_key(helpers.natural_cmp)(sort_name(_so)))
         for cur_show_obj in t.shows:

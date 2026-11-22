@@ -23,7 +23,8 @@
 	id: 'showNames',
 	is: function(s) { return !1; },
 	format: function(s) {
-	    return (s || '')#if not $sickgear.SORT_ARTICLE#.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1')#end if#;
+	    ## the article is after the 0_ or 1_ that sorts shows with no folder last
+	    return (s || '')#if not $sickgear.SORT_ARTICLE#.replace(/^(\d_)?(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1$2')#end if#;
 	},
 	type: 'text'
 });
