@@ -109,6 +109,7 @@
 * Change bulk change page to tint the row and the column of the cell under the pointer, as on the history page
 * Change bulk change page to tick the Edit checkbox of a row with a click anywhere on the row, shift for a range
 * Change the Subtitle column of the bulk change page to a dash where search is off, and fix its tick all box and Submit
+* Change bulk change page to sort the Edit and action columns by their boxes, ticked first, then those that can be ticked
 
 
 [develop]

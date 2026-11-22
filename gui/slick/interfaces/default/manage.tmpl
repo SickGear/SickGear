@@ -39,7 +39,7 @@
 ##
 #set $enable_tvinfo = True
 #set $column_headers = [
-    ('!1', '!1', False),
+    ("'digit'", '!1', 'action'),
     ("'showNames'", '!0', False),
     ("'size'", '!1', False), ('!1', '!1', False),
     ((None, "'tvinfo'")[$enable_tvinfo], '!1', False),
@@ -49,7 +49,8 @@
     ((None, "'anime'")[$has_any_anime], '!1', True),
     ((None, "'flatfold'")[$has_any_flat_folders], '!1', True),
     ("'paused'", '!1', True), ("'status'", '!0', False),
-    ('!1', '!1', False), ('!1', '!1', False), ('!1', '!1', False), ((None, '!1')[$sickgear.USE_SUBTITLES], '!1', False), ('!1', '!1', False), ('!1', '!1', False)
+    ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'),
+    ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action')
 ]
 #set $columns_total = $len($column_headers) - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickgear.USE_SUBTITLES])
 #set $headers = []
@@ -60,8 +61,11 @@
         #continue
     #end if
     #set $column += 1
-    #set void = $headers.append('\t\t\t%s: {sorter:%s, filter:%s}' % ($column, $sort, $filter))
-    #if $img_extract
+    #set void = $headers.append('\t\t\t%s: {sorter:%s, filter:%s%s}' % ($column, $sort, $filter, ('', ", sortInitialOrder:'desc'")['action' == $img_extract]))
+    #if 'action' == $img_extract
+        ## an action box sorts ticked first, then one that can be ticked, then a dash or a box of an action in progress
+        #set void = $text_extract.append('			%s%s' % ($column, ": function(node) {var c = $(node).find('input'); return !c.length || c.prop('disabled') ? 0 : (c.prop('checked') ? 2 : 1)}"))
+    #elif $img_extract
         #set void = $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('.yes-no').attr('title')}"))
     #end if
 #end for
@@ -107,6 +111,8 @@
 .tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:30px 54px}
 .tablesorter.rotate th.tablesorter-header.sort-size{background-position:26px 54px; padding:4px 14px 4px 14px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:20px 54px}
+.tablesorter.rotate th.tablesorter-header.sort-action{background-position:21px 56px; padding-right:18px}
+.tablesorter th.tablesorter-header.col-checkbox{background-position:center 56px; padding:4px}
 .rotate-holder{width:20px; margin-bottom:-16px}
 .rotate-holder2{width:20px; margin:22px 0 -22px}
 .rotate-body{width:25px; transform-origin:bottom left; transform:translateX(16px) rotate(-45deg)}
@@ -166,15 +172,15 @@ $xsrf_form_html
 #end if
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="update-check"><span>Update</span></label></div></div></th>
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="refresh-check"><span>Rescan</span></label></div></div></th>
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="rename-check"><span>Rename</span></label></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="update-check" title="Tick all"><span>Update</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="refresh-check" title="Tick all"><span>Rescan</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="rename-check" title="Tick all"><span>Rename</span></div></div></th>
 #if $sickgear.USE_SUBTITLES
 			#set $subtitles_on = len([_s for _s in $shows + $shows_no_loc if _s.subtitles])
-			<th width="1%" title="Subtitle search is on for $subtitles_on of #echo len($shows + $shows_no_loc)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="subtitle-check"><span>Subtitle</span></label></div></div></th>
+			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows + $shows_no_loc)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="subtitle-check" title="Tick all"><span>Subtitle</span></div></div></th>
 #end if
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="delete-check"><span>Delete</span></label></div></div></th>
-			<th width="1%"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="remove-check"><span>Remove</span></label></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="delete-check" title="Tick all"><span>Delete</span></div></div></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="remove-check" title="Tick all"><span>Remove</span></div></div></th>
 		</tr>
 	</thead>
 

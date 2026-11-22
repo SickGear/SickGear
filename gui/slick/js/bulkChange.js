@@ -150,8 +150,9 @@ $(function(){
 					? ((value < 0) ? (-1 * value) + $.SickGear.high : value)
 					: ((value > $.SickGear.high) ? -1 * (value - $.SickGear.high) : value))
 			});
-			table$.trigger('updateCache');
 		}
+		// an action box sorts by its state now, it was read when the page loaded
+		table$.trigger('updateCache');
 	}
 
 	$('#bulk-change-table')
