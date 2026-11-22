@@ -122,8 +122,9 @@
 #bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 4px 18px}
 #bulk-change-table:not(.hasFilters) thead th.sort-size{padding:4px}
 #bulk-change-table:not(.hasFilters) thead th.col-checkbox{padding:4px}
-#bulk-change-table:not(.hasFilters) thead th.sort-icon-status{min-width:96px}
-#bulk-change-table:not(.hasFilters) thead th.sort-icon-quality{width:62px}
+## the Status and Quality widths come from their filter boxes and cells, kept when a filter leaves few or no rows
+#bulk-change-table thead th.sort-icon-status{min-width:96px}
+#bulk-change-table thead th.sort-icon-quality{width:62px}
 @supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
 .tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:center left; padding: 4px 4px 4px 18px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:10px 54px /*28px 45px*/}
