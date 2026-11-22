@@ -180,11 +180,17 @@ $(function(){
 		table$.trigger('updateCache');
 	}
 
+	$('#clear-filters').on('click', function(){
+		$('#bulk-change-table').trigger('filterReset');
+		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
+	});
+
 	$('#bulk-change-table')
 		.bind('sortStart', function(e, t){
 			refreshSortCache($(t));
 		})
 		.bind('filterInit filterEnd', function(e, data){
+			$('#no-match').prop('hidden', 0 < data.filteredRows);
 			$('#tfoot').find('.stats').html(
 				(data.filteredRows === data.totalRows
 					? '<span class="total-rows">' +  data.totalRows + '</span> shows'

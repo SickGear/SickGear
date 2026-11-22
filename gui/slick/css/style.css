@@ -4824,6 +4824,27 @@ pre{
 	position:relative
 }
 
+/* the row that says a filter matches no show, with its clear button, has no hover tint and no column box */
+#bulk-change-table #no-match td{
+	padding:16px;
+	text-align:center;
+	background:none
+}
+
+#bulk-change-table #no-match #clear-filters{
+	margin-left:8px
+}
+
+#bulk-change-table.hover-highlight #no-match td:hover::after{
+	content:none
+}
+
+/* the clear button of a filter box, the style sheet of the page library hides it on every search box */
+#bulk-change-table .tablesorter-filter::-webkit-search-cancel-button{
+	-webkit-appearance:searchfield-cancel-button;
+	cursor:pointer
+}
+
 #bulk-change-table.hover-highlight tbody td:hover::after{
 	content:"";
 	position:absolute;
