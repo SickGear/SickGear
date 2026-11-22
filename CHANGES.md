@@ -116,6 +116,7 @@
 * Change the bulk change header for the keyboard, a focus ring, a size type menu, names on its boxes and filters
 * Change the bulk change header, Delete and Remove say what they do, sort fill covers slanted labels, clearer filters
 * Change the bulk change header filter boxes to show their edge and focus, and a hover fill on sortable columns
+* Change the bulk change table to keep its columns and rows in place while the page loads
 
 
 [develop]

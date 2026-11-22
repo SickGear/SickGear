@@ -1388,6 +1388,11 @@ thead.tablesorter-stickyHeader{
 	border-bottom:0
 }
 
+/* the space kept for the filter row before the table script adds it, in the colour of the row */
+#bulk-change-table:not(.hasFilters) thead th{
+	border-bottom:29px solid #d7d7d7
+}
+
 /* =======================================================================
 jquery.confirm.css
 ========================================================================== */

@@ -114,6 +114,15 @@
 .tvShow{text-align:left}
 .tvShow i{margin-right:6px; margin-bottom:1px}
 .rotate-body span{float:left}
+## until the table script runs, the header has the padding and the filter row space the script gives it, so nothing moves,
+## the space is a header cell border in the filter row colour of the theme
+#bulk-change-table:not(.hasFilters) thead th{padding:4px 18px 4px 4px}
+#bulk-change-table:not(.hasFilters) thead tr{height:99px !important}
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 4px 18px}
+#bulk-change-table:not(.hasFilters) thead th.sort-size{padding:4px}
+#bulk-change-table:not(.hasFilters) thead th.col-checkbox{padding:4px}
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-status{min-width:96px}
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-quality{width:62px}
 @supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
 .tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:center left; padding: 4px 4px 4px 18px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:10px 54px /*28px 45px*/}
