@@ -106,6 +106,7 @@
 * Remove Requests library 2.34.2 (6e83187), replaced by niquests
 * Add DNS resolver setting to Config/Search/Search Tasks, e.g. doh+cloudflare:// for provider connections
 * Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
+* Change bulk change page to tint the row and the column of the cell under the pointer, as on the history page
 
 
 [develop]

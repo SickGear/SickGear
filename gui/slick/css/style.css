@@ -4810,6 +4810,31 @@ pre{
 	border:1px solid
 }
 
+/* bulk change, a tint on the row and the column of the cell under the pointer, as the tables of the history page,
+   the column tint is one box on that cell, clipped to the table and not a scroll box, so the sticky header still works */
+#bulk-change-table.hover-highlight{
+	overflow:clip
+}
+
+#bulk-change-table.hover-highlight thead{
+	z-index:2
+}
+
+#bulk-change-table.hover-highlight tbody td{
+	position:relative
+}
+
+#bulk-change-table.hover-highlight tbody td:hover::after{
+	content:"";
+	position:absolute;
+	left:0;
+	top:-999em;
+	width:100%;
+	height:1998em;
+	pointer-events:none;
+	z-index:1
+}
+
 /* a yes or no in a table cell, a check for yes and a short dash for no, so that a yes stands out */
 .yes-no{
 	display:inline-block;

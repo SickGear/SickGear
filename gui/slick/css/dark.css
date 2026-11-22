@@ -40,6 +40,14 @@ pre .log-stop{
 	color:#7ac143
 }
 
+#bulk-change-table.hover-highlight tbody > tr:hover > td{
+	background-color:#282828
+}
+
+#bulk-change-table.hover-highlight tbody td:hover::after{
+	background-color:rgba(0, 0, 0, 0.2)
+}
+
 .yes-no.is-no{
 	color:#858585
 }
