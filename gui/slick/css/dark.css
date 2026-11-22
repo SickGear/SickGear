@@ -40,6 +40,20 @@ pre .log-stop{
 	color:#7ac143
 }
 
+/* bulk change, the slanted label of a sorted column sits on the fill colour, the cell fill covers only part of it */
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body2,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body2,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerDesc .rotate-body span{
+	background-color:#297ab8
+}
+
+.tablesorter.rotate thead th.col-destructive span{
+	color:#ffc2b8
+}
+
 /* the hint in a filter box of the bulk change header, the browser grey hardly shows on the box */
 #bulk-change-table .tablesorter-filter-row input[type="search"]::placeholder,
 #bulk-change-table-sticky .tablesorter-filter-row input[type="search"]::placeholder{
@@ -1399,6 +1413,12 @@ tablesorter.css
 .tablesorter thead .tablesorter-headerDesc{
 	background:#297ab8 url("data:image/gif;base64,R0lGODlhFQAEAIAAAP///////yH5BAEAAAEALAAAAAAVAAQAAAINjB+gC+jP2ptn0WskLQA7") no-repeat center right;
 	/* background-image:url("../images/tablesorter/asc.gif") */
+}
+
+/* white text on a sorted header, the light grey text was 3.4:1 on its blue */
+.tablesorter thead .tablesorter-headerDesc,
+.tablesorter thead .tablesorter-headerAsc{
+	color:#fff
 }
 
 .tablesorter thead .tablesorter-headerAsc{

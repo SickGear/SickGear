@@ -4846,6 +4846,32 @@ pre{
 	box-shadow:0 0 0 2px #fff
 }
 
+/* bulk change, the slanted label of a sorted column is a tag of the fill colour, as wide as its text, the text stays
+   where it was, in an action column the tag is behind the label and not the tick all box */
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body2,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body2{
+	width:max-content;
+	margin-left:-3px;
+	padding:0 3px;
+	border-radius:2px
+}
+
+.tablesorter.rotate thead th.sort-action.tablesorter-headerAsc .rotate-body,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerDesc .rotate-body{
+	width:25px;
+	margin-left:0;
+	padding:0;
+	background-color:transparent
+}
+
+.tablesorter.rotate thead th.sort-action.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerDesc .rotate-body span{
+	padding:0 3px;
+	border-radius:2px
+}
+
 /* the size type menu of the bulk change header, total, average, largest or smallest size, compact in the header */
 #bulk-change-table select.size-type,
 #bulk-change-table-sticky select.size-type{

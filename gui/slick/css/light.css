@@ -41,6 +41,27 @@ pre .log-stop{
 	color:#2a6e1f
 }
 
+/* bulk change, the slanted label of a sorted column sits on the fill colour, the cell fill covers only part of it */
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body2,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body2,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerDesc .rotate-body span{
+	background-color:#555
+}
+
+.tablesorter.rotate thead th.col-destructive span{
+	color:#ffc2b8
+}
+
+/* the filter boxes of the bulk change header read as fields */
+#bulk-change-table .tablesorter-filter-row input[type="search"],
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]{
+	background:#fff;
+	box-shadow:inset 0 0 0 1px #b5b5b5
+}
+
 #bulk-change-table.hover-highlight tbody > tr:hover > td{
 	background-color:#f4f3c2
 }

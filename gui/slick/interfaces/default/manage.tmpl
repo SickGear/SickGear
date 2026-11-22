@@ -186,8 +186,8 @@ $xsrf_form_html
 			#set $subtitles_on = len([_s for _s in $shows + $shows_no_loc if _s.subtitles])
 			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows + $shows_no_loc)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"><span>Subtitle</span></div></div></th>
 #end if
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="delete-check" title="Tick all for Delete" aria-label="Tick all for Delete"><span>Delete</span></div></div></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"><span>Remove</span></div></div></th>
+			<th width="1%" class="sort-action col-destructive" title="Remove the show from SickGear and #echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]# its folder and files"><div class="rotate-holder2"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="delete-check" title="Tick all for Delete" aria-label="Tick all for Delete"><span>Delete</span></div></div></th>
+			<th width="1%" class="sort-action col-destructive" title="Remove the show from SickGear, keep its folder and files"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><input type="checkbox" class="bulk-check right-2px" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"><span>Remove</span></div></div></th>
 		</tr>
 	</thead>
 
