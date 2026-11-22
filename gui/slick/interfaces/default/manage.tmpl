@@ -119,7 +119,8 @@
 ## the space is a header cell border in the filter row colour of the theme
 #bulk-change-table:not(.hasFilters) thead th{padding:4px 18px 4px 4px}
 #bulk-change-table:not(.hasFilters) thead tr{height:99px !important}
-#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 4px 18px}
+## Show Name is drawn sorted, as the table script sorts by it first
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 4px 18px; background-repeat:no-repeat; background-position:center left}
 #bulk-change-table:not(.hasFilters) thead th.sort-size{padding:4px}
 #bulk-change-table:not(.hasFilters) thead th.col-checkbox{padding:4px}
 ## the Status and Quality widths come from their filter boxes and cells, kept when a filter leaves few or no rows

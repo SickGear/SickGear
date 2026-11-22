@@ -4867,6 +4867,30 @@ pre{
 	box-shadow:0 0 0 2px #fff
 }
 
+/* bulk change header, a column shows its sort arrows only when sorted, or under the pointer or the keyboard focus, so the
+   one sorted column stands out, with a larger arrow and the tag behind its label */
+#bulk-change-table thead th.tablesorter-headerUnSorted:not(:hover):not(:focus-visible),
+#bulk-change-table-sticky thead th.tablesorter-headerUnSorted:not(:hover){
+	background-image:none
+}
+
+/* the arrows of an unsorted column, under the pointer or the focus, drawn as the arrow of the sorted column */
+#bulk-change-table thead th.tablesorter-headerUnSorted,
+#bulk-change-table-sticky thead th.tablesorter-headerUnSorted{
+	background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='9'%3E%3Cpath d='M6.5 3.5h8l-4-3.5zM6.5 5.5h8l-4 3.5z' fill='%23fff'/%3E%3C/svg%3E")
+}
+
+#bulk-change-table thead th.tablesorter-headerAsc,
+#bulk-change-table-sticky thead th.tablesorter-headerAsc,
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{
+	background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='8'%3E%3Cpath d='M4.5 7.5h12l-6-7z' fill='%23fff'/%3E%3C/svg%3E")
+}
+
+#bulk-change-table thead th.tablesorter-headerDesc,
+#bulk-change-table-sticky thead th.tablesorter-headerDesc{
+	background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='8'%3E%3Cpath d='M4.5 .5h12l-6 7z' fill='%23fff'/%3E%3C/svg%3E")
+}
+
 /* bulk change, the slanted label of a sorted column is a tag of the fill colour, as wide as its text, the text stays
    where it was, in an action column the tag is behind the label and not the tick all box */
 .tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body,

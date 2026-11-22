@@ -50,6 +50,31 @@ pre .log-stop{
 	background-color:#297ab8
 }
 
+/* bulk change, a sorted column keeps the header colour, its label tag, arrow and bar mark it, so the mark does not
+   grow with the width of the column, Show Name has a tag as the slanted labels do */
+#bulk-change-table thead th.tablesorter-headerAsc,
+#bulk-change-table thead th.tablesorter-headerDesc,
+#bulk-change-table-sticky thead th.tablesorter-headerAsc,
+#bulk-change-table-sticky thead th.tablesorter-headerDesc,
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{
+	background-color:#15528f
+}
+
+#bulk-change-table thead th.col-checkbox.tablesorter-headerAsc .tablesorter-header-inner > div,
+#bulk-change-table thead th.col-checkbox.tablesorter-headerDesc .tablesorter-header-inner > div,
+#bulk-change-table-sticky thead th.col-checkbox.tablesorter-headerAsc .tablesorter-header-inner > div,
+#bulk-change-table-sticky thead th.col-checkbox.tablesorter-headerDesc .tablesorter-header-inner > div,
+#bulk-change-table thead th.sort-icon-left.tablesorter-headerAsc .tablesorter-header-inner,
+#bulk-change-table thead th.sort-icon-left.tablesorter-headerDesc .tablesorter-header-inner,
+#bulk-change-table-sticky thead th.sort-icon-left.tablesorter-headerAsc .tablesorter-header-inner,
+#bulk-change-table-sticky thead th.sort-icon-left.tablesorter-headerDesc .tablesorter-header-inner{
+	display:inline-block;
+	margin:0 -4px;
+	padding:0 4px;
+	border-radius:2px;
+	background-color:#297ab8
+}
+
 .tablesorter.rotate thead th.col-destructive span{
 	color:#ffc2b8
 }
@@ -72,7 +97,8 @@ pre .log-stop{
 
 /* a sortable column of the bulk change header under the pointer, and a destructive label on the sorted fill */
 .tablesorter.rotate thead th.tablesorter-header:not(.sorter-false):not(.tablesorter-headerAsc):not(.tablesorter-headerDesc):hover{
-	background-color:#1c5f9e
+	background-color:#2a6fb0;
+	color:#fff
 }
 
 .tablesorter.rotate thead th.col-destructive.tablesorter-headerAsc span,
@@ -1437,7 +1463,8 @@ tablesorter.css
 
 /* white text on a sorted header, the light grey text was 3.4:1 on its blue */
 .tablesorter thead .tablesorter-headerDesc,
-.tablesorter thead .tablesorter-headerAsc{
+.tablesorter thead .tablesorter-headerAsc,
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{
 	color:#fff
 }
 
