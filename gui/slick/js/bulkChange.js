@@ -236,8 +236,9 @@ $(function(){
 		});
 	});
 
-	$('.sort-size-type').on('click', function(){
-		var that = $(this), title = 'total', htmlType = '&Sigma;', dataType = 'E', key = 'Size';
+	// on the document, the sticky header of the table is a copy that tablesorter makes after this script runs
+	$(document).on('click', '.sort-size-type', function(){
+		var that = $('.sort-size-type'), title = 'total', htmlType = '&Sigma;', dataType = 'E', key = 'Size';
 		if(dataType === $(this).attr('data-type')){
 			title = 'average';
 			htmlType = '<div class="average"><i>x</i></div>';
@@ -254,10 +255,11 @@ $(function(){
 			dataType = '<';
 			key = 'Smallest';
 		}
-		showSizes(key);
+		// before the sizes, as their table update makes the sticky header copy again from the table header
 		that.attr('title', title);
 		that.attr('data-type', dataType);
 		that.find('.sort-size-type-body').html(htmlType);
+		showSizes(key);
 	});
 
 });

@@ -111,6 +111,7 @@
 * Change the Subtitle column of the bulk change page to a dash where search is off, and fix its tick all box and Submit
 * Change bulk change page to sort the Edit and action columns by their boxes, ticked first, then those that can be ticked
 * Change the size type column of the bulk change page to switch the sizes on the page, not read every show folder
+* Fix the size type column of the bulk change page cannot be clicked once its header sticks under the menu bar
 
 
 [develop]
