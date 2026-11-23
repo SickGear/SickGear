@@ -4134,7 +4134,8 @@ pre,pre code{
 	font-family:Hack-mono, Menlo, Monaco, Consolas, "Courier New", monospace
 }
 
-html *{
+/* no outline on a click, the keyboard focus keeps the outline of the browser, so it shows where the keyboard is */
+html *:focus:not(:focus-visible){
 	outline:0 !important
 }
 
@@ -4921,7 +4922,11 @@ pre{
 	z-index:1
 }
 
-/* bulk change header, the page draws no outline, so a ring shows the keyboard focus */
+/* bulk change header, a ring of its own shows the keyboard focus, in place of the outline of the browser */
+#bulk-change-table thead :focus-visible{
+	outline:0 !important
+}
+
 #bulk-change-table thead th:focus-visible{
 	box-shadow:inset 0 0 0 2px #fff
 }

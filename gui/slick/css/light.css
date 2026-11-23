@@ -1449,6 +1449,13 @@ thead.tablesorter-stickyHeader{
 	background-color:rgba(42, 111, 176, 0.07)
 }
 
+/* the keyboard focus, a ring in the text colour of the theme, the outline of the browser hardly shows on it */
+/* important, as the focus rules of the page library are more specific */
+html *:focus-visible{
+	outline:2px solid #333 !important;
+	outline-offset:1px !important
+}
+
 /* the space kept for the filter row before the table script adds it, in the colour of the row */
 #bulk-change-table:not(.hasFilters) thead th{
 	border-bottom:29px solid #d7d7d7

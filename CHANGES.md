@@ -138,6 +138,7 @@
 * Change the bulk change header to set the size menu on the line of the boxes, and Remove 71 pixels wide, not 82
 * Change the bulk change action columns to one block, a darker header, tinted cells, the cell as target
 * Fix bulk change Submit to act on every list of shows, match whole show ids, and escape show names
+* Change pages to show the keyboard focus, a ring in the theme text colour, and keep it clear of the bulk change bars
 
 
 [develop]
