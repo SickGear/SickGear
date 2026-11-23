@@ -178,7 +178,7 @@
 .tip-average,.tip-average i{display:inline-block; line-height:8px}
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img,.spinner{display:inline-block;width:16px;height:16px}.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
 ## the skip link shows over the table header when it has the keyboard focus, and does not move the table
-#skip-to-filters:focus{position:absolute; z-index:4; margin-top:4px; padding:4px 8px; background:#fff; color:#000; border-radius:2px}
+#skip-to-filters:focus, #skip-to-actions:focus{position:absolute; z-index:4; margin-top:4px; padding:4px 8px; background:#fff; color:#000; border-radius:2px}
 ## a keyboard focus scrolls clear of the sticky header and its filter row at the top and of the action bar at the foot
 html{scroll-padding-top:175px; scroll-padding-bottom:50px}
 </style>
@@ -188,6 +188,7 @@ html{scroll-padding-top:175px; scroll-padding-bottom:50px}
 $xsrf_form_html
 
 <a href="#" id="skip-to-filters" class="sr-only sr-only-focusable">Skip to the filters, or press /</a>
+<a href="#" id="skip-to-actions" class="sr-only sr-only-focusable">Skip to Submit, past the rows of shows</a>
 <table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0">
 	<thead>
 		<tr style="height:86px">  <!-- must inline this css -->
@@ -307,7 +308,7 @@ $xsrf_form_html
 		<tr><td colspan="$columns_total"><span class="no-match-text">No shows match the filter</span> <span class="no-match-filters"></span><button type="button" class="btn" id="clear-filters">Clear all filters</button></td></tr>
 	</tbody>
 </table>
-<div id="tfoot">
+<div id="tfoot" tabindex="-1">
 	<span style="width:20%" class="pull-left"><input class="btn pull-left" type="button" value="Edit Selected" id="bulk-change-edit"></span>
 	<span class="pull-left"><button type="button" class="btn" id="read-folder-sizes" title="#echo ('sizes are of media files that SickGear knows, read the size of all show folder files', 'sizes are of all show folder files, read again')['folder' == $sizes_from]#">Read folder sizes</button></span>
 	<span class="stats grey-text" aria-live="polite"></span> <button type="button" class="btn" id="footer-clear-filters" hidden>Clear filters</button> <span id="hidden-ticks" class="grey-text" hidden></span>

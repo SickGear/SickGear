@@ -141,6 +141,7 @@
 * Change pages to show the keyboard focus, a ring in the theme text colour, and keep it clear of the bulk change bars
 * Change dialogs to be named by their title, name the close button, and give the focus back to the opening control
 * Change pages to set their language to English, so a screen reader reads them in English
+* Change the bulk change page to add a skip link past the rows of shows to Submit
 
 
 [develop]

@@ -253,6 +253,13 @@ $(function(){
 	function focusFilters(){
 		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
 	}
+	// the second skip link goes past the rows to Submit, or to Edit, or when neither has a tick to act on, the bar
+	$('#skip-to-actions').on('click', function(e){
+		e.preventDefault();
+		var target$ = $('#bulk-change-submit:enabled, #bulk-change-edit:enabled').last();
+		(target$.length ? target$ : $('#tfoot')).focus();
+	});
+
 	$('#skip-to-filters').on('click', function(e){
 		e.preventDefault();
 		focusFilters();
