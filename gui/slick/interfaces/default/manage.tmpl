@@ -119,21 +119,22 @@
 .rotate-body span{float:left}
 ## until the table script runs, the header has the padding and the filter row space the script gives it, so nothing moves,
 ## the space is a header cell border in the filter row colour of the theme
-#bulk-change-table:not(.hasFilters) thead th{padding:4px 18px 4px 4px}
+#bulk-change-table:not(.hasFilters) thead th{padding:4px 18px 17px 4px}
 #bulk-change-table:not(.hasFilters) thead tr{height:115px !important}
 ## Show Name is drawn sorted, as the table script sorts by it first
-#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 4px 18px; background-repeat:no-repeat; background-position:center left}
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 17px 22px; background-repeat:no-repeat; background-position:left 0 bottom 23px}
 #bulk-change-table:not(.hasFilters) thead th.sort-size{padding:4px 4px 17px}
 #bulk-change-table:not(.hasFilters) thead th.col-checkbox{padding:4px 4px 17px}
 #bulk-change-table:not(.hasFilters) thead th.sort-action{padding:4px 11px 17px}
 ## the Status and Quality widths come from their filter boxes and cells, kept when a filter leaves few or no rows
 #bulk-change-table thead th.sort-icon-status{min-width:96px}
 #bulk-change-table thead th.sort-icon-quality{width:62px}
-#bulk-change-table thead th.filter-select{min-width:53px}
-## the labels, tick all boxes and size menu stand on a common line over the sort arrows, Show Name stays in the middle
-#bulk-change-table thead th:not(.sort-icon-left), #bulk-change-table-sticky thead th:not(.sort-icon-left){vertical-align:bottom; padding-bottom:17px}
+#bulk-change-table thead th.filter-select{min-width:55px}
+## the labels, tick all boxes and size menu stand on a common line over the sort arrows, Show Name on that line too
+#bulk-change-table thead th, #bulk-change-table-sticky thead th{vertical-align:bottom; padding-bottom:17px}
 @supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
-.tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:center left; padding: 4px 4px 4px 18px}
+## the Show Name arrow is clear of the tag behind the sorted label
+.tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:left 0 bottom 23px; padding:4px 4px 17px 22px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:left 10px bottom 7px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:left 30px bottom 7px}
 .tablesorter.rotate th.tablesorter-header.sort-size{background-position:center bottom 5px}

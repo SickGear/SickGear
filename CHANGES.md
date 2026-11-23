@@ -132,6 +132,7 @@
 * Change the bulk change no match row to name each filter in use, with a button that clears just that one
 * Change the bulk change page to name each box in a row for a screen reader, by its action and the show
 * Change the bulk change filters to mark those in use, add Clear filters by the count, menus as boxes, Yes before No
+* Change the bulk change header to set Show Name on the line of the other labels, boxes and size menu
 
 
 [develop]
