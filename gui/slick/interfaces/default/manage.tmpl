@@ -120,6 +120,8 @@
 ## until the table script runs, the header has the padding and the filter row space the script gives it, so nothing moves,
 ## the space is a header cell border in the filter row colour of the theme
 #bulk-change-table:not(.hasFilters) thead th{padding:4px 18px 17px 4px}
+## the header row, 86 pixels, before the table script adds the filter row the space of that row too
+#bulk-change-table thead tr:first-child, #bulk-change-table-sticky thead tr:first-child{height:86px}
 #bulk-change-table:not(.hasFilters) thead tr{height:115px !important}
 ## Show Name is drawn sorted, as the table script sorts by it first
 #bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 17px 22px; background-repeat:no-repeat; background-position:left 0 bottom 23px}
@@ -191,8 +193,8 @@ $xsrf_form_html
 <a href="#" id="skip-to-actions" class="sr-only sr-only-focusable">Skip to Submit, past the rows of shows</a>
 <table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0">
 	<thead>
-		<tr style="height:86px">  <!-- must inline this css -->
-			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check" title="Tick all for Edit" aria-label="Tick all for Edit"></th>
+		<tr>
+			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check" data-action="edit-check" title="Tick all for Edit" aria-label="Tick all for Edit"></th>
 			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
 			<th class="sort-size narrow dir-none" title="#echo ('Total size: all media files of a show; average, largest and smallest file: one of its media files', 'Total size: all files in a show folder; average, largest and smallest file: one of its media files')['folder' == $sizes_from]#"><select class="size-type form-control form-control-inline input-sm" aria-label="Size measure" title="Choose the size to show and sort by"><option value="Size" title="All the media files of a show, or all the files in its folder after Read folder sizes">Total size</option><option value="AverageSize" title="The average size of one media file of a show">Average file</option><option value="Largest" title="The largest media file of a show">Largest file</option><option value="Smallest" title="The smallest media file of a show">Smallest file</option></select></th>
 #if $enable_tvinfo
@@ -211,14 +213,14 @@ $xsrf_form_html
 #end if
 			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
-			<th width="1%" class="sort-action col-actions-start"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rescan</span></div></div><input type="checkbox" class="bulk-check" id="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"></th>
-			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rename</span></div></div><input type="checkbox" class="bulk-check" id="rename-check" title="Tick all for Rename" aria-label="Tick all for Rename"></th>
+			<th width="1%" class="sort-action col-actions-start"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" data-action="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rescan</span></div></div><input type="checkbox" class="bulk-check" id="refresh-check" data-action="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rename</span></div></div><input type="checkbox" class="bulk-check" id="rename-check" data-action="rename-check" title="Tick all for Rename" aria-label="Tick all for Rename"></th>
 #if $sickgear.USE_SUBTITLES
 			#set $subtitles_on = len([_s for _s in $shows if _s.subtitles])
-			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><span>Subtitle</span></div></div><input type="checkbox" class="bulk-check" id="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"></th>
+			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><span>Subtitle</span></div></div><input type="checkbox" class="bulk-check" id="subtitle-check" data-action="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"></th>
 #end if
-			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
+			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" data-action="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
 		</tr>
 	</thead>
 

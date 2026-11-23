@@ -15,17 +15,22 @@ $(function(){
 		window.location.href = $.SickGear.Root + '/manage/mass-edit?to_edit=' + toDo.join('|');
 	});
 
+	// as the server does it, a show to remove has no other action, and Update rescans a show too, so a tick of an action
+	// box is left out by Remove or by Update, the footer count and the Submit review both leave it out
+	function leftOutBy(box, k){
+		var row$ = $(box).closest('tr');
+		return 'remove' !== k && row$.find('.remove-check').is(':checked') ? 'remove'
+			: 'refresh' === k && row$.find('.update-check').is(':checked') ? 'update' : '';
+	}
+
 	$('#bulk-change-submit').click(function(){
 
 		var toChange = !1, toDo = {update: [], refresh: [], rename: [], subtitle: [], remove: []},
 			names = {update: [], refresh: [], rename: [], subtitle: [], remove: []}, dropped = {update: 0, remove: 0};
 
-		// as the server does it, a show to remove has no other action, and Update rescans a show too
 		$.each(Object.keys(toDo), function(i, k){
 			$('.' + k + '-check:checked').each(function(){
-				var row$ = $(this).closest('tr'),
-					by = 'remove' !== k && row$.find('.remove-check').is(':checked') ? 'remove'
-						: 'refresh' === k && row$.find('.update-check').is(':checked') ? 'update' : '';
+				var row$ = $(this).closest('tr'), by = leftOutBy(this, k);
 				if (by){
 					dropped[by]++;
 					return;
@@ -103,23 +108,17 @@ $(function(){
 	var updateButtons = function(){
 		sortCacheStale = !0;
 		showHiddenTicks();
+		// the count of actions Submit sends, as its review lists them
 		var editBtn$ = $('#bulk-change-edit'), submitBtn$ = $('#bulk-change-submit'), numEdits = $('.edit-check:checked').length,
-			numToDo = $('.update-check:checked, .refresh-check:checked, .rename-check:checked, .subtitle-check:checked,'
-				+ ' .remove-check:checked').length;
-		if(!!numEdits){
-			editBtn$.attr('disabled', !1);
-			editBtn$.val('Edit ' + numEdits + ' selected');
-		} else {
-			editBtn$.attr('disabled', !0);
-			editBtn$.val('Select items');
-		}
-		if(!!numToDo){
-			submitBtn$.attr('disabled', !1);
-			submitBtn$.val('Submit ' + numToDo + ' action(s)');
-		} else {
-			submitBtn$.attr('disabled', !0);
-			submitBtn$.val('Select actions');
-		}
+			numToDo = 0;
+		$.each(['update', 'refresh', 'rename', 'subtitle', 'remove'], function(i, k){
+			numToDo += $('.' + k + '-check:checked').filter(function(){return !leftOutBy(this, k);}).length;
+		});
+		// the buttons keep their names, Edit and Submit, with the count when there is one, a disabled button had read as
+		// an instruction, Select items
+		editBtn$.attr('disabled', !numEdits).val(numEdits ? 'Edit ' + numEdits + ' show' + (1 === numEdits ? '' : 's') : 'Edit');
+		submitBtn$.attr('disabled', !numToDo)
+			.val(numToDo ? 'Submit ' + numToDo + ' action' + (1 === numToDo ? '' : 's') : 'Submit');
 	}
 	updateButtons();
 
@@ -133,7 +132,7 @@ $(function(){
 	// some are, the table header and its sticky copy have the same box, so both are set
 	function syncTickAll(name){
 		var boxes$ = shownBoxes(name), ticked = boxes$.filter(':checked').length;
-		$('[id="' + name + '"]').each(function(){
+		$('[data-action="' + name + '"]').each(function(){
 			this.checked = !!boxes$.length && ticked === boxes$.length;
 			this.indeterminate = !!ticked && ticked < boxes$.length;
 		});
@@ -149,7 +148,7 @@ $(function(){
 
 	// Submit shows the shows of each action before it acts, so tick all acts at once, Remove too
 	$(document).on('click', '.bulk-check', function(){
-		tickAll($(this).attr('id'), this.checked);
+		tickAll($(this).attr('data-action'), this.checked);
 	});
 
 	['.edit-check', '.update-check', '.refresh-check', '.rename-check', '.subtitle-check', '.remove-check'].forEach(function(name){
@@ -230,6 +229,8 @@ $(function(){
 	// the sticky header is a copy for the pointer, a keyboard or screen reader uses the table header, not both
 	function hideStickyCopy(){
 		orderYesNo('#bulk-change-table-sticky');
+		// the copy keeps no id, an id is for one element on a page, the header boxes are found by data-action
+		$('#bulk-change-table-sticky').find('[id]').removeAttr('id');
 		$('#bulk-change-table-sticky').attr('aria-hidden', 'true')
 			.find('input, button, select, a, [tabindex]').attr('tabindex', '-1')
 			.end().find('.tablesorter-filter').each(function(){
@@ -324,7 +325,7 @@ $(function(){
 			});
 			if (!data.filteredRows)
 				showNoMatch();
-			$('.bulk-check').each(function(){syncTickAll(this.id);});
+			$('#bulk-change-table .bulk-check').each(function(){syncTickAll($(this).attr('data-action'));});
 			$('#tfoot').find('.stats').html(
 				(data.filteredRows === data.totalRows
 					? '<span class="total-rows">' +  data.totalRows + '</span> shows'
