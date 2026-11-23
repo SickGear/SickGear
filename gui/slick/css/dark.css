@@ -79,14 +79,33 @@ pre .log-stop{
 	color:#ffc2b8
 }
 
-/* a filter box of the bulk change header, an edge of 3:1 or more on the row and a hint of 4.5:1 on the box */
+/* a filter box or menu of the bulk change header, an edge of 3:1 or more on the row and a hint of 4.5:1 on the box,
+   a filter in use has a wider edge in the colour of the action line */
 #bulk-change-table .tablesorter-filter-row input[type="search"],
-#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]{
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"],
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter,
+#bulk-change-table-sticky .tablesorter-filter-row select.tablesorter-filter{
 	box-shadow:inset 0 0 0 1px #8c8c8c
 }
 
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter,
+#bulk-change-table-sticky .tablesorter-filter-row select.tablesorter-filter{
+	background-color:rgba(255, 255, 255, 0.2);
+	color:#ddd
+}
+
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter option{
+	background-color:#282828
+}
+
+#bulk-change-table .tablesorter-filter-row .tablesorter-filter.filter-in-use,
+#bulk-change-table-sticky .tablesorter-filter-row .tablesorter-filter.filter-in-use{
+	box-shadow:inset 0 0 0 2px #78a6d8
+}
+
 #bulk-change-table .tablesorter-filter-row input[type="search"]:focus-visible,
-#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]:focus-visible{
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]:focus-visible,
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter:focus-visible{
 	box-shadow:inset 0 0 0 1px #8c8c8c, 0 0 0 2px #fff
 }
 

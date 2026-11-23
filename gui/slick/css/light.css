@@ -80,15 +80,25 @@ pre .log-stop{
 	color:#ffc2b8
 }
 
-/* the filter boxes of the bulk change header read as fields, an edge of 3:1 or more on the row, and show the focus */
+/* the filter boxes and menus of the bulk change header read as fields, an edge of 3:1 or more on the row, and show the
+   focus, a filter in use has a wider blue edge */
 #bulk-change-table .tablesorter-filter-row input[type="search"],
-#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]{
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"],
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter,
+#bulk-change-table-sticky .tablesorter-filter-row select.tablesorter-filter{
 	background:#fff;
+	color:#333;
 	box-shadow:inset 0 0 0 1px #767676
 }
 
+#bulk-change-table .tablesorter-filter-row .tablesorter-filter.filter-in-use,
+#bulk-change-table-sticky .tablesorter-filter-row .tablesorter-filter.filter-in-use{
+	box-shadow:inset 0 0 0 2px #2a6fb0
+}
+
 #bulk-change-table .tablesorter-filter-row input[type="search"]:focus-visible,
-#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]:focus-visible{
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]:focus-visible,
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter:focus-visible{
 	box-shadow:inset 0 0 0 1px #767676, 0 0 0 2px #333
 }
 

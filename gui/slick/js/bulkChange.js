@@ -156,13 +156,14 @@ $(function(){
 	// a name for each filter box in use, from its column header, a box of a column with no filter is hidden from all,
 	// again after a table update, as the filter widget then makes the filter boxes anew, a change of size type does
 	function nameFilters(){
+		orderYesNo('#bulk-change-table');
 		$('#bulk-change-table .tablesorter-filter').each(function(){
 			var name = $.trim($('#bulk-change-table thead tr:first th').eq($(this).attr('data-column')).text());
 			if (name && !this.disabled){
 				$(this).attr('aria-label', 'Filter ' + name).attr('placeholder', 'Filter');
 				// the name filter says how to leave words out
 				if (1 === +$(this).attr('data-column'))
-					$(this).attr({placeholder: 'Filter, !word leaves it out', title: 'part of a name, or !word to leave out the names with it'});
+					$(this).attr({placeholder: 'Filter, !word skips', title: 'part of a name, or !word to leave out the names with it'});
 			} else
 				$(this).removeAttr('aria-label').attr({'aria-hidden': 'true', tabindex: '-1'});
 		});
@@ -170,8 +171,16 @@ $(function(){
 	nameFilters();
 	$('#bulk-change-table').on('updateComplete filterInit filterEnd', nameFilters);
 
+	// a yes or no filter menu lists Yes before No, the table script sorts its options
+	function orderYesNo(table){
+		$(table + ' select.tablesorter-filter').each(function(){
+			$(this).find('option[value="Yes"]').insertBefore($(this).find('option[value="No"]'));
+		});
+	}
+
 	// the sticky header is a copy for the pointer, a keyboard or screen reader uses the table header, not both
 	function hideStickyCopy(){
+		orderYesNo('#bulk-change-table-sticky');
 		$('#bulk-change-table-sticky').attr('aria-hidden', 'true')
 			.find('input, button, select, a, [tabindex]').attr('tabindex', '-1')
 			.end().find('.tablesorter-filter').each(function(){
@@ -208,6 +217,11 @@ $(function(){
 		}
 	});
 
+	$(document).on('click', '#footer-clear-filters', function(){
+		$('#bulk-change-table').trigger('filterReset');
+		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
+	});
+
 	$('#clear-filters').on('click', function(){
 		$('#bulk-change-table').trigger('filterReset');
 		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
@@ -241,6 +255,10 @@ $(function(){
 		})
 		.bind('filterInit filterEnd', function(e, data){
 			$('#no-match').prop('hidden', 0 < data.filteredRows);
+			// a filter in use is marked, in the table and its sticky copy
+			$('#bulk-change-table .tablesorter-filter, #bulk-change-table-sticky .tablesorter-filter').each(function(){
+				$(this).toggleClass('filter-in-use', !!$(this).val());
+			});
 			if (!data.filteredRows)
 				showNoMatch();
 			$('.bulk-check').each(function(){syncTickAll(this.id);});
@@ -248,6 +266,8 @@ $(function(){
 				(data.filteredRows === data.totalRows
 					? '<span class="total-rows">' +  data.totalRows + '</span> shows'
 					: '<span class="filter-rows">' + data.filteredRows + '</span> of <span class="total-rows">' + data.totalRows + '</span> shows'));
+			// the button is out of the announced count, so a screen reader hears the count only
+			$('#footer-clear-filters').prop('hidden', data.filteredRows === data.totalRows);
 		});
 
 	// read the size of every show folder, slow on a large or network drive, so only when asked for

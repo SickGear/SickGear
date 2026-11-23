@@ -4835,6 +4835,12 @@ pre{
 	margin-left:8px
 }
 
+/* a hidden clear button stays hidden, the button style of the page library would show it */
+#bulk-change-table #no-match .btn[hidden],
+#footer-clear-filters[hidden]{
+	display:none
+}
+
 /* the choice of what Remove does with the folders and files of the shows, in its dialog */
 .confirmation-modal .remove-choice{
 	display:block;
@@ -4845,6 +4851,19 @@ pre{
 
 #bulk-change-table.hover-highlight #no-match td:hover::after{
 	content:none
+}
+
+/* a yes or no filter menu has the size and shape of a filter box */
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter,
+#bulk-change-table-sticky .tablesorter-filter-row select.tablesorter-filter{
+	height:20px;
+	padding:0 2px;
+	border:0;
+	border-radius:4px;
+	font-size:14px;
+	line-height:20px;
+	/* on the baseline the menu made the filter row 1 pixel taller than the boxes do */
+	vertical-align:top
 }
 
 /* the clear button of a filter box, the style sheet of the page library hides it on every search box */

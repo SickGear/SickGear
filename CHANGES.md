@@ -131,6 +131,7 @@
 * Change the bulk change page to one Remove column, the Submit dialog asks whether to keep or delete the show files
 * Change the bulk change no match row to name each filter in use, with a button that clears just that one
 * Change the bulk change page to name each box in a row for a screen reader, by its action and the show
+* Change the bulk change filters to mark those in use, add Clear filters by the count, menus as boxes, Yes before No
 
 
 [develop]
