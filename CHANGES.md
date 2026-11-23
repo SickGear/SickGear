@@ -139,6 +139,7 @@
 * Change the bulk change action columns to one block, a darker header, tinted cells, the cell as target
 * Fix bulk change Submit to act on every list of shows, match whole show ids, and escape show names
 * Change pages to show the keyboard focus, a ring in the theme text colour, and keep it clear of the bulk change bars
+* Change dialogs to be named by their title, name the close button, and give the focus back to the opening control
 
 
 [develop]

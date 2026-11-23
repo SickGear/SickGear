@@ -6,6 +6,8 @@
  * @returns the dialog as a jQuery object, or undefined if a dialog is open
  */
 function confirmDialog(options){
+	// the control that opened the dialog has the focus again when the dialog closes
+	const opener = document.activeElement;
 	$.confirm($.extend({
 		cancel: function(){},
 		confirmButton: 'Yes', confirmButtonClass: 'green',
@@ -26,6 +28,16 @@ function confirmDialog(options){
 		}
 	});
 	modal$.children().draggable({handle: '.modal-header'}).find('.modal-header').css('cursor', 'move');
+
+	// a screen reader names the dialog by its title, the close button is named, and the page behind is out of reach
+	modal$.attr({'aria-modal': 'true', 'aria-labelledby': 'confirmation-modal-title'})
+		.find('.modal-title').attr('id', 'confirmation-modal-title')
+		.end().find('.modal-header .close').removeAttr('aria-hidden').attr('aria-label', 'Close');
+	modal$.one('hidden.bs.modal', function(){
+		if (opener && document.contains(opener) && opener !== document.body)
+			// the opener was on screen when used, so the page stays where it is
+			opener.focus({preventScroll: true});
+	});
 
 	return modal$;
 }
