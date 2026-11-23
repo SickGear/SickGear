@@ -301,9 +301,11 @@ $(function(){
 		})
 		.bind('filterInit filterEnd', function(e, data){
 			$('#no-match').prop('hidden', 0 < data.filteredRows);
-			// a filter in use is marked, in the table and its sticky copy
+			// a filter in use is marked, its box and the label of its column, in the table and its sticky copy
 			$('#bulk-change-table .tablesorter-filter, #bulk-change-table-sticky .tablesorter-filter').each(function(){
-				$(this).toggleClass('filter-in-use', !!$(this).val());
+				var used = !!$(this).val();
+				$(this).toggleClass('filter-in-use', used)
+					.closest('table').find('thead tr:first th').eq($(this).attr('data-column')).toggleClass('column-filtered', used);
 			});
 			if (!data.filteredRows)
 				showNoMatch();

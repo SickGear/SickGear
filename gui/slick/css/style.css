@@ -4841,6 +4841,23 @@ pre{
 	display:none
 }
 
+/* a column with a filter in use has a dot after its label */
+#bulk-change-table thead th.column-filtered .rotate-body::after,
+#bulk-change-table thead th.column-filtered .rotate-body2::after,
+#bulk-change-table thead th.sort-icon-left.column-filtered .tablesorter-header-inner::after,
+#bulk-change-table-sticky thead th.column-filtered .rotate-body::after,
+#bulk-change-table-sticky thead th.column-filtered .rotate-body2::after,
+#bulk-change-table-sticky thead th.sort-icon-left.column-filtered .tablesorter-header-inner::after{
+	content:"";
+	display:inline-block;
+	width:6px;
+	height:6px;
+	margin-left:4px;
+	border-radius:50%;
+	background-color:#fff;
+	vertical-align:middle
+}
+
 /* the Submit dialog lists the shows of each action, a long list scrolls */
 .confirmation-modal .review-action{
 	font-weight:600

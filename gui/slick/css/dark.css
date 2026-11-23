@@ -120,9 +120,11 @@ pre .log-stop{
 	color:#fff
 }
 
-.tablesorter.rotate thead th.col-destructive.tablesorter-headerAsc span,
-.tablesorter.rotate thead th.col-destructive.tablesorter-headerDesc span{
-	color:#fff
+/* a sorted Remove label keeps its soft red, on a dark red tag, 4.8:1 */
+.tablesorter.rotate thead th.col-destructive.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.col-destructive.tablesorter-headerDesc .rotate-body span{
+	color:#ffc2b8;
+	background-color:#9b2f2f
 }
 
 #bulk-change-table.hover-highlight tbody > tr:hover > td{

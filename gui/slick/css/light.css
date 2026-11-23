@@ -107,9 +107,16 @@ pre .log-stop{
 	background-color:#505050
 }
 
-.tablesorter.rotate thead th.col-destructive.tablesorter-headerAsc span,
-.tablesorter.rotate thead th.col-destructive.tablesorter-headerDesc span{
-	color:#fff
+/* a sorted Remove label keeps its soft red, on a dark red tag, 4.8:1 */
+.tablesorter.rotate thead th.col-destructive.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.col-destructive.tablesorter-headerDesc .rotate-body span{
+	color:#ffc2b8;
+	background-color:#9b2f2f
+}
+
+/* the footer count of shows, 4.5:1 on the footer */
+#tfoot .stats{
+	color:#555
 }
 
 #bulk-change-table.hover-highlight tbody > tr:hover > td{

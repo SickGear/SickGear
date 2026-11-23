@@ -134,6 +134,7 @@
 * Change the bulk change filters to mark those in use, add Clear filters by the count, menus as boxes, Yes before No
 * Change the bulk change header to set Show Name on the line of the other labels, boxes and size menu
 * Change bulk change Submit to list the shows of each action first, send a form post, and its handler to refuse a link
+* Change the bulk change header to dot a filtered column label, a red tag on sorted Remove, a footer count of 5:1
 
 
 [develop]
