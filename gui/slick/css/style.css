@@ -4841,6 +4841,22 @@ pre{
 	display:none
 }
 
+/* the Submit dialog lists the shows of each action, a long list scrolls */
+.confirmation-modal .review-action{
+	font-weight:600
+}
+
+.confirmation-modal .review-shows{
+	max-height:160px;
+	overflow:auto;
+	margin:2px 0 10px;
+	padding-left:20px
+}
+
+#hidden-ticks[hidden]{
+	display:none
+}
+
 /* the choice of what Remove does with the folders and files of the shows, in its dialog */
 .confirmation-modal .remove-choice{
 	display:block;

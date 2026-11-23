@@ -8159,6 +8159,10 @@ class Manage(MainHandler):
     def bulk_change(self, to_update='', to_refresh='', to_rename='',
                     to_subtitle='', to_delete='', to_remove='', **kwargs):
 
+        # a change is a form post with its token, a link or an image cannot remove a show
+        if 'POST' != self.request.method:
+            return self.redirect('/manage/bulk/')
+
         to_change = dict({_tvid_prodid: helpers.find_show_by_id(_tvid_prodid)
                           for _tvid_prodid in
                           next(iter([_x.split('|') for _x in (to_update, to_refresh, to_rename, to_subtitle,
