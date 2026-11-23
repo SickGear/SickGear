@@ -224,29 +224,31 @@ $xsrf_form_html
 #for $row, $cur_show_obj in enumerate($shows)
     #set $show_loc = $cur_show_obj.path
     #set $show_size = $max if not $show_loc else $sizes.get($cur_show_obj.tvid_prodid, 0)
-    #set $option_state = '<input type="checkbox"%s class="%s-check"%s>'
+    ## each box is named for a screen reader by its action and the show, as the column header is far away
+    #set $aria_show = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name).replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;')
+    #set $option_state = '<input type="checkbox"%s class="%s-check"%s aria-label="%s ' + $aria_show.replace('%', '%%') + '">'
     ##
     #set $curUpdate_disabled = $sickgear.show_queue_scheduler.action.is_being_updated($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_update_queue($cur_show_obj)
     #set $tip = ' title="Update%s"' % ('', $disabled_inprogress_tip)[$curUpdate_disabled]
-    #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip))
+    #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip, 'Update'))
     ##
     #set $curRefresh_disabled = $sickgear.show_queue_scheduler.action.is_being_refreshed($cur_show_obj)\
                                 or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Rescan%s"' % ('', $disabled_inprogress_tip)[$curRefresh_disabled]
-    #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip))
+    #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip, 'Rescan'))
     ##
     #set $curRename_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)
     #set $tip = ' title="Rename%s"' % ('', $disabled_inprogress_tip)[$curRename_disabled]
-    #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip))
+    #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip, 'Rename'))
     ##
     #set $subtitles_disabled = not $cur_show_obj.subtitles\
                                or $sickgear.show_queue_scheduler.action.is_being_subtitled($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_subtitle_queue($cur_show_obj)
     #set $tip = (' title="Search subtitle"', (' title="Search subtitle%s"' % $disabled_inprogress_tip,
                                               $disabled_subtitles_tip)[not $cur_show_obj.subtitles])[$subtitles_disabled]
-    #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip))
+    #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip, 'Subtitle'))
     #if not $cur_show_obj.subtitles
         ## no box to tick, a dash as in the yes and no columns, the cell title says why
         #set $curSubtitle = ($tip, '<span class="yes-no is-no" role="img" aria-label="Subtitle search off"></span>')
@@ -256,9 +258,9 @@ $xsrf_form_html
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
     #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
-    #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
+    #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip, 'Remove'))
 		<tr class="#echo ('odd', 'even')[$row % 2]#" data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
-			<td><input type="checkbox" class="edit-check"></td>
+			<td><input type="checkbox" class="edit-check" aria-label="Edit $aria_show"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
 			<td>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
