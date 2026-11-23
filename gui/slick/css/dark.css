@@ -474,14 +474,15 @@ home_newShow.tmpl
 	background-color:rgb(40, 40, 40)
 }
 
+/* the dimmed article of a show name, 4.5:1 or more on the rows */
 .article{
-	color:#707070
+	color:#9e9e9e
 }
 
 .cast .person span, .cast .person a,
 .btn-inverse.dark-bg,
 #addRootDirTable td label .filepath,
-.grey-text{color:#999}
+.grey-text{color:#a3a3a3}
 .highlight-text{color:#fff}
 #display-show.back-art.pro.ii .tablesorter tr .grey-text{color:#555}
 
@@ -1225,8 +1226,9 @@ fieldset[disabled] .form-control{
 }
 
 
+/* white button text, 4.6:1 at the top of the fill, the text colour was 3.7:1 there */
 .btn{
-	color:var(--text);
+	color:#fff;
 	text-shadow:0 1px 1px rgba(0, 0, 0, 0.75);
 	background-color:#2672b6;
 	*background-color:#2672b6;
@@ -1617,9 +1619,13 @@ jquery.confirm.css
 	text-shadow:0 1px 1px rgba(0,0,0,0.75)
 }
 
-.modal-body,
-.modal-footer .btn{
+.modal-body{
 	color:#ddd
+}
+
+/* white on the blue, green and red dialog buttons is 4.5:1 or more */
+.modal-footer .btn{
+	color:#fff
 }
 
 /*

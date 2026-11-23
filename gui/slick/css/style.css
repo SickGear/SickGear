@@ -3854,20 +3854,25 @@ span.quality,
 	border-radius:4px
 }
 
+/* a quality badge has white text of 4.5:1 or more on its fill, the fills are the shades that need */
+span.quality{
+	color:#fff
+}
+
 span.Custom{
 	background-color:#621993
 }
 
 span.HD{
-	background-color:#2672b6
+	background-color:#246daf
 }
 
 span.HD720p{
-	background-color:#5b990d
+	background-color:#47770a
 }
 
 span.HD1080p{
-	background-color:#2672b6
+	background-color:#246daf
 }
 
 span.UHD2160p{
@@ -3875,7 +3880,7 @@ span.UHD2160p{
 }
 
 span.RawHD{
-	background-color:#cd7300
+	background-color:#a05a00
 }
 
 span.SD{
@@ -3886,12 +3891,15 @@ span.Any{
 	background-color:#666
 }
 
+/* the one light fill, dark text */
 span.Unknown{
-	background-color:#999
+	background-color:#999;
+	color:#111;
+	text-shadow:0 1px rgba(255, 255, 255, 0.3)
 }
 
 span.Proper{
-	background-color:#3f7f00
+	background-color:#3c7900
 }
 
 span.false{

@@ -344,8 +344,9 @@ pre .log-stop{
 inc_bottom.tmpl
 ========================================================================== */
 
+/* 5.6:1 on the white footer, 5:1 on a dialog */
 .footerhighlight{
-	color:#428bca
+	color:#2a6aa8
 }
 
 body#display-show.back-art .displayshow-wrapper a,
@@ -454,14 +455,15 @@ home_newShow.tmpl
 	background-color:rgb(245, 245, 245)
 }
 
+/* the dimmed article of a show name, 4.5:1 or more on the rows */
 .article{
-	color:#909090
+	color:#595959
 }
 
 .cast .person span, .cast .person a,
 .btn-inverse.dark-bg,
 #addRootDirTable td label .filepath,
-.grey-text{color:#666}
+.grey-text{color:#595959}
 .highlight-text{color:#000}
 
 #newShowPortal #displayText .show-name,
@@ -1480,6 +1482,12 @@ jquery.confirm.css
 .modal-header .modal-title,
 .modal-footer .btn{
 	color:#fff
+}
+
+/* a dialog button with no colour, such as Cancel, is light grey, so its text is dark */
+.modal-footer .btn:not(.green):not(.red){
+	color:#222;
+	text-shadow:0 1px 1px rgba(255,255,255,0.75)
 }
 
 .modal-body{
