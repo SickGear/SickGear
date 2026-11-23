@@ -143,6 +143,10 @@
 ## a tick all box stands upright under its slanted label, over the boxes of its column, as the Edit box does
 .tablesorter.rotate th.sort-action input.bulk-check{display:block; margin:0 0 0 2px}
 .tablesorter th.col-checkbox input.bulk-check{display:block; margin:0 auto}
+## the last column, Remove, has room on its right for its slanted label, the table edge would cut it
+#bulk-change-table thead th.sort-action.col-destructive, #bulk-change-table-sticky thead th.sort-action.col-destructive{padding-right:40px}
+## and its row boxes stand under the header box
+#bulk-change-table > tbody:not(#no-match) > tr > td:last-child{padding-left:11px; padding-right:40px}
 .tablesorter th.tablesorter-header.col-checkbox{background-position:center bottom 5px; padding:4px}
 .rotate-holder{width:20px; margin-bottom:0}
 .rotate-holder2{width:20px; margin:0 0 4px}
@@ -164,7 +168,7 @@
 .tablesorter-filter-row input[disabled]{display:none}
 .tablesorter-filter-row input[type="search"]{background:rgba(255,255,255,0.2); padding:0 3px; border:0; border-radius:4px; color:inherit}
 ## the menu sits in the Size cell before the table script runs, else it shows at the page edge while the page loads
-#bulk-change-table th.sort-size, #bulk-change-table-sticky th.sort-size{width:1%; padding:4px; vertical-align:bottom; text-align:center}
+#bulk-change-table th.sort-size, #bulk-change-table-sticky th.sort-size{width:1%; padding:4px 4px 17px; vertical-align:bottom; text-align:center}
 #bulk-change-table th.sort-size select.size-type, #bulk-change-table-sticky th.sort-size select.size-type{margin-bottom:0}
 
 #set $theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
@@ -210,7 +214,7 @@ $xsrf_form_html
 			#set $subtitles_on = len([_s for _s in $shows if _s.subtitles])
 			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><span>Subtitle</span></div></div><input type="checkbox" class="bulk-check" id="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"></th>
 #end if
-			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
+			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
 		</tr>
 	</thead>
 
@@ -291,7 +295,7 @@ $xsrf_form_html
     #if $sickgear.USE_SUBTITLES
 			<td$curSubtitle[0]>$curSubtitle[1]</td>
     #end if
-			<td$curRemove[0]><span style="margin-right: 40px">$curRemove[1]</span></td>
+			<td$curRemove[0]>$curRemove[1]</td>
 		</tr>
 #end for
 	</tbody>

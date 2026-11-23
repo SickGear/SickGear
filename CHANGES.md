@@ -135,6 +135,7 @@
 * Change the bulk change header to set Show Name on the line of the other labels, boxes and size menu
 * Change bulk change Submit to list the shows of each action first, send a form post, and its handler to refuse a link
 * Change the bulk change header to dot a filtered column label, a red tag on sorted Remove, a footer count of 5:1
+* Change the bulk change header to set the size menu on the line of the boxes, and Remove 71 pixels wide, not 82
 
 
 [develop]
