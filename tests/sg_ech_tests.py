@@ -9,11 +9,15 @@ from unittest import mock
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
+import certifi
+import requests
 from urllib3.contrib.resolver import BaseResolver, ManyResolver
 from urllib3.contrib.resolver.factories import ResolverDescription
 from urllib3.exceptions import HTTPError, MaxRetryError
 
 import sg_ech
+import sg_helpers
+from sg_helpers import get_url
 
 GOOD_ADDR = (socket.AF_INET, socket.SOCK_STREAM, 6, '', ('1.2.3.4', 443))
 
@@ -116,21 +120,23 @@ class CheckTests(unittest.TestCase):
     def setUp(self):
         sg_ech.blocked_domains.clear()
         sg_ech._checked.clear()
+        sg_ech._retry_at.clear()
         self.hook = mock.Mock()
         self.patches = [mock.patch.object(sg_ech, 'on_route_change', self.hook)]
-        self.probe(ip='172.66.134.33', no_sni=True, cloudflare=True, ech=True, backend=True)
+        self.probe(ip='172.66.134.33', outer=True, named=False, cloudflare=True, ech=True, backend=True)
 
     def tearDown(self):
         for cur_patch in self.patches:
             cur_patch.stop()
         sg_ech.blocked_domains.clear()
         sg_ech._checked.clear()
+        sg_ech._retry_at.clear()
 
-    def probe(self, ip, no_sni, cloudflare, ech, backend):
+    def probe(self, ip, outer, named, cloudflare, ech, backend):
         if not self.patches[0].is_started:
             self.patches[0].start()
-        for cur_name, cur_value in (('_resolve_ip', ip), ('_no_sni_handshake', no_sni), ('_is_cloudflare', cloudflare),
-                                    ('_has_ech', ech), ('_ech_backend', backend)):
+        for cur_name, cur_value in (('_resolve_ip', ip), ('_outer_name_handshake', outer), ('_named_handshake', named),
+                                    ('_is_cloudflare', cloudflare), ('_has_ech', ech), ('_ech_backend', backend)):
             self.patches.append(mock.patch.object(sg_ech, cur_name, return_value=cur_value))
             self.patches[-1].start()
 
@@ -138,7 +144,7 @@ class CheckTests(unittest.TestCase):
         for cur_patch in self.patches[1:]:
             cur_patch.stop()
         del self.patches[1:]
-        values = dict(ip='172.66.134.33', no_sni=True, cloudflare=True, ech=True, backend=True)
+        values = dict(ip='172.66.134.33', outer=True, named=False, cloudflare=True, ech=True, backend=True)
         values.update(kwargs)
         self.probe(**values)
 
@@ -190,13 +196,29 @@ class CheckTests(unittest.TestCase):
         self.reprobe(ip=None)
         self.assert_nothing()
 
-    def test_no_sni_fails(self):
-        self.reprobe(no_sni=False)
+    def test_outer_name_fails(self):
+        self.reprobe(outer=False)
         self.assert_nothing()
 
     def test_not_cloudflare(self):
         self.reprobe(cloudflare=False)
         self.assert_nothing()
+        sg_ech._outer_name_handshake.assert_not_called()
+
+    def test_not_cloudflare_kept_after_wait(self):
+        self.reprobe(cloudflare=False)
+        self.assert_nothing()
+        with mock.patch.object(sg_ech.time, 'monotonic', return_value=time.monotonic() + sg_ech.RETRY_AFTER + 1):
+            self.assert_nothing()
+        self.assertEqual(1, sg_ech._is_cloudflare.call_count)
+
+    def test_outer_name_fail_retried_later(self):
+        self.reprobe(outer=False)
+        self.assert_nothing()
+        self.reprobe()
+        with mock.patch.object(sg_ech.time, 'monotonic', return_value=time.monotonic() + sg_ech.RETRY_AFTER + 1):
+            with self.assertLogs('sg.helper', 'INFO'):
+                self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
 
     def test_ech_unknown(self):
         self.reprobe(ech=None)
@@ -214,6 +236,38 @@ class CheckTests(unittest.TestCase):
         sg_ech._resolve_ip.side_effect = OSError('boom')
         self.assert_nothing()
 
+    def test_transient_not_kept_for_run(self):
+        self.reprobe(ech=None)
+        self.assert_nothing()
+        self.assert_nothing()  # inside the wait, no probe again
+        self.assertEqual(1, sg_ech._has_ech.call_count)
+        self.reprobe()
+        with mock.patch.object(sg_ech.time, 'monotonic', return_value=time.monotonic() + sg_ech.RETRY_AFTER + 1):
+            with self.assertLogs('sg.helper', 'INFO'):
+                self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
+
+    def test_probe_exception_retried_later(self):
+        sg_ech._resolve_ip.side_effect = OSError('boom')
+        self.assert_nothing()
+        sg_ech._resolve_ip.side_effect = None
+        with mock.patch.object(sg_ech.time, 'monotonic', return_value=time.monotonic() + sg_ech.RETRY_AFTER + 1):
+            with self.assertLogs('sg.helper', 'INFO'):
+                self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
+
+    def test_user_switches_doh_to_system(self):
+        self.assert_nothing(user_resolver='doh+cloudflare://')
+        with self.assertLogs('sg.helper', 'INFO'):
+            self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
+
+    def test_named_handshake_ok_is_not_a_block(self):
+        self.reprobe(named=True)
+        self.assert_nothing()
+        sg_ech._has_ech.assert_not_called()
+        self.reprobe()
+        with mock.patch.object(sg_ech.time, 'monotonic', return_value=time.monotonic() + sg_ech.RETRY_AFTER + 1):
+            with self.assertLogs('sg.helper', 'INFO'):
+                self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
+
     def test_concurrent_same_host_checks_once(self):
         calls = []
 
@@ -222,7 +276,7 @@ class CheckTests(unittest.TestCase):
             time.sleep(0.2)
             return True
 
-        sg_ech._no_sni_handshake.side_effect = slow
+        sg_ech._outer_name_handshake.side_effect = slow
         with self.assertLogs('sg.helper', 'INFO') as logs:
             threads = [threading.Thread(target=sg_ech.check_ssl_failure, args=(self.url, '')) for _ in range(5)]
             [_t.start() for _t in threads]
@@ -234,11 +288,145 @@ class CheckTests(unittest.TestCase):
 
 class ProbeTests(unittest.TestCase):
 
+    def test_resolve_ip_error_is_silent(self):
+        error = socket.gaierror(11001, 'getaddrinfo failed')
+        with mock.patch.object(sg_ech.socket, 'getaddrinfo', side_effect=error), \
+                mock.patch.object(threading, 'excepthook') as hook:
+            self.assertIsNone(sg_ech._resolve_ip('nonexistent.invalid'))
+        hook.assert_not_called()
+
+    def test_named_handshake_uses_certifi_and_short_timeout(self):
+        context = mock.MagicMock()
+        with mock.patch.object(sg_ech.ssl, 'create_default_context', return_value=context), \
+                mock.patch.object(sg_ech.socket, 'create_connection', side_effect=OSError('reset')) as connect:
+            self.assertFalse(sg_ech._named_handshake('172.66.134.33', 'www.torrentleech.org'))
+        context.load_verify_locations.assert_called_once_with(certifi.where())
+        self.assertEqual(sg_ech.NAMED_TIMEOUT, connect.call_args.kwargs['timeout'])
+        self.assertEqual(5, sg_ech.NAMED_TIMEOUT)
+
+    def test_named_handshake_without_certifi_uses_os_store(self):
+        context = mock.MagicMock()
+        context.load_verify_locations.side_effect = FileNotFoundError('missing.pem')
+        with mock.patch.object(sg_ech.ssl, 'create_default_context', return_value=context), \
+                mock.patch.object(sg_ech.socket, 'create_connection', return_value=mock.MagicMock()):
+            self.assertTrue(sg_ech._named_handshake('172.66.134.33', 'www.torrentleech.org'))
+
+    def test_outer_name_handshake_sends_ech_outer_name(self):
+        context = mock.MagicMock()
+        with mock.patch.object(sg_ech.ssl, 'SSLContext', return_value=context), \
+                mock.patch.object(sg_ech.socket, 'create_connection', return_value=mock.MagicMock()):
+            self.assertTrue(sg_ech._outer_name_handshake('104.21.70.6'))
+        self.assertEqual('cloudflare-ech.com', context.wrap_socket.call_args.kwargs['server_hostname'])
+
+    def test_resolve_ip_times_out(self):
+        def slow(*args, **kwargs):
+            time.sleep(2)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('1.2.3.4', 443))]
+
+        start = time.monotonic()
+        with mock.patch.object(sg_ech, 'TIMEOUT', 0.2), mock.patch.object(sg_ech.socket, 'getaddrinfo', slow):
+            self.assertIsNone(sg_ech._resolve_ip('slow.example'))
+        self.assertLess(time.monotonic() - start, 1)
+
     def test_is_cloudflare(self):
         self.assertTrue(sg_ech._is_cloudflare('172.66.134.33'))
         self.assertTrue(sg_ech._is_cloudflare('2606:4700:10::ac42:8621'))
         self.assertFalse(sg_ech._is_cloudflare('192.168.1.10'))
         self.assertFalse(sg_ech._is_cloudflare('not an ip'))
+
+
+class _RaisingSession(requests.Session):
+    def __init__(self, error):
+        super(_RaisingSession, self).__init__()
+        self.error = error
+
+    def request(self, method, url, *args, **kwargs):
+        raise self.error
+
+
+class HookFailureTests(unittest.TestCase):
+
+    def setUp(self):
+        sg_ech.blocked_domains.clear()
+        sg_ech._checked.clear()
+        sg_ech._retry_at.clear()
+
+    tearDown = setUp
+
+    def test_hook_exception_does_not_raise(self):
+        with mock.patch.object(sg_ech, '_outcome', return_value=(sg_ech.ROUTED, True, 'ECH on')), \
+                mock.patch.object(sg_ech, 'on_route_change', side_effect=RuntimeError('rebuild failed')):
+            self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure('https://blocked.example/', ''))
+
+
+class GetUrlTests(unittest.TestCase):
+
+    url = 'https://blocked.example/browse'
+
+    def fetch(self, error):
+        with mock.patch.object(sg_ech, 'check_ssl_failure', return_value=sg_ech.ROUTED) as check:
+            with self.assertRaises(requests.exceptions.ConnectionError) as ctx:
+                get_url(self.url, session=_RaisingSession(error), raise_exceptions=True, failure_monitor=False,
+                        nocache=True, mute_connect_err=True)
+        return check, ctx.exception
+
+    def test_get_url_runs_check_on_ssl_error(self):
+        check, error = self.fetch(requests.exceptions.SSLError('received corrupt message of type InvalidContentType'))
+        check.assert_called_once_with(self.url, sg_helpers.DNS_RESOLVER)
+        self.assertTrue(getattr(error, 'sg_ech_routed', False))
+
+    def test_get_url_checks_the_host_a_redirect_failed_on(self):
+        error = requests.exceptions.SSLError('received corrupt message of type InvalidContentType')
+        error.request = mock.MagicMock(url='https://www.blocked.example/')
+        check, _ = self.fetch(error)
+        check.assert_called_once_with('https://www.blocked.example/', sg_helpers.DNS_RESOLVER)
+
+    def test_get_url_no_check_on_plain_connection_error(self):
+        check, error = self.fetch(requests.exceptions.ConnectionError('connection refused'))
+        check.assert_not_called()
+        self.assertFalse(getattr(error, 'sg_ech_routed', False))
+
+
+class ProviderRetryTests(unittest.TestCase):
+
+    def setUp(self):
+        import test_lib  # noqa: F401, sets up sickgear for a provider
+        from sickgear.providers import generic
+        self.generic = generic
+        self.provider = generic.TorrentProvider('TestProv')
+        self.provider.should_skip = lambda **kwargs: False
+        self.provider.is_public_access = lambda: True
+        self.provider.fails.save_list = lambda: None
+
+    def fetch(self, error):
+        with mock.patch.object(self.generic.helpers, 'get_url', side_effect=[error, 'data']) as fetch:
+            return self.provider.get_url('https://blocked.example/'), fetch
+
+    def test_routed_retries_once_with_new_session(self):
+        error = requests.exceptions.ConnectionError('blocked')
+        error.sg_ech_routed = True
+        data, fetch = self.fetch(error)
+        self.assertEqual('data', data)
+        self.assertEqual(2, fetch.call_count)
+        self.assertIs(self.provider.session, fetch.call_args.kwargs['session'])
+        self.assertEqual(0, self.provider.failure_count)
+
+    def test_runtime_rebuild_keeps_cookies_and_old_session_open(self):
+        from sickgear import providers
+        old_session = self.provider.session
+        old_session.cookies.set('uid', '42', domain='blocked.example')
+        old_session.close = mock.Mock()
+        with mock.patch.object(providers, 'sorted_sources', return_value=[self.provider]):
+            providers.apply_dns_resolver('', close=False)
+        self.assertIsNot(old_session, self.provider.session)
+        self.assertEqual('42', self.provider.session.cookies.get('uid', domain='blocked.example'))
+        old_session.close.assert_not_called()
+
+    def test_not_routed_counts_failure(self):
+        data, fetch = self.fetch(requests.exceptions.ConnectionError('refused'))
+        self.assertIsNone(data)
+        self.assertEqual(1, fetch.call_count)
+        self.assertEqual(1, self.provider.failure_count)
 
 
 if '__main__' == __name__:

@@ -13,4 +13,7 @@ orjson; 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64
 pip
 RapidFuzz < 4.0.0
 regex
+rtls; 'Windows' == platform_system or 'Darwin' == platform_system
+rtls; 'Linux' == platform_system and ('x86_64' == platform_machine or 'aarch64' == platform_machine or 'armv7l' == platform_machine)
+rtls; 'Linux' == platform_system and ('i686' == platform_machine or 'riscv64' == platform_machine)
 setuptools

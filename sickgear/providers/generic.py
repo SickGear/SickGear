@@ -593,7 +593,15 @@ class GenericProvider(object):
         # noinspection PyUnusedLocal
         log_failure_url = False
         try:
-            data = helpers.get_url(url, *args, **kwargs)
+            try:
+                data = helpers.get_url(url, *args, **kwargs)
+            except requests.exceptions.ConnectionError as e:
+                if not getattr(e, 'sg_ech_routed', False):
+                    raise
+                # sessions are rebuilt to look the blocked name up via DoH for ECH, try once more with the new one
+                if 'session' in kwargs:
+                    kwargs['session'] = self.session
+                data = helpers.get_url(url, *args, **kwargs)
             if data and not isinstance(data, tuple) \
                     or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:

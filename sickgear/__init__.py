@@ -34,6 +34,7 @@ from threading import Lock
 from configobj import ConfigObj
 from six import string_types
 
+import sg_ech
 import sg_helpers
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
@@ -1337,6 +1338,8 @@ def init_stage_1(console_logging):
 
     torrentrss_data = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
     torrent_rss_providers = providers.torrent_rss_source_list(torrentrss_data)
+    # rebuild provider sessions when a domain blocked by name at the ISP is routed via DoH for ECH
+    sg_ech.on_route_change = lambda: providers.apply_dns_resolver(DNS_RESOLVER, close=False)
     if DNS_RESOLVER:
         providers.apply_dns_resolver(DNS_RESOLVER)
 

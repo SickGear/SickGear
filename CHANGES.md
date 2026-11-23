@@ -105,6 +105,7 @@
 * Change use niquests in place of requests for all HTTP activity
 * Remove Requests library 2.34.2 (6e83187), replaced by niquests
 * Add DNS resolver setting to Config/Search/Search Tasks, e.g. doh+cloudflare:// for provider connections
+* Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
 
 
 [develop]

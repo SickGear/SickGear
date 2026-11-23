@@ -1082,6 +1082,12 @@ def get_url(url,  # type: AnyStr
         raised = e
         if 'mute_connect_err' not in mute:
             logger.warning(f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
+        # an ISP may block the site by the server name in the TLS handshake, ECH via DoH can get past that,
+        # check the host the request failed on, a redirect may have moved it from the host of url
+        failed_url = getattr(getattr(e, 'request', None), 'url', None) or url
+        if failed_url.startswith('https://') and sg_ech.is_ssl_error(e) \
+                and sg_ech.ROUTED == sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER):
+            e.sg_ech_routed = True
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:

@@ -23,14 +23,17 @@ import logging
 import socket
 import ssl
 import threading
+import time
 
+import certifi
 import requests
+import urllib3.exceptions
 
 from _23 import urlparse
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import Dict, List, Optional, Union
+    from typing import Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger('sg.helper')
 logger.addHandler(logging.NullHandler())
@@ -39,6 +42,9 @@ BUILTIN_DOH = ('doh+cloudflare://', 'doh+quad9://', 'doh+google://')
 # DoH servers with a JSON API to read the HTTPS record, Quad9 has none
 JSON_DOH = ('https://cloudflare-dns.com/dns-query', 'https://dns.google/resolve')
 TIMEOUT = 10
+NAMED_TIMEOUT = 5  # a block that drops packets hangs, the edge just answered the outer name probe so 5 s is ample
+ECH_OUTER = 'cloudflare-ech.com'  # the server name Cloudflare ECH sends in the clear
+RETRY_AFTER = 600  # seconds before a check that gave no answer runs again
 
 ROUTED, NO_BACKEND, ECH_OFF, NOTHING = 'routed', 'no_backend', 'ech_off', 'nothing'
 
@@ -52,7 +58,8 @@ CLOUDFLARE_NETS = tuple(ipaddress.ip_network(_n) for _n in (
     '2c0f:f248::/32'))
 
 blocked_domains = set()  # host names that go via DoH for this run
-_checked = {}  # type: Dict[str, str]
+_checked = {}  # type: Dict[Tuple[str, bool], str]
+_retry_at = {}  # type: Dict[Tuple[str, bool], float]
 _locks = {}  # type: Dict[str, threading.Lock]
 _locks_lock = threading.Lock()
 
@@ -83,23 +90,55 @@ def session_resolver(user_resolver):
 def _resolve_ip(host):
     # type: (str) -> Optional[str]
     """
-    :return: the first address of host from the DNS of the system, as the fetch that failed used
+    :return: the first address of host from the DNS of the system, as the fetch that failed used, None on timeout
     """
-    for cur_info in socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP):
-        return cur_info[4][0]
+    found = []
+
+    def _lookup():
+        try:
+            found.extend(socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP))
+        except (BaseException, Exception):
+            pass
+
+    # getaddrinfo has no timeout, a daemon thread that is left behind ends when the lookup does
+    lookup = threading.Thread(target=_lookup, daemon=True)
+    lookup.start()
+    lookup.join(TIMEOUT)
+    return found and found[0][4][0] or None
 
 
-def _no_sni_handshake(ip):
+def _outer_name_handshake(ip):
     # type: (str) -> bool
     """
-    :return: True if a TLS handshake to ip completes with no server name, the address is then not blocked
+    :return: True if a TLS handshake to ip completes with the ECH outer name, the address and the name ECH sends are
+     then not blocked. Not with no server name, as some Cloudflare edges reject a handshake that has none
     """
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
     try:
         with socket.create_connection((ip, 443), timeout=TIMEOUT) as sock:
-            with context.wrap_socket(sock):
+            with context.wrap_socket(sock, server_hostname=ECH_OUTER):
+                return True
+    except (BaseException, Exception):
+        return False
+
+
+def _named_handshake(ip, host):
+    # type: (str, str) -> bool
+    """
+    :return: True if a TLS handshake to ip with server name host completes with a valid certificate for host, the
+     failed fetch was then not a block. A block resets the handshake or answers with a certificate not for host
+    """
+    context = ssl.create_default_context()
+    # both stores, so a root missing from either one is not taken for a block, the OS store alone if certifi fails
+    try:
+        context.load_verify_locations(certifi.where())
+    except (BaseException, Exception):
+        pass
+    try:
+        with socket.create_connection((ip, 443), timeout=NAMED_TIMEOUT) as sock:
+            with context.wrap_socket(sock, server_hostname=host):
                 return True
     except (BaseException, Exception):
         return False
@@ -140,26 +179,52 @@ def _ech_backend():
 
 
 def _outcome(host, user_resolver):
-    # type: (str, Optional[str]) -> str
+    # type: (str, Optional[str]) -> Tuple[str, bool, str]
+    """
+    :return: outcome, True if it holds for the run, False if the check gave no answer and may run again later, and why
+    """
     ip = _resolve_ip(host)
-    if not ip or not _no_sni_handshake(ip) or not _is_cloudflare(ip):
-        return NOTHING
+    if not ip:
+        return NOTHING, False, 'no address from DNS'
+    if not _is_cloudflare(ip):
+        return NOTHING, True, f'{ip} is not Cloudflare'
+    if not _outer_name_handshake(ip):
+        return NOTHING, False, f'{ip} fails a handshake with the ECH outer name'
+    if _named_handshake(ip, host):
+        return NOTHING, False, f'{ip} completes a handshake with the name, not a block'
     ech = _has_ech(host, user_resolver)
     if None is ech:
-        return NOTHING
+        return NOTHING, False, 'no DoH server answers for the HTTPS record'
     if not ech:
-        return ECH_OFF
+        return ECH_OFF, True, 'no ECH config in the HTTPS record'
     if not _ech_backend():
-        return NO_BACKEND
+        return NO_BACKEND, True, 'no TLS backend that can do ECH'
     # a DoH user setting already gives ECH its config, the failure is then something else
-    return (ROUTED, NOTHING)[(user_resolver or '').startswith('doh')]
+    if (user_resolver or '').startswith('doh'):
+        return NOTHING, True, 'the DoH setting already gives ECH its config'
+    return ROUTED, True, 'ECH on'
+
+
+def is_ssl_error(error):
+    # type: (BaseException) -> bool
+    """
+    :return: True if error, or an error it was raised from, is a failed TLS handshake
+    """
+    seen = set()
+    while None is not error and id(error) not in seen:
+        if isinstance(error, (requests.exceptions.SSLError, urllib3.exceptions.SSLError, ssl.SSLError)):
+            return True
+        seen.add(id(error))
+        error = error.__cause__ or error.__context__
+    return False
 
 
 def check_ssl_failure(url, user_resolver):
     # type: (str, Optional[str]) -> str
     """
     find out if a TLS handshake failure on url is an ISP block by server name of a Cloudflare site, and what ECH
-    can do about it. Each host is checked once per run, the outcome is logged once
+    can do about it. Each host is checked once per run and the outcome logged once, a check that gave no answer
+    runs again after RETRY_AFTER seconds
 
     :param url: url of the fetch that failed
     :param user_resolver: resolver url of the user setting, empty for system DNS
@@ -174,22 +239,34 @@ def check_ssl_failure(url, user_resolver):
     except ValueError:
         pass
 
+    # the outcome differs with a DoH user setting, a change of setting checks again
+    key = (host, (user_resolver or '').startswith('doh'))
     with _locks_lock:
         lock = _locks.setdefault(host, threading.Lock())
     with lock:
-        if host in _checked:
-            return _checked[host]
+        if key in _checked:
+            return _checked[key]
+        if time.monotonic() < _retry_at.get(key, 0):
+            return NOTHING
         try:
-            outcome = _outcome(host, user_resolver)
-        except (BaseException, Exception):
-            outcome = NOTHING
-        _checked[host] = outcome
+            outcome, final, why = _outcome(host, user_resolver)
+        except (BaseException, Exception) as e:
+            outcome, final, why = NOTHING, False, f'check failed: {e}'
+        logger.debug(f'ECH check of {host} gives {outcome}, {why}{("", ", may run again later")[not final]}')
+        if final:
+            _checked[key] = outcome
+            _retry_at.pop(key, None)
+        else:
+            _retry_at[key] = time.monotonic() + RETRY_AFTER
 
         if ROUTED == outcome:
             blocked_domains.add(host)
             logger.info(f'ISP blocks {host} by name, the site has ECH on, {host} now looks up via DNS over HTTPS'
                         f' to use ECH')
-            on_route_change()
+            try:
+                on_route_change()
+            except (BaseException, Exception) as e:
+                logger.debug(f'Failed to rebuild sessions for {host}: {e}')
         elif NO_BACKEND == outcome:
             logger.info(f'ISP blocks {host} by name, the site has ECH on, install rtls (pip install rtls)'
                         f' to get through')
