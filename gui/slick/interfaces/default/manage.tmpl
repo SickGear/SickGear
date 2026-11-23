@@ -233,23 +233,24 @@ $xsrf_form_html
 #for $row, $cur_show_obj in enumerate($shows)
     #set $show_loc = $cur_show_obj.path
     #set $show_size = $max if not $show_loc else $sizes.get($cur_show_obj.tvid_prodid, 0)
-    ## each box is named for a screen reader by its action and the show, as the column header is far away
+    ## each box is named for a screen reader by its action and the show, as the column header is far away, a box has a
+    ## title only to say why it can not be ticked, a title that only named the action was one of 2,400 on the page
     #set $aria_show = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name).replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;')
     #set $option_state = '<input type="checkbox"%s class="%s-check"%s aria-label="%s ' + $aria_show.replace('%', '%%') + '">'
     ##
     #set $curUpdate_disabled = $sickgear.show_queue_scheduler.action.is_being_updated($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_update_queue($cur_show_obj)
-    #set $tip = ' title="Update%s"' % ('', $disabled_inprogress_tip)[$curUpdate_disabled]
+    #set $tip = ('', ' title="Update%s"' % $disabled_inprogress_tip)[$curUpdate_disabled]
     #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip, 'Update'))
     ##
     #set $curRefresh_disabled = $sickgear.show_queue_scheduler.action.is_being_refreshed($cur_show_obj)\
                                 or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
-    #set $tip = ' title="Rescan%s"' % ('', $disabled_inprogress_tip)[$curRefresh_disabled]
+    #set $tip = ('', ' title="Rescan%s"' % $disabled_inprogress_tip)[$curRefresh_disabled]
     #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip, 'Rescan'))
     ##
     #set $curRename_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)
-    #set $tip = ' title="Rename%s"' % ('', $disabled_inprogress_tip)[$curRename_disabled]
+    #set $tip = ('', ' title="Rename%s"' % $disabled_inprogress_tip)[$curRename_disabled]
     #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip, 'Rename'))
     ##
     #set $subtitles_disabled = not $cur_show_obj.subtitles\
@@ -266,7 +267,7 @@ $xsrf_form_html
     #set $curRemove_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
-    #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
+    #set $tip = ('', ' title="Remove%s"' % $disabled_inprogress_tip)[$curRemove_disabled]
     #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip, 'Remove'))
 		<tr class="#echo ('odd', 'even')[$row % 2]#" data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
 			<td><input type="checkbox" class="edit-check" aria-label="Edit $aria_show"></td>

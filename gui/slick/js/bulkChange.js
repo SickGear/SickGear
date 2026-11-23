@@ -101,6 +101,7 @@ $(function(){
 	}
 
 	var updateButtons = function(){
+		sortCacheStale = !0;
 		showHiddenTicks();
 		var editBtn$ = $('#bulk-change-edit'), submitBtn$ = $('#bulk-change-submit'), numEdits = $('.edit-check:checked').length,
 			numToDo = $('.update-check:checked, .refresh-check:checked, .rename-check:checked, .subtitle-check:checked,'
@@ -240,13 +241,18 @@ $(function(){
 	hideStickyCopy();
 	$('#bulk-change-table').on('updateComplete sortEnd filterEnd', hideStickyCopy);
 
-	$('#edit-check, .edit-check').each(function(i, el$){
+	$('#edit-check').each(function(i, el$){
 		$(el$).parent().attr('title', 'shift click ticks every box between this one and the one ticked before, in any column');
 	})
 
+	// a size, or an action box, sorts by its value now, not as it was when the page loaded, the sort values are read
+	// again only after a tick or a size change, each sort read all 599 rows, about 25 to 70 ms
+	var sortCacheStale = !1;
 	function refreshSortCache(table$){
-		// a size, or an action box, sorts by its value now, not as it was when the page loaded
-		table$.trigger('updateCache');
+		if (sortCacheStale){
+			sortCacheStale = !1;
+			table$.trigger('updateCache');
+		}
 	}
 
 	// the filters are past 20 header stops for the keyboard, a skip link and the / key go to the name filter
@@ -388,7 +394,9 @@ $(function(){
 		// the sort values and the sort only, a table update makes the filter boxes anew, clears a filter, and filters
 		// again, after which the sticky header scrolls the page up to the top of the table
 		var table$ = $('#bulk-change-table');
-		table$.trigger('updateCache').trigger('sorton', [table$[0].config.sortList]);
+		// the sort start reads the sort values again, once
+		sortCacheStale = !0;
+		table$.trigger('sorton', [table$[0].config.sortList]);
 	}
 
 	$('#read-folder-sizes').on('click', function(){
