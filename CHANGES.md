@@ -129,6 +129,7 @@
 * Fix tick all and shift range on the bulk change page tick rows a filter hides, they now act on the shown rows only
 * Change the bulk change filters, yes or no menus on Scene, Anime, Paused and others, a hint on the name filter
 * Change the bulk change page to one Remove column, the Submit dialog asks whether to keep or delete the show files
+* Change the bulk change no match row to name each filter in use, with a button that clears just that one
 
 
 [develop]

@@ -213,12 +213,36 @@ $(function(){
 		$('#bulk-change-table .tablesorter-filter[data-column="1"]').focus();
 	});
 
+	// when no show matches, the row names each filter in use, a button clears that one, the focus goes to its box
+	function showNoMatch(){
+		var table$ = $('#bulk-change-table'), filters = $.tablesorter.getFilters(table$) || [], used = [];
+		$.each(filters, function(col, value){
+			if (!value)
+				return;
+			var name = $.trim(table$.find('thead tr:first th').eq(col).text());
+			used.push($('<button type="button" class="btn clear-one">').attr({'data-column': col,
+				'aria-label': 'Clear the ' + name + ' filter, ' + value}).text(name + ': ' + value + ' ')
+				.append('<span aria-hidden="true">&times;</span>'));
+		});
+		$('#no-match .no-match-text').text(1 < used.length ? 'No shows match these filters' : 'No shows match the filter');
+		$('#no-match .no-match-filters').empty().append(used);
+		$('#clear-filters').prop('hidden', 2 > used.length);
+	}
+	$('#no-match').on('click', '.clear-one', function(){
+		var table$ = $('#bulk-change-table'), col = +$(this).attr('data-column'), filters = $.tablesorter.getFilters(table$);
+		filters[col] = '';
+		$.tablesorter.setFilters(table$, filters, !0);
+		table$.find('.tablesorter-filter[data-column="' + col + '"]').focus();
+	});
+
 	$('#bulk-change-table')
 		.bind('sortStart', function(e, t){
 			refreshSortCache($(t));
 		})
 		.bind('filterInit filterEnd', function(e, data){
 			$('#no-match').prop('hidden', 0 < data.filteredRows);
+			if (!data.filteredRows)
+				showNoMatch();
 			$('.bulk-check').each(function(){syncTickAll(this.id);});
 			$('#tfoot').find('.stats').html(
 				(data.filteredRows === data.totalRows

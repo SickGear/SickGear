@@ -294,7 +294,7 @@ $xsrf_form_html
 	</tbody>
 	## shown when a filter matches no show, the table script leaves an info only body out of sorting and filtering
 	<tbody class="tablesorter-infoOnly" id="no-match" hidden>
-		<tr><td colspan="$columns_total">No shows match the filter <button type="button" class="btn" id="clear-filters">Clear filter</button></td></tr>
+		<tr><td colspan="$columns_total"><span class="no-match-text">No shows match the filter</span> <span class="no-match-filters"></span><button type="button" class="btn" id="clear-filters">Clear all filters</button></td></tr>
 	</tbody>
 </table>
 <div id="tfoot">

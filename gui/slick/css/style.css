@@ -4831,7 +4831,7 @@ pre{
 	background:none
 }
 
-#bulk-change-table #no-match #clear-filters{
+#bulk-change-table #no-match .btn{
 	margin-left:8px
 }
 
