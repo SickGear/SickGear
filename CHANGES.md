@@ -60,8 +60,6 @@
 * Change log one line per show when its episodes load or update, instead of up to thirteen lines per episode
 * Change log one line per show when a refresh checks its media files, instead of up to seven lines per file
 * Change log no line per media file for the file name parse of a show refresh
-* Change reuse a session's kept alive connection for web requests, instead of a new connection per request
-* Change web requests with no session, e.g. to TV info sources, to share kept alive connections
 * Change keep the AniDB session file in the cache folder instead of the sickgear.py folder
 * Change episode load from the DB to list a season folder once, instead of two disk checks per episode file
 * Change the XEM refresh check to read its DB table once a day per show, instead of a few times per episode load
