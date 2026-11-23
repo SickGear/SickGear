@@ -1,7 +1,10 @@
 import socket
 import sys
+import threading
+import time
 import unittest
 from os.path import abspath, dirname, join
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
@@ -103,6 +106,139 @@ class SessionResolverTests(unittest.TestCase):
         result = sg_ech.session_resolver('doh://my.dns/dns-query?timeout=3')
         self.assertEqual('doh://my.dns/dns-query?timeout=3&hosts=h', result[0])
         self.assertEqual('doh://my.dns/dns-query?timeout=3', result[-1])
+
+
+class CheckTests(unittest.TestCase):
+
+    url = 'https://www.torrentleech.org/torrents/browse'
+    host = 'www.torrentleech.org'
+
+    def setUp(self):
+        sg_ech.blocked_domains.clear()
+        sg_ech._checked.clear()
+        self.hook = mock.Mock()
+        self.patches = [mock.patch.object(sg_ech, 'on_route_change', self.hook)]
+        self.probe(ip='172.66.134.33', no_sni=True, cloudflare=True, ech=True, backend=True)
+
+    def tearDown(self):
+        for cur_patch in self.patches:
+            cur_patch.stop()
+        sg_ech.blocked_domains.clear()
+        sg_ech._checked.clear()
+
+    def probe(self, ip, no_sni, cloudflare, ech, backend):
+        if not self.patches[0].is_started:
+            self.patches[0].start()
+        for cur_name, cur_value in (('_resolve_ip', ip), ('_no_sni_handshake', no_sni), ('_is_cloudflare', cloudflare),
+                                    ('_has_ech', ech), ('_ech_backend', backend)):
+            self.patches.append(mock.patch.object(sg_ech, cur_name, return_value=cur_value))
+            self.patches[-1].start()
+
+    def reprobe(self, **kwargs):
+        for cur_patch in self.patches[1:]:
+            cur_patch.stop()
+        del self.patches[1:]
+        values = dict(ip='172.66.134.33', no_sni=True, cloudflare=True, ech=True, backend=True)
+        values.update(kwargs)
+        self.probe(**values)
+
+    def assert_nothing(self, url=None, user_resolver=''):
+        with self.assertNoLogs('sg.helper', 'INFO'):
+            self.assertEqual(sg_ech.NOTHING, sg_ech.check_ssl_failure(url or self.url, user_resolver))
+        self.assertEqual(set(), sg_ech.blocked_domains)
+        self.hook.assert_not_called()
+
+    def test_routed(self):
+        with self.assertLogs('sg.helper', 'INFO') as logs:
+            self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
+        self.assertEqual({self.host}, sg_ech.blocked_domains)
+        self.hook.assert_called_once_with()
+        self.assertIn('ISP blocks www.torrentleech.org by name, the site has ECH on, www.torrentleech.org now looks up'
+                      ' via DNS over HTTPS to use ECH', logs.output[0])
+
+    def test_routed_calls_hook_once(self):
+        with self.assertLogs('sg.helper', 'INFO') as logs:
+            sg_ech.check_ssl_failure(self.url, '')
+            self.assertEqual(sg_ech.ROUTED, sg_ech.check_ssl_failure(self.url, ''))
+        self.assertEqual(1, len(logs.output))
+        self.hook.assert_called_once_with()
+
+    def test_no_backend(self):
+        self.reprobe(backend=False)
+        with self.assertLogs('sg.helper', 'INFO') as logs:
+            self.assertEqual(sg_ech.NO_BACKEND, sg_ech.check_ssl_failure(self.url, ''))
+        self.assertEqual(set(), sg_ech.blocked_domains)
+        self.hook.assert_not_called()
+        self.assertIn('ISP blocks www.torrentleech.org by name, the site has ECH on, install rtls (pip install rtls)'
+                      ' to get through', logs.output[0])
+
+    def test_ech_off(self):
+        self.reprobe(ech=False)
+        with self.assertLogs('sg.helper', 'INFO') as logs:
+            self.assertEqual(sg_ech.ECH_OFF, sg_ech.check_ssl_failure(self.url, ''))
+        self.assertEqual(set(), sg_ech.blocked_domains)
+        self.assertIn('ISP blocks www.torrentleech.org by name, the site is on Cloudflare with ECH off, its owner can'
+                      ' turn ECH on, else use a proxy', logs.output[0])
+
+    def test_ip_literal_and_localhost(self):
+        self.assert_nothing('https://192.168.1.10:9117/api')
+        self.assert_nothing('https://[::1]/api')
+        self.assert_nothing('https://localhost/api')
+        sg_ech._resolve_ip.assert_not_called()
+
+    def test_no_ip(self):
+        self.reprobe(ip=None)
+        self.assert_nothing()
+
+    def test_no_sni_fails(self):
+        self.reprobe(no_sni=False)
+        self.assert_nothing()
+
+    def test_not_cloudflare(self):
+        self.reprobe(cloudflare=False)
+        self.assert_nothing()
+
+    def test_ech_unknown(self):
+        self.reprobe(ech=None)
+        self.assert_nothing()
+
+    def test_user_doh_has_backend(self):
+        self.assert_nothing(user_resolver='doh+cloudflare://')
+
+    def test_user_doh_missing_backend(self):
+        self.reprobe(backend=False)
+        with self.assertLogs('sg.helper', 'INFO'):
+            self.assertEqual(sg_ech.NO_BACKEND, sg_ech.check_ssl_failure(self.url, 'doh+cloudflare://'))
+
+    def test_probe_exception_is_nothing(self):
+        sg_ech._resolve_ip.side_effect = OSError('boom')
+        self.assert_nothing()
+
+    def test_concurrent_same_host_checks_once(self):
+        calls = []
+
+        def slow(ip):
+            calls.append(ip)
+            time.sleep(0.2)
+            return True
+
+        sg_ech._no_sni_handshake.side_effect = slow
+        with self.assertLogs('sg.helper', 'INFO') as logs:
+            threads = [threading.Thread(target=sg_ech.check_ssl_failure, args=(self.url, '')) for _ in range(5)]
+            [_t.start() for _t in threads]
+            [_t.join() for _t in threads]
+        self.assertEqual(1, len(calls))
+        self.assertEqual(1, len(logs.output))
+        self.hook.assert_called_once_with()
+
+
+class ProbeTests(unittest.TestCase):
+
+    def test_is_cloudflare(self):
+        self.assertTrue(sg_ech._is_cloudflare('172.66.134.33'))
+        self.assertTrue(sg_ech._is_cloudflare('2606:4700:10::ac42:8621'))
+        self.assertFalse(sg_ech._is_cloudflare('192.168.1.10'))
+        self.assertFalse(sg_ech._is_cloudflare('not an ip'))
 
 
 if '__main__' == __name__:
