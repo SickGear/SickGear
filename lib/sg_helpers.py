@@ -35,6 +35,7 @@ from send2trash import send2trash
 from six import integer_types, moves, PY2, string_types, text_type
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
+import sg_ech
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
 # noinspection PyPep8Naming
@@ -845,7 +846,7 @@ def _shared_adapter(cache_dir, resolver=None):
     :return: the adapter that all requests with no session of the caller share
     """
     with _shared_adapters_lock:
-        key = (cache_dir, resolver)
+        key = (cache_dir, tuple(resolver) if isinstance(resolver, list) else resolver)
         if key not in _shared_adapters:
             _shared_adapters[key] = IdleLimitHTTPAdapter(resolver=resolver) if None is cache_dir \
                 else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir), resolver=resolver)
@@ -932,11 +933,11 @@ def get_url(url,  # type: AnyStr
     use_shared_adapter = False
     if None is session:
         if (kwargs.get('url_solver') or '').strip():
-            session = CloudflareScraper.create_scraper(resolver=DNS_RESOLVER or None)
+            session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(DNS_RESOLVER))
         else:
             # in case of an empty argument
             kwargs.pop('url_solver', None)
-            session = requests.Session(resolver=DNS_RESOLVER or None)
+            session = requests.Session(resolver=sg_ech.session_resolver(DNS_RESOLVER))
             use_shared_adapter = True
         session.headers.update({'User-Agent': USER_AGENT})
 
@@ -957,7 +958,7 @@ def get_url(url,  # type: AnyStr
     if use_shared_adapter:
         # the session is new, but its connections are kept for the next request to the same site
         for cur_prefix in ('https://', 'http://'):
-            session.mount(cur_prefix, _shared_adapter(cache_dir, DNS_RESOLVER or None))
+            session.mount(cur_prefix, _shared_adapter(cache_dir, sg_ech.session_resolver(DNS_RESOLVER)))
     # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
     elif cache_dir and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
         # keep the session resolver, CacheControl mounts a new adapter that would otherwise use system DNS

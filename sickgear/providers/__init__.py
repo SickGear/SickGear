@@ -19,6 +19,7 @@ import sys
 
 from cfscrape import CloudflareScraper
 
+import sg_ech
 import sickgear
 from . import generic, newznab
 from .newznab import NewznabConstants
@@ -64,7 +65,7 @@ def apply_dns_resolver(resolver):
     """
     for cur_provider in sorted_sources():
         cur_provider.session.close()
-        cur_provider.session = CloudflareScraper.create_scraper(resolver=resolver or None)
+        cur_provider.session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(resolver))
 
 
 def sorted_sources():
