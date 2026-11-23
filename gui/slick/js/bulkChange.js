@@ -193,7 +193,9 @@ $(function(){
 		.on('click', 'tr', function(event){
 			if ($(event.target).closest('a, input, button, select, label, textarea').length)
 				return;
-			var check = $(this).find('.edit-check')[0];
+			// in an action cell the click ticks the box of that cell, elsewhere in the row the Edit box
+			var cell$ = $(event.target).closest('td.col-action'),
+				check = (cell$.length ? cell$ : $(this)).find(cell$.length ? 'input' : '.edit-check')[0];
 			if (check && !check.disabled)
 				check.dispatchEvent(new MouseEvent('click', {bubbles: !0, cancelable: !0,
 					shiftKey: event.shiftKey, ctrlKey: event.ctrlKey}));

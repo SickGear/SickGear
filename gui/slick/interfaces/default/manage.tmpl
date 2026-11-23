@@ -146,7 +146,8 @@
 ## the last column, Remove, has room on its right for its slanted label, the table edge would cut it
 #bulk-change-table thead th.sort-action.col-destructive, #bulk-change-table-sticky thead th.sort-action.col-destructive{padding-right:40px}
 ## and its row boxes stand under the header box
-#bulk-change-table > tbody:not(#no-match) > tr > td:last-child{padding-left:11px; padding-right:40px}
+#bulk-change-table > tbody:not(#no-match) > tr > td:last-child,
+#bulk-change-table .tablesorter-filter-row td:last-child, #bulk-change-table-sticky .tablesorter-filter-row td:last-child{padding-left:11px; padding-right:40px}
 .tablesorter th.tablesorter-header.col-checkbox{background-position:center bottom 5px; padding:4px}
 .rotate-holder{width:20px; margin-bottom:0}
 .rotate-holder2{width:20px; margin:0 0 4px}
@@ -289,13 +290,13 @@ $xsrf_form_html
     #end if
 			<td>#if 1 == int($cur_show_obj.paused) then $yes else $no#</td>
 			<td>$cur_show_obj.status</td>
-			<td$curUpdate[0]>$curUpdate[1]</td>
-			<td$curRefresh[0]>$curRefresh[1]</td>
-			<td$curRename[0]>$curRename[1]</td>
+			<td class="col-action"$curUpdate[0]>$curUpdate[1]</td>
+			<td class="col-action"$curRefresh[0]>$curRefresh[1]</td>
+			<td class="col-action"$curRename[0]>$curRename[1]</td>
     #if $sickgear.USE_SUBTITLES
-			<td$curSubtitle[0]>$curSubtitle[1]</td>
+			<td class="col-action"$curSubtitle[0]>$curSubtitle[1]</td>
     #end if
-			<td$curRemove[0]>$curRemove[1]</td>
+			<td class="col-action"$curRemove[0]>$curRemove[1]</td>
 		</tr>
 #end for
 	</tbody>

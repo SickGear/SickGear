@@ -4858,6 +4858,11 @@ pre{
 	vertical-align:middle
 }
 
+/* a click anywhere in an action cell ticks its box */
+#bulk-change-table tbody td.col-action{
+	cursor:pointer
+}
+
 /* the Submit dialog lists the shows of each action, a long list scrolls */
 .confirmation-modal .review-action{
 	font-weight:600

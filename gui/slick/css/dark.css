@@ -1554,6 +1554,19 @@ thead.tablesorter-stickyHeader{
 	border-left:1px solid #78a6d8
 }
 
+/* the action columns, Update to Remove, are one block of controls, a darker header and a tint on their cells */
+.tablesorter.rotate thead th.sort-action,
+#bulk-change-table thead th.sort-action.tablesorter-headerAsc,
+#bulk-change-table thead th.sort-action.tablesorter-headerDesc,
+#bulk-change-table-sticky thead th.sort-action.tablesorter-headerAsc,
+#bulk-change-table-sticky thead th.sort-action.tablesorter-headerDesc{
+	background-color:#0f3b66
+}
+
+#bulk-change-table tbody td.col-action{
+	background-color:rgba(120, 166, 216, 0.08)
+}
+
 /* the space kept for the filter row before the table script adds it, in the colour of the row */
 #bulk-change-table:not(.hasFilters) thead th{
 	border-bottom:29px solid #282828
