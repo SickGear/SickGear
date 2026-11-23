@@ -45,11 +45,11 @@
     ("'size'", '!1', False),
     ((None, "'tvinfo'")[$enable_tvinfo], '!1', False),
     ("'quality'", '!0', False),
-    ((None, "'sports'")[$has_any_sports], '!1', True),
-    ("'scene'", '!1', True),
-    ((None, "'anime'")[$has_any_anime], '!1', True),
-    ((None, "'flatfold'")[$has_any_flat_folders], '!1', True),
-    ("'paused'", '!1', True), ("'status'", '!0', False),
+    ((None, "'sports'")[$has_any_sports], '!0', True),
+    ("'scene'", '!0', True),
+    ((None, "'anime'")[$has_any_anime], '!0', True),
+    ((None, "'flatfold'")[$has_any_flat_folders], '!0', True),
+    ("'paused'", '!0', True), ("'status'", '!0', False),
     ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'),
     ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action')
 ]
@@ -83,6 +83,8 @@
 
 	\$('#bulk-change-table:has(tbody tr)').tablesorter({
 		widgets: ['zebra','stickyHeaders', 'filter'],
+		// a yes or no filter offers All, Yes and No
+		widgetOptions: {filter_placeholder: {select: 'All'}},
 		sortList: [[1,0]],
 		headers: {
 #echo ',\n'.join($headers)#
@@ -127,6 +129,7 @@
 ## the Status and Quality widths come from their filter boxes and cells, kept when a filter leaves few or no rows
 #bulk-change-table thead th.sort-icon-status{min-width:96px}
 #bulk-change-table thead th.sort-icon-quality{width:62px}
+#bulk-change-table thead th.filter-select{min-width:53px}
 ## the labels, tick all boxes and size menu stand on a common line over the sort arrows, Show Name stays in the middle
 #bulk-change-table thead th:not(.sort-icon-left), #bulk-change-table-sticky thead th:not(.sort-icon-left){vertical-align:bottom; padding-bottom:17px}
 @supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
@@ -188,16 +191,16 @@ $xsrf_form_html
 #end if
 			<th class="col-legend narrow sort-icon-quality"><div class="rotate-holder"><div class="rotate-body">Quality</div></div></th>
 #if $has_any_sports
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">Sports</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body">Sports</div></div></th>
 #end if
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Scene</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Scene</div></div></th>
 #if $has_any_anime
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Anime</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Anime</div></div></th>
 #end if
 #if $has_any_flat_folders
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Flat Folders</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Flat Folders</div></div></th>
 #end if
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
 			<th width="1%" class="sort-action col-actions-start"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
 			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rescan</span></div></div><input type="checkbox" class="bulk-check" id="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"></th>

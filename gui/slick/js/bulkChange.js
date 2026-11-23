@@ -157,26 +157,33 @@ $(function(){
 	function nameFilters(){
 		$('#bulk-change-table .tablesorter-filter').each(function(){
 			var name = $.trim($('#bulk-change-table thead tr:first th').eq($(this).attr('data-column')).text());
-			if (name && !this.disabled)
+			if (name && !this.disabled){
 				$(this).attr('aria-label', 'Filter ' + name).attr('placeholder', 'Filter');
-			else
+				// the name filter says how to leave words out
+				if (1 === +$(this).attr('data-column'))
+					$(this).attr({placeholder: 'Filter, !word leaves it out', title: 'part of a name, or !word to leave out the names with it'});
+			} else
 				$(this).removeAttr('aria-label').attr({'aria-hidden': 'true', tabindex: '-1'});
 		});
 	}
 	nameFilters();
-	$('#bulk-change-table').on('updateComplete filterInit', nameFilters);
+	$('#bulk-change-table').on('updateComplete filterInit filterEnd', nameFilters);
 
 	// the sticky header is a copy for the pointer, a keyboard or screen reader uses the table header, not both
 	function hideStickyCopy(){
 		$('#bulk-change-table-sticky').attr('aria-hidden', 'true')
 			.find('input, button, select, a, [tabindex]').attr('tabindex', '-1')
-			.end().find('.tablesorter-filter').attr('placeholder', 'Filter');
+			.end().find('.tablesorter-filter').each(function(){
+				// the hint of the box in the table, the copy is made without it
+				$(this).attr('placeholder',
+					$('#bulk-change-table .tablesorter-filter[data-column="' + $(this).attr('data-column') + '"]').attr('placeholder'));
+			});
 	}
 	hideStickyCopy();
 	$('#bulk-change-table').on('updateComplete sortEnd filterEnd', hideStickyCopy);
 
 	$('#edit-check, .edit-check').each(function(i, el$){
-		$(el$).parent().attr('title', 'multiselect = ctrl/shift + left click');
+		$(el$).parent().attr('title', 'shift click ticks every box between this one and the one ticked before, in any column');
 	})
 
 	function refreshSortCache(table$){
@@ -215,7 +222,7 @@ $(function(){
 			$('#tfoot').find('.stats').html(
 				(data.filteredRows === data.totalRows
 					? '<span class="total-rows">' +  data.totalRows + '</span> shows'
-					: '<span class="filter-rows">' + data.filteredRows + '</span> of <span class="total-rows">' + data.totalRows + '</span>  shows (' + (data.totalRows - data.filteredRows) + ' filtered)'));
+					: '<span class="filter-rows">' + data.filteredRows + '</span> of <span class="total-rows">' + data.totalRows + '</span> shows'));
 		});
 
 	// read the size of every show folder, slow on a large or network drive, so only when asked for
