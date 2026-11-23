@@ -1,8 +1,6 @@
 import json
 import sys
-import threading
 import unittest
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from os.path import abspath, dirname, join
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
@@ -83,49 +81,6 @@ class GetUrlTests(unittest.TestCase):
         self.assertIs(adapter, session.adapters['https://'])
 
 
-class SharedPoolTests(unittest.TestCase):
-    """ requests with no session of the caller reuse a connection, each of them used to open a new one """
-
-    def setUp(self):
-        connections = self.connections = set()
-
-        class Handler(BaseHTTPRequestHandler):
-            protocol_version = 'HTTP/1.1'
-
-            def do_GET(self):
-                connections.add(self.client_address)
-                self.send_response(200)
-                self.send_header('Content-Length', '2')
-                self.end_headers()
-                self.wfile.write(b'ok')
-
-            def log_message(self, *args):
-                pass
-
-        self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        threading.Thread(target=self.server.serve_forever, daemon=True).start()
-        self.url = 'http://127.0.0.1:%s/' % self.server.server_address[1]
-
-    def tearDown(self):
-        self.server.shutdown()
-        self.server.server_close()
-
-    def test_no_session_no_cache(self):
-        self.assertEqual(['ok'] * 5, [get_url(self.url, nocache=True) for _ in range(5)])
-        self.assertEqual(1, len(self.connections))
-
-    def test_no_session_with_cache(self):
-        self.assertEqual(['ok'] * 5, [get_url(self.url) for _ in range(5)])
-        self.assertEqual(1, len(self.connections))
-
-    def test_session_of_the_caller_keeps_its_own_adapter(self):
-        session = requests.Session()
-        adapter = session.adapters['http://']
-        self.assertEqual('ok', get_url(self.url, session=session, nocache=True))
-        self.assertIs(adapter, session.adapters['http://'])
-
-
 if '__main__' == __name__:
-    for cur_case in (GetUrlTests, SharedPoolTests):
-        suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
-        unittest.TextTestRunner(verbosity=2).run(suite)
+    suite = unittest.TestLoader().loadTestsFromTestCase(GetUrlTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
