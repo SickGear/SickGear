@@ -1,9 +1,11 @@
 import json
 import sys
 import threading
+import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from os.path import abspath, dirname, join
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
@@ -11,6 +13,7 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 import requests
 from requests.models import Response
 
+import sg_helpers
 from sg_helpers import get_url
 
 
@@ -117,6 +120,22 @@ class SharedPoolTests(unittest.TestCase):
     def test_no_session_with_cache(self):
         self.assertEqual(['ok'] * 5, [get_url(self.url) for _ in range(5)])
         self.assertEqual(1, len(self.connections))
+
+    def test_no_session_connection_idle_past_the_limit_is_not_reused(self):
+        with mock.patch.object(sg_helpers, 'KEEP_ALIVE_IDLE', 0.2):
+            self.assertEqual('ok', get_url(self.url))
+            time.sleep(0.3)
+            self.assertEqual('ok', get_url(self.url))
+        self.assertEqual(2, len(self.connections))
+
+    def test_session_connection_is_reused_within_the_limit_only(self):
+        session = requests.Session()
+        with mock.patch.object(sg_helpers, 'KEEP_ALIVE_IDLE', 0.2):
+            self.assertEqual(['ok'] * 3, [get_url(self.url, session=session) for _ in range(3)])
+            self.assertEqual(1, len(self.connections))
+            time.sleep(0.3)
+            self.assertEqual('ok', get_url(self.url, session=session))
+        self.assertEqual(2, len(self.connections))
 
     def test_session_of_the_caller_keeps_its_own_adapter(self):
         session = requests.Session()
