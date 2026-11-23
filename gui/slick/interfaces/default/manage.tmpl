@@ -51,7 +51,7 @@
     ((None, "'flatfold'")[$has_any_flat_folders], '!0', True),
     ("'paused'", '!0', True), ("'status'", '!0', False),
     ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'),
-    ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action')
+    ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action')
 ]
 #set $columns_total = $len($column_headers) - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickgear.USE_SUBTITLES])
 #set $headers = []
@@ -209,8 +209,7 @@ $xsrf_form_html
 			#set $subtitles_on = len([_s for _s in $shows if _s.subtitles])
 			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><span>Subtitle</span></div></div><input type="checkbox" class="bulk-check" id="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"></th>
 #end if
-			<th width="1%" class="sort-action col-destructive" title="Remove the show from SickGear and #echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]# its folder and files"><div class="rotate-holder2"><div class="rotate-body"><span>Delete</span></div></div><input type="checkbox" class="bulk-check" id="delete-check" title="Tick all for Delete" aria-label="Tick all for Delete"></th>
-			<th width="1%" class="sort-action col-destructive" title="Remove the show from SickGear, keep its folder and files"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
+			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
 		</tr>
 	</thead>
 
@@ -253,12 +252,6 @@ $xsrf_form_html
         #set $curSubtitle = ($tip, '<span class="yes-no is-no" role="img" aria-label="Subtitle search off"></span>')
     #end if
     ##
-    #set $curDelete_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
-    #set $tip = ' title="Delete%s"' % ('', $disabled_inprogress_tip)[$curDelete_disabled]
-    #set $curDelete = ($tip, $option_state % (('', $disabled)[$curDelete_disabled], 'delete', $tip))
-    ##
     #set $curRemove_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
@@ -295,7 +288,6 @@ $xsrf_form_html
     #if $sickgear.USE_SUBTITLES
 			<td$curSubtitle[0]>$curSubtitle[1]</td>
     #end if
-			<td$curDelete[0]>$curDelete[1]</td>
 			<td$curRemove[0]><span style="margin-right: 40px">$curRemove[1]</span></td>
 		</tr>
 #end for

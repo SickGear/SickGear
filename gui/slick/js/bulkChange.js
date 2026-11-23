@@ -17,7 +17,7 @@ $(function(){
 
 	$('#bulk-change-submit').click(function(){
 
-		var toChange = !1, toDo = {update: [], refresh: [], rename: [], subtitle: [], delete: [], remove: []};
+		var toChange = !1, toDo = {update: [], refresh: [], rename: [], subtitle: [], remove: []};
 
 		$.each(Object.keys(toDo), function(i, k){
 			$('.' + k + '-check:checked').each(function(){
@@ -29,30 +29,31 @@ $(function(){
 		if (!toChange)
 			return !1;
 
-		var confirmArr = [],
-			command = function(){
+		var command = function(deleteFiles){
 				window.location.href = $.SickGear.Root + '/manage/bulk-change?'
 					+ 'to_update=' + toDo.update.join('|')
 					+ '&to_refresh=' + toDo.refresh.join('|')
 					+ '&to_rename=' + toDo.rename.join('|')
 					+ '&to_subtitle=' + toDo.subtitle.join('|')
-					+ '&to_delete=' + toDo.delete.join('|')
-					+ '&to_remove=' + toDo.remove.join('|');
+					+ '&to_delete=' + (deleteFiles ? toDo.remove : []).join('|')
+					+ '&to_remove=' + (deleteFiles ? [] : toDo.remove).join('|');
 				return !0;
 			};
-		if(toDo.delete.length){
-			confirmArr.push('delete ' + toDo.delete.length);
-		}
-		if(toDo.remove.length){
-			confirmArr.push('remove ' + toDo.remove.length);
-		}
-		if(!confirmArr.length){
-			command();
+		if(!toDo.remove.length){
+			command(!1);
 		} else {
+			// one Remove column, the dialog asks what happens to the folders and files, they are kept unless chosen
+			var count = toDo.remove.length, shows = count + ' show' + (1 === count ? '' : 's'),
+				files = $('#remove-check').closest('th').attr('data-files');
 			confirmDialog({
-				title: 'Are you sure ?',
-				text: confirmArr.join(' and ') + ' show(s)',
-				confirm	: command
+				title: 'Remove ' + shows + ' from SickGear?',
+				text: '<label class="remove-choice"><input type="radio" name="remove-files" value="keep" checked> Keep their folders and files</label>'
+					+ '<label class="remove-choice"><input type="radio" name="remove-files" value="delete"> Also ' + files + ' their folders and files</label>',
+				confirmButton: 'Remove ' + shows, confirmButtonClass: 'red',
+				cancelButton: 'Cancel', cancelButtonClass: '',
+				confirm: function(){
+					command('delete' === $('input[name="remove-files"]:checked').val());
+				}
 			});
 		}
 
@@ -61,7 +62,7 @@ $(function(){
 	var updateButtons = function(){
 		var editBtn$ = $('#bulk-change-edit'), submitBtn$ = $('#bulk-change-submit'), numEdits = $('.edit-check:checked').length,
 			numToDo = $('.update-check:checked, .refresh-check:checked, .rename-check:checked, .subtitle-check:checked,'
-				+ ' .delete-check:checked, .remove-check:checked').length;
+				+ ' .remove-check:checked').length;
 		if(!!numEdits){
 			editBtn$.attr('disabled', !1);
 			editBtn$.val('Edit ' + numEdits + ' selected');
@@ -104,7 +105,7 @@ $(function(){
 		updateButtons();
 	});
 
-	['.edit-check', '.update-check', '.refresh-check', '.rename-check', '.subtitle-check', '.delete-check', '.remove-check'].forEach(function(name){
+	['.edit-check', '.update-check', '.refresh-check', '.rename-check', '.subtitle-check', '.remove-check'].forEach(function(name){
 		var lastCheck = null;
 
 		$(name).click(function(event){

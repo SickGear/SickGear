@@ -4835,6 +4835,14 @@ pre{
 	margin-left:8px
 }
 
+/* the choice of what Remove does with the folders and files of the shows, in its dialog */
+.confirmation-modal .remove-choice{
+	display:block;
+	margin:6px 0;
+	font-weight:normal;
+	cursor:pointer
+}
+
 #bulk-change-table.hover-highlight #no-match td:hover::after{
 	content:none
 }
