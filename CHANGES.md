@@ -95,6 +95,7 @@
 * Change reuse a session's kept alive connection for web requests, instead of a new connection per request
 * Change web requests with no session, e.g. to TV info sources, to share kept alive connections
 * Change close a kept alive connection that is idle for over 30 seconds, instead of a request on it that can hang
+* Change TorrentLeech to use torrentleech.org
 
 
 [develop]
