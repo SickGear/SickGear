@@ -79,24 +79,27 @@ $(function(){
 	}
 	updateButtons();
 
-	// a header box shows whether all the boxes of its column that can be ticked are ticked, or part ticked when some are
-	// the table header and its sticky copy have the same box, so both are set
+	// the boxes of a column that can be ticked in the rows a filter shows, the header boxes act on these only, so a
+	// filter that shows 5 shows does not tick the other rows
+	function shownBoxes(name){
+		return $('#bulk-change-table tbody tr:not(.filtered) .' + name).filter(function(){return !this.disabled});
+	}
+
+	// a header box shows whether all the shown boxes of its column that can be ticked are ticked, or part ticked when
+	// some are, the table header and its sticky copy have the same box, so both are set
 	function syncTickAll(name){
-		var boxes$ = $('.' + name).filter(function(){return !this.disabled}), ticked = boxes$.filter(':checked').length;
+		var boxes$ = shownBoxes(name), ticked = boxes$.filter(':checked').length;
 		$('[id="' + name + '"]').each(function(){
 			this.checked = !!boxes$.length && ticked === boxes$.length;
 			this.indeterminate = !!ticked && ticked < boxes$.length;
 		});
 	}
 
-	// on the document, as the sticky header copy is made after this script runs, ticks or clears all boxes of the
+	// on the document, as the sticky header copy is made after this script runs, ticks or clears all shown boxes of the
 	// column that can be ticked, it no longer flips each box, which reversed a selection made by hand
 	$(document).on('click', '.bulk-check', function(){
 		var name = $(this).attr('id'), on = this.checked;
-		$('.' + name).each(function(){
-			if (!this.disabled)
-				this.checked = on;
-		});
+		shownBoxes(name).prop('checked', on);
 		syncTickAll(name);
 		updateButtons();
 	});
@@ -113,7 +116,8 @@ $(function(){
 			} else {
 				var check = this, found = 0;
 
-				$(name).each(function(){
+				// a range runs over the rows a filter shows
+				$('#bulk-change-table tbody tr:not(.filtered) ' + name).each(function(){
 					switch (found){
 						case 2:
 							return !1;
@@ -207,6 +211,7 @@ $(function(){
 		})
 		.bind('filterInit filterEnd', function(e, data){
 			$('#no-match').prop('hidden', 0 < data.filteredRows);
+			$('.bulk-check').each(function(){syncTickAll(this.id);});
 			$('#tfoot').find('.stats').html(
 				(data.filteredRows === data.totalRows
 					? '<span class="total-rows">' +  data.totalRows + '</span> shows'
