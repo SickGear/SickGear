@@ -8163,13 +8163,17 @@ class Manage(MainHandler):
         if 'POST' != self.request.method:
             return self.redirect('/manage/bulk/')
 
-        to_change = dict({_tvid_prodid: helpers.find_show_by_id(_tvid_prodid)
-                          for _tvid_prodid in
-                          next(iter([_x.split('|') for _x in (to_update, to_refresh, to_rename, to_subtitle,
-                                                              to_delete, to_remove) if _x]), '')})
+        # each action is a set of show ids, all the sets are read, and an id matches whole, not as part of another id
+        to_update, to_refresh, to_rename, to_subtitle, to_delete, to_remove = [
+            set(filter(None, _x.split('|')))
+            for _x in (to_update, to_refresh, to_rename, to_subtitle, to_delete, to_remove)]
+        to_change = {_tvid_prodid: helpers.find_show_by_id(_tvid_prodid) for _tvid_prodid in
+                     to_update | to_refresh | to_rename | to_subtitle | to_delete | to_remove}
 
         update, refresh, rename, subtitle, errors = [], [], [], [], []
         for cur_tvid_prodid, cur_show_obj in to_change.items():
+            if not cur_show_obj:
+                continue
 
             if cur_tvid_prodid in to_delete:
                 cur_show_obj.delete_show(True)
@@ -8181,24 +8185,24 @@ class Manage(MainHandler):
                 if cur_tvid_prodid in to_update:
                     try:
                         sickgear.show_queue_scheduler.action.update_show(cur_show_obj, True, True)
-                        update.append(cur_show_obj.name)
+                        update.append(helpers.xhtml_escape(cur_show_obj.name))
                     except exceptions_helper.CantUpdateException as e:
-                        errors.append('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e)))
+                        errors.append(helpers.xhtml_escape('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e))))
 
                 elif cur_tvid_prodid in to_refresh:
                     try:
                         sickgear.show_queue_scheduler.action.refresh_show(cur_show_obj)
-                        refresh.append(cur_show_obj.name)
+                        refresh.append(helpers.xhtml_escape(cur_show_obj.name))
                     except exceptions_helper.CantRefreshException as e:
-                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e)))
+                        errors.append(helpers.xhtml_escape('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e))))
 
                 if cur_tvid_prodid in to_rename:
                     sickgear.show_queue_scheduler.action.rename_show_episodes(cur_show_obj)
-                    rename.append(cur_show_obj.name)
+                    rename.append(helpers.xhtml_escape(cur_show_obj.name))
 
                 if sickgear.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
                     sickgear.show_queue_scheduler.action.download_subtitles(cur_show_obj)
-                    subtitle.append(cur_show_obj.name)
+                    subtitle.append(helpers.xhtml_escape(cur_show_obj.name))
 
         if len(errors):
             ui.notifications.error('Errors encountered', '<br>\n'.join(errors))

@@ -137,6 +137,7 @@
 * Change the bulk change header to dot a filtered column label, a red tag on sorted Remove, a footer count of 5:1
 * Change the bulk change header to set the size menu on the line of the boxes, and Remove 71 pixels wide, not 82
 * Change the bulk change action columns to one block, a darker header, tinted cells, the cell as target
+* Fix bulk change Submit to act on every list of shows, match whole show ids, and escape show names
 
 
 [develop]
