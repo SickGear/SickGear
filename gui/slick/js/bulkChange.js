@@ -401,14 +401,16 @@ $(function(){
 	}
 
 	$('#read-folder-sizes').on('click', function(){
-		var button$ = $(this).prop('disabled', !0).html('<i class="spinner"></i> Reading folders');
+		var button$ = $(this), label = button$.text();
+		button$.prop('disabled', !0).html('<i class="spinner"></i> Reading folders');
 		readSizes().then(function(content){
 			keepSizes(content);
 			showSizes('Size');
 			$('select.size-type').val('Size');
-			button$.attr('title', 'sizes are of all show folder files, read again');
+			$('#size-source').text('Sizes count all files in each show folder');
+			label = 'Read again';
 		}).always(function(){
-			button$.prop('disabled', !1).html('Read folder sizes');
+			button$.prop('disabled', !1).text(label);
 		});
 	});
 
