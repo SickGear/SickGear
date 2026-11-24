@@ -1,4 +1,10 @@
-﻿### 3.36.16 (2026-11-21 15:10:00 UTC)
+﻿### 3.36.17 (2026-11-24 01:50:00 UTC)
+
+* Add SearchNZB usenet provider
+* Remove NinjaCentral provider
+
+
+### 3.36.16 (2026-11-21 15:10:00 UTC)
 
 * Fix restart returns the browser to the port that SickGear listens on, not the one it used, e.g. a docker mapped port
 

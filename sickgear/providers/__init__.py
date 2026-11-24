@@ -230,7 +230,7 @@ def _default_newznab_sources():
         '|'.join(_src) for _src in
         (['NZBgeek', 'https://api.nzbgeek.info/', '', '5030,5040', '0', 'eponly', '0', '0', '0'],
          ['DrunkenSlug', 'https://api.drunkenslug.com/', '', '5030,5040', '0', 'eponly', '0', '0', '0'],
-         ['NinjaCentral', 'https://ninjacentral.co.za/', '', '5030,5040', '0', 'eponly', '0', '0', '0'],
+         ['SearchNZB', 'https://searchnzb.com/', '', '5030,5040', '0', 'eponly', '0', '0', '0'],
          )])
 
 
