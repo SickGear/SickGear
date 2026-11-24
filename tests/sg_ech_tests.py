@@ -123,6 +123,7 @@ class CheckTests(unittest.TestCase):
         sg_ech._retry_at.clear()
         self.hook = mock.Mock()
         self.patches = [mock.patch.object(sg_ech, 'on_route_change', self.hook)]
+        self.patches[0].start()
         self.probe(ip='172.66.134.33', outer=True, named=False, cloudflare=True, ech=True, backend=True)
 
     def tearDown(self):
@@ -133,8 +134,6 @@ class CheckTests(unittest.TestCase):
         sg_ech._retry_at.clear()
 
     def probe(self, ip, outer, named, cloudflare, ech, backend):
-        if not self.patches[0].is_started:
-            self.patches[0].start()
         for cur_name, cur_value in (('_resolve_ip', ip), ('_outer_name_handshake', outer), ('_named_handshake', named),
                                     ('_is_cloudflare', cloudflare), ('_has_ech', ech), ('_ech_backend', backend)):
             self.patches.append(mock.patch.object(sg_ech, cur_name, return_value=cur_value))
