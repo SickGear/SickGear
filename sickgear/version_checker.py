@@ -354,7 +354,7 @@ class GitUpdateManager(UpdateManager):
 
         return self._run_git(['version'], git_path)
 
-    def _run_git(self, arg_list, git_path=None, repeat=False):
+    def _run_git(self, arg_list, git_path=None, repeat=False, fail_ok=False):
 
         output = err = None
         exit_status = 1
@@ -385,7 +385,8 @@ class GitUpdateManager(UpdateManager):
             self.unsafe = False
 
         elif 1 == exit_status:
-            logger.error(f'Failed: {cmd} returned: {output}')
+            # a caller that expects a fail, and says why, has it logged only as debug
+            (logger.error, logger.debug)[fail_ok](f'Failed: {cmd} returned: {output}')
 
         elif 128 == exit_status or 'fatal:' in output or err:
             if 'unsafe repository' not in output and 'fatal:' in output:
@@ -466,7 +467,7 @@ class GitUpdateManager(UpdateManager):
         if not self._cur_pr_number:
 
             # get the latest commit_hash from remote
-            output, _, exit_status = self._run_git(['rev-parse', '--verify', '--quiet', '@{upstream}'])
+            output, _, exit_status = self._run_git(['rev-parse', '--verify', '--quiet', '@{upstream}'], fail_ok=True)
 
             if 0 == exit_status and output:
                 cur_commit_hash = output.strip()
@@ -478,6 +479,10 @@ class GitUpdateManager(UpdateManager):
                 self._newest_commit_hash = cur_commit_hash
                 self._old_commit_hash = cur_commit_hash
                 self._old_branch = self._find_installed_branch()
+            elif 1 == exit_status:
+                # a local branch, one with no upstream, has nothing to update from
+                logger.warning('The checked out branch has no upstream branch, cannot check for update')
+                return
             else:
                 logger.debug("git didn't return newest commit hash")
                 return
