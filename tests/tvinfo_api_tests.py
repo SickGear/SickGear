@@ -75,6 +75,7 @@ def _make_filename(file_str, file_ext, extra_strs=None):
 def _mock_get(*args, **kwargs):
     url = (1 < len(args) and args[1]) or kwargs.get('url')
     post = 'post' == kwargs.pop('method', 'get')
+    live_on_miss = kwargs.pop('live_on_miss', False)
     resp = requests.Response()
     resp.url = url
     resp.status_code = 200
@@ -94,13 +95,14 @@ def _mock_get(*args, **kwargs):
     elif not disable_content_creation:
         kw = kwargs.copy()
         kw.update({'params': args[0].params, 'headers': args[0].headers})
-        if post:
-            resp = requests.post(*args[1:], **kw)
-        else:
-            resp = requests.get(*args[1:], **kw)
+        # by the saved method, a live request would come back to this mock
+        with requests.Session() as live:
+            resp = backup_session_request(live, ('GET', 'POST')[post], *args[1:], **kw)
         if not post or 'imdb.com' in url:
             with lzma.open(data_file, 'wb') as fd:
                 fd.write(resp.content)
+    elif live_on_miss:
+        return backup_session_request(args[0], ('GET', 'POST')[post], *args[1:], **kwargs)
     else:
         print(f'error getting: {url}')
     return resp
@@ -114,6 +116,13 @@ def _mock_post(*args, **kwargs):
     # resp.status_code = 200
     # resp._content = ''
     # return resp
+
+
+def _mock_request(session, method, url, *args, **kwargs):
+    # get_url sends through Session.request, e.g. request('GET', url). The IMDb login by requests.post has no
+    # recorded file, it goes live as when only get and post were mocked
+    kwargs.update(method=method.lower(), live_on_miss='api.imdbws.com/authentication/' in url)
+    return _mock_get(session, url, *args, **kwargs)
 
 
 browse_start_date_filename = os.path.join(mock_data_dir, 'browse_start_date.data')
@@ -176,6 +185,7 @@ def _load_pickle_file(f_name):
 
 backup_session_get = requests.sessions.Session.get
 backup_session_post = requests.sessions.Session.post
+backup_session_request = requests.sessions.Session.request
 
 
 def _check_types(obj, check_list):
@@ -580,6 +590,7 @@ class TVInfoTests(test.SickbeardTestDBCase):
         datetime.datetime = _FakeDateTime
         requests.sessions.Session.get = _mock_get
         requests.sessions.Session.post = _mock_post
+        requests.sessions.Session.request = _mock_request
         # if disable_content_creation:
         #     requests.sessions.Session.post = _mock_post
 
@@ -603,6 +614,7 @@ class TVInfoTests(test.SickbeardTestDBCase):
         datetime.datetime = datetime_datetime_backup
         requests.sessions.Session.get = backup_session_get
         requests.sessions.Session.post = backup_session_post
+        requests.sessions.Session.request = backup_session_request
 
     def tearDown(self):
         super(TVInfoTests, self).tearDown()
@@ -848,5 +860,6 @@ if '__main__' == __name__:
     finally:
         requests.sessions.Session.get = backup_session_get
         requests.sessions.Session.post = backup_session_post
+        requests.sessions.Session.request = backup_session_request
         datetime.date = datetime_date_backup
         datetime.datetime = datetime_datetime_backup

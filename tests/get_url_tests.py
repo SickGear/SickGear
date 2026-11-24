@@ -113,13 +113,25 @@ class SharedPoolTests(unittest.TestCase):
         self.server.shutdown()
         self.server.server_close()
 
+    def connections_of_one_session(self):
+        # the connections that one session opens for 5 requests, the most that the shared pool may open,
+        # e.g. 1 with requests, 2 with niquests
+        with requests.Session() as session:
+            for _ in range(5):
+                self.assertEqual('ok', session.get(self.url).text)
+        count = len(self.connections)
+        self.connections.clear()
+        return count
+
     def test_no_session_no_cache(self):
+        most = self.connections_of_one_session()
         self.assertEqual(['ok'] * 5, [get_url(self.url, nocache=True) for _ in range(5)])
-        self.assertEqual(1, len(self.connections))
+        self.assertLessEqual(len(self.connections), most)
 
     def test_no_session_with_cache(self):
+        most = self.connections_of_one_session()
         self.assertEqual(['ok'] * 5, [get_url(self.url) for _ in range(5)])
-        self.assertEqual(1, len(self.connections))
+        self.assertLessEqual(len(self.connections), most)
 
     def test_no_session_connection_idle_past_the_limit_is_not_reused(self):
         with mock.patch.object(sg_helpers, 'KEEP_ALIVE_IDLE', 0.2):
@@ -144,7 +156,42 @@ class SharedPoolTests(unittest.TestCase):
         self.assertIs(adapter, session.adapters['http://'])
 
 
+class _BasePool(object):
+
+    def __init__(self, conn):
+        self.conn, self.kwargs = conn, None
+
+    def _get_conn(self, timeout=None, **kwargs):
+        self.kwargs = kwargs
+        return self.conn
+
+    def _put_conn(self, conn):
+        pass
+
+
+class _Pool(sg_helpers._IdleLimitPoolMixin, _BasePool):
+    pass
+
+
+class IdlePoolTests(unittest.TestCase):
+
+    def test_get_conn_passes_keyword_args_on(self):
+        pool = _Pool(mock.MagicMock(sg_idle_since=None))
+        pool._get_conn(1, heb_timeout='timeout')
+        self.assertEqual({'heb_timeout': 'timeout'}, pool.kwargs)
+
+    def test_multiplexed_conn_in_use_is_not_closed(self):
+        conn = mock.MagicMock(is_idle=False, sg_idle_since=time.monotonic() - 60)
+        _Pool(conn)._get_conn()
+        conn.close.assert_not_called()
+
+    def test_idle_conn_past_the_limit_is_closed(self):
+        conn = mock.MagicMock(is_idle=True, sg_idle_since=time.monotonic() - 60)
+        _Pool(conn)._get_conn()
+        conn.close.assert_called_once_with()
+
+
 if '__main__' == __name__:
-    for cur_case in (GetUrlTests, SharedPoolTests):
+    for cur_case in (GetUrlTests, SharedPoolTests, IdlePoolTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

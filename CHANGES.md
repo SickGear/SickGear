@@ -96,6 +96,16 @@
 * Change web requests with no session, e.g. to TV info sources, to share kept alive connections
 * Change close a kept alive connection that is idle for over 30 seconds, instead of a request on it that can hang
 * Change TorrentLeech to use torrentleech.org
+* Add h11 0.16.0 (1c5b075)
+* Add jh2 5.0.15 (3b08a9e)
+* Change replace urllib3 2.8.0 (b1d30ab) with urllib3.future 2.25.907 (c2e56e1)
+* Add Charset Normalizer 3.5.3 (0b45fe2)
+* Add wassima 2.1.5 (4052aa7)
+* Add niquests 3.21.3 (3ebbc84)
+* Change use niquests in place of requests for all HTTP activity
+* Remove Requests library 2.34.2 (6e83187), replaced by niquests
+* Add DNS resolver setting to Config/Search/Search Tasks, e.g. doh+cloudflare:// for provider connections
+* Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
 
 
 [develop]

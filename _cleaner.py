@@ -37,6 +37,10 @@ if old_magic != magic_number:
 
 # skip cleaned005 as used during dev by testers
 cleanups = [
+    # lib\requests is now a compat shim, only remove the old library cache
+    ['.cleaned013.tmp', r'lib\requests\sessions.py', [
+        r'lib\requests\__pycache__'
+    ]],
     ['.cleaned012.tmp', r'lib\iso639', [
         r'lib\iso639\__pycache__', r'lib\iso639\data', r'lib\iso639'
     ]],

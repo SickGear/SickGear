@@ -450,7 +450,10 @@ if not PY2 and sg_path and Ek.ek(os.path.isdir, Ek.ek(os.path.join, sg_path, 'li
 
 py_msg = 'Python 3 %s be set to run python files instead of the current Python 2.'
 try:
-    import requests
+    try:
+        import niquests as requests
+    except ImportError:
+        import requests
     if PY2:
         Logger.log(py_msg % 'should', Logger.WARNING)
 except ImportError:
@@ -458,7 +461,7 @@ except ImportError:
         Logger.log(py_msg % 'must', Logger.ERROR)
         sys.exit(1)
     # Logger.log('You must set SickGear sg_base_path in script config or install python requests library', Logger.ERROR)
-    Logger.log('You must install python requests library', Logger.ERROR)
+    Logger.log('You must install python niquests or requests library', Logger.ERROR)
     sys.exit(1)
 
 

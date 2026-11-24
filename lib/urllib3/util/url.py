@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import typing
-from functools import partial
+from functools import lru_cache, partial
 from urllib.parse import unquote as _unquote
 
 from ..exceptions import LocationParseError
@@ -16,8 +16,8 @@ _NORMALIZABLE_SCHEMES = ("http", "https", None)
 # 'rfc3986' module: https://github.com/python-hyper/rfc3986
 _PERCENT_RE = re.compile(r"%[a-fA-F0-9]{2}")
 _HOST_PERCENT_RE = re.compile(r"%[a-fA-F0-9]{2}|%")
-_SCHEME_RE = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+-]*:|/)")
 _HOST_INVALID_CHAR_RE = re.compile(r"[\x00-\x20\x7f]")
+_SCHEME_RE = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+-]*:|/)")
 _URI_RE = re.compile(
     r"^(?:([a-zA-Z][a-zA-Z0-9+.-]*):)?"
     r"(?://([^\\/?#]*))?"
@@ -59,9 +59,7 @@ _IPV6_ADDRZ_PAT = r"\[" + _IPV6_PAT + r"(?:" + _ZONE_ID_PAT + r")?\]"
 _REG_NAME_PAT = r"(?:[^\[\]%:/?#]|%[a-fA-F0-9]{2})*"
 _TARGET_RE = re.compile(r"^(/[^?#]*)(?:\?([^#]*))?(?:#.*)?$")
 
-_IPV4_RE = re.compile(
-    r"^(?:0[xX][0-9a-fA-F]+|[0-9]+)(?:\.(?:0[xX][0-9a-fA-F]+|[0-9]+)){0,3}$"
-)
+_IPV4_RE = re.compile("^" + _IPV4_PAT + "$")
 _IPV6_RE = re.compile("^" + _IPV6_PAT + "$")
 _IPV6_ADDRZ_RE = re.compile("^" + _IPV6_ADDRZ_PAT + "$")
 _BRACELESS_IPV6_ADDRZ_RE = re.compile("^" + _IPV6_ADDRZ_PAT[2:-2] + "$")
@@ -127,7 +125,8 @@ class Url(
     def auth_decoded(self) -> tuple[None, None] | tuple[str, str | None]:
         """
         User information with %-escapes decoded as UTF-8, returned as a
-        ``(username, password)`` tuple.
+        ``(username, password)`` tuple. Invalid UTF-8 sequences are replaced
+        with the Unicode replacement character.
 
         Both values are ``None`` if ``auth`` is ``None``.
         ``password`` is ``None`` if not present in the auth component.
@@ -157,6 +156,9 @@ class Url(
         If only the username is present, a trailing colon is still
         appended.
         If ``auth`` is ``None``, this returns ``None``.
+
+        A decoded username containing a colon cannot be represented in
+        HTTP Basic authentication.
         """
         username, password = self.auth_decoded
         if username is None:
@@ -204,7 +206,7 @@ class Url(
         """
         if self.host is None:
             return None
-        if self.port is not None:
+        if self.port:
             return f"{self.host}:{self.port}"
         return self.host
 
@@ -363,35 +365,45 @@ def _normalize_host(host: str | None, scheme: str | None) -> str | None:
         invalid_host_char = _HOST_INVALID_CHAR_RE.search(host)
         if invalid_host_char:
             raise LocationParseError(
-                f"Host {host!r} contains invalid character "
-                f"{invalid_host_char.group()!r}"
+                f"Host {host!r} contains invalid character {invalid_host_char.group()!r}"
             )
-        if scheme in _NORMALIZABLE_SCHEMES:
-            is_ipv6 = _IPV6_ADDRZ_RE.match(host)
-            if is_ipv6:
-                # IPv6 hosts of the form 'a::b%zone' are encoded in a URL as
-                # such per RFC 6874: 'a::b%25zone'. Unquote the ZoneID
-                # separator as necessary to return a valid RFC 4007 scoped IP.
-                match = _ZONE_ID_RE.search(host)
-                if match:
-                    start, end = match.span(1)
-                    zone_id = host[start:end]
+        # Validate every scheme without changing non-HTTP host normalization.
+        normalize = scheme in _NORMALIZABLE_SCHEMES
+        is_ipv6 = _IPV6_ADDRZ_RE.fullmatch(host)
+        if is_ipv6:
+            # IPv6 hosts of the form 'a::b%zone' are encoded in a URL as
+            # such per RFC 6874: 'a::b%25zone'. Unquote the ZoneID
+            # separator as necessary to return a valid RFC 4007 scoped IP.
+            match = _ZONE_ID_RE.search(host)
+            if match:
+                start, end = match.span(1)
+                zone_id = host[start:end]
 
-                    if zone_id.startswith("%25") and zone_id != "%25":
-                        zone_id = zone_id[3:]
-                    else:
-                        zone_id = zone_id[1:]
-                    zone_id = _PERCENT_RE.sub(
-                        partial(_normalize_zone_id_percent_encoding, error_host=host),
-                        zone_id,
-                    )
+                if zone_id.startswith("%25") and zone_id != "%25":
+                    zone_id = zone_id[3:]
+                else:
+                    zone_id = zone_id[1:]
+                zone_id = _PERCENT_RE.sub(
+                    partial(_normalize_host_percent_encoding, decode_unreserved=False),
+                    zone_id,
+                )
+                if normalize:
                     zone_id = _encode_invalid_chars(zone_id, _UNRESERVED_CHARS)
                     return f"{host[:start].lower()}%{zone_id}{host[end:]}"
-                else:
-                    return host.lower()
-            elif not _IPV4_RE.match(host):
-                if "%" in host:
-                    host = _HOST_PERCENT_RE.sub(_normalize_host_percent_encoding, host)
+            elif normalize:
+                return host.lower()
+        elif not _IPV4_RE.fullmatch(host):
+            if "%" in host:
+                address, separator, zone = host.partition("%")
+                if ":" in address and host.isascii() and _IPV6_RE.fullmatch(address):
+                    # Native IPv6 zone names are literal and may be case-sensitive.
+                    return f"{address.lower()}{separator}{zone}" if normalize else host
+                normalized_host = _HOST_PERCENT_RE.sub(
+                    _normalize_host_percent_encoding, host
+                )
+                if normalize:
+                    host = normalized_host
+            if normalize:
                 return to_str(
                     b".".join([_idna_encode(label) for label in host.split(".")]),
                     "ascii",
@@ -399,57 +411,78 @@ def _normalize_host(host: str | None, scheme: str | None) -> str | None:
     return host
 
 
-def _decode_percent_encoding(match: re.Match[str], *, error_host: str) -> str:
-    percent_encoded_octet = match.group(0)
-    decoded_octet = chr(int(percent_encoded_octet[1:], 16))
-    # Keep this narrower than _HOST_INVALID_CHAR_RE because "%20" is valid
-    # percent-encoding and remains encoded.
-    if decoded_octet < "\x20" or decoded_octet == "\x7f":
-        raise LocationParseError(
-            f"Host {error_host!r} contains invalid percent-encoded "
-            f"control character {percent_encoded_octet!r}"
-        )
-    return decoded_octet
+def _encode_host(host: str | None, scheme: str | None) -> str | None:
+    """Re-encode a parsed zone separator before passing a host to a pool."""
+    if host and host[0] == "[" and "%" in host and scheme in _NORMALIZABLE_SCHEMES:
+        return host.replace("%", "%25", 1)
+    return host
 
 
-def _normalize_host_percent_encoding(match: re.Match[str]) -> str:
-    # Reject invalid percent encodings
-    if match.group(0) == "%":
-        raise LocationParseError(f"{match.string!r} is not a valid host")
-    decoded_octet = _decode_percent_encoding(match, error_host=match.string)
-    if decoded_octet in _UNRESERVED_CHARS:
-        return decoded_octet
-    return match.group(0).upper()
-
-
-def _normalize_zone_id_percent_encoding(
-    match: re.Match[str], *, error_host: str
+def _normalize_host_percent_encoding(
+    match: re.Match[str], *, decode_unreserved: bool = True
 ) -> str:
-    _decode_percent_encoding(match, error_host=error_host)
-    return match.group(0).upper()
+    encoded = match.group(0)
+    if encoded == "%":
+        raise LocationParseError(f"{match.string!r} is not a valid host")
+    decoded = chr(int(encoded[1:], 16))
+    # Encoded spaces and reserved characters stay encoded; controls are invalid.
+    if decoded < "\x20" or decoded == "\x7f":
+        raise LocationParseError(
+            f"Host {match.string!r} contains invalid percent-encoded control "
+            f"character {encoded!r}"
+        )
+    if decode_unreserved and decoded in _UNRESERVED_CHARS:
+        return decoded
+    return encoded.upper()
 
 
 def _idna_encode(name: str) -> bytes:
     if not name.isascii():
+        # we can do IDNA encoding using
+        # two solutions.
+        #   A) native IDNA package
+        #   B) qh3 internal hazmat idna encoder
+        # we keep IDNA package try first for
+        # backward compatibility.
+        # qh3 idna encoder is less strict (browser like)
+        # regarding labels. So it may be a surprise to see
+        # some label not raising an exception when it is
+        # clearly expected.
         try:
             import idna
+        except ImportError:
+            pass
+        else:
+            try:
+                return idna.encode(name.lower(), strict=True, std3_rules=True)
+            except idna.IDNAError:
+                raise LocationParseError(
+                    f"Name '{name}' is not a valid IDNA label"
+                ) from None
+
+        try:
+            from qh3._hazmat import idna_encode as hazmat_idna
         except ImportError:
             raise LocationParseError(
                 "Unable to parse URL without the 'idna' module"
             ) from None
+        else:
+            try:
+                return hazmat_idna(name.lower())
+            except (ValueError, TypeError):
+                # TypeError in qh3 1.4.0 (due to an internal binding call error)
+                # ValueError >= 1.4.1 (correct one)
+                raise LocationParseError(
+                    f"Name '{name}' is not a valid IDNA label"
+                ) from None
 
-        try:
-            return idna.encode(name.lower(), strict=True, std3_rules=True)
-        except idna.IDNAError:
-            raise LocationParseError(
-                f"Name '{name}' is not a valid IDNA label"
-            ) from None
-
-    return _PERCENT_RE.sub(lambda match: match.group(0).upper(), name.lower()).encode(
-        "ascii"
-    )
+    name = name.lower()
+    if "%" in name:
+        name = _PERCENT_RE.sub(lambda match: match.group(0).upper(), name)
+    return name.encode("ascii")
 
 
+@lru_cache(maxsize=1024)
 def _encode_target(target: str) -> str:
     """Percent-encodes a request target so that there are no invalid characters
 
@@ -468,6 +501,7 @@ def _encode_target(target: str) -> str:
     return encoded_target
 
 
+@lru_cache(maxsize=1024)
 def parse_url(url: str) -> Url:
     """
     Given a url, return a parsed :class:`.Url` namedtuple. Best-effort is
@@ -500,6 +534,7 @@ def parse_url(url: str) -> Url:
         # Empty
         return Url()
 
+    source_url = url
     if not _SCHEME_RE.search(url):
         url = "//" + url
 
@@ -513,48 +548,43 @@ def parse_url(url: str) -> Url:
     query: str | None
     fragment: str | None
 
-    scheme, authority, path, query, fragment = _URI_RE.match(url).groups()  # type: ignore[union-attr]
-    normalize_uri = scheme is None or scheme.lower() in _NORMALIZABLE_SCHEMES
+    try:
+        scheme, authority, path, query, fragment = _URI_RE.match(url).groups()  # type: ignore[union-attr]
+        normalize_uri = scheme is None or scheme.lower() in _NORMALIZABLE_SCHEMES
 
-    if scheme:
-        scheme = scheme.lower()
+        if scheme:
+            scheme = scheme.lower()
 
-    if authority:
-        auth, _, host_port = authority.rpartition("@")
-        auth = auth or None
-        host_port_match = _HOST_PORT_RE.fullmatch(host_port)
-        if not host_port_match:
-            invalid_host_char = _HOST_INVALID_CHAR_RE.search(host_port)
-            if invalid_host_char:
-                raise LocationParseError(
-                    f"Host {host_port!r} contains invalid character "
-                    f"{invalid_host_char.group()!r}"
-                )
-            raise LocationParseError(f"{host_port!r} is not a valid host or port")
-        host, port = host_port_match.groups()
-        if auth and normalize_uri:
-            auth = _encode_invalid_chars(auth, _USERINFO_CHARS)
-        if port == "":
-            port = None
-    else:
-        auth, host, port = None, None, None
+        if authority:
+            auth, _, host_port = authority.rpartition("@")
+            auth = auth or None
+            host, port = _HOST_PORT_RE.fullmatch(host_port).groups()  # type: ignore[union-attr]
+            if auth and normalize_uri:
+                auth = _encode_invalid_chars(auth, _USERINFO_CHARS)
+            if port == "":
+                port = None
+        else:
+            auth, host, port = None, None, None
 
-    if port is not None:
-        port_int = int(port)
-        if not (0 <= port_int <= 65535):
-            raise LocationParseError(url)
-    else:
-        port_int = None
+        if port is not None:
+            port_int = int(port)
+            if not (0 <= port_int <= 65535):
+                raise LocationParseError(url)
+        else:
+            port_int = None
 
-    host = _normalize_host(host, scheme)
+        host = _normalize_host(host, scheme)
 
-    if normalize_uri and path:
-        path = _remove_path_dot_segments(path)
-        path = _encode_invalid_chars(path, _PATH_CHARS)
-    if normalize_uri and query:
-        query = _encode_invalid_chars(query, _QUERY_CHARS)
-    if normalize_uri and fragment:
-        fragment = _encode_invalid_chars(fragment, _FRAGMENT_CHARS)
+        if normalize_uri and path:
+            path = _remove_path_dot_segments(path)
+            path = _encode_invalid_chars(path, _PATH_CHARS)
+        if normalize_uri and query:
+            query = _encode_invalid_chars(query, _QUERY_CHARS)
+        if normalize_uri and fragment:
+            fragment = _encode_invalid_chars(fragment, _FRAGMENT_CHARS)
+
+    except (ValueError, AttributeError) as e:
+        raise LocationParseError(source_url) from e
 
     # For the sake of backwards compatibility we put empty
     # string values for path if there are any defined values
@@ -575,3 +605,9 @@ def parse_url(url: str) -> Url:
         query=query,
         fragment=fragment,
     )
+
+
+def parse_extension(scheme: str) -> tuple[str, str | None]:
+    if "+" in scheme:
+        return tuple(scheme.split("+", maxsplit=1))  # type: ignore[return-value]
+    return scheme, None

@@ -8,7 +8,9 @@ from socket import getdefaulttimeout
 from ..exceptions import TimeoutStateError
 
 if typing.TYPE_CHECKING:
-    from typing import Final
+    from typing_extensions import Final
+
+    from .._typing import _TYPE_TIMEOUT, _TYPE_TIMEOUT_INTERNAL
 
 
 class _TYPE_DEFAULT(Enum):
@@ -18,8 +20,6 @@ class _TYPE_DEFAULT(Enum):
 
 
 _DEFAULT_TIMEOUT: Final[_TYPE_DEFAULT] = _TYPE_DEFAULT.token
-
-_TYPE_TIMEOUT = typing.Optional[typing.Union[float, _TYPE_DEFAULT]]
 
 
 class Timeout:
@@ -101,6 +101,10 @@ class Timeout:
         the case; if a server streams one byte every fifteen seconds, a timeout
         of 20 seconds will not trigger, even though the request will take
         several minutes to complete.
+
+        If your goal is to cut off any request after a set amount of wall clock
+        time, consider having a second "watcher" thread to cut off a slow
+        request.
     """
 
     #: A sentinel object representing the default timeout value
@@ -108,9 +112,9 @@ class Timeout:
 
     def __init__(
         self,
-        total: _TYPE_TIMEOUT = None,
-        connect: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
-        read: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
+        total: _TYPE_TIMEOUT_INTERNAL = None,
+        connect: _TYPE_TIMEOUT_INTERNAL = _DEFAULT_TIMEOUT,
+        read: _TYPE_TIMEOUT_INTERNAL = _DEFAULT_TIMEOUT,
     ) -> None:
         self._connect = self._validate_timeout(connect, "connect")
         self._read = self._validate_timeout(read, "read")
@@ -124,11 +128,13 @@ class Timeout:
     __str__ = __repr__
 
     @staticmethod
-    def resolve_default_timeout(timeout: _TYPE_TIMEOUT) -> float | None:
+    def resolve_default_timeout(timeout: _TYPE_TIMEOUT_INTERNAL) -> float | None:
         return getdefaulttimeout() if timeout is _DEFAULT_TIMEOUT else timeout
 
     @classmethod
-    def _validate_timeout(cls, value: _TYPE_TIMEOUT, name: str) -> _TYPE_TIMEOUT:
+    def _validate_timeout(
+        cls, value: _TYPE_TIMEOUT, name: str
+    ) -> _TYPE_TIMEOUT_INTERNAL:
         """Check that a timeout attribute is valid.
 
         :param value: The timeout value to validate
@@ -143,11 +149,10 @@ class Timeout:
 
         if isinstance(value, bool):
             raise ValueError(
-                "Timeout cannot be a boolean value. It must "
-                "be an int, float or None."
+                "Timeout cannot be a boolean value. It must be an int, float or None."
             )
         try:
-            float(value)
+            float(value)  # type: ignore[arg-type]
         except (TypeError, ValueError):
             raise ValueError(
                 "Timeout value %s was %s, but it must be an "
@@ -155,7 +160,7 @@ class Timeout:
             ) from None
 
         try:
-            if value <= 0:
+            if value <= 0:  # type: ignore[operator]
                 raise ValueError(
                     "Attempted to set %s timeout to %s, but the "
                     "timeout cannot be set to a value less "
@@ -167,10 +172,10 @@ class Timeout:
                 "int, float or None." % (name, value)
             ) from None
 
-        return value
+        return value  # type: ignore[return-value]
 
     @classmethod
-    def from_float(cls, timeout: _TYPE_TIMEOUT) -> Timeout:
+    def from_float(cls, timeout: _TYPE_TIMEOUT_INTERNAL) -> Timeout:
         """Create a new Timeout from a legacy timeout value.
 
         The timeout value used by httplib.py sets the same timeout on the
@@ -225,7 +230,7 @@ class Timeout:
         return time.monotonic() - self._start_connect
 
     @property
-    def connect_timeout(self) -> _TYPE_TIMEOUT:
+    def connect_timeout(self) -> _TYPE_TIMEOUT_INTERNAL:
         """Get the value to use when setting a connection timeout.
 
         This will be a positive float or integer, the value None

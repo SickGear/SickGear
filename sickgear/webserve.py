@@ -58,6 +58,7 @@ from tornado.ioloop import IOLoop
 # import requests
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from niquests.utils import create_resolver
 from cfscrape import CloudflareScraper
 from dateutil import tz
 from dateutil.relativedelta import relativedelta
@@ -9548,7 +9549,7 @@ class ConfigSearch(Config):
                     usenet_retention=None, ignore_words=None, require_words=None,
                     download_propers=None, propers_webdl_onegrp=None,
                     search_unaired=None, unaired_recent_search_only=None, flaresolverr_host=None,
-                    allow_high_priority=None,
+                    dns_resolver=None, allow_high_priority=None,
                     sab_username=None, sab_password=None, sab_apikey=None, sab_category=None, sab_host=None,
                     nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
                     nzbget_use_https=None, nzbget_priority=None, nzbget_parent_map=None,
@@ -9609,6 +9610,17 @@ class ConfigSearch(Config):
 
         sickgear.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
         sg_helpers.FLARESOLVERR_HOST = sickgear.FLARESOLVERR_HOST
+
+        dns_resolver = (dns_resolver or '').strip()
+        if dns_resolver != (sickgear.DNS_RESOLVER or ''):
+            try:
+                create_resolver(dns_resolver or None).close()
+            except (BaseException, Exception) as e:
+                results += ['DNS resolver "%s" rejected (%s), setting unchanged.' % (dns_resolver, ex(e))]
+            else:
+                sickgear.DNS_RESOLVER = dns_resolver
+                sg_helpers.DNS_RESOLVER = dns_resolver
+                sickgear.providers.apply_dns_resolver(dns_resolver)
 
         sickgear.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 

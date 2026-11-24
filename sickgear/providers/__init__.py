@@ -17,6 +17,9 @@
 import importlib
 import sys
 
+from cfscrape import CloudflareScraper
+
+import sg_ech
 import sickgear
 from . import generic, newznab
 from .newznab import NewznabConstants
@@ -51,6 +54,22 @@ for module in __all__:
     except ImportError as e:
         if 'custom' != module[0:6]:
             raise e
+
+
+def apply_dns_resolver(resolver, close=True):
+    # type: (AnyStr, bool) -> None
+    """
+    rebuild provider sessions with a DNS resolver, needed as sessions are built at import before config is read
+
+    :param resolver: niquests resolver url, e.g. doh+cloudflare:// or '' for system DNS
+    :param close: close the old sessions, False while other threads may still have requests running on them
+    """
+    for cur_provider in sorted_sources():
+        new_session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(resolver))
+        # keep logins
+        new_session.cookies.update(cur_provider.session.cookies)
+        close and cur_provider.session.close()
+        cur_provider.session = new_session
 
 
 def sorted_sources():

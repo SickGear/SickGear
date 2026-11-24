@@ -34,6 +34,7 @@ from threading import Lock
 from configobj import ConfigObj
 from six import string_types
 
+import sg_ech
 import sg_helpers
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
@@ -282,6 +283,7 @@ MAX_WATCHEDSTATE_INTERVAL = 60
 SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 FLARESOLVERR_HOST = None
+DNS_RESOLVER = None
 
 ADD_SHOWS_WO_DIR = False
 ADD_SHOWS_METALANG = 'en'
@@ -673,7 +675,7 @@ def init_stage_1(console_logging):
     global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_INTERVAL, \
         BACKLOG_LIMITED_PERIOD, BACKLOG_NOFULL, BACKLOG_PERIOD, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
         IGNORE_WORDS, IGNORE_WORDS_REGEX, REQUIRE_WORDS, REQUIRE_WORDS_REGEX, \
-        ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, FLARESOLVERR_HOST
+        ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, FLARESOLVERR_HOST, DNS_RESOLVER
     # Search Settings/NZB search
     global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
         NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, \
@@ -980,6 +982,8 @@ def init_stage_1(console_logging):
     UNAIRED_RECENT_SEARCH_ONLY = bool(check_setting_int(CFG, 'General', 'unaired_recent_search_only', 1))
     FLARESOLVERR_HOST = check_setting_str(CFG, 'General', 'flaresolverr_host', '')
     sg_helpers.FLARESOLVERR_HOST = FLARESOLVERR_HOST
+    DNS_RESOLVER = check_setting_str(CFG, 'General', 'dns_resolver', '')
+    sg_helpers.DNS_RESOLVER = DNS_RESOLVER
 
     NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
     TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -1334,6 +1338,10 @@ def init_stage_1(console_logging):
 
     torrentrss_data = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
     torrent_rss_providers = providers.torrent_rss_source_list(torrentrss_data)
+    # rebuild provider sessions when a domain blocked by name at the ISP is routed via DoH for ECH
+    sg_ech.on_route_change = lambda: providers.apply_dns_resolver(DNS_RESOLVER, close=False)
+    if DNS_RESOLVER:
+        providers.apply_dns_resolver(DNS_RESOLVER)
 
     # dynamically load provider settings
     for torrent_prov in [curProvider for curProvider in providers.sorted_sources()
@@ -1978,6 +1986,7 @@ def _save_config(force=False, **kwargs):
     new_config['General']['search_unaired'] = int(SEARCH_UNAIRED)
     new_config['General']['unaired_recent_search_only'] = int(UNAIRED_RECENT_SEARCH_ONLY)
     new_config['General']['flaresolverr_host'] = FLARESOLVERR_HOST
+    new_config['General']['dns_resolver'] = DNS_RESOLVER
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     sg_helpers.CACHE_DIR = CACHE_DIR

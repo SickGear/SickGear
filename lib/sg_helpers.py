@@ -4,6 +4,7 @@
 import ast
 import codecs
 import datetime
+import functools
 import getpass
 import hashlib
 import io
@@ -34,6 +35,7 @@ from send2trash import send2trash
 from six import integer_types, moves, PY2, string_types, text_type
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
+import sg_ech
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
 # noinspection PyPep8Naming
@@ -128,6 +130,7 @@ USER_AGENT = ''
 CACHE_DIR = None
 DATA_DIR = None
 PROXY_SETTING = None
+DNS_RESOLVER = None
 TRASH_REMOVE_SHOW = False
 REMOVE_FILENAME_CHARS = None
 MEMCACHE = {}
@@ -780,10 +783,12 @@ class _IdleLimitPoolMixin(object):
     close a pooled connection that is idle longer than KEEP_ALIVE_IDLE, instead of a request on it.
     A router or firewall can drop an idle connection with no sign, then a request on it waits for its full timeout
     """
-    def _get_conn(self, timeout=None):
-        conn = super()._get_conn(timeout)
+    def _get_conn(self, timeout=None, **kwargs):
+        conn = super()._get_conn(timeout, **kwargs)
         idle_since = getattr(conn, 'sg_idle_since', None)
-        if None is not idle_since and KEEP_ALIVE_IDLE < time.monotonic() - idle_since:
+        # a multiplexed connection is handed out while a request is still on it, close only one that is idle
+        if None is not idle_since and getattr(conn, 'is_idle', True) \
+                and KEEP_ALIVE_IDLE < time.monotonic() - idle_since:
             conn.close()  # the pool connects it again, as it does for a dropped connection
         return conn
 
@@ -829,21 +834,23 @@ class IdleLimitCacheControlAdapter(_IdleLimitAdapterMixin, CacheControlAdapter):
 # adapters, each with its pool of connections, for requests that are made with no session of the caller.
 # A new session is made for each of those requests, and a pool that lives and ends with that session
 # opens a new connection, with a new TLS handshake, for every request
-_shared_adapters = {}  # type: Dict[Optional[AnyStr], requests.adapters.HTTPAdapter]
+_shared_adapters = {}  # type: Dict[Tuple[Optional[AnyStr], Optional[AnyStr]], requests.adapters.HTTPAdapter]
 _shared_adapters_lock = threading.Lock()
 
 
-def _shared_adapter(cache_dir):
-    # type: (Optional[AnyStr]) -> requests.adapters.HTTPAdapter
+def _shared_adapter(cache_dir, resolver=None):
+    # type: (Optional[AnyStr], Optional[AnyStr]) -> requests.adapters.HTTPAdapter
     """
     :param cache_dir: folder of the response cache, or None for an adapter that does not cache
+    :param resolver: url of the DNS resolver, or None for the DNS of the system
     :return: the adapter that all requests with no session of the caller share
     """
     with _shared_adapters_lock:
-        if cache_dir not in _shared_adapters:
-            _shared_adapters[cache_dir] = IdleLimitHTTPAdapter() if None is cache_dir \
-                else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir))
-        return _shared_adapters[cache_dir]
+        key = (cache_dir, tuple(resolver) if isinstance(resolver, list) else resolver)
+        if key not in _shared_adapters:
+            _shared_adapters[key] = IdleLimitHTTPAdapter(resolver=resolver) if None is cache_dir \
+                else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir), resolver=resolver)
+        return _shared_adapters[key]
 
 
 def get_url(url,  # type: AnyStr
@@ -926,11 +933,11 @@ def get_url(url,  # type: AnyStr
     use_shared_adapter = False
     if None is session:
         if (kwargs.get('url_solver') or '').strip():
-            session = CloudflareScraper.create_scraper()
+            session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(DNS_RESOLVER))
         else:
             # in case of an empty argument
             kwargs.pop('url_solver', None)
-            session = requests.Session()
+            session = requests.Session(resolver=sg_ech.session_resolver(DNS_RESOLVER))
             use_shared_adapter = True
         session.headers.update({'User-Agent': USER_AGENT})
 
@@ -951,11 +958,12 @@ def get_url(url,  # type: AnyStr
     if use_shared_adapter:
         # the session is new, but its connections are kept for the next request to the same site
         for cur_prefix in ('https://', 'http://'):
-            session.mount(cur_prefix, _shared_adapter(cache_dir))
+            session.mount(cur_prefix, _shared_adapter(cache_dir, sg_ech.session_resolver(DNS_RESOLVER)))
     # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
     elif cache_dir and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
+        # keep the session resolver, CacheControl mounts a new adapter that would otherwise use system DNS
         session = CacheControl(sess=session, cache=caches.FileCache(cache_dir),
-                               adapter_class=IdleLimitCacheControlAdapter)
+                               adapter_class=functools.partial(IdleLimitCacheControlAdapter, resolver=session.resolver))
 
     provider = kwargs.pop('provider', None)
 
@@ -1015,9 +1023,10 @@ def get_url(url,  # type: AnyStr
             if post_json:
                 kwargs.setdefault('json', post_json)
 
-            method = session.post
+            # niquests post() has no **kwargs, so route via request() where CloudflareScraper pops url_solver
+            method = functools.partial(session.request, 'POST')
         else:
-            method = session.get
+            method = functools.partial(session.request, 'GET')
 
         for r in range(0, 5):
             response = method(url, timeout=timeout, **kwargs)
@@ -1039,7 +1048,7 @@ def get_url(url,  # type: AnyStr
             if encoding:
                 response.encoding = encoding
             elif not response.encoding or 'charset' not in response.headers.get('Content-Type', ''):
-                response.encoding = response.apparent_encoding
+                response.encoding = None  # niquests guesses via charset_normalizer when None
 
         # noinspection PyProtectedMember
         if provider and not proxy_browser and provider._has_signature(response.text):
@@ -1073,6 +1082,12 @@ def get_url(url,  # type: AnyStr
         raised = e
         if 'mute_connect_err' not in mute:
             logger.warning(f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
+        # an ISP may block the site by the server name in the TLS handshake, ECH via DoH can get past that,
+        # check the host the request failed on, a redirect may have moved it from the host of url
+        failed_url = getattr(getattr(e, 'request', None), 'url', None) or url
+        if failed_url.startswith('https://') and sg_ech.is_ssl_error(e) \
+                and sg_ech.ROUTED == sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER):
+            e.sg_ech_routed = True
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:

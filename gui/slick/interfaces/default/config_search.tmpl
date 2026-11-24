@@ -252,6 +252,16 @@
 							</span>
 						</div>
 
+						<div class="field-pair adv">
+							<label for="dns-resolver">
+								<span class="component-title">DNS resolver</span>
+								<span class="component-desc">
+									<input type="text" name="dns_resolver" id="dns-resolver" value="$sickgear.DNS_RESOLVER" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false"><p>blank to use system DNS</p>
+									<p class="clear-left note">DNS resolver for provider connections, DoH is used where needed to reach a site<br>e.g. doh+cloudflare://, doh+google://, doh+quad9://, dot+cloudflare://, dou://1.1.1.1</p>
+								</span>
+							</label>
+						</div>
+
 						<input type="submit" class="btn config_submitter" value="Save Changes" style="display:block;margin-top:20px">
 
 					</fieldset>

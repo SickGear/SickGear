@@ -39,15 +39,16 @@ class CloudflareError(RequestException):
 
 class CloudflareScraper(Session):
     def __init__(self, **kwargs):
-        super(CloudflareScraper, self).__init__()
+        delay = kwargs.pop('delay', None)
+        super(CloudflareScraper, self).__init__(**kwargs)
 
-        if 'requests' in self.headers['User-Agent']:
+        if 'niquests' in self.headers['User-Agent']:
             # Set a random User-Agent if no custom User-Agent has been set
             self.headers['User-Agent'] = random.choice(DEFAULT_USER_AGENTS)
         self.cf_ua = self.headers['User-Agent']
 
         self.default_delay = 8
-        self.delay = kwargs.pop('delay', self.default_delay)
+        self.delay = self.default_delay if None is delay else delay
         self.start_time = None
 
         self.trust_env = False

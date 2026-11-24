@@ -6,17 +6,10 @@ import os
 import typing
 from io import BytesIO
 
-from .fields import _TYPE_FIELD_VALUE_TUPLE, RequestField
+from ._typing import _TYPE_FIELD_VALUE_TUPLE, _TYPE_FIELDS
+from .fields import RequestField
 
 writer = codecs.lookup("utf-8")[3]
-
-_TYPE_FIELDS_SEQUENCE = typing.Sequence[
-    typing.Union[tuple[str, _TYPE_FIELD_VALUE_TUPLE], RequestField]
-]
-_TYPE_FIELDS = typing.Union[
-    _TYPE_FIELDS_SEQUENCE,
-    typing.Mapping[str, _TYPE_FIELD_VALUE_TUPLE],
-]
 
 
 def choose_boundary() -> str:

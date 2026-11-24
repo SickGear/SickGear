@@ -40,10 +40,13 @@ sys.path.insert(1, os.path.join(sg_path, 'lib'))
 sys.path.insert(1, sg_path)
 
 try:
-    import requests
+    import niquests as requests
 except ImportError:
-    print('You must install python requests library')
-    sys.exit(1)
+    try:
+        import requests
+    except ImportError:
+        print('You must install python niquests or requests library')
+        sys.exit(1)
 
 try:  # Try importing Python 3 modules
     import configparser

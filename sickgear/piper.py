@@ -6,7 +6,7 @@ import io
 import os
 import re
 
-from requests.structures import CaseInsensitiveDict
+from requests.structures import CaseInsensitiveDict as _CaseInsensitiveDict
 
 from json_helper import json_loads
 from sg_helpers import cmdline_runner, is_virtualenv
@@ -144,6 +144,12 @@ def check_pip_installed():
     """Return working installed Python performance packages"""
     input_reco, _, installed, _ = _check_pip_env()
     return installed, input_reco
+
+
+class CaseInsensitiveDict(_CaseInsensitiveDict):
+    def __setitem__(self, key, value):
+        # niquests only permits str/bytes values, this map holds Version objects
+        self._store[key.lower()] = (key, value)
 
 
 def check_pip_env():
