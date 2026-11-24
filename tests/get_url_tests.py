@@ -86,6 +86,17 @@ class GetUrlTests(unittest.TestCase):
         self.assertIs(adapter, session.adapters['https://'])
 
 
+class ConnectionFailNoDbTests(unittest.TestCase):
+    """ a script that uses sg_helpers without a running SickGear has no db """
+
+    def test_fail_values_with_no_db(self):
+        with mock.patch.object(sg_helpers, 'db', None), mock.patch.object(sg_helpers, 'DATA_DIR', '.'):
+            fail_list = sg_helpers.ConnectionFailList('no-db.example.org')
+            fail_list.failure_count += 1
+            fail_list.failure_time = None
+        self.assertEqual(1, fail_list.failure_count)
+
+
 class SharedPoolTests(unittest.TestCase):
     """ requests with no session of the caller reuse a connection, each of them used to open a new one """
 
@@ -192,6 +203,6 @@ class IdlePoolTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for cur_case in (GetUrlTests, SharedPoolTests, IdlePoolTests):
+    for cur_case in (GetUrlTests, ConnectionFailNoDbTests, SharedPoolTests, IdlePoolTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

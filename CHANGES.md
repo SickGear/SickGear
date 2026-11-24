@@ -152,6 +152,7 @@
 * Change the Emby setting warning to log once, not at each watched state check, until the setting changes
 * Fix backlog warns no provider has backlog searching when a torrent provider has scheduled backlog off
 * Change log a FlareSolverr that is not running or fails as one line, at most each 10 minutes, with no traceback
+* Fix a script that fetches a page with SickGear helpers stops with an error when the fetch fails
 
 
 [develop]

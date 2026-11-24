@@ -533,7 +533,7 @@ class ConnectionFailList(object):
             self.save_list()
 
     def _load_fail_values(self):
-        if None is not DATA_DIR:
+        if None is not DATA_DIR and None is not db:
             with db.DBConnection('cache.db') as sg_db:
                 if sg_db.has_table('connection_fails_count'):
                     r = sg_db.select('SELECT * FROM connection_fails_count WHERE domain_url = ?', [self.url])
@@ -555,13 +555,14 @@ class ConnectionFailList(object):
                     self._last_fail_type = self.last_fail
 
     def _save_fail_value(self, field, value):
-        with db.DBConnection('cache.db') as sg_db:
-            if sg_db.has_table('connection_fails_count'):
-                r = sg_db.action(f'UPDATE connection_fails_count SET {field} = ? WHERE domain_url = ?',
-                                 [value, self.url])
-                if 0 == r.rowcount:
-                    sg_db.action(f'REPLACE INTO connection_fails_count (domain_url, {field}) VALUES (?,?)',
-                                 [self.url, value])
+        if None is not db:
+            with db.DBConnection('cache.db') as sg_db:
+                if sg_db.has_table('connection_fails_count'):
+                    r = sg_db.action(f'UPDATE connection_fails_count SET {field} = ? WHERE domain_url = ?',
+                                     [value, self.url])
+                    if 0 == r.rowcount:
+                        sg_db.action(f'REPLACE INTO connection_fails_count (domain_url, {field}) VALUES (?,?)',
+                                     [self.url, value])
 
     def save_list(self):
         if self.dirty:
