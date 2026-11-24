@@ -39,6 +39,8 @@
 });
 ##
 #set $enable_tvinfo = True
+## an empty column starts and one ends the block of action columns, the last holds the end of the Remove label, so the
+## five action columns are of one width, the first balances the block
 #set $column_headers = [
     ("'digit'", '!1', 'action'),
     ("'showNames'", '!0', False),
@@ -50,8 +52,10 @@
     ((None, "'anime'")[$has_any_anime], '!0', True),
     ((None, "'flatfold'")[$has_any_flat_folders], '!0', True),
     ("'paused'", '!0', True), ("'status'", '!0', False),
+    ('!1', '!1', False),
     ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'),
-    ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action')
+    ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action'),
+    ('!1', '!1', False)
 ]
 #set $columns_total = $len($column_headers) - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickgear.USE_SUBTITLES])
 #set $headers = []
@@ -147,24 +151,31 @@
 @supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
 ## the Show Name arrow is clear of the tag behind the sorted label
 .tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:left 0 bottom 23px; padding:4px 4px 17px 22px}
-.tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:left 10px bottom 7px}
-.tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:left 30px bottom 7px}
+## a sort arrow is under the middle of its column, as its slanted label is
+.tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:center bottom 7px}
+.tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:center bottom 7px}
 .tablesorter.rotate th.tablesorter-header.sort-size{background-position:center bottom 5px}
-.tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:left 20px bottom 7px}
-.tablesorter.rotate th.tablesorter-header.sort-action{background-position:left 10px bottom 5px; padding:4px 11px; text-align:left}
+.tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:center bottom 7px}
+.tablesorter.rotate th.tablesorter-header.sort-action{background-position:center bottom 5px; padding:4px 11px; text-align:left}
 ## a tick all box stands upright under its slanted label, over the boxes of its column, as the Edit box does
 .tablesorter.rotate th.sort-action input.bulk-check{display:block; margin:0 0 0 2px}
 .tablesorter th.col-checkbox input.bulk-check{display:block; margin:0 auto}
-## the last column, Remove, has room on its right for its slanted label, the table edge would cut it
-#bulk-change-table thead th.sort-action.col-destructive, #bulk-change-table-sticky thead th.sort-action.col-destructive{padding-right:40px}
-## and its row boxes stand under the header box
-#bulk-change-table > tbody:not(#no-match) > tr > td:last-child,
-#bulk-change-table .tablesorter-filter-row td:last-child, #bulk-change-table-sticky .tablesorter-filter-row td:last-child{padding-left:11px; padding-right:40px}
+## the empty first and last action columns, the last is room for the end of the Remove label, the table edge would cut
+## it, they can not be ticked or sorted, and a screen reader skips them
+#bulk-change-table thead th.col-spacer, #bulk-change-table-sticky thead th.col-spacer{width:12px; min-width:12px; padding:0; background-image:none; cursor:default}
+## the pointer does not reach the header cell, a row cell has the row highlight and no column highlight
+#bulk-change-table thead th.col-spacer, #bulk-change-table-sticky thead th.col-spacer{pointer-events:none}
+#bulk-change-table tbody td.col-spacer{cursor:default}
+#bulk-change-table.hover-highlight tbody td.col-spacer:hover::after{background-color:transparent}
 .tablesorter th.tablesorter-header.col-checkbox{background-position:center bottom 5px; padding:4px}
-.rotate-holder{width:20px; margin-bottom:0}
-.rotate-holder2{width:20px; margin:0 0 4px}
-.rotate-body{width:25px; transform-origin:bottom left; transform:translateX(16px) rotate(-45deg)}
-.rotate-body2{width:25px; transform-origin:bottom left; transform:translateX(20px) rotate(-45deg)}
+## the middle of a slanted label is over the middle of its column, whatever the length of the word, a slant of 45
+## degrees moves the label right by 0.3536 of its width, it is moved back by that, 35.36% of its own width, and right by
+## 7 pixels, a third of its line height, the label is out of the flow, so the column keeps its width
+.rotate-holder, .rotate-holder2{position:relative; min-width:20px; height:20px; margin-bottom:0}
+.rotate-holder2{margin:0 0 4px}
+.rotate-body, .rotate-body2{position:absolute; left:50%; bottom:0; width:max-content; transform-origin:bottom left; transform:translateX(7px) translateX(-35.36%) rotate(-45deg)}
+## a column of values has 14 pixels more padding on its right than its left, the middle of its cells is 7 pixels right
+th.col-legend .rotate-body, th.col-legend .rotate-body2{left:calc(50% + 7px)}
 .rotate-body span{float:none}
 .rotate th.col-legend, .rotate td.col-legend{width:40px}
 .rotate .img-warning-16{cursor:help}
@@ -223,7 +234,8 @@ $xsrf_form_html
 #end if
 			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
-			<th width="1%" class="sort-action col-actions-start"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" data-action="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
+			<th class="col-spacer col-actions-start" aria-hidden="true"></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" data-action="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
 			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rescan</span></div></div><input type="checkbox" class="bulk-check" id="refresh-check" data-action="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"></th>
 			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rename</span></div></div><input type="checkbox" class="bulk-check" id="rename-check" data-action="rename-check" title="Tick all for Rename" aria-label="Tick all for Rename"></th>
 #if $sickgear.USE_SUBTITLES
@@ -231,6 +243,7 @@ $xsrf_form_html
 			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><span>Subtitle</span></div></div><input type="checkbox" class="bulk-check" id="subtitle-check" data-action="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"></th>
 #end if
 			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" data-action="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
+			<th class="col-spacer" aria-hidden="true"></th>
 		</tr>
 	</thead>
 
@@ -307,6 +320,7 @@ $xsrf_form_html
     #end if
 			<td>#if 1 == int($cur_show_obj.paused) then $yes else $no#</td>
 			<td>$cur_show_obj.status</td>
+			<td class="col-action col-spacer" aria-hidden="true"></td>
 			<td class="col-action"$curUpdate[0]>$curUpdate[1]</td>
 			<td class="col-action"$curRefresh[0]>$curRefresh[1]</td>
 			<td class="col-action"$curRename[0]>$curRename[1]</td>
@@ -314,6 +328,7 @@ $xsrf_form_html
 			<td class="col-action"$curSubtitle[0]>$curSubtitle[1]</td>
     #end if
 			<td class="col-action"$curRemove[0]>$curRemove[1]</td>
+			<td class="col-action col-spacer" aria-hidden="true"></td>
 		</tr>
 #end for
 	</tbody>

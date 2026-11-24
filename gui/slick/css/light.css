@@ -1443,7 +1443,9 @@ thead.tablesorter-stickyHeader{
 #bulk-change-table thead th.sort-action.tablesorter-headerAsc,
 #bulk-change-table thead th.sort-action.tablesorter-headerDesc,
 #bulk-change-table-sticky thead th.sort-action.tablesorter-headerAsc,
-#bulk-change-table-sticky thead th.sort-action.tablesorter-headerDesc{
+#bulk-change-table-sticky thead th.sort-action.tablesorter-headerDesc,
+#bulk-change-table thead th.col-spacer,
+#bulk-change-table-sticky thead th.col-spacer{
 	background-color:#222
 }
 

@@ -4983,7 +4983,7 @@ pre{
 
 .tablesorter.rotate thead th.sort-action.tablesorter-headerAsc .rotate-body,
 .tablesorter.rotate thead th.sort-action.tablesorter-headerDesc .rotate-body{
-	width:25px;
+	width:max-content;
 	margin-left:0;
 	padding:0;
 	background-color:transparent
