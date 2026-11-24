@@ -92,6 +92,9 @@
 * Change the yes and no marks of the bulk change page to a check for yes and a quiet dash for no, not red crosses
 * Change log the output of a git command as one line in the log file, the log page shows its lines as before
 * Change the log page to show the newest 1000 lines of the log file, not 500
+* Change reuse a session's kept alive connection for web requests, instead of a new connection per request
+* Change web requests with no session, e.g. to TV info sources, to share kept alive connections
+* Change close a kept alive connection that is idle for over 30 seconds, instead of a request on it that can hang
 
 
 [develop]

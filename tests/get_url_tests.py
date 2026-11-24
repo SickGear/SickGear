@@ -1,7 +1,11 @@
 import json
 import sys
+import threading
+import time
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from os.path import abspath, dirname, join
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
@@ -9,6 +13,7 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 import requests
 from requests.models import Response
 
+import sg_helpers
 from sg_helpers import get_url
 
 
@@ -73,7 +78,73 @@ class GetUrlTests(unittest.TestCase):
         self.assertEqual([{'name': 'Show S01E01'}],
                          self.get_url(b'[{"name":"Show S01E01"}]', parse_json=True))
 
+    def test_cache_adapter_is_mounted_once_per_session(self):
+        session = FakeSession('page')
+        get_url('https://example.org/', session=session)
+        adapter = session.adapters['https://']
+        get_url('https://example.org/', session=session)
+        self.assertIs(adapter, session.adapters['https://'])
+
+
+class SharedPoolTests(unittest.TestCase):
+    """ requests with no session of the caller reuse a connection, each of them used to open a new one """
+
+    def setUp(self):
+        connections = self.connections = set()
+
+        class Handler(BaseHTTPRequestHandler):
+            protocol_version = 'HTTP/1.1'
+
+            def do_GET(self):
+                connections.add(self.client_address)
+                self.send_response(200)
+                self.send_header('Content-Length', '2')
+                self.end_headers()
+                self.wfile.write(b'ok')
+
+            def log_message(self, *args):
+                pass
+
+        self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.url = 'http://127.0.0.1:%s/' % self.server.server_address[1]
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def test_no_session_no_cache(self):
+        self.assertEqual(['ok'] * 5, [get_url(self.url, nocache=True) for _ in range(5)])
+        self.assertEqual(1, len(self.connections))
+
+    def test_no_session_with_cache(self):
+        self.assertEqual(['ok'] * 5, [get_url(self.url) for _ in range(5)])
+        self.assertEqual(1, len(self.connections))
+
+    def test_no_session_connection_idle_past_the_limit_is_not_reused(self):
+        with mock.patch.object(sg_helpers, 'KEEP_ALIVE_IDLE', 0.2):
+            self.assertEqual('ok', get_url(self.url))
+            time.sleep(0.3)
+            self.assertEqual('ok', get_url(self.url))
+        self.assertEqual(2, len(self.connections))
+
+    def test_session_connection_is_reused_within_the_limit_only(self):
+        session = requests.Session()
+        with mock.patch.object(sg_helpers, 'KEEP_ALIVE_IDLE', 0.2):
+            self.assertEqual(['ok'] * 3, [get_url(self.url, session=session) for _ in range(3)])
+            self.assertEqual(1, len(self.connections))
+            time.sleep(0.3)
+            self.assertEqual('ok', get_url(self.url, session=session))
+        self.assertEqual(2, len(self.connections))
+
+    def test_session_of_the_caller_keeps_its_own_adapter(self):
+        session = requests.Session()
+        adapter = session.adapters['http://']
+        self.assertEqual('ok', get_url(self.url, session=session, nocache=True))
+        self.assertIs(adapter, session.adapters['http://'])
+
 
 if '__main__' == __name__:
-    suite = unittest.TestLoader().loadTestsFromTestCase(GetUrlTests)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    for cur_case in (GetUrlTests, SharedPoolTests):
+        suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
+        unittest.TextTestRunner(verbosity=2).run(suite)

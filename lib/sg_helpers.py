@@ -25,13 +25,14 @@ from io import StringIO
 from html.parser import HTMLParser
 
 import requests
-from cachecontrol import CacheControl, caches
+from cachecontrol import CacheControl, CacheControlAdapter, caches
 from dateutil.parser import parser
 # from tmdbsimple.configuration import Configuration
 # from tmdbsimple.genres import Genres
 from cfscrape import CloudflareScraper
 from send2trash import send2trash
 from six import integer_types, moves, PY2, string_types, text_type
+from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
@@ -770,6 +771,81 @@ def proxy_setting(setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
+# seconds a kept alive connection may be idle and still be used again
+KEEP_ALIVE_IDLE = 30
+
+
+class _IdleLimitPoolMixin(object):
+    """
+    close a pooled connection that is idle longer than KEEP_ALIVE_IDLE, instead of a request on it.
+    A router or firewall can drop an idle connection with no sign, then a request on it waits for its full timeout
+    """
+    def _get_conn(self, timeout=None):
+        conn = super()._get_conn(timeout)
+        idle_since = getattr(conn, 'sg_idle_since', None)
+        if None is not idle_since and KEEP_ALIVE_IDLE < time.monotonic() - idle_since:
+            conn.close()  # the pool connects it again, as it does for a dropped connection
+        return conn
+
+    def _put_conn(self, conn):
+        if conn:
+            conn.sg_idle_since = time.monotonic()
+        super()._put_conn(conn)
+
+
+class _IdleLimitHTTPPool(_IdleLimitPoolMixin, HTTPConnectionPool):
+    pass
+
+
+class _IdleLimitHTTPSPool(_IdleLimitPoolMixin, HTTPSConnectionPool):
+    pass
+
+
+_idle_limit_pools = {'http': _IdleLimitHTTPPool, 'https': _IdleLimitHTTPSPool}
+
+
+class _IdleLimitAdapterMixin(object):
+    """ an adapter with pools that apply KEEP_ALIVE_IDLE """
+    def init_poolmanager(self, *args, **kwargs):
+        super().init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = _idle_limit_pools
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        manager = super().proxy_manager_for(proxy, **proxy_kwargs)
+        # shortcut: a socks proxy keeps its own pools with no idle limit, add socks pools if a socks user has a hang
+        if not proxy.lower().startswith('socks'):
+            manager.pool_classes_by_scheme = _idle_limit_pools
+        return manager
+
+
+class IdleLimitHTTPAdapter(_IdleLimitAdapterMixin, requests.adapters.HTTPAdapter):
+    pass
+
+
+class IdleLimitCacheControlAdapter(_IdleLimitAdapterMixin, CacheControlAdapter):
+    pass
+
+
+# adapters, each with its pool of connections, for requests that are made with no session of the caller.
+# A new session is made for each of those requests, and a pool that lives and ends with that session
+# opens a new connection, with a new TLS handshake, for every request
+_shared_adapters = {}  # type: Dict[Optional[AnyStr], requests.adapters.HTTPAdapter]
+_shared_adapters_lock = threading.Lock()
+
+
+def _shared_adapter(cache_dir):
+    # type: (Optional[AnyStr]) -> requests.adapters.HTTPAdapter
+    """
+    :param cache_dir: folder of the response cache, or None for an adapter that does not cache
+    :return: the adapter that all requests with no session of the caller share
+    """
+    with _shared_adapters_lock:
+        if cache_dir not in _shared_adapters:
+            _shared_adapters[cache_dir] = IdleLimitHTTPAdapter() if None is cache_dir \
+                else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir))
+        return _shared_adapters[cache_dir]
+
+
 def get_url(url,  # type: AnyStr
             post_data=None,  # type: Optional
             params=None,  # type: Optional
@@ -847,6 +923,7 @@ def get_url(url,  # type: AnyStr
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
+    use_shared_adapter = False
     if None is session:
         if (kwargs.get('url_solver') or '').strip():
             session = CloudflareScraper.create_scraper()
@@ -854,6 +931,7 @@ def get_url(url,  # type: AnyStr
             # in case of an empty argument
             kwargs.pop('url_solver', None)
             session = requests.Session()
+            use_shared_adapter = True
         session.headers.update({'User-Agent': USER_AGENT})
 
     proxy_browser = kwargs.get('proxy_browser')
@@ -869,9 +947,15 @@ def get_url(url,  # type: AnyStr
         # session streaming
         session.stream = True
 
-    if not kwargs.pop('nocache', False):
-        cache_dir = CACHE_DIR or get_system_temp_dir()
-        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+    cache_dir = None if kwargs.pop('nocache', False) else os.path.join(CACHE_DIR or get_system_temp_dir(), 'sessions')
+    if use_shared_adapter:
+        # the session is new, but its connections are kept for the next request to the same site
+        for cur_prefix in ('https://', 'http://'):
+            session.mount(cur_prefix, _shared_adapter(cache_dir))
+    # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
+    elif cache_dir and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
+        session = CacheControl(sess=session, cache=caches.FileCache(cache_dir),
+                               adapter_class=IdleLimitCacheControlAdapter)
 
     provider = kwargs.pop('provider', None)
 
