@@ -191,7 +191,7 @@ $xsrf_form_html
 
 <a href="#" id="skip-to-filters" class="sr-only sr-only-focusable">Skip to the filters, or press /</a>
 <a href="#" id="skip-to-actions" class="sr-only sr-only-focusable">Skip to Submit, past the rows of shows</a>
-<table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0">
+<table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0" aria-label="Shows">
 	<thead>
 		<tr>
 			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check" data-action="edit-check" title="Tick all for Edit" aria-label="Tick all for Edit"></th>
@@ -274,10 +274,11 @@ $xsrf_form_html
 		<tr class="#echo ('odd', 'even')[$row % 2]#" data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
 			<td><input type="checkbox" class="edit-check" aria-label="Edit $aria_show"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
-			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
+			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" role="img" title="Location no longer exists" aria-label="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
 			<td>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
     #if $enable_tvinfo
-			<td><i class="icon16 $sickgear.TVInfoAPI($cur_show_obj.tvid).config['slug']" data-tvid="$cur_show_obj.tvid"></i></td>
+			#set $tvinfo_config = $sickgear.TVInfoAPI($cur_show_obj.tvid).config
+			<td><i class="icon16 $tvinfo_config['slug']" data-tvid="$cur_show_obj.tvid" role="img" aria-label="$tvinfo_config['name']"></i></td>
     #end if
     #if $cur_show_obj.quality in $qualityPresets
 			<td><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>

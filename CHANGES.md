@@ -145,6 +145,7 @@
 * Change quality badges, dimmed articles, grey text and dark theme buttons to text of 4.5:1 or more
 * Change the bulk change page to read its sort values only after a tick or size change, and drop 900 tips
 * Change the bulk change page to keep its footer button names with counts, no repeated ids, the header height in CSS
+* Change the bulk change page to name its table, TV info and missing folder icons, and pages to mark their main area
 
 
 [develop]
