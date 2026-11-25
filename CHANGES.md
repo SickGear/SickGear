@@ -9,6 +9,7 @@
 * Fix a search gives up on an episode when its best torrent is bad, it now tries the next best result
 * Fix a magnet snatch fails when the provider site is down, as a magnet link needs no provider site to save it
 * Change get a torrent for a magnet from itorrents.net, the new home of itorrents.org
+* Remove dead mirrors from The Pirate Bay, LimeTorrents and TorLock
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)

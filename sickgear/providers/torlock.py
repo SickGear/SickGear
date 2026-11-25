@@ -23,7 +23,7 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring, quote_plus
+from _23 import quote_plus
 
 
 class TorLockProvider(generic.TorrentProvider):
@@ -31,13 +31,7 @@ class TorLockProvider(generic.TorrentProvider):
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'TorLock')
 
-        self.url_home = ['https://www.torlock.com/'] + \
-                        [f'https://{b64decodestring(x)}/' for x in [''.join(x) for x in [
-                            [re.sub(r'[g\sF]+', '', x[::-1]) for x in [
-                                'y9FFGd', 'j9FgGb', '15 Fya', 'sF Jmb', 'rN 2Fb', 'uQW FZ', '0Vmg Y']],
-                            [re.sub(r'[O\si]+', '', x[::-1]) for x in [
-                                'byO9Gid', 'y aji9G', '02O bj1', 'vJ Hicu', 'cz 5OCe', 'QZij FG', '=  =']],
-                        ]]]
+        self.url_home = ['https://www.torlock.com/']
 
         self.url_vars = {'search': 'television/torrents/%s.html?sort=added&order=desc',
                          'browse': 'television/1/added/desc.html', 'get': 'tor/%s.torrent'}

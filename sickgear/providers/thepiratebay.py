@@ -23,21 +23,13 @@ from .. import logger
 from ..helpers import try_int
 from bs4_parser import BS4Parser
 
-from _23 import b64decodestring
-
 
 class ThePirateBayProvider(generic.TorrentProvider):
 
     def __init__(self):
         generic.TorrentProvider.__init__(self, 'The Pirate Bay')
 
-        self.url_home = ['https://thepiratebay.org/'] + \
-                        [f'https://{b64decodestring(x)}/' for x in [''.join(x) for x in [
-                            [re.sub(r'[h\sI]+', '', x[::-1]) for x in [
-                                'm IY', '5  F', 'HhIc', 'vI J', 'HIhe', 'uI k', '2  d', 'uh l']],
-                            [re.sub(r'[N\sQ]+', '', x[::-1]) for x in [
-                                'lN Gc', 'X  Yy', 'c lNR', 'vNJNH', 'kQNHe', 'GQdQu', 'wNN9']],
-                        ]]]
+        self.url_home = ['https://thepiratebay.org/']
 
         self.url_vars = {'search': '/s/?q=%s&video=on&page=0&orderby=',
                          'search2': 'search.php?q=%s&video=on&search=Pirate+Search&page=0&orderby='}
