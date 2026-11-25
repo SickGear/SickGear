@@ -35,6 +35,7 @@ import traceback
 import zipfile
 # noinspection PyProtectedMember
 from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
+from functools import cmp_to_key
 from mimetypes import MimeTypes
 from urllib.parse import urljoin, quote as url_quote
 try:
@@ -7391,35 +7392,42 @@ class Manage(MainHandler):
         t.has_any_sports = False
         t.has_any_anime = False
         t.has_any_flat_folders = False
-        t.shows = []
-        t.shows_no_loc = []
         # the size of a show from its media files in the database, reading every show folder took seconds, the folder
         # size is used when the folders have been read in the last 30 minutes, or when the page button reads them
         cache = Home.media_stats_cache
+        # with the number of media files, the smallest, largest and average size, for the size type column of the page
         if cache['shows'] and 1800 > time.time() - cache['read']:
             t.sizes = {_k: _v['bSize'] for _k, _v in cache['shows'].items()}
+            t.stats = {_k: (_v.get('nFiles', 0), _v.get('bSmallest', 0), _v.get('bLargest', 0), _v.get('bAverageSize', 0))
+                       for _k, _v in cache['shows'].items()}
             t.sizes_from = 'folder'
         else:
             with db.DBConnection() as sg_db:
                 # a file of more than one episode is on each of its episodes, so count each file once
                 sql_result = sg_db.select(
                     """
-                    SELECT indexer, showid, SUM(file_size) AS size
+                    SELECT indexer, showid, SUM(file_size) AS size, COUNT(*) AS files,
+                     MIN(file_size) AS smallest, MAX(file_size) AS largest
                     FROM (SELECT DISTINCT indexer, showid, location, file_size
                      FROM tv_episodes
                      WHERE location != '' AND file_size > 0)
                     GROUP BY indexer, showid
                     """)
             t.sizes = {f'{_r["indexer"]}:{_r["showid"]}': _r['size'] for _r in sql_result}
+            t.stats = {f'{_r["indexer"]}:{_r["showid"]}': (_r['files'], _r['smallest'], _r['largest'],
+                                                            int(_r['size'] / _r['files']))
+                       for _r in sql_result}
             t.sizes_from = 'database'
-        for cur_show_obj in sorted(sickgear.showList, key=lambda _x: _x.name.lower()):
+        # in the order the table script sorts the names, shows with no folder last, so the rows do not move when it starts
+        def sort_name(show_obj):
+            name = getattr(show_obj, 'unique_name', show_obj.name)
+            return ('0_', '1_')[not show_obj.path] + (remove_article(name), name)[sickgear.SORT_ARTICLE].lower()
+
+        t.shows = sorted(sickgear.showList, key=lambda _so: cmp_to_key(helpers.natural_cmp)(sort_name(_so)))
+        for cur_show_obj in t.shows:
             t.has_any_sports |= bool(cur_show_obj.sports)
             t.has_any_anime |= bool(cur_show_obj.anime)
             t.has_any_flat_folders |= bool(cur_show_obj.flatten_folders)
-            if not cur_show_obj.path:
-                t.shows_no_loc += [cur_show_obj]
-            else:
-                t.shows += [cur_show_obj]
 
         return t.respond()
 
@@ -8151,13 +8159,21 @@ class Manage(MainHandler):
     def bulk_change(self, to_update='', to_refresh='', to_rename='',
                     to_subtitle='', to_delete='', to_remove='', **kwargs):
 
-        to_change = dict({_tvid_prodid: helpers.find_show_by_id(_tvid_prodid)
-                          for _tvid_prodid in
-                          next(iter([_x.split('|') for _x in (to_update, to_refresh, to_rename, to_subtitle,
-                                                              to_delete, to_remove) if _x]), '')})
+        # a change is a form post with its token, a link or an image cannot remove a show
+        if 'POST' != self.request.method:
+            return self.redirect('/manage/bulk/')
+
+        # each action is a set of show ids, all the sets are read, and an id matches whole, not as part of another id
+        to_update, to_refresh, to_rename, to_subtitle, to_delete, to_remove = [
+            set(filter(None, _x.split('|')))
+            for _x in (to_update, to_refresh, to_rename, to_subtitle, to_delete, to_remove)]
+        to_change = {_tvid_prodid: helpers.find_show_by_id(_tvid_prodid) for _tvid_prodid in
+                     to_update | to_refresh | to_rename | to_subtitle | to_delete | to_remove}
 
         update, refresh, rename, subtitle, errors = [], [], [], [], []
         for cur_tvid_prodid, cur_show_obj in to_change.items():
+            if not cur_show_obj:
+                continue
 
             if cur_tvid_prodid in to_delete:
                 cur_show_obj.delete_show(True)
@@ -8169,24 +8185,24 @@ class Manage(MainHandler):
                 if cur_tvid_prodid in to_update:
                     try:
                         sickgear.show_queue_scheduler.action.update_show(cur_show_obj, True, True)
-                        update.append(cur_show_obj.name)
+                        update.append(helpers.xhtml_escape(cur_show_obj.name))
                     except exceptions_helper.CantUpdateException as e:
-                        errors.append('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e)))
+                        errors.append(helpers.xhtml_escape('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e))))
 
                 elif cur_tvid_prodid in to_refresh:
                     try:
                         sickgear.show_queue_scheduler.action.refresh_show(cur_show_obj)
-                        refresh.append(cur_show_obj.name)
+                        refresh.append(helpers.xhtml_escape(cur_show_obj.name))
                     except exceptions_helper.CantRefreshException as e:
-                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e)))
+                        errors.append(helpers.xhtml_escape('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e))))
 
                 if cur_tvid_prodid in to_rename:
                     sickgear.show_queue_scheduler.action.rename_show_episodes(cur_show_obj)
-                    rename.append(cur_show_obj.name)
+                    rename.append(helpers.xhtml_escape(cur_show_obj.name))
 
                 if sickgear.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
                     sickgear.show_queue_scheduler.action.download_subtitles(cur_show_obj)
-                    subtitle.append(cur_show_obj.name)
+                    subtitle.append(helpers.xhtml_escape(cur_show_obj.name))
 
         if len(errors):
             ui.notifications.error('Errors encountered', '<br>\n'.join(errors))

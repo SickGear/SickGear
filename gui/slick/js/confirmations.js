@@ -1,10 +1,13 @@
 /**
  * Open a confirmation dialog. This is the one place that sets what all dialogs share.
- * Buttons are a green Yes and a red No unless given, Return confirms, Esc closes, and the title bar moves the dialog.
+ * Buttons are a green Yes and a red No unless given, Return confirms unless enterConfirm is false, Esc closes, and the
+ * title bar moves the dialog.
  * @param options of jquery.confirm
  * @returns the dialog as a jQuery object, or undefined if a dialog is open
  */
 function confirmDialog(options){
+	// the control that opened the dialog has the focus again when the dialog closes
+	const opener = document.activeElement;
 	$.confirm($.extend({
 		cancel: function(){},
 		confirmButton: 'Yes', confirmButtonClass: 'green',
@@ -16,14 +19,25 @@ function confirmDialog(options){
 	if (modal$.children().hasClass('ui-draggable'))
 		return;
 
-	// Return confirms, unless a focused button, link, or text area handles it. Esc is handled by the bootstrap modal
+	// Return confirms, unless a focused button, link, or text area handles it, or the dialog sets enterConfirm false.
+	// Esc is handled by the bootstrap modal
 	modal$.on('keydown', function(e){
-		if (13 === e.which && !$(e.target).is('button, a, textarea')) {
+		if (13 === e.which && false !== options.enterConfirm && !$(e.target).is('button, a, textarea')) {
 			e.preventDefault();
 			modal$.find('.confirm').click();
 		}
 	});
 	modal$.children().draggable({handle: '.modal-header'}).find('.modal-header').css('cursor', 'move');
+
+	// a screen reader names the dialog by its title, the close button is named, and the page behind is out of reach
+	modal$.attr({'aria-modal': 'true', 'aria-labelledby': 'confirmation-modal-title'})
+		.find('.modal-title').attr('id', 'confirmation-modal-title')
+		.end().find('.modal-header .close').removeAttr('aria-hidden').attr('aria-label', 'Close');
+	modal$.one('hidden.bs.modal', function(){
+		if (opener && document.contains(opener) && opener !== document.body)
+			// the opener was on screen when used, so the page stays where it is
+			opener.focus({preventScroll: true});
+	});
 
 	return modal$;
 }

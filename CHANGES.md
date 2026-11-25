@@ -106,6 +106,48 @@
 * Remove Requests library 2.34.2 (6e83187), replaced by niquests
 * Add DNS resolver setting to Config/Search/Search Tasks, e.g. doh+cloudflare:// for provider connections
 * Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
+* Change bulk change page to tint the row and the column of the cell under the pointer, as on the history page
+* Change bulk change page to tick the Edit checkbox of a row with a click anywhere on the row, shift for a range
+* Change the Subtitle column of the bulk change page to a dash where search is off, and fix its tick all box and Submit
+* Change bulk change page to sort the Edit and action columns by their boxes, ticked first, then those that can be ticked
+* Change the size type column of the bulk change page to switch the sizes on the page, not read every show folder
+* Fix the size type column of the bulk change page cannot be clicked once its header sticks under the menu bar
+* Fix a tick all box of the bulk change page flips each row, it now ticks or clears all and shows when part ticked
+* Change the bulk change header for the keyboard, a focus ring, a size type menu, names on its boxes and filters
+* Change the bulk change header, Delete and Remove say what they do, sort fill covers slanted labels, clearer filters
+* Change the bulk change header filter boxes to show their edge and focus, and a hover fill on sortable columns
+* Change the bulk change table to keep its columns and rows in place while the page loads
+* Change the bulk change page to send its rows in the order the table sorts them, so show names do not move on load
+* Fix sort by show name on the bulk change page to leave out A, An and The when the sort with articles setting is off
+* Change the bulk change page to send its rows with their alternate colours, not only once the table script runs
+* Change pages to load the fonts of the first view with the style sheets, so the menu under the top bar does not move
+* Change the bulk change table to keep its column widths while a filter leaves few or no rows
+* Change the bulk change table to say when a filter matches no show, with a button to clear it, and a clear in each box
+* Change the bulk change header to mark the sorted column by a label tag and a larger arrow, not a fill, clearer hover
+* Change the bulk change header tick all boxes to stand upright under their slanted labels, as the Edit box does
+* Change the bulk change header to set the action columns apart by a 3:1 line, add a skip link and / key to the filters
+* Fix tick all and shift range on the bulk change page tick rows a filter hides, they now act on the shown rows only
+* Change the bulk change filters, yes or no menus on Scene, Anime, Paused and others, a hint on the name filter
+* Change the bulk change page to one Remove column, the Submit dialog asks whether to keep or delete the show files
+* Change the bulk change no match row to name each filter in use, with a button that clears just that one
+* Change the bulk change page to name each box in a row for a screen reader, by its action and the show
+* Change the bulk change filters to mark those in use, add Clear filters by the count, menus as boxes, Yes before No
+* Change the bulk change header to set Show Name on the line of the other labels, boxes and size menu
+* Change bulk change Submit to list the shows of each action first, send a form post, and its handler to refuse a link
+* Change the bulk change header to dot a filtered column label, a red tag on sorted Remove, a footer count of 5:1
+* Change the bulk change header to set the size menu on the line of the boxes, and Remove 71 pixels wide, not 82
+* Change the bulk change action columns to one block, a darker header, tinted cells, the cell as target
+* Fix bulk change Submit to act on every list of shows, match whole show ids, and escape show names
+* Change pages to show the keyboard focus, a ring in the theme text colour, and keep it clear of the bulk change bars
+* Change dialogs to be named by their title, name the close button, and give the focus back to the opening control
+* Change pages to set their language to English, so a screen reader reads them in English
+* Change the bulk change page to add a skip link past the rows of shows to Submit
+* Change quality badges, dimmed articles, grey text and dark theme buttons to text of 4.5:1 or more
+* Change the bulk change page to read its sort values only after a tick or size change, and drop 900 tips
+* Change the bulk change page to keep its footer button names with counts, no repeated ids, the header height in CSS
+* Change the bulk change page to name its table, TV info and missing folder icons, and pages to mark their main area
+* Change the bulk change page to read folder sizes from the title line, which says what the sizes count
+* Change the bulk change slanted labels and sort arrows to centre in their column, and the action columns to one width
 
 
 [develop]
@@ -121,6 +163,7 @@
 * Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
 * Fix log filter masks the program name when a stored login or key is the name or a part of it
 * Fix folder sizes of the bulk change page count the size of a folder entry, 4096 bytes each on Linux
+* Fix sort by size on the bulk change page puts shows with no size first, keep them last both ways
 
 
 ### 3.36.17 (2026-11-24 01:50:00 UTC)

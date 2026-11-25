@@ -23,7 +23,8 @@
 	id: 'showNames',
 	is: function(s) { return !1; },
 	format: function(s) {
-	    return (s || '')#if not $sickgear.SORT_ARTICLE#.replace(/^(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1')#end if#;
+	    ## the article is after the 0_ or 1_ that sorts shows with no folder last
+	    return (s || '')#if not $sickgear.SORT_ARTICLE#.replace(/^(\d_)?(?:(?:A(?!\s+to)n?)|The)\s(\w)/i, '$1$2')#end if#;
 	},
 	type: 'text'
 });
@@ -38,18 +39,23 @@
 });
 ##
 #set $enable_tvinfo = True
+## an empty column starts and one ends the block of action columns, the last holds the end of the Remove label, so the
+## five action columns are of one width, the first balances the block
 #set $column_headers = [
-    ('!1', '!1', False),
+    ("'digit'", '!1', 'action'),
     ("'showNames'", '!0', False),
-    ("'size'", '!1', False), ('!1', '!1', False),
+    ("'size'", '!1', False),
     ((None, "'tvinfo'")[$enable_tvinfo], '!1', False),
     ("'quality'", '!0', False),
-    ((None, "'sports'")[$has_any_sports], '!1', True),
-    ("'scene'", '!1', True),
-    ((None, "'anime'")[$has_any_anime], '!1', True),
-    ((None, "'flatfold'")[$has_any_flat_folders], '!1', True),
-    ("'paused'", '!1', True), ("'status'", '!0', False),
-    ('!1', '!1', False), ('!1', '!1', False), ('!1', '!1', False), ((None, '!1')[$sickgear.USE_SUBTITLES], '!1', False), ('!1', '!1', False), ('!1', '!1', False)
+    ((None, "'sports'")[$has_any_sports], '!0', True),
+    ("'scene'", '!0', True),
+    ((None, "'anime'")[$has_any_anime], '!0', True),
+    ((None, "'flatfold'")[$has_any_flat_folders], '!0', True),
+    ("'paused'", '!0', True), ("'status'", '!0', False),
+    ('!1', '!1', False),
+    ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'), ("'digit'", '!1', 'action'),
+    ((None, "'digit'")[$sickgear.USE_SUBTITLES], '!1', 'action'), ("'digit'", '!1', 'action'),
+    ('!1', '!1', False)
 ]
 #set $columns_total = $len($column_headers) - ((1, 0)[$has_any_sports] + (1, 0)[$has_any_anime] + (1, 0)[$has_any_flat_folders] + (1, 0)[$sickgear.USE_SUBTITLES])
 #set $headers = []
@@ -60,16 +66,29 @@
         #continue
     #end if
     #set $column += 1
-    #set void = $headers.append('\t\t\t%s: {sorter:%s, filter:%s}' % ($column, $sort, $filter))
-    #if $img_extract
+    #set void = $headers.append('\t\t\t%s: {sorter:%s, filter:%s%s}' % ($column, $sort, $filter, ('', ", sortInitialOrder:'desc'")['action' == $img_extract]))
+    #if 'action' == $img_extract
+        ## an action box sorts ticked first, then one that can be ticked, then a dash or a box of an action in progress
+        #set void = $text_extract.append('			%s%s' % ($column, ": function(node) {var c = $(node).find('input'); return !c.length || c.prop('disabled') ? 0 : (c.prop('checked') ? 2 : 1)}"))
+    #elif $img_extract
         #set void = $text_extract.append('\t\t\t%s%s' % ($column, ": function(node) {return $(node).find('.yes-no').attr('title')}"))
     #end if
 #end for
 
 \$(function()
 {
+	## the Size column is named by the menu choice, not by the text of all its options
+	var setAriaLabel = \$.tablesorter.setColumnAriaLabel;
+	\$.tablesorter.setColumnAriaLabel = function(config, header){
+		setAriaLabel.apply(this, arguments);
+		if (header.hasClass('sort-size'))
+			header.attr('aria-label', header.attr('aria-label').replace(/^[^:]*/, header.find('option:selected').text()));
+	};
+
 	\$('#bulk-change-table:has(tbody tr)').tablesorter({
 		widgets: ['zebra','stickyHeaders', 'filter'],
+		// a yes or no filter offers All, Yes and No
+		widgetOptions: {filter_placeholder: {select: 'All'}},
 		sortList: [[1,0]],
 		headers: {
 #echo ',\n'.join($headers)#
@@ -77,12 +96,13 @@
 		textExtraction: {
 #raw
 			1: function(node) {return ((!!$(node).find('i.img-warning-16').length ? '1_' : '0_') + $(node).text().toLowerCase())},
-			2: function(node) {return parseInt($(node).closest('[data-tvid_prodid]').attr('data-size') || -100, 10)},
+			// no size, i.e. no media files, a failed folder read or no folder, is empty, the sort keeps it at the bottom
+			2: function(node) {var size = parseInt($(node).closest('[data-tvid_prodid]').attr('data-size'), 10); return 0 < size && size < $.SickGear.high ? size : ''},
 #end raw
 #if $enable_tvinfo
-			4: function(node) {return \$(node).find('i').attr('data-tvid')},
+			3: function(node) {return \$(node).find('i').attr('data-tvid')},
 #end if
-			#echo ('5','4')[not $enable_tvinfo]#: function(node) {return \$(node).find('span').text().toLowerCase()},
+			#echo ('4','3')[not $enable_tvinfo]#: function(node) {return \$(node).find('span').text().toLowerCase()},
 #echo ',\n'.join($text_extract)#
 		}
 	});
@@ -91,29 +111,73 @@
 //-->
 </script>
 <script src="$sbRoot/js/bulkChange.js?v=$sbPID"></script>
+## the title line has, on its right, where the sizes are from and the button that reads them from the show folders, a
+## slow read of the whole page, set apart from Edit and Submit, which act on ticked shows
+#set $from_folders = 'folder' == $sizes_from
+<div id="bulk-title">
 #if $varExists('header')
 	<h1 class="header">$header</h1>
 #else
 	<h1 class="title">$title</h1>
 #end if
+	<span id="size-source" class="grey-text" aria-live="polite">#echo ('Sizes count episode files only', 'Sizes count all files in each show folder')[$from_folders]#</span>
+	<button type="button" class="btn" id="read-folder-sizes" title="Read the size of every file in each show folder, slow on a large or network drive">#echo ('Read folder sizes', 'Read again')[$from_folders]#</button>
+</div>
 
 <style>
+#bulk-title{display:flex; align-items:baseline; gap:12px}
+#bulk-title h1{flex:1 1 auto}
+#size-source{font-size:13px}
 .tvShow{text-align:left}
 .tvShow i{margin-right:6px; margin-bottom:1px}
 .rotate-body span{float:left}
+## until the table script runs, the header has the padding and the filter row space the script gives it, so nothing moves,
+## the space is a header cell border in the filter row colour of the theme
+#bulk-change-table:not(.hasFilters) thead th{padding:4px 18px 17px 4px}
+## the header row, 86 pixels, before the table script adds the filter row the space of that row too
+#bulk-change-table thead tr:first-child, #bulk-change-table-sticky thead tr:first-child{height:86px}
+#bulk-change-table:not(.hasFilters) thead tr{height:115px !important}
+## Show Name is drawn sorted, as the table script sorts by it first
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{padding:4px 4px 17px 22px; background-repeat:no-repeat; background-position:left 0 bottom 23px}
+#bulk-change-table:not(.hasFilters) thead th.sort-size{padding:4px 4px 17px}
+#bulk-change-table:not(.hasFilters) thead th.col-checkbox{padding:4px 4px 17px}
+#bulk-change-table:not(.hasFilters) thead th.sort-action{padding:4px 11px 17px}
+## the Status and Quality widths come from their filter boxes and cells, kept when a filter leaves few or no rows
+#bulk-change-table thead th.sort-icon-status{min-width:96px}
+#bulk-change-table thead th.sort-icon-quality{width:62px}
+#bulk-change-table thead th.filter-select{min-width:55px}
+## the labels, tick all boxes and size menu stand on a common line over the sort arrows, Show Name on that line too
+#bulk-change-table thead th, #bulk-change-table-sticky thead th{vertical-align:bottom; padding-bottom:17px}
 @supports (transform:translateX(16px) rotate(-45deg)) and (transform-origin:bottom left){
-.tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:center left; padding: 4px 4px 4px 18px}
-.tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:10px 54px /*28px 45px*/}
-.tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:30px 54px}
-.tablesorter.rotate th.tablesorter-header.sort-size{background-position:26px 54px; padding:4px 14px 4px 14px}
-.tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:20px 54px}
-.rotate-holder{width:20px; margin-bottom:-16px}
-.rotate-holder2{width:20px; margin:22px 0 -22px}
-.rotate-body{width:25px; transform-origin:bottom left; transform:translateX(16px) rotate(-45deg)}
-.rotate-body2{width:25px; transform-origin:bottom left; transform:translateX(20px) rotate(-45deg)}
+## the Show Name arrow is clear of the tag behind the sorted label
+.tablesorter.rotate th.tablesorter-header.sort-icon-left{background-position:left 0 bottom 23px; padding:4px 4px 17px 22px}
+## a sort arrow is under the middle of its column, as its slanted label is
+.tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:center bottom 7px}
+.tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:center bottom 7px}
+.tablesorter.rotate th.tablesorter-header.sort-size{background-position:center bottom 5px}
+.tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:center bottom 7px}
+.tablesorter.rotate th.tablesorter-header.sort-action{background-position:center bottom 5px; padding:4px 11px; text-align:left}
+## a tick all box stands upright under its slanted label, over the boxes of its column, as the Edit box does
+.tablesorter.rotate th.sort-action input.bulk-check{display:block; margin:0 0 0 2px}
+.tablesorter th.col-checkbox input.bulk-check{display:block; margin:0 auto}
+## the empty first and last action columns, the last is room for the end of the Remove label, the table edge would cut
+## it, they can not be ticked or sorted, and a screen reader skips them
+#bulk-change-table thead th.col-spacer, #bulk-change-table-sticky thead th.col-spacer{width:12px; min-width:12px; padding:0; background-image:none; cursor:default}
+## the pointer does not reach the header cell, a row cell has the row highlight and no column highlight
+#bulk-change-table thead th.col-spacer, #bulk-change-table-sticky thead th.col-spacer{pointer-events:none}
+#bulk-change-table tbody td.col-spacer{cursor:default}
+#bulk-change-table.hover-highlight tbody td.col-spacer:hover::after{background-color:transparent}
+.tablesorter th.tablesorter-header.col-checkbox{background-position:center bottom 5px; padding:4px}
+## the middle of a slanted label is over the middle of its column, whatever the length of the word, a slant of 45
+## degrees moves the label right by 0.3536 of its width, it is moved back by that, 35.36% of its own width, and right by
+## 7 pixels, a third of its line height, the label is out of the flow, so the column keeps its width
+.rotate-holder, .rotate-holder2{position:relative; min-width:20px; height:20px; margin-bottom:0}
+.rotate-holder2{margin:0 0 4px}
+.rotate-body, .rotate-body2{position:absolute; left:50%; bottom:0; width:max-content; transform-origin:bottom left; transform:translateX(7px) translateX(-35.36%) rotate(-45deg)}
+## a column of values has 14 pixels more padding on its right than its left, the middle of its cells is 7 pixels right
+th.col-legend .rotate-body, th.col-legend .rotate-body2{left:calc(50% + 7px)}
 .rotate-body span{float:none}
 .rotate th.col-legend, .rotate td.col-legend{width:40px}
-.rotate input[type="checkbox"].right-2px{margin:0 2px 0 0}
 .rotate .img-warning-16{cursor:help}
 }
 #bulk-change-table thead,
@@ -122,113 +186,122 @@
 #bulk-change-table thead,
 #bulk-change-table-sticky thead{top:50px}
 #bulk-change-table-sticky,.tablesorter thead,.tablesorter thead tr,.tablesorter thead tr th, .tablesorter thead tr td{border-spacing:0}
-#tfoot{bottom:0; min-height:34px; line-height:26px}
+#tfoot{bottom:0; min-height:34px; line-height:26px; z-index:3}
 #tfoot input[disabled]{cursor:not-allowed}
 .tablesorter-sticky-wrapper{margin-top:50px}
 .tablesorter-filter-row input[disabled]{display:none}
 .tablesorter-filter-row input[type="search"]{background:rgba(255,255,255,0.2); padding:0 3px; border:0; border-radius:4px; color:inherit}
-.tablesorter .tablesorter-header.sort-size-type{padding:0; width:16px; cursor:pointer}
-th.sort-size-type{font-weight:normal}
-.average{border-top:1px solid white; width:9px; margin:0 auto}
-.average i{display:block; line-height:10px; margin-right:1px}
+## the menu sits in the Size cell before the table script runs, else it shows at the page edge while the page loads
+#bulk-change-table th.sort-size, #bulk-change-table-sticky th.sort-size{width:1%; padding:4px 4px 17px; vertical-align:bottom; text-align:center}
+#bulk-change-table th.sort-size select.size-type, #bulk-change-table-sticky th.sort-size select.size-type{margin-bottom:0}
 
 #set $theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
 .tip,.tip-average{margin:0 2px}
 .tip-average{border-top:1px solid #echo ('#999', '#666')[not $theme_suffix]#}
 .tip-average,.tip-average i{display:inline-block; line-height:8px}
 .bfr{position:absolute;left:-999px;top:-999px}.bfr img,.spinner{display:inline-block;width:16px;height:16px}.spinner{background:url(${sbRoot}/images/loading16${theme_suffix}.gif) no-repeat 0 0}
+## the skip link shows over the table header when it has the keyboard focus, and does not move the table
+#skip-to-filters:focus, #skip-to-actions:focus{position:absolute; z-index:4; margin-top:4px; padding:4px 8px; background:#fff; color:#000; border-radius:2px}
+## a keyboard focus scrolls clear of the sticky header and its filter row at the top and of the action bar at the foot
+html{scroll-padding-top:175px; scroll-padding-bottom:50px}
 </style>
 <div class="bfr"><img src="$sbRoot/images/loading16${theme_suffix}.gif"></div>
 
 <form name="bulkChangeForm" method="post" action="bulk_change">
 $xsrf_form_html
 
-<table id="bulk-change-table" class="sickbeardTable tablesorter rotate" cellspacing="1" border="0" cellpadding="0">
+<a href="#" id="skip-to-filters" class="sr-only sr-only-focusable">Skip to the filters, or press /</a>
+<a href="#" id="skip-to-actions" class="sr-only sr-only-focusable">Skip to Submit, past the rows of shows</a>
+<table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0" aria-label="Shows">
 	<thead>
-		<tr style="height:70px">  <!-- must inline this css -->
-			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check"></th>
+		<tr>
+			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check" data-action="edit-check" title="Tick all for Edit" aria-label="Tick all for Edit"></th>
 			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
-			<th class="sort-size col-legend narrow dir-none" title="#echo ('size of media files that SickGear knows', 'size of all show folder files')['folder' == $sizes_from]#"><div class="rotate-holder"><div class="rotate-body">Size</div></div></th>
-			<th class="narrow sort-size-type" data-type="E" title="total"><div class="sort-size-type-body">&Sigma;</div><span class="sort-size-type-image" style="display:none; margin-top:8px"><i class="spinner"></i></span></th>
+			<th class="sort-size narrow dir-none" title="#echo ('Total size: all media files of a show; average, largest and smallest file: one of its media files', 'Total size: all files in a show folder; average, largest and smallest file: one of its media files')['folder' == $sizes_from]#"><select class="size-type form-control form-control-inline input-sm" aria-label="Size measure" title="Choose the size to show and sort by"><option value="Size" title="All the media files of a show, or all the files in its folder after Read folder sizes">Total size</option><option value="AverageSize" title="The average size of one media file of a show">Average file</option><option value="Largest" title="The largest media file of a show">Largest file</option><option value="Smallest" title="The smallest media file of a show">Smallest file</option></select></th>
 #if $enable_tvinfo
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">TV Info</div></div></th>
 #end if
 			<th class="col-legend narrow sort-icon-quality"><div class="rotate-holder"><div class="rotate-body">Quality</div></div></th>
 #if $has_any_sports
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">Sports</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body">Sports</div></div></th>
 #end if
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Scene</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Scene</div></div></th>
 #if $has_any_anime
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Anime</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Anime</div></div></th>
 #end if
 #if $has_any_flat_folders
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Flat Folders</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Flat Folders</div></div></th>
 #end if
-			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
+			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body2">Paused</div></div></th>
 			<th class="col-legend narrow sort-icon-status"><div class="rotate-holder"><div class="rotate-body2">Status</div></div></th>
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="update-check"><span>Update</span></label></div></div></th>
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="refresh-check"><span>Rescan</span></label></div></div></th>
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="rename-check"><span>Rename</span></label></div></div></th>
+			<th class="col-spacer col-actions-start" aria-hidden="true"></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Update</span></div></div><input type="checkbox" class="bulk-check" id="update-check" data-action="update-check" title="Tick all for Update" aria-label="Tick all for Update"></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rescan</span></div></div><input type="checkbox" class="bulk-check" id="refresh-check" data-action="refresh-check" title="Tick all for Rescan" aria-label="Tick all for Rescan"></th>
+			<th width="1%" class="sort-action"><div class="rotate-holder2"><div class="rotate-body"><span>Rename</span></div></div><input type="checkbox" class="bulk-check" id="rename-check" data-action="rename-check" title="Tick all for Rename" aria-label="Tick all for Rename"></th>
 #if $sickgear.USE_SUBTITLES
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="subtitleCheck"><span>Subtitle</span></label></div></div></th>
+			#set $subtitles_on = len([_s for _s in $shows if _s.subtitles])
+			<th width="1%" class="sort-action" title="Subtitle search is on for $subtitles_on of #echo len($shows)# shows, turn it on per show with Edit"><div class="rotate-holder2"><div class="rotate-body"><span>Subtitle</span></div></div><input type="checkbox" class="bulk-check" id="subtitle-check" data-action="subtitle-check" title="Tick all for Subtitle" aria-label="Tick all for Subtitle"></th>
 #end if
-			<th width="1%"><div class="rotate-holder2"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="delete-check"><span>Delete</span></label></div></div></th>
-			<th width="1%"><div class="rotate-holder2" style="margin-right:40px;"><div class="rotate-body"><label><input type="checkbox" class="bulk-check right-2px" id="remove-check"><span>Remove</span></label></div></div></th>
+			<th width="1%" class="sort-action col-destructive" data-files="#echo ('delete', 'move to the trash')[bool($sickgear.TRASH_REMOVE_SHOW)]#" title="Remove the show from SickGear, Submit asks whether to keep its folder and files"><div class="rotate-holder2"><div class="rotate-body"><span>Remove</span></div></div><input type="checkbox" class="bulk-check" id="remove-check" data-action="remove-check" title="Tick all for Remove" aria-label="Tick all for Remove"></th>
+			<th class="col-spacer" aria-hidden="true"></th>
 		</tr>
 	</thead>
 
 	<tbody>
 #set $disabled = ' disabled="disabled"'
 #set $disabled_inprogress_tip = ' action is currently in progress for this show'
-#set $disabled_subtitles_tip = ' title="Use edit to enable subtitle search for this show"'
+#set $disabled_subtitles_tip = ' title="Subtitle search is off for this show, turn it on with Edit"'
 #set $no = '<span class="yes-no is-no" role="img" title="No" aria-label="No"></span>'
 #set $yes = '<span class="yes-no is-yes" role="img" title="Yes" aria-label="Yes"></span>'
 #set $max = $high + 100
-#for $cur_show_obj in $shows + $shows_no_loc
+## a row has the stripe the table script gives it, as the rows are in its order, so the colours show before it runs
+#for $row, $cur_show_obj in enumerate($shows)
     #set $show_loc = $cur_show_obj.path
     #set $show_size = $max if not $show_loc else $sizes.get($cur_show_obj.tvid_prodid, 0)
-    #set $option_state = '<input type="checkbox"%s class="%s-check"%s>'
+    ## each box is named for a screen reader by its action and the show, as the column header is far away, a box has a
+    ## title only to say why it can not be ticked, a title that only named the action was one of 2,400 on the page
+    #set $aria_show = getattr($cur_show_obj, 'unique_name', $cur_show_obj.name).replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;')
+    #set $option_state = '<input type="checkbox"%s class="%s-check"%s aria-label="%s ' + $aria_show.replace('%', '%%') + '">'
     ##
     #set $curUpdate_disabled = $sickgear.show_queue_scheduler.action.is_being_updated($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_update_queue($cur_show_obj)
-    #set $tip = ' title="Update%s"' % ('', $disabled_inprogress_tip)[$curUpdate_disabled]
-    #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip))
+    #set $tip = ('', ' title="Update%s"' % $disabled_inprogress_tip)[$curUpdate_disabled]
+    #set $curUpdate = ($tip, $option_state % (('', $disabled)[$curUpdate_disabled], 'update', $tip, 'Update'))
     ##
     #set $curRefresh_disabled = $sickgear.show_queue_scheduler.action.is_being_refreshed($cur_show_obj)\
                                 or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
-    #set $tip = ' title="Rescan%s"' % ('', $disabled_inprogress_tip)[$curRefresh_disabled]
-    #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip))
+    #set $tip = ('', ' title="Rescan%s"' % $disabled_inprogress_tip)[$curRefresh_disabled]
+    #set $curRefresh = ($tip, $option_state % (('', $disabled)[$curRefresh_disabled], 'refresh', $tip, 'Rescan'))
     ##
     #set $curRename_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)
-    #set $tip = ' title="Rename%s"' % ('', $disabled_inprogress_tip)[$curRename_disabled]
-    #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip))
+    #set $tip = ('', ' title="Rename%s"' % $disabled_inprogress_tip)[$curRename_disabled]
+    #set $curRename = ($tip, $option_state % (('', $disabled)[$curRename_disabled], 'rename', $tip, 'Rename'))
     ##
     #set $subtitles_disabled = not $cur_show_obj.subtitles\
                                or $sickgear.show_queue_scheduler.action.is_being_subtitled($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_subtitle_queue($cur_show_obj)
     #set $tip = (' title="Search subtitle"', (' title="Search subtitle%s"' % $disabled_inprogress_tip,
                                               $disabled_subtitles_tip)[not $cur_show_obj.subtitles])[$subtitles_disabled]
-    #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip))
-    ##
-    #set $curDelete_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
-                               or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
-    #set $tip = ' title="Delete%s"' % ('', $disabled_inprogress_tip)[$curDelete_disabled]
-    #set $curDelete = ($tip, $option_state % (('', $disabled)[$curDelete_disabled], 'delete', $tip))
+    #set $curSubtitle = ($tip, $option_state % (('', $disabled)[$subtitles_disabled], 'subtitle', $tip, 'Subtitle'))
+    #if not $cur_show_obj.subtitles
+        ## no box to tick, a dash as in the yes and no columns, the cell title says why
+        #set $curSubtitle = ($tip, '<span class="yes-no is-no" role="img" aria-label="Subtitle search off"></span>')
+    #end if
     ##
     #set $curRemove_disabled = $sickgear.show_queue_scheduler.action.is_being_renamed($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_rename_queue($cur_show_obj)\
                                or $sickgear.show_queue_scheduler.action.is_in_refresh_queue($cur_show_obj)
-    #set $tip = ' title="Remove%s"' % ('', $disabled_inprogress_tip)[$curRemove_disabled]
-    #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip))
-		<tr data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size">
-			<td><input type="checkbox" class="edit-check"></td>
+    #set $tip = ('', ' title="Remove%s"' % $disabled_inprogress_tip)[$curRemove_disabled]
+    #set $curRemove = ($tip, $option_state % (('', $disabled)[$curRemove_disabled], 'remove', $tip, 'Remove'))
+		<tr class="#echo ('odd', 'even')[$row % 2]#" data-tvid_prodid="$cur_show_obj.tvid_prodid" data-size="$show_size" data-total="#echo (-10, $show_size)[0 < $show_size < $max]#" data-stats="#echo ','.join(str(_n) for _n in $stats.get($cur_show_obj.tvid_prodid, (0, 0, 0, 0)))#">
+			<td><input type="checkbox" class="edit-check" aria-label="Edit $aria_show"></td>
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
-			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" title="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
-			<td colspan=2>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
+			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" role="img" title="Location no longer exists" aria-label="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
+			<td>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
     #if $enable_tvinfo
-			<td><i class="icon16 $sickgear.TVInfoAPI($cur_show_obj.tvid).config['slug']" data-tvid="$cur_show_obj.tvid"></i></td>
+			#set $tvinfo_config = $sickgear.TVInfoAPI($cur_show_obj.tvid).config
+			<td><i class="icon16 $tvinfo_config['slug']" data-tvid="$cur_show_obj.tvid" role="img" aria-label="$tvinfo_config['name']"></i></td>
     #end if
     #if $cur_show_obj.quality in $qualityPresets
 			<td><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>
@@ -247,22 +320,26 @@ $xsrf_form_html
     #end if
 			<td>#if 1 == int($cur_show_obj.paused) then $yes else $no#</td>
 			<td>$cur_show_obj.status</td>
-			<td$curUpdate[0]>$curUpdate[1]</td>
-			<td$curRefresh[0]>$curRefresh[1]</td>
-			<td$curRename[0]>$curRename[1]</td>
+			<td class="col-action col-spacer" aria-hidden="true"></td>
+			<td class="col-action"$curUpdate[0]>$curUpdate[1]</td>
+			<td class="col-action"$curRefresh[0]>$curRefresh[1]</td>
+			<td class="col-action"$curRename[0]>$curRename[1]</td>
     #if $sickgear.USE_SUBTITLES
-			<td$curSubtitle[0]>$curSubtitle[1]</td>
+			<td class="col-action"$curSubtitle[0]>$curSubtitle[1]</td>
     #end if
-			<td$curDelete[0]>$curDelete[1]</td>
-			<td$curRemove[0]><span style="margin-right: 40px">$curRemove[1]</span></td>
+			<td class="col-action"$curRemove[0]>$curRemove[1]</td>
+			<td class="col-action col-spacer" aria-hidden="true"></td>
 		</tr>
 #end for
 	</tbody>
+	## shown when a filter matches no show, the table script leaves an info only body out of sorting and filtering
+	<tbody class="tablesorter-infoOnly" id="no-match" hidden>
+		<tr><td colspan="$columns_total"><span class="no-match-text">No shows match the filter</span> <span class="no-match-filters"></span><button type="button" class="btn" id="clear-filters">Clear all filters</button></td></tr>
+	</tbody>
 </table>
-<div id="tfoot">
+<div id="tfoot" tabindex="-1">
 	<span style="width:20%" class="pull-left"><input class="btn pull-left" type="button" value="Edit Selected" id="bulk-change-edit"></span>
-	<span class="pull-left"><button type="button" class="btn" id="read-folder-sizes" title="#echo ('sizes are of media files that SickGear knows, read the size of all show folder files', 'sizes are of all show folder files, read again')['folder' == $sizes_from]#">Read folder sizes</button></span>
-	<span class="stats grey-text"></span>
+	<span class="stats grey-text" aria-live="polite"></span> <button type="button" class="btn" id="footer-clear-filters" hidden>Clear filters</button> <span id="hidden-ticks" class="grey-text" hidden></span>
 	<span style="width:20%" class="pull-right"><input class="btn pull-right" type="button" value="Submit" id="bulk-change-submit"></span>
 </div>
 </form>
