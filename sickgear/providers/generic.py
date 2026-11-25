@@ -704,9 +704,13 @@ class GenericProvider(object):
             # username/uid only for log masking (keys=True), same username at two sites is not a duplicate auth
             for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']
                            + ([], ['username', 'uid'])[keys]):
-                auth = (getattr(cur_p, cur_kt, '') or '').strip()
                 if 'url' == cur_kt:
-                    auth = urlparse(auth).query  # rss feed urls can carry passkey/rsskey params
+                    # read the url held, the url property of a torrent provider fetches its home page and that fetch
+                    # logs, so the log filter that calls this would start the fetch again from inside each log line
+                    held = ('url', '_url')[isinstance(getattr(type(cur_p), 'url', None), property)]
+                    auth = urlparse((getattr(cur_p, held, '') or '').strip()).query  # rss urls carry keys
+                else:
+                    auth = (getattr(cur_p, cur_kt, '') or '').strip()
                 if auth and '0' != auth and 'sg=0' != auth:
                     auth = rxc_cookie.sub('', auth)
                     if '=' not in auth:

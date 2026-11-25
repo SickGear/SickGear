@@ -168,6 +168,7 @@
 * Fix folder sizes of the bulk change page count the size of a folder entry, 4096 bytes each on Linux
 * Fix sort by size on the bulk change page puts shows with no size first, keep them last both ways
 * Fix provider logs a connection warning when the ISP blocks its name, the fetch then gets through via ECH
+* Fix log filter freezes SickGear when a log line is made while a torrent provider looks up its home page
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)

@@ -1,6 +1,7 @@
 import logging
 import sys
 import unittest
+import unittest.mock
 from os.path import abspath, dirname, join
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
@@ -61,6 +62,31 @@ class RedactingFilterTests(unittest.TestCase):
         self.assertTrue(logger.RedactingFilter().filter(_rec('startup line')))
         self.set_auths(['sh0rtkey'])
         self.assertEqual(42, logger.RedactingFilter.mask_text(42))
+
+    def test_log_line_while_reading_secrets_does_not_read_again(self):
+        calls = []
+
+        def auths(keys=False):
+            calls.append(1)
+            logger.RedactingFilter().filter(_rec('logged while secrets are read'))  # as a fetch inside would
+            return ['sh0rtkey']
+        sickgear.GenericProvider.dedupe_auths = staticmethod(auths)
+        logger.RedactingFilter.reset()
+        rec = _rec('key sh0rtkey')
+        logger.RedactingFilter().filter(rec)
+        self.assertEqual(1, len(calls))
+        self.assertEqual('key sh0r****', rec.getMessage())
+
+    def test_dedupe_auths_reads_held_url_not_property(self):
+        from sickgear.providers import generic
+
+        class Prov(generic.TorrentProvider):
+            def _valid_home(self, *args, **kwargs):
+                raise AssertionError('url property used, it fetches the home page')
+        prov = Prov('TestProv')
+        prov._url = 'https://site.example/rss?passkey=heldkey123'
+        with unittest.mock.patch.object(sickgear.providers, 'sorted_sources', return_value=[prov]):
+            self.assertIn('heldkey123', self.orig(True))
 
     def test_reset_picks_up_new_secret(self):
         f = logger.RedactingFilter()
