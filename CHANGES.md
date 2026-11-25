@@ -1,4 +1,9 @@
-﻿### 3.36.18 (2026-11-25 14:30:00 UTC)
+﻿### 3.36.19 (2026-xx-xx xx:xx:00 UTC)
+
+* Fix EZTV search finds no results for a show whose IMDb id has a leading zero
+
+
+### 3.36.18 (2026-11-25 14:30:00 UTC)
 
 * Fix TorrentDay finds no results since its search page changed the table of results
 

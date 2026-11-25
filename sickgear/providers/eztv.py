@@ -52,7 +52,8 @@ class EztvProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         data = {
-            'imdb_id': kwargs["ids"][TVINFO_IMDB]["id"],
+            # the API needs the leading zeros of the IMDb id (e.g. 0096697), the stored id is a number without them
+            'imdb_id': '%07d' % try_int(kwargs['ids'][TVINFO_IMDB]['id']),
             'torrents_count': 0,
             'torrents': []
         }
