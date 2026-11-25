@@ -1947,8 +1947,11 @@ class TorrentProvider(GenericProvider):
                 return None
         elif last_url:
             last_url = last_url.replace('getrss.php', '/')  # correct develop typo after a network outage (0.11>0.12)
-            last_url in url_list and url_list.remove(last_url)
-            url_list.insert(0, last_url)
+            if last_url in url_list:  # a remembered home is tried first while it is still a listed home
+                url_list.remove(last_url)
+                url_list.insert(0, last_url)
+            else:  # drop a remembered home that is no longer listed, and its expiry that skips the page check
+                last_url, expire = '', None
 
         if not self.enabled:
             return last_url
