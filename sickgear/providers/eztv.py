@@ -46,18 +46,22 @@ class EztvProvider(generic.TorrentProvider):
     def _search_provider(self, search_params, **kwargs):
 
         results = []
-        if not self.url or not isinstance(kwargs['ids'], dict):
+        if not self.url:
             return results
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
+        # a recent search (Cache) and a Propers search are made with no ids
+        imdb_id = try_int(((kwargs.get('ids') or {}).get(TVINFO_IMDB) or {}).get('id'))
         data = {
             # the API needs the leading zeros of the IMDb id (e.g. 0096697), the stored id is a number without them
-            'imdb_id': '%07d' % try_int(kwargs['ids'][TVINFO_IMDB]['id']),
+            'imdb_id': '%07d' % imdb_id,
             'torrents_count': 0,
             'torrents': []
         }
         for mode in search_params:
+            if 'Cache' != mode and not imdb_id:
+                continue  # the API gives every release for a search with no id, so search only by a known show id
             for _ in search_params[mode]:
                 for page in (1, 2):
                     if 'Cache' == mode:
