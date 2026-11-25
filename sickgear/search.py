@@ -857,6 +857,58 @@ def cache_torrent_file(
     return search_result
 
 
+def _best_usable_result(
+        results,  # type: List[search_result_type]
+        **kwargs
+):
+    # type: (...) -> Optional[search_result_type]
+    """
+    :return: the best result, for a torrent the best one that is good, a bad torrent (its data did not download, or
+     the name inside fails the checks) drops out and the next best is picked, None when no result is left
+    """
+    candidates = list(results)
+    while candidates:
+        best_result = _pick_best_result_helper(results=candidates, **kwargs)
+        if not best_result or 'torrent' != best_result.resultType:
+            return best_result
+        # filter out possible bad torrents from providers
+        usable = _usable_torrent(best_result, **kwargs)
+        if usable:
+            return usable
+        candidates.remove(best_result)
+
+
+def _usable_torrent(
+        best_result,  # type: Union[sickgear.classes.SearchResult, TorrentSearchResult]
+        **kwargs
+):
+    # type: (...) -> Optional[TorrentSearchResult]
+    """
+    :return: the torrent result with its data ready, or None for a bad torrent, its data did not download, or the
+     name inside the torrent fails the checks
+    """
+    if not best_result.url.startswith('magnet') and None is not best_result.get_data_func:
+        best_result.url = best_result.get_data_func(best_result.url)
+        best_result.get_data_func = None  # consume only once
+        if not best_result.url:
+            return None
+    if best_result.url.startswith('magnet'):
+        if 'blackhole' != sickgear.TORRENT_METHOD:
+            best_result.content = None
+    else:
+        best_result = cache_torrent_file(best_result, **kwargs)
+        if not best_result:
+            return None
+
+        if 'blackhole' == sickgear.TORRENT_METHOD:
+            best_result.content = None
+
+    if None is not best_result.after_get_data_func:
+        best_result.after_get_data_func(best_result)
+        best_result.after_get_data_func = None  # consume only once
+    return best_result
+
+
 def _pick_best_result_helper(
         results,  # type: List[search_result_type]
         show_obj,  # type: TVShow
@@ -1094,33 +1146,11 @@ def search_providers(
             if 0 == len(found_results[provider_id][cur_search_result]):
                 continue
 
-            best_result = _pick_best_result_helper(results=found_results[provider_id][cur_search_result], **params)
+            best_result = _best_usable_result(found_results[provider_id][cur_search_result], **params)
 
             # if all results were rejected move on to the next episode
             if not best_result:
                 continue
-
-            # filter out possible bad torrents from providers
-            if 'torrent' == best_result.resultType:
-                if not best_result.url.startswith('magnet') and None is not best_result.get_data_func:
-                    best_result.url = best_result.get_data_func(best_result.url)
-                    best_result.get_data_func = None  # consume only once
-                    if not best_result.url:
-                        continue
-                if best_result.url.startswith('magnet'):
-                    if 'blackhole' != sickgear.TORRENT_METHOD:
-                        best_result.content = None
-                else:
-                    best_result = cache_torrent_file(best_result, **params)
-                    if not best_result:
-                        continue
-
-                    if 'blackhole' == sickgear.TORRENT_METHOD:
-                        best_result.content = None
-
-                if None is not best_result.after_get_data_func:
-                    best_result.after_get_data_func(best_result)
-                    best_result.after_get_data_func = None  # consume only once
 
             # add result if it's not a duplicate
             found = False
