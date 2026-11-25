@@ -594,7 +594,7 @@ class GenericProvider(object):
         log_failure_url = False
         try:
             try:
-                data = helpers.get_url(url, *args, **kwargs)
+                data = helpers.get_url(url, *args, ech_retry=True, **kwargs)
             except requests.exceptions.ConnectionError as e:
                 if not getattr(e, 'sg_ech_routed', False):
                     raise
