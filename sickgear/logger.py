@@ -72,6 +72,8 @@ class RedactingFilter(logging.Filter):
     def _refresh(cls):
         if time.time() < cls._expires:
             return
+        # a log line made while the secrets are read must not read them again, it uses the last pattern
+        cls._expires = time.time() + 5
         try:
             # the program name is in every start line and file path, so a login or key that is the name, or a part of it,
             # would mask the name everywhere and show the pattern of the secret, and hiding it hides nothing
