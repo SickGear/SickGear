@@ -105,9 +105,12 @@ class TorrentDayProvider(generic.TorrentProvider):
                     if not html or self._has_no_results(html):
                         raise generic.HaltParseException
 
-                    with BS4Parser(html, tag='table', attr='torrentTable') as soup:
-                        tbl = soup.find('table', id='torrentTable')
-                        tbl_rows = [] if not tbl else tbl.find_all('tr')
+                    # a class, not an id, so rows may be split over tables, the first has the header, a header row
+                    # in a later table has no td cells and is passed over below; parse_only keeps every such table,
+                    # the attr trim of BS4Parser would keep the last one only
+                    with BS4Parser(html, parse_only=dict(table={'class': 'tdt-table'})) as soup:
+                        tbl_rows = [cur_tr for cur_tbl in soup.find_all('table', class_='tdt-table')
+                                    for cur_tr in cur_tbl.find_all('tr')]
 
                         if 2 > len(tbl_rows):
                             raise generic.HaltParseException
