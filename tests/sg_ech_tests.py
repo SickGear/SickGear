@@ -410,6 +410,13 @@ class ProviderRetryTests(unittest.TestCase):
         self.assertIs(self.provider.session, fetch.call_args.kwargs['session'])
         self.assertEqual(0, self.provider.failure_count)
 
+    def test_first_fetch_tells_get_url_of_the_retry(self):
+        error = requests.exceptions.ConnectionError('blocked')
+        error.sg_ech_routed = True
+        _, fetch = self.fetch(error)
+        self.assertTrue(fetch.call_args_list[0].kwargs.get('ech_retry'))
+        self.assertNotIn('ech_retry', fetch.call_args_list[1].kwargs)
+
     def test_runtime_rebuild_keeps_cookies_and_old_session_open(self):
         from sickgear import providers
         old_session = self.provider.session
@@ -426,6 +433,28 @@ class ProviderRetryTests(unittest.TestCase):
         self.assertIsNone(data)
         self.assertEqual(1, fetch.call_count)
         self.assertEqual(1, self.provider.failure_count)
+
+
+class EchRetryLogTests(unittest.TestCase):
+    """ a routed failure of a fetch that its caller retries is a debug line and no failure count, else a warning and a
+    count, as the retry logs and counts its own """
+
+    url = 'https://blocked.example/browse'
+
+    def fetch(self, ech_retry):
+        lines, counts = [], []
+        with mock.patch.object(sg_ech, 'check_ssl_failure', return_value=sg_ech.ROUTED),                 mock.patch.object(sg_helpers.logger, 'warning', side_effect=lambda m: lines.append('warning')),                 mock.patch.object(sg_helpers.logger, 'debug', side_effect=lambda m: lines.append('debug')),                 mock.patch.object(sg_helpers.DOMAIN_FAILURES, 'inc_failure_count',
+                                  side_effect=lambda *a: counts.append(a)),                 mock.patch.object(sg_helpers, 'save_failure'):
+            with self.assertRaises(requests.exceptions.ConnectionError):
+                get_url(self.url, raise_exceptions=True, nocache=True, ech_retry=ech_retry,
+                        session=_RaisingSession(requests.exceptions.SSLError('received corrupt message')))
+        return 'warning' in lines, len(counts)
+
+    def test_retried_is_debug_and_not_counted(self):
+        self.assertEqual((False, 0), self.fetch(True))
+
+    def test_not_retried_is_a_warning_and_counted(self):
+        self.assertEqual((True, 1), self.fetch(False))
 
 
 if '__main__' == __name__:

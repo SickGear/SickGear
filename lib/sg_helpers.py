@@ -873,6 +873,7 @@ def get_url(url,  # type: AnyStr
             exclude_no_data=True,  # type: bool
             use_method=None,  # type: Optional[AnyStr]
             return_response=False,  # type: bool
+            ech_retry=False,  # type: bool
             **kwargs):
     # type: (...) -> Optional[Union[AnyStr, bool, bytes, Dict, Tuple[Union[Dict, List], requests.Session], requests.Response]]
     """
@@ -907,6 +908,8 @@ def get_url(url,  # type: AnyStr
     :param exclude_no_data: exclude no data as failure
     :param use_method: force any supported method by Session(): get, put, post, delete
     :param return_response: return response object
+    :param ech_retry: the caller fetches again when a failed TLS handshake is routed via DoH for ECH, so that failure is
+     logged as debug and not counted, the fetch again logs and counts its own
     :param kwargs: keyword params to passthru to Requests
     :return: None or data fetched from address
     """
@@ -1080,15 +1083,17 @@ def get_url(url,  # type: AnyStr
             logger.warning(f'HTTP error {e.errno} while loading URL{_maybe_request_url(e)}')
     except requests.exceptions.ConnectionError as e:
         raised = e
-        if 'mute_connect_err' not in mute:
-            logger.warning(f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
         # an ISP may block the site by the server name in the TLS handshake, ECH via DoH can get past that,
         # check the host the request failed on, a redirect may have moved it from the host of url
         failed_url = getattr(getattr(e, 'request', None), 'url', None) or url
         if failed_url.startswith('https://') and sg_ech.is_ssl_error(e) \
                 and sg_ech.ROUTED == sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER):
             e.sg_ech_routed = True
-        if failure_monitor:
+        retried = ech_retry and getattr(e, 'sg_ech_routed', False)
+        if 'mute_connect_err' not in mute:
+            (logger.warning, logger.debug)[retried](
+                f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
+        if failure_monitor and not retried:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
         raised = e
