@@ -37,6 +37,11 @@ class CloudflareError(RequestException):
     pass
 
 
+class FlareSolverrError(ValueError):
+    """ FlareSolverr is not running or failed, the message says what failed, so a log line needs no traceback """
+    pass
+
+
 class CloudflareScraper(Session):
     def __init__(self, **kwargs):
         delay = kwargs.pop('delay', None)
@@ -100,22 +105,25 @@ class CloudflareScraper(Session):
 
     def test_flaresolverr(self, url_solver):
         # test if FlareSolverr software is running
-        response_test = super(CloudflareScraper, self).request('GET', url_solver)
         fs_ver = None
-        if 200 == response_test.status_code and response_test.ok:
-            json_data = response_test.json()
-            if any([json_data.get('version')]):
-                fs_ver = json_data.get('version')
+        try:
+            response_test = super(CloudflareScraper, self).request('GET', url_solver)
+            if 200 == response_test.status_code and response_test.ok:
+                json_data = response_test.json()
+                if any([json_data.get('version')]):
+                    fs_ver = json_data.get('version')
+        except (RequestException, ValueError, AttributeError):
+            pass
         if None is fs_ver:
-            raise ValueError('FlareSolverr software not found (is it running?)')
+            raise FlareSolverrError('FlareSolverr software not found at %s (is it running?)' % url_solver)
         return fs_ver
 
     def get_content(self, method, url, url_solver, user_agent, proxy_browser=False, **kwargs):
 
         url_solver = url_solver and re.sub(r'(/|v1)*$', '', url_solver) or 'http://localhost:8191'
         if not self.test_flaresolverr(url_solver):
-            raise ValueError('No FlareSolverr software running %sat %s' % (('to solve Cloudflare challenge ',
-                                                                            '')[proxy_browser], url_solver))
+            raise FlareSolverrError('No FlareSolverr software running %sat %s' % (
+                ('to solve Cloudflare challenge ', '')[proxy_browser], url_solver))
         # FlareSolverr's browser refuses (and fails the whole request on) a cookie for any domain other than the
         # page it is on, so only send cookies for the requested host; e.g. a solved page can leave the jar holding
         # cookies of a domain the site redirected to
@@ -147,7 +155,8 @@ class CloudflareScraper(Session):
                 else:
                     response = None
             elif 'error' == result.get('status'):
-                raise ValueError('Failure with FlareSolverr: %s' % result.get('message', 'See the FlareSolver output'))
+                raise FlareSolverrError('Failure with FlareSolverr: %s' % result.get(
+                    'message', 'See the FlareSolver output'))
 
         return response
 
@@ -155,8 +164,8 @@ class CloudflareScraper(Session):
         try:
             return super(CloudflareScraper, self).request('POST', '%s/v1' % url_solver, json=params)
         except(BaseException, Exception) as e:
-            raise ValueError('FlareSolverr software unable to %s: %r' % (('solve Cloudflare anti-bot IUAM challenge',
-                                                                          'fetch content')[proxy_browser], e))
+            raise FlareSolverrError('FlareSolverr software unable to %s: %s' % (
+                ('solve Cloudflare anti-bot IUAM challenge', 'fetch content')[proxy_browser], e)) from None
 
     @staticmethod
     def _fs_json(response):

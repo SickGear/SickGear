@@ -151,6 +151,7 @@
 * Change the update check of a branch with no upstream to log a warning, not an error
 * Change the Emby setting warning to log once, not at each watched state check, until the setting changes
 * Fix backlog warns no provider has backlog searching when a torrent provider has scheduled backlog off
+* Change log a FlareSolverr that is not running or fails as one line, at most each 10 minutes, with no traceback
 
 
 [develop]
