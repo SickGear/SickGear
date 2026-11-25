@@ -4,6 +4,7 @@
 * Fix EZTV recent and Propers search fail with an error, as they are made with no show ids
 * Fix EZTV fetches the same pages more than once in a search and lists each release more than once
 * Fix SnowFL finds no results since its site changed the script that a search key is read from
+* Fix TorLock finds no results since its site changed the table of results, and leave out its advert rows
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)

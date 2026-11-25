@@ -59,8 +59,8 @@ class TorLockProvider(generic.TorrentProvider):
 
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
-        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
-            'info': r'torrent.?(\d+)', 'versrc': r'ver\.', 'verified': 'Verified'}.items()])
+        # a release links to /torrent/<id>/ on the site, a row linking to another site (e.g. *.t0r.store) is an advert
+        rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {'info': r'^/torrent/(\d+)'}.items()])
 
         for mode in search_params:
             for search_string in search_params[mode]:
@@ -76,41 +76,27 @@ class TorLockProvider(generic.TorrentProvider):
                 try:
                     if not html or self._has_no_results(html) or re.search(r'<b>Error:\sNot\sFound</b>', html):
                         raise generic.HaltParseException
-                    with BS4Parser(html.replace('thead', 'tr')) as soup:
+                    with BS4Parser(html) as soup:
 
-                        tbl = soup.find_all('div', class_='table-responsive')
-                        if None is tbl:
-                            raise generic.HaltParseException
-                        if len(tbl):
-                            tbl = tbl[-1]
-                        tbl = tbl.find(
-                            'table', class_='table table-striped table-bordered table-hover table-condensed')
+                        tbl = soup.find('table', class_='tl-list')
                         tbl_rows = [] if not tbl else tbl.find_all('tr')
 
                         if 2 > len(tbl_rows):
                             raise generic.HaltParseException
 
-                        head = None
                         for tr in tbl_rows[1:]:
-                            cells = tr.find_all('td')
-                            if 5 > len(cells) or not tr.find('td', class_='tf'):
-                                continue
                             try:
-                                head = head if None is not head else self._header_row(tr)
+                                info = tr.find('a', class_='tl-name', href=rc['info'])
+                                if not info:
+                                    continue
                                 seeders, leechers, size = [try_int(n, n) for n in [
-                                    cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
-                                if not len(tbl_rows[0].select('th a[href *="file"]')):
-                                    seeders, leechers, size = [try_int(n, n) for n in [
-                                        tr.find_all('td', class_=x)[0].get_text().strip()
-                                        for x in ('tul', 'tdl', 'ts')]]
-                                if self._reject_item(seeders, leechers, verified=self.confirmed and not (
-                                        tr.find('img', src=rc['versrc']) or tr.find('img', title=rc['verified']))):
+                                    tr.find('td', class_=x).get_text().strip() for x in ('tul', 'tdl', 'ts')]]
+                                if self._reject_item(seeders, leechers,
+                                                     verified=self.confirmed and not tr.find(class_='tl-ver')):
                                     continue
 
-                                info = tr.find('a', href=rc['info']) or {}
-                                title = info and info.get_text().strip()
-                                tid_href = info and try_int(rc['info'].findall(info['href'])[0])
-                                download_url = tid_href and self._link(tid_href)
+                                title = info.get_text().strip()
+                                download_url = self._link(try_int(rc['info'].findall(info['href'])[0]))
                             except (AttributeError, TypeError, ValueError, IndexError):
                                 continue
 
