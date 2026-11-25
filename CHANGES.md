@@ -170,6 +170,11 @@
 * Fix provider logs a connection warning when the ISP blocks its name, the fetch then gets through via ECH
 
 
+### 3.36.18 (2026-11-25 14:30:00 UTC)
+
+* Fix TorrentDay finds no results since its search page changed the table of results
+
+
 ### 3.36.17 (2026-11-24 01:50:00 UTC)
 
 * Add SearchNZB usenet provider
