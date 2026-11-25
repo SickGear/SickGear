@@ -30,7 +30,7 @@ from cachecontrol import CacheControl, CacheControlAdapter, caches
 from dateutil.parser import parser
 # from tmdbsimple.configuration import Configuration
 # from tmdbsimple.genres import Genres
-from cfscrape import CloudflareScraper
+from cfscrape import CloudflareScraper, FlareSolverrError
 from send2trash import send2trash
 from six import integer_types, moves, PY2, string_types, text_type
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
@@ -135,6 +135,7 @@ TRASH_REMOVE_SHOW = False
 REMOVE_FILENAME_CHARS = None
 MEMCACHE = {}
 FLARESOLVERR_HOST = None
+_flaresolverr_logged = {}  # type: Dict[AnyStr, float]
 
 # noinspection PyRedeclaration
 db = None
@@ -1107,6 +1108,15 @@ def get_url(url,  # type: AnyStr
             logger.warning(f'Connection timed out msg:{ex(e)} while loading URL {_maybe_request_url(e, url)}')
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection_timeout)
+    except FlareSolverrError as e:
+        raised = e
+        # one line, at most each 10 minutes per message, a traceback of the solver call adds nothing to the message
+        now = time.time()
+        (logger.debug, logger.warning)[_flaresolverr_logged.get(ex(e), 0) < now - 600](f'{ex(e)}, for URL {url}')
+        _flaresolverr_logged[ex(e)] = now
+        if failure_monitor:
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.other)
+            log_failure_url = True
     except (BaseException, Exception) as e:
         raised = e
         logger.warning(('Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
