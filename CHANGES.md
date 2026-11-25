@@ -149,6 +149,7 @@
 * Change the bulk change page to read folder sizes from the title line, which says what the sizes count
 * Change the bulk change slanted labels and sort arrows to centre in their column, and the action columns to one width
 * Change the update check of a branch with no upstream to log a warning, not an error
+* Change the Emby setting warning to log once, not at each watched state check, until the setting changes
 
 
 [develop]
