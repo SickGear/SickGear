@@ -205,10 +205,9 @@ class BacklogSearcher(Job):
         any_torrent_enabled = continued_backlog = False
         if not force and standard_backlog and (datetime.datetime.now() - datetime.datetime.fromtimestamp(
                 self._get_last_runtime())) < datetime.timedelta(hours=23):
-            any_torrent_enabled = any(map(
-                lambda x: x.is_active() and getattr(x, 'enable_backlog', None)
-                and GenericProvider.TORRENT == x.providerType,
-                sickgear.providers.sorted_sources()))
+            # the same test as the check below, a torrent provider with backlog on and scheduled backlog off made this run
+            # go on, and that check then warned that no provider has backlog searching
+            any_torrent_enabled = self.providers_active(torrent_only=True, scheduled=True)
             if not any_torrent_enabled:
                 logger.debug('Last scheduled backlog run was within the last day, skipping this run.')
                 return
