@@ -62,7 +62,9 @@ class EztvProvider(generic.TorrentProvider):
         for mode in search_params:
             if 'Cache' != mode and not imdb_id:
                 continue  # the API gives every release for a search with no id, so search only by a known show id
-            for _ in search_params[mode]:
+            data['torrents_count'], data['torrents'] = 0, []
+            # the API query uses no search string, only the page and the show id, so fetch the pages once per mode
+            for _ in search_params[mode][:1]:
                 for page in (1, 2):
                     if 'Cache' == mode:
                         search_url = self.urls['browse'] % page
