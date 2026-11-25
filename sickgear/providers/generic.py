@@ -799,8 +799,8 @@ class GenericProvider(object):
         :return:
         """
 
-        # check for auth
-        if not self._authorised():
+        # check for auth, a magnet link needs no provider site as it is fetched from a torrent cache or saved as is
+        if not (result.url or '').lower().startswith('magnet:') and not self._authorised():
             return False
 
         if GenericProvider.TORRENT == self.providerType:

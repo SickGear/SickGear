@@ -7,6 +7,7 @@
 * Fix TorLock finds no results since its site changed the table of results, and leave out its advert rows
 * Fix a torrent is ignored when a site advert is before the release name inside it, e.g. "www.site.org - "
 * Fix a search gives up on an episode when its best torrent is bad, it now tries the next best result
+* Fix a magnet snatch fails when the provider site is down, as a magnet link needs no provider site to save it
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)
