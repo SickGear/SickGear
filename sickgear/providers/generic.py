@@ -595,6 +595,8 @@ class GenericProvider(object):
 
         # noinspection PyUnusedLocal
         log_failure_url = False
+        if self._tunnel_on and not self._tunnel_allowed():
+            self._tunnel_on = False  # the fallback is now off for this provider, so go direct, a block is then noted
         try:
             try:
                 if self._tunnel_on:
@@ -694,7 +696,8 @@ class GenericProvider(object):
         :return: data fetched, raise cause or a connection error when the tunnel is not usable or the site fails
         """
         cause = kwargs.pop('cause', None) or requests.exceptions.ConnectionError('tunnel route failed')
-        if sickgear.PROXY_SETTING:  # the proxy of the user setting stays the only route
+        if not self._tunnel_allowed():
+            self._note_blocked(cause)
             raise cause
         sg_tunnel.load(self._provider_data())
         for _ in range(3):
@@ -735,7 +738,7 @@ class GenericProvider(object):
                 if helpers.download_file(url, filename, **kwargs):
                     return True
                 continue
-            if sickgear.PROXY_SETTING:  # the proxy of the user setting stays the only route
+            if not self._tunnel_allowed():
                 continue
             sg_tunnel.load(self._provider_data())
             proxy = sg_tunnel.proxy()
@@ -749,7 +752,45 @@ class GenericProvider(object):
                 return True
         return False
 
+    # private trackers whose rules allow access by VPN, they use the fallback by default as public access providers do
+    TUNNEL_DEFAULT_ON = ('iptorrents', 'speedcd', 'torrentday', 'torrenting', 'torrentleech')
+
+    def tunnel_default_on(self):
+        # type: (...) -> bool
+        """
+        :return: True when this provider uses the fallback unless the user unticks it, a provider that may ban an
+         account used from a VPN address is off until the user ticks it
+        """
+        return self.get_id() in self.TUNNEL_DEFAULT_ON or self.is_public_access()
+
+    def tunnel_use(self):
+        # type: (...) -> bool
+        """
+        :return: True when this provider uses the fallback, by a choice the user saved, else by its default
+        """
+        pid = self.get_id()
+        return pid in sickgear.PROVIDER_TUNNEL_USE or (
+            pid not in sickgear.PROVIDER_TUNNEL_EXCLUDE and self.tunnel_default_on())
+
+    def _tunnel_allowed(self):
+        # type: (...) -> bool
+        """
+        :return: True when the fallback setting is on, the user has no proxy setting (it stays the only route), and
+         this provider uses the fallback
+        """
+        return bool(sickgear.PROVIDER_TUNNEL and not sickgear.PROXY_SETTING and self.tunnel_use())
+
+    def _note_blocked(self, error):
+        # type: (BaseException) -> None
+        """
+        note a failed TLS handshake that ECH did not get past, it looks like a block, the top notice then offers the
+        fallback for this provider, with what the ECH check found, while the fallback is off or not ticked for it
+        """
+        if not sickgear.PROXY_SETTING and not self._tunnel_allowed() and getattr(error, 'sg_ech_outcome', None):
+            sickgear.PROVIDER_TUNNEL_BLOCKED[self.get_id()] = (self.name, error.sg_ech_outcome)
+
     def _tunnel_use(self):
+        sickgear.PROVIDER_TUNNEL_BLOCKED.pop(self.get_id(), None)  # it gets through, so no notice for it
         if not self._tunnel_on:
             self._tunnel_on = True
             self._tunnel_log('direct fetch failed, the tunnel route gets through, check that the provider rules allow'

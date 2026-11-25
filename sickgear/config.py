@@ -29,6 +29,10 @@ from _23 import urlsplit, urlunsplit
 from sg_helpers import compress_file, copy_file, remove_file_perm, scantree, try_int
 from json_helper import json_load
 
+# noinspection PyUnreachableCode
+if False:
+    from typing import Any, AnyStr, List, Tuple
+
 
 naming_ep_type = ('%(seasonnumber)dx%(episodenumber)02d',
                   's%(seasonnumber)02de%(episodenumber)02d',
@@ -367,6 +371,26 @@ def kv_csv(data, default=''):
 
     return ','.join(['='.join([i.strip() for i in i.split('=')]) for i in data.split(',')
                      if 1 == len(re.findall('=', i)) and all(i.replace(' ', '').split('='))])
+
+
+def provider_tunnel_choices(use, left_out, shown, ticked, default_on):
+    # type: (List[AnyStr], List[AnyStr], Any, Any, List[AnyStr]) -> Tuple[List[AnyStr], List[AnyStr]]
+    """
+    a choice is saved only where it differs from the default of the provider, so a provider the user never changed
+    follows its default
+
+    :param use: provider ids saved as ticked against a default of off
+    :param left_out: provider ids saved as unticked against a default of on
+    :param shown: space separated ids of the providers the form listed
+    :param ticked: one ticked provider id as a string, more as a list, or None for none ticked
+    :param default_on: ids of the listed providers that use the fallback by default
+    :return: the new use and left out lists, a saved choice of a provider that the form did not list is kept
+    """
+    shown = set((shown or '').split())
+    ticked = set(([ticked], ticked)[isinstance(ticked, list)] if ticked else []) & shown
+    default_on = set(default_on) & shown
+    return (sorted((set(use) - shown) | (ticked - default_on)),
+            sorted((set(left_out) - shown) | (default_on - ticked)))
 
 
 def to_int(val, default=0):

@@ -60,7 +60,7 @@ from tvinfo_base.base import ShowContainer
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Optional
+    from typing import AnyStr, Dict, List, Optional, Tuple
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
@@ -284,6 +284,12 @@ SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 FLARESOLVERR_HOST = None
 DNS_RESOLVER = None
+PROVIDER_TUNNEL = False
+# provider ids whose fallback choice differs from their default, see GenericProvider.tunnel_default_on
+PROVIDER_TUNNEL_USE = []  # type: List[AnyStr]
+PROVIDER_TUNNEL_EXCLUDE = []  # type: List[AnyStr]
+PROVIDER_TUNNEL_NOTICE_CLOSED = {}  # type: Dict[AnyStr, int]
+PROVIDER_TUNNEL_BLOCKED = {}  # type: Dict[AnyStr, Tuple[AnyStr, AnyStr]]
 
 ADD_SHOWS_WO_DIR = False
 ADD_SHOWS_METALANG = 'en'
@@ -675,7 +681,8 @@ def init_stage_1(console_logging):
     global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_INTERVAL, \
         BACKLOG_LIMITED_PERIOD, BACKLOG_NOFULL, BACKLOG_PERIOD, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
         IGNORE_WORDS, IGNORE_WORDS_REGEX, REQUIRE_WORDS, REQUIRE_WORDS_REGEX, \
-        ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, FLARESOLVERR_HOST, DNS_RESOLVER
+        ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, FLARESOLVERR_HOST, DNS_RESOLVER, \
+        PROVIDER_TUNNEL, PROVIDER_TUNNEL_USE, PROVIDER_TUNNEL_EXCLUDE, PROVIDER_TUNNEL_NOTICE_CLOSED
     # Search Settings/NZB search
     global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
         NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, \
@@ -984,6 +991,13 @@ def init_stage_1(console_logging):
     sg_helpers.FLARESOLVERR_HOST = FLARESOLVERR_HOST
     DNS_RESOLVER = check_setting_str(CFG, 'General', 'dns_resolver', '')
     sg_helpers.DNS_RESOLVER = DNS_RESOLVER
+    PROVIDER_TUNNEL = bool(check_setting_int(CFG, 'General', 'provider_tunnel', 0))
+    PROVIDER_TUNNEL_USE = check_setting_str(CFG, 'General', 'provider_tunnel_use', '').split()
+    PROVIDER_TUNNEL_EXCLUDE = check_setting_str(CFG, 'General', 'provider_tunnel_exclude', '').split()
+    PROVIDER_TUNNEL_NOTICE_CLOSED = {
+        k: helpers.try_int(v) for k, _, v in [
+            cur_kv.partition(':') for cur_kv in
+            check_setting_str(CFG, 'General', 'provider_tunnel_notice_closed', '').split()] if k and v}
 
     NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
     TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -1987,6 +2001,11 @@ def _save_config(force=False, **kwargs):
     new_config['General']['unaired_recent_search_only'] = int(UNAIRED_RECENT_SEARCH_ONLY)
     new_config['General']['flaresolverr_host'] = FLARESOLVERR_HOST
     new_config['General']['dns_resolver'] = DNS_RESOLVER
+    new_config['General']['provider_tunnel'] = int(PROVIDER_TUNNEL)
+    new_config['General']['provider_tunnel_use'] = ' '.join(PROVIDER_TUNNEL_USE)
+    new_config['General']['provider_tunnel_exclude'] = ' '.join(PROVIDER_TUNNEL_EXCLUDE)
+    new_config['General']['provider_tunnel_notice_closed'] = ' '.join(
+        '%s:%s' % (k, v) for k, v in sorted(PROVIDER_TUNNEL_NOTICE_CLOSED.items()))
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     sg_helpers.CACHE_DIR = CACHE_DIR

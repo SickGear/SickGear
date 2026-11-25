@@ -1104,9 +1104,10 @@ def get_url(url,  # type: AnyStr
         # an ISP may block the site by the server name in the TLS handshake, ECH via DoH can get past that,
         # check the host the request failed on, a redirect may have moved it from the host of url
         failed_url = getattr(getattr(e, 'request', None), 'url', None) or url
-        if failed_url.startswith('https://') and sg_ech.is_ssl_error(e) \
-                and sg_ech.ROUTED == sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER):
-            e.sg_ech_routed = True
+        if failed_url.startswith('https://') and sg_ech.is_ssl_error(e):
+            # the outcome tells a caller what ECH can do about a block, e.g. the site has ECH off
+            e.sg_ech_outcome = sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER)
+            e.sg_ech_routed = sg_ech.ROUTED == e.sg_ech_outcome
         retried = ech_retry and getattr(e, 'sg_ech_routed', False)
         e.sg_connect_msg = f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}'
         if 'mute_connect_err' not in mute:

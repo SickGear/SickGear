@@ -155,6 +155,7 @@
 * Fix a script that fetches a page with SickGear helpers stops with an error when the fetch fails
 * Fix a script error on Config/Search from a folder browser set up for a field that is not on that page
 * Add a tunnel route for a provider that is blocked and has no ECH route, with checked certificates at each step
+* Add Blocked provider fallback setting, off by default, with a choice per provider and a top notice
 
 
 [develop]

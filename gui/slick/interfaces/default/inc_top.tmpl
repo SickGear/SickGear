@@ -424,6 +424,31 @@
 	</div>
 #end if
 ##
+#set $tunnel_items = $sickgear.providers.tunnel_notice_items()
+#if $tunnel_items
+	#set $tunnel_names = ', '.join([cur_item[1] for cur_item in $tunnel_items])
+	<div class="alert alert-warning topbar-notification" role="alert" id="provider-tunnel-notice">
+		<i class="sgicon-warning tunnel-notice-icon" aria-hidden="true"></i>
+		<div class="tunnel-notice-text">
+			<p><strong>$tunnel_names #echo ('looks', 'look')[1 < len($tunnel_items)]# blocked by your ISP</strong>, a fetch failed in the TLS handshake</p>
+	#for $cur_pid, $cur_name, $cur_outcome, $cur_one_click in $tunnel_items
+		#if $sickgear.sg_ech.ECH_OFF == $cur_outcome
+			<p>$cur_name is on Cloudflare with ECH off, its owner can turn ECH on, then SickGear gets past the block with DNS over HTTPS</p>
+		#elif $sickgear.sg_ech.NO_BACKEND == $cur_outcome
+			<p>$cur_name has ECH on, install rtls (pip install rtls) so that SickGear can use it</p>
+		#end if
+		#if $cur_one_click
+			<p class="tunnel-notice-action"><button type="button" class="btn btn-sm tunnel-notice-use" data-pid="$cur_pid" data-name="$cur_name">Use the tunnel for $cur_name</button></p>
+		#else
+			<p>$cur_name is a private tracker, check that its rules allow a VPN address, then turn the fallback on for it under <a href="$sbRoot/config/search/#provider-tunnel">Blocked provider fallback</a></p>
+		#end if
+	#end for
+			<p class="tunnel-notice-note">with the tunnel, a provider sees a VPN address</p>
+		</div>
+		<button type="button" class="tunnel-notice-close" aria-label="Close" title="Close" onclick="this.closest('.alert').remove(); fetch('$sbRoot/config/search/tunnel-notice-close')"><i class="glyphicon glyphicon-remove" aria-hidden="true"></i></button>
+	</div>
+#end if
+##
 #if $sickgear.MEMCACHE.get('DEPRECATE_SB_RUNNER')
 	<div class="alert" style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
 		<p>Since Jan 2019, installations like this one have displayed a
