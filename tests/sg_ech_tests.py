@@ -429,10 +429,79 @@ class ProviderRetryTests(unittest.TestCase):
         old_session.close.assert_not_called()
 
     def test_not_routed_counts_failure(self):
+        # no tunnel data, the tunnel route is not usable and the direct error counts
+        self.provider._provider_data = lambda: None
         data, fetch = self.fetch(requests.exceptions.ConnectionError('refused'))
         self.assertIsNone(data)
         self.assertEqual(1, fetch.call_count)
         self.assertEqual(1, self.provider.failure_count)
+
+    def test_not_routed_tries_tunnel(self):
+        tunnel = mock.Mock(return_value='tunnel data')
+        self.provider._tunnel_get = tunnel
+        with mock.patch.object(self.generic.helpers, 'get_url',
+                               side_effect=requests.exceptions.ConnectionError('refused')) as fetch:
+            data = self.provider.get_url('https://blocked.example/')
+        self.assertEqual('tunnel data', data)
+        self.assertEqual(1, fetch.call_count)
+        self.assertIsInstance(tunnel.call_args.kwargs['cause'], requests.exceptions.ConnectionError)
+        self.assertEqual(0, self.provider.failure_count)
+
+    def test_direct_failure_logged_as_warning_only_when_tunnel_fails(self):
+        for tunnel_result, warned in (('tunnel data', False),
+                                      (requests.exceptions.ConnectionError('tunnel down too'), True)):
+            self.provider._tunnel_on = False
+            self.provider._tunnel_get = mock.Mock(side_effect=[tunnel_result])
+            error = requests.exceptions.ConnectionError('refused')
+            error.sg_connect_msg = 'Connection error msg:refused while loading URL https://blocked.example/'
+            with mock.patch.object(self.generic.helpers, 'get_url', side_effect=error) as fetch,                     mock.patch.object(self.generic.logger, 'warning') as warning:
+                self.provider.get_url('https://blocked.example/')
+            self.assertTrue(fetch.call_args.kwargs['defer_connect_log'])
+            self.assertEqual(warned, mock.call(error.sg_connect_msg) in warning.call_args_list, tunnel_result)
+
+    def test_get_url_defers_connection_warning_to_debug(self):
+        with mock.patch.object(sg_helpers.logger, 'warning') as warning,                 mock.patch.object(sg_helpers.logger, 'debug') as debug:
+            with self.assertRaises(requests.exceptions.ConnectionError) as ctx:
+                get_url('https://blocked.example/', session=_RaisingSession(
+                    requests.exceptions.ConnectionError('refused')), raise_exceptions=True, failure_monitor=False,
+                    defer_connect_log=True)
+        self.assertIn('refused', ctx.exception.sg_connect_msg)
+        self.assertFalse([c for c in warning.call_args_list if 'Connection error' in c.args[0]])
+        self.assertIn(mock.call(ctx.exception.sg_connect_msg), debug.call_args_list)
+
+    def download(self, tunnel_on, direct_ok, tunnel_ok):
+        self.provider._tunnel_on = tunnel_on
+        self.provider._provider_data = lambda: None
+        calls = []
+
+        def download_file(url, filename, **kwargs):
+            route = ('direct', 'tunnel')['tunnel_proxy' in kwargs]
+            calls.append(route)
+            return (direct_ok, tunnel_ok)['tunnel' == route]
+        with mock.patch.object(self.generic.helpers, 'download_file', side_effect=download_file),                 mock.patch.object(self.generic.sg_tunnel, 'proxy', return_value='https://u:p@192.0.2.1:443'),                 mock.patch.object(self.generic.sg_tunnel, 'load'),                 mock.patch.object(self.generic.sg_tunnel, 'succeeded'):
+            ok = self.provider.download_file('https://blocked.example/dl/1', 'f.torrent', session=None)
+        return ok, calls
+
+    def test_download_tries_tunnel_after_direct_fails(self):
+        self.assertEqual((True, ['direct', 'tunnel']), self.download(False, False, True))
+        self.assertTrue(self.provider._tunnel_on)
+
+    def test_download_tunnel_first_once_on(self):
+        self.assertEqual((True, ['tunnel']), self.download(True, False, True))
+        self.assertEqual((True, ['tunnel', 'direct']), self.download(True, True, False))
+
+    def test_download_direct_only_with_user_proxy(self):
+        with mock.patch.object(self.generic.sickgear, 'PROXY_SETTING', 'http://127.0.0.1:1'):
+            self.assertEqual((False, ['direct']), self.download(False, False, True))
+
+    def test_tunnel_first_then_direct_on_tunnel_failure(self):
+        self.provider._tunnel_on = True
+        self.provider._tunnel_get = mock.Mock(side_effect=requests.exceptions.ConnectionError('tunnel down'))
+        with mock.patch.object(self.generic.helpers, 'get_url', return_value='direct data') as fetch:
+            data = self.provider.get_url('https://blocked.example/')
+        self.assertEqual('direct data', data)
+        self.assertEqual(1, fetch.call_count)
+        self.assertFalse(self.provider._tunnel_on)
 
 
 class EchRetryLogTests(unittest.TestCase):

@@ -36,6 +36,7 @@ from six import integer_types, moves, PY2, string_types, text_type
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
 import sg_ech
+import sg_tunnel
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
 # noinspection PyPep8Naming
@@ -818,6 +819,8 @@ class _IdleLimitAdapterMixin(object):
         self.poolmanager.pool_classes_by_scheme = _idle_limit_pools
 
     def proxy_manager_for(self, proxy, **proxy_kwargs):
+        # a tunnel proxy gets its own CA and name check, never the session verify setting, which may be off
+        proxy_kwargs.update(sg_tunnel.adapter_kwargs(proxy))
         manager = super().proxy_manager_for(proxy, **proxy_kwargs)
         # shortcut: a socks proxy keeps its own pools with no idle limit, add socks pools if a socks user has a hang
         if not proxy.lower().startswith('socks'):
@@ -971,6 +974,9 @@ def get_url(url,  # type: AnyStr
                                adapter_class=functools.partial(IdleLimitCacheControlAdapter, resolver=session.resolver))
 
     provider = kwargs.pop('provider', None)
+    tunnel_proxy = kwargs.pop('tunnel_proxy', None)
+    # the caller fetches again via the tunnel after a connection error, and logs the kept message if that fails
+    defer_connect_log = kwargs.pop('defer_connect_log', False)
 
     # handle legacy uses of `json` param
     if kwargs.get('json'):
@@ -991,6 +997,8 @@ def get_url(url,  # type: AnyStr
 
     # session ssl verify
     session.verify = bool(re.search(r'(//|[.@])(github\.(com|io)|githubusercontent\.com|gitlab\.com)/', url))
+    if tunnel_proxy:
+        session.verify = True  # the tunnel must not be able to read or alter the site traffic, check the site cert
 
     # don't trust os environments (auth, proxies, ...)
     session.trust_env = False
@@ -1003,7 +1011,13 @@ def get_url(url,  # type: AnyStr
         url = urlunparse(parsed)
 
         # session proxies
-        if PROXY_SETTING:
+        if tunnel_proxy:
+            # only the idle limit adapters apply the tunnel proxy check, mount one where a session has none
+            if not isinstance(session.adapters.get('https://'), _IdleLimitAdapterMixin):
+                for cur_prefix in ('https://', 'http://'):
+                    session.mount(cur_prefix, IdleLimitHTTPAdapter(resolver=getattr(session, 'resolver', None)))
+            session.proxies = {'http': tunnel_proxy, 'https': tunnel_proxy}
+        elif PROXY_SETTING:
             (proxy_address, pac_found) = proxy_setting(PROXY_SETTING, url)
             msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
             if None is proxy_address:
@@ -1012,6 +1026,8 @@ def get_url(url,  # type: AnyStr
             elif proxy_address:
                 logger.debug(f'Using {msg}')
                 session.proxies = {'http': proxy_address, 'https': proxy_address}
+        elif sg_tunnel.is_tunnel((session.proxies or {}).get('https')):
+            session.proxies = {}  # a persistent session goes direct again when the caller gives no tunnel
 
         if None is not use_method:
 
@@ -1092,9 +1108,9 @@ def get_url(url,  # type: AnyStr
                 and sg_ech.ROUTED == sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER):
             e.sg_ech_routed = True
         retried = ech_retry and getattr(e, 'sg_ech_routed', False)
+        e.sg_connect_msg = f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}'
         if 'mute_connect_err' not in mute:
-            (logger.warning, logger.debug)[retried](
-                f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
+            (logger.warning, logger.debug)[retried or defer_connect_log](e.sg_connect_msg)
         if failure_monitor and not retried:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
