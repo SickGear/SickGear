@@ -5,6 +5,7 @@
 * Fix EZTV fetches the same pages more than once in a search and lists each release more than once
 * Fix SnowFL finds no results since its site changed the script that a search key is read from
 * Fix TorLock finds no results since its site changed the table of results, and leave out its advert rows
+* Fix a torrent is ignored when a site advert is before the release name inside it, e.g. "www.site.org - "
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)

@@ -794,6 +794,14 @@ def _search_provider_thread(provider, provider_results, show_obj, ep_obj_list, m
         logger.log(f'No suitable result at [{provider.name}]')
 
 
+# a leading site advert in a name, then a separator, as "[ <domain> ]", "www.<domain> - ", or "<domain> - " with a
+# top level domain that ads use and spaces around the separator, a release name has none of these at its start
+rc_site_prefix = re.compile(
+    r'(?i)^\s*(?:\[\s*(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\s*\]\s*[-|:]?'
+    r'|www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+\s*[-|:]'
+    r'|[a-z0-9-]+\.(?:com|net|org|xyz|club|info|cc|ws|io|ru|cx|ph|li|se|eu|vip|lol|top|site)\s+[-|:])\s*')
+
+
 def cache_torrent_file(
         search_result,  # type: Union[sickgear.classes.SearchResult, TorrentSearchResult]
         show_obj,  # type: TVShow
@@ -831,6 +839,9 @@ def cache_torrent_file(
 
     if isinstance(torrent_meta, dict):
         torrent_name = torrent_meta.get('info', {}).get('name')
+        if isinstance(torrent_name, str):
+            # a site may put its advert before the name, e.g. "www.UIndex.org  -  Show S01E01 ...", it fails the checks
+            torrent_name = rc_site_prefix.sub('', torrent_name)
         if torrent_name:
             # verify the name in torrent also passes filtration
             result_name = search_result.name
