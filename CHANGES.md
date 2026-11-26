@@ -11,6 +11,7 @@
 * Change get a torrent for a magnet from itorrents.net, the new home of itorrents.org
 * Remove dead mirrors from The Pirate Bay, LimeTorrents and TorLock
 * Fix a provider keeps trying a remembered site that is no longer in its list of sites
+* Fix a private provider that stopped working since its site changed its login and search
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)

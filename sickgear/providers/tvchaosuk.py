@@ -23,7 +23,8 @@ import traceback
 from . import generic
 from .. import logger
 from ..config import naming_ep_type
-from ..helpers import try_int
+from ..helpers import anon_url, try_int
+from browser_ua import get_ua
 from bs4_parser import BS4Parser
 from dateutil.parser import parse
 
@@ -37,7 +38,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         self.url_base = 'https://tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': f'{self.url_base}login',
+                     'login': self.url_base,
                      'search': self.url_base + 'torrents/filter?%s' % '&'.join(
                          ['search=%s', 'page=0', 'tmdb=', 'imdb=', 'tvdb=', 'description=', 'uploader=', 'view=list',
                           'start_year=', 'end_year=', 'sorting=created_at', 'direction=desc', 'qty=100', '_token=%s',
@@ -46,12 +47,19 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self._token, \
-            self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 7 * [None]
+        self.headers['User-Agent'] = get_ua()
+        self.session.headers['User-Agent'] = self.headers['User-Agent']
+
+        self.digest, self._token, \
+            self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 6 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(TVChaosUKProvider, self)._authorised(logged_in=self.logged_in, post_params={'remember': '1'})
+        if not self.digest:
+            logger.warning(f'{self.name} needs the Cookies setting from a logged in browser session')
+            return False
+        return super(TVChaosUKProvider, self)._authorised(
+            logged_in=self.logged_in, failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def logged_in(self, resp=None):
 
@@ -330,13 +338,16 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 ep_detail=(lambda e: [naming_ep_type[2] % e] + (
                     [], ['%(episodenumber)d of' % e])[1 == try_int(e.get('seasonnumber'))]), **kwargs)
 
-    @staticmethod
-    def ui_string(key):
+    def ui_string(self, key):
 
         return ('tvchaosuk_tip' == key
                 and 'releases are often "Air by date release names" - edit search settings of show if required'
                 or 'tvchaosuk_use_after_get_data' == key and 'Send "Say thanks!"'
                 or 'tvchaosuk_use_after_get_data_tip' == key and 'to each release that is snatched'
+                or 'tvchaosuk_digest' == key and (
+                    'use... all cookies of a logged in browser session,'
+                    ' e.g. \'<name>_session=xx; remember_web_<id>=yy\''
+                    ' from <a target="_blank" href="%s">%s</a>' % (anon_url(self.url_base), self.url_base.strip('/')))
                 or '')
 
 
