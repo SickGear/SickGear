@@ -6,6 +6,7 @@ warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from os.path import abspath, dirname, join
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
@@ -13,6 +14,9 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 import requests
 
 import sg_helpers
+import sickgear
+from sickgear import webserve
+from sickgear.providers.generic import TorrentProvider
 from sickgear.providers.milkie import MilkieProvider
 from sickgear.providers.nebulance import NebulanceProvider
 from sickgear.providers.speedapp import SpeedAppProvider
@@ -127,6 +131,36 @@ class CookieSettingTests(unittest.TestCase):
         self.assertEqual(['', 'sid=kept', 'sid=kept'], self.sent)
 
 
+class LoginSettingSaveTests(unittest.TestCase):
+    """ a saved change to a login setting lets the next search update the provider cache, it does not wait """
+
+    def save(self, digest, **attrs):
+        provider = TorrentProvider('Cookie Prov')
+        provider.digest = 'uid=1;pass=old'
+        for cur_attr, cur_value in attrs.items():
+            setattr(provider, cur_attr, cur_value)
+        provider.cache = mock.MagicMock()
+        with mock.patch.object(sickgear.providers, 'sorted_sources', lambda: [provider]),                 mock.patch.multiple(sickgear, newznab_providers=[], torrent_rss_providers=[], save_config=mock.DEFAULT,
+                                    USE_NZBS=False, USE_TORRENTS=False),                 mock.patch.object(webserve.helpers, 'clear_unused_providers'),                 mock.patch.object(webserve.threading, 'Thread'), mock.patch.object(webserve, 'ui'):
+            webserve.ConfigProviders.save_providers(
+                mock.MagicMock(), provider_order='%s:1' % provider.get_id(),
+                **{'%s_digest' % provider.get_id(): digest})
+        return provider
+
+    def test_changed_cookie(self):
+        provider = self.save('uid=1;pass=new')
+        self.assertEqual('uid=1;pass=new', provider.digest)
+        provider.cache.set_last_update.assert_called_once()
+
+    def test_same_cookie(self):
+        self.save('uid=1;pass=old').cache.set_last_update.assert_not_called()
+
+    def test_no_change_for_a_login_value_that_is_not_a_setting(self):
+        # e.g. a uid that a login gives, or an api key not saved yet, is not a change made on the page
+        provider = self.save('uid=1;pass=old', uid='123', api_key=None)
+        provider.cache.set_last_update.assert_not_called()
+
+
 if '__main__' == __name__:
-    for case in (MilkieLoginTests, JsonReplyLoginTests, CookieSettingTests):
+    for case in (MilkieLoginTests, JsonReplyLoginTests, CookieSettingTests, LoginSettingSaveTests):
         unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromTestCase(case))
