@@ -46,8 +46,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         self.headers['User-Agent'] = get_ua()
         self.session.headers['User-Agent'] = self.headers['User-Agent']
 
-        self.digest, self._token, \
-            self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 6 * [None]
+        self.digest, self._token, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
@@ -314,13 +313,6 @@ class TVChaosUKProvider(generic.TorrentProvider):
     def regulate_cache_torrent_file(title):
         return re.sub(r'\b(\s*subs)\b([\W\w]{0,20})$', r'\2', title)
 
-    def after_get_data(self, result):
-        if self.use_after_get_data:
-            try:
-                self.get_url(self.url_base + 'thanks/%s' % re.findall(r'download/(\d+)', result.url)[0])
-            except IndexError:
-                pass
-
     def _season_strings(self, ep_obj, **kwargs):
 
         return \
@@ -344,8 +336,6 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         return ('tvchaosuk_tip' == key
                 and 'releases are often "Air by date release names" - edit search settings of show if required'
-                or 'tvchaosuk_use_after_get_data' == key and 'Send "Say thanks!"'
-                or 'tvchaosuk_use_after_get_data_tip' == key and 'to each release that is snatched'
                 or 'tvchaosuk_digest' == key and (
                     'use... all cookies of a logged in browser session,'
                     ' e.g. \'<name>_session=xx; remember_web_<id>=yy\''
