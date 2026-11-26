@@ -2286,6 +2286,7 @@ class TorrentProvider(GenericProvider):
             response = response[0]
         if not self.should_skip() and response:
             if logged_in(response):
+                logger.debug(f'{self.name} logged in')
                 return session
 
             if maxed_out(response) and hasattr(self, 'password'):
