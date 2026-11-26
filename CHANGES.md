@@ -1,4 +1,4 @@
-﻿### 3.37.x (2026-xx-xx xx:xx:00 UTC)
+﻿### 3.37.0 (2026-11-26 23:00:00 UTC)
 
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
 * Update browser_ua from user-agents 2.1.38 (a78437e) to v2.1.246 (53a8923)
@@ -159,24 +159,6 @@
 * Fix a provider uid learnt at login is emptied by a save of the providers page, when the page has no uid field for it
 * Fix a typo in the debug log line of building an anime allow and block list
 * Add a debug log line when a provider logs in to its site
-
-
-[develop]
-* Update idna library 3.19 (03a9a11) to 3.20 (d55e65e)
-* Update SimpleJSON 4.1.2 (d1fe71a) to 4.2.0 (0ace7d1)
-* Update Tornado Web Server 6.5.9 (75ef8b1) to 6.5.10 (143a06b)
-* Update Tornado Web Server 6.5.10 (143a06b) to 6.6.1 (fb0e3df)
-* Update SimpleJSON 4.2.0 (0ace7d1) to 4.3.0 (d88746d)
-* Update soupsieve 2.10.0 (fc195cd) to 3.0.4 (628ec6b)
-* Update soupsieve 3.0.4 (628ec6b) to 4.1.3 (3587fb1)
-* Fix video codec read from a file for Dolby Vision in mp4 and H.266 in ts, and an error for a file with no video
-* Fix video codec read from a file is unknown or wrong for Xvid, DivX, VC-1, MPEG-1, MPEG-2, and codecs in flv
-* Fix video codec read from a file for MPEG-1/2 in avi, asf, and mov, for DVCPRO HD, and for other codecs in mpg
-* Fix log filter masks the program name when a stored login or key is the name or a part of it
-* Fix folder sizes of the bulk change page count the size of a folder entry, 4096 bytes each on Linux
-* Fix sort by size on the bulk change page puts shows with no size first, keep them last both ways
-* Fix provider logs a connection warning when the ISP blocks its name, the fetch then gets through via ECH
-* Fix log filter freezes SickGear when a log line is made while a torrent provider looks up its home page
 
 
 ### 3.36.22 (2026-11-26 22:45:00 UTC)
