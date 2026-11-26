@@ -51,6 +51,25 @@ class MilkieLoginTests(unittest.TestCase):
                                                   or url == provider.urls['auth'] and 'not json' or None)
         self.assertFalse(provider._authorised())
 
+    def test_one_login_for_many_fetches(self):
+        provider = MilkieProvider()
+        provider.enabled, provider.username, provider.password = True, 'user', 'pass'
+        provider.should_skip = lambda *args, **kwargs: False
+        logins = []
+
+        def get_url(url, **kwargs):
+            if url == provider.urls['login']:
+                logins.append(url)
+                return {'token': 'tok'}
+            return url == provider.urls['auth'] and {'user': {'apiKey': 'AAA'}} or None
+        provider.get_url = get_url
+        for _ in range(3):
+            self.assertTrue(provider._authorised())
+        self.assertEqual(1, len(logins))
+        provider._token = None  # as a failed search does
+        self.assertTrue(provider._authorised())
+        self.assertEqual(2, len(logins))
+
 
 class LoginLogTests(unittest.TestCase):
     """ a login logs a debug line, so the log shows when a provider logs in """
@@ -91,6 +110,42 @@ class JsonReplyLoginTests(unittest.TestCase):
                 reply if url.endswith('checkpoint/API') else '<html>speed</html>'))
             provider.digest = ''
             self.assertFalse(provider._authorised())
+
+    def test_speedapp_one_token_test_for_many_fetches(self):
+        tests = []
+
+        def get_url(url, **kwargs):
+            if url == provider.urls['login']:
+                tests.append(url)
+                return {'scopes': list(provider.perms)}
+            return [{'id': 41, 'name': 'TV HD'}]
+        provider = self.prepare(SpeedAppProvider(), get_url)
+        provider.api_key = 'token'
+        for _ in range(3):
+            self.assertTrue(provider._authorised())
+        self.assertEqual(1, len(tests))
+
+    def test_tips_do_not_contact_the_site(self):
+        def no_fetch(url, **kwargs):
+            self.fail('the tip fetched %s' % url)
+
+        provider = self.prepare(NebulanceProvider(), no_fetch)
+        provider._authorised = lambda *args, **kwargs: self.fail('the tip logged in')
+        key = '%s_api_key_tip' % provider.get_id()
+        self.assertNotIn('href', provider.ui_string(key))
+        provider.uid = '42'
+        self.assertIn('userid=42"', provider.ui_string(key))
+
+        provider = self.prepare(SpeedAppProvider(), no_fetch)
+        provider._authorised = lambda *args, **kwargs: self.fail('the tip tested the token')
+        key = '%s_api_key_tip' % provider.get_id()
+        self.assertIn('create token', provider.ui_string(key))
+        provider.api_key = 'token'
+        self.assertEqual('the token is tested at the next search', provider.ui_string(key))
+        provider._authd, provider.perms_needed = True, []
+        self.assertEqual('token is valid and required permissions are enabled', provider.ui_string(key))
+        provider.perms_needed = ['snatch.read']
+        self.assertIn('Read snatches', provider.ui_string(key))
 
     def test_speedapp_categories_reply(self):
         for item in self.bad_replies:
