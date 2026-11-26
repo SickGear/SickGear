@@ -39,11 +39,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
         self.url_base = 'https://tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
                      'login': self.url_base,
-                     'search': self.url_base + 'torrents/filter?%s' % '&'.join(
-                         ['search=%s', 'page=0', 'tmdb=', 'imdb=', 'tvdb=', 'description=', 'uploader=', 'view=list',
-                          'start_year=', 'end_year=', 'sorting=created_at', 'direction=desc', 'qty=100', '_token=%s',
-                          'types[]=SD', 'types[]=HD720p', 'types[]=HD1080p',
-                          'types[]=SD Pack', 'types[]=HD720p Pack', 'types[]=HD1080p Pack'])}
+                     'search': f'{self.url_base}torrents/filter'}
 
         self.url = self.urls['config_provider_home_uri']
 
@@ -84,31 +80,35 @@ class TVChaosUKProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
-            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download'}.items()])
+            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download',
+            'free': r'^\s*(?:free|weekly\s+freeleech)\s*$'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_string = unquote_plus(search_string)
 
-                vals = [i for i in range(5, 16)]
-                random.SystemRandom().shuffle(vals)
-                attempts = html = soup = tbl = None
-                fetch = 'failed fetch'
-                for attempts, s in enumerate((0, vals[0], vals[5], vals[10])):
+                html = soup = tbl = None
+                # the site search page posts this form by xhr, the headers are as its page script sends them
+                post_data = {'_token': self._token, 'search': search_string, 'except': '', 'description': '',
+                             'uploader': '', 'imdb': '', 'tvdb': '', 'view': 'list', 'tmdb': '', 'start_year': '',
+                             'end_year': '', 'sorting': 'created_at', 'direction': 'desc', 'page': '0', 'qty': '50'}
+                headers = dict(self.headers, **{
+                    'Accept': '*/*', 'Origin': self.url_base.rstrip('/'), 'X-Requested-With': 'XMLHttpRequest',
+                    'X-Csrf-Token': '[object HTMLMetaElement]'})
+                for s in (0, random.SystemRandom().choice(range(5, 16))):
                     time.sleep(s)
-                    html = self.get_url(self.urls['search'] % (search_string, self._token))
+                    html = self.get_url(self.urls['search'], post_data=post_data, headers=headers)
                     if self.should_skip():
                         return results
-                    if html:
-                        try:
-                            soup = BS4Parser(html).soup
-                            tbl = soup.find('table', class_='table')
-                            if tbl:
-                                fetch = 'data fetched'
-                                break
-                        except (BaseException, Exception):
-                            pass
-                if attempts:
-                    logger.log(f'{mode} {fetch} after {attempts + 1} attempts')
+                    if html:  # only a failed fetch is tried again, a page with no results table will not change
+                        break
+                if html:
+                    try:
+                        soup = BS4Parser(html).soup
+                        tbl = soup.find('table', class_='table')
+                    except (BaseException, Exception):
+                        pass
+                    if not tbl and not self._has_no_results(html):
+                        logger.warning(f'{mode} search page has no results table, the site layout may have changed')
 
                 cnt = len(items[mode])
                 try:
@@ -129,8 +129,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             head = head if None is not head else self._header_row(tr)
                             seeders, leechers, size = [try_int(n, n) for n in [
                                 cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
-                            if self._reject_item(seeders, leechers, self.freeleech and (
-                                    None is tr.find('i', class_='fa-star'))):
+                            # a free row has a star, a free or a weekly freeleech badge
+                            if self._reject_item(seeders, leechers, self.freeleech and not (
+                                    tr.find('i', class_='fa-star') or tr.find(title=rc['free'])
+                                    or tr.find(attrs={'data-original-title': rc['free']}))):
                                 continue
 
                             title = tr.find('a', href=rc['info']).get_text().strip()
