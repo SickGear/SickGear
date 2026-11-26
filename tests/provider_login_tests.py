@@ -134,7 +134,7 @@ class CookieSettingTests(unittest.TestCase):
 class LoginSettingSaveTests(unittest.TestCase):
     """ a saved change to a login setting lets the next search update the provider cache, it does not wait """
 
-    def save(self, digest, **attrs):
+    def save(self, digest, form=None, **attrs):
         provider = TorrentProvider('Cookie Prov')
         provider.digest = 'uid=1;pass=old'
         for cur_attr, cur_value in attrs.items():
@@ -144,7 +144,7 @@ class LoginSettingSaveTests(unittest.TestCase):
                                     USE_NZBS=False, USE_TORRENTS=False),                 mock.patch.object(webserve.helpers, 'clear_unused_providers'),                 mock.patch.object(webserve.threading, 'Thread'), mock.patch.object(webserve, 'ui'):
             webserve.ConfigProviders.save_providers(
                 mock.MagicMock(), provider_order='%s:1' % provider.get_id(),
-                **{'%s_digest' % provider.get_id(): digest})
+                **dict({'%s_digest' % provider.get_id(): digest}, **(form or {})))
         return provider
 
     def test_changed_cookie(self):
@@ -159,6 +159,12 @@ class LoginSettingSaveTests(unittest.TestCase):
         # e.g. a uid that a login gives, or an api key not saved yet, is not a change made on the page
         provider = self.save('uid=1;pass=old', uid='123', api_key=None)
         provider.cache.set_last_update.assert_not_called()
+        self.assertEqual('123', provider.uid)
+
+    def test_changed_uid_on_the_page(self):
+        provider = self.save('uid=1;pass=old', form={'cookie_prov_uid': '456'}, uid='123')
+        self.assertEqual('456', provider.uid)
+        provider.cache.set_last_update.assert_called_once()
 
 
 if '__main__' == __name__:

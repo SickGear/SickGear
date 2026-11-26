@@ -10172,7 +10172,7 @@ class ConfigProviders(Config):
 
         # the login settings of a provider, a setting not saved yet (None) is the same as an empty one
         login_of = (lambda p: [getattr(p, cur_a, None) or '' for cur_a in (
-            'username', 'password', 'api_key', 'passkey', 'digest', 'hash')])
+            'username', 'uid', 'password', 'api_key', 'passkey', 'digest', 'hash')])
 
         def login_changed(p, was):
             if was != login_of(p):
@@ -10201,6 +10201,8 @@ class ConfigProviders(Config):
             for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'username', 'uid', '_seed_ratio', 'scene_or_contain'
             ]):
+                if 'uid' == attr and src_id_prefix + attr not in kwargs:
+                    continue  # the page has no uid field for a provider with a username, e.g. a uid set by its login
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr.replace('_seed_', ''), '')).strip())
 
             for attr in filter(lambda a: hasattr(torrent_src, a), [
