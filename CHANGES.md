@@ -153,6 +153,7 @@
 * Fix backlog warns no provider has backlog searching when a torrent provider has scheduled backlog off
 * Change log a FlareSolverr that is not running or fails as one line, at most each 10 minutes, with no traceback
 * Fix a script that fetches a page with SickGear helpers stops with an error when the fetch fails
+* Fix a script error on Config/Search from a folder browser set up for a field that is not on that page
 
 
 [develop]
