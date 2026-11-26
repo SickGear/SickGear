@@ -110,6 +110,28 @@ class JsonReplyLoginTests(unittest.TestCase):
             self.assertTrue(provider._authorised())
         self.assertEqual(1, len(tests))
 
+    def test_tips_do_not_contact_the_site(self):
+        def no_fetch(url, **kwargs):
+            self.fail('the tip fetched %s' % url)
+
+        provider = self.prepare(NebulanceProvider(), no_fetch)
+        provider._authorised = lambda *args, **kwargs: self.fail('the tip logged in')
+        key = '%s_api_key_tip' % provider.get_id()
+        self.assertNotIn('href', provider.ui_string(key))
+        provider.uid = '42'
+        self.assertIn('userid=42"', provider.ui_string(key))
+
+        provider = self.prepare(SpeedAppProvider(), no_fetch)
+        provider._authorised = lambda *args, **kwargs: self.fail('the tip tested the token')
+        key = '%s_api_key_tip' % provider.get_id()
+        self.assertIn('create token', provider.ui_string(key))
+        provider.api_key = 'token'
+        self.assertEqual('the token is tested at the next search', provider.ui_string(key))
+        provider._authd, provider.perms_needed = True, []
+        self.assertEqual('token is valid and required permissions are enabled', provider.ui_string(key))
+        provider.perms_needed = ['snatch.read']
+        self.assertIn('Read snatches', provider.ui_string(key))
+
     def test_speedapp_categories_reply(self):
         for item in self.bad_replies:
             provider = self.prepare(SpeedAppProvider(), lambda url, **kwargs: (

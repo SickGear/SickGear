@@ -1,6 +1,7 @@
-﻿### 3.36.22 (2026-xx-xx xx:xx:00 UTC)
+﻿### 3.36.22 (2026-11-26 22:45:00 UTC)
 
 * Fix a provider logs in to its site again before each fetch, its login check cleared the login it had made
+* Fix a view of the providers page logs in to a provider site, only to show a link or a token check in a tip
 
 
 ### 3.36.21 (2026-11-26 21:40:00 UTC)
