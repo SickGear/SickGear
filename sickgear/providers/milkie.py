@@ -51,12 +51,12 @@ class MilkieProvider(generic.TorrentProvider):
 
     def logged_in(self, resp=None):
 
-        self._token = resp and resp.get('token')
+        self._token = isinstance(resp, dict) and resp.get('token')
         if self._token:
             resp = self.get_url(self.urls['auth'], skip_auth=True,
                                 headers=dict(Authorization=f'Bearer {self._token}'), parse_json=True)
             user = isinstance(resp, dict) and resp.get('user')
-            self._dkey = user and user.get('apiKey') or user.get('downloadKey')
+            self._dkey = isinstance(user, dict) and (user.get('apiKey') or user.get('downloadKey'))
         return bool(self._token) and bool(self._dkey)
 
     def _search_provider(self, search_params, **kwargs):

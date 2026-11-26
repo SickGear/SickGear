@@ -62,7 +62,7 @@ class SpeedCDProvider(generic.TorrentProvider):
             self.session.cookies.clear()
             json = self.get_url(self.urls['login_1'], skip_auth=True,
                                 post_data={'username': self.username}, parse_json=True)
-            resp = list(filter(lambda l: isinstance(l, list), json.get('Fs', [])))
+            resp = list(filter(lambda l: isinstance(l, list), isinstance(json, dict) and json.get('Fs') or []))
 
             def get_html(_resp):
                 for cur_item in _resp:

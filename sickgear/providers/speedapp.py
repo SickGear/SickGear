@@ -61,7 +61,8 @@ class SpeedAppProvider(generic.TorrentProvider):
                 resp = self.get_url(self.urls['cats'], skip_auth=True, parse_json=True, headers=self.auth_header())
                 if isinstance(resp, list):
                     categories = [category['id'] for category in list(filter(
-                        lambda c: isinstance(c.get('id'), int) and isinstance(c.get('name'), string_types)
+                        lambda c: isinstance(c, dict) and isinstance(c.get('id'), int)
+                        and isinstance(c.get('name'), string_types)
                         and c.get('name').upper() in ('TV PACKS', 'TV HD', 'TV SD'), resp))]
                     self.categories = {'Cache': categories, 'Episode': categories, 'Season': categories}
 

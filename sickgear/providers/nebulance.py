@@ -60,7 +60,7 @@ class NebulanceProvider(generic.TorrentProvider):
             response = self.get_url(self.urls['user'], skip_auth=True, parse_json=True)
             if self.should_skip():
                 return False
-            if 'response' in response:
+            if isinstance(response, dict) and isinstance(response.get('response'), dict):
                 self.user_authkey, self.user_passkey, self.uid = [response['response'].get(v)
                                                                   for v in ('authkey', 'passkey', 'id')]
         return self.user_authkey
