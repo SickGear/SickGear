@@ -1,4 +1,9 @@
-﻿### 3.36.20 (2026-11-26 18:05:00 UTC)
+﻿### 3.36.21 (2026-11-26 21:40:00 UTC)
+
+* Fix a key that a provider gets from its site shows in the log, e.g. an auth key or passkey in an address
+
+
+### 3.36.20 (2026-11-26 18:05:00 UTC)
 
 * Fix a newznab provider that gives an error on the maxage value, search it without that parameter
 * Fix a changed Cookies setting of a provider is not used until a restart, the cookies of an earlier fetch were sent

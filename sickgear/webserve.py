@@ -1096,6 +1096,7 @@ class LogfileHandler(BaseHandler):
                                 cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
                                                        replacements[cur_line[cur_change.start():cur_change.end()]],
                                                        cur_line[cur_change.end():])
+                            cur_line = helpers.starify_url_keys(cur_line)
                         data_to_write += cur_line
                         if 10000 < len(data_to_write) or l_n == line_count:
                             try:
@@ -10540,6 +10541,7 @@ class EventLogs(MainHandler):
                                 cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
                                                        replacements[cur_line[cur_change.start():cur_change.end()]],
                                                        cur_line[cur_change.end():])
+                            cur_line = helpers.starify_url_keys(cur_line)
 
                         final_data.append(cur_line)
                         if 'Starting SickGear' in cur_line:
