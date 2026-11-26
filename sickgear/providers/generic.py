@@ -2010,7 +2010,8 @@ class TorrentProvider(GenericProvider):
             (logged_in, (lambda y=None: self.has_all_cookies())),
             (failed_msg, (lambda y='': maxed_out(y) and 'Urgent abort, running low on login attempts. ' +
                                                         'Password flushed to prevent service disruption to %s.' or
-                          (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
+                          (isinstance(y, string_types) and
+                           re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
                                      r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
                            'Invalid username or password for %s. Check settings' or
                            'Failed to authenticate or parse a response from %s, abort provider')))

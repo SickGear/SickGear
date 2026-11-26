@@ -1,4 +1,4 @@
-﻿### 3.36.19 (2026-11-26 02:05:00 UTC)
+﻿### 3.36.19 (2026-11-26 08:55:00 UTC)
 
 * Fix EZTV search finds no results for a show whose IMDb id has a leading zero
 * Fix EZTV recent and Propers search fail with an error, as they are made with no show ids
@@ -13,6 +13,7 @@
 * Fix a provider keeps trying a remembered site that is no longer in its list of sites
 * Fix a private provider that stopped working since its site changed its login and search
 * Fix release names from a private provider that SickGear could not match, e.g. a date as "Nov 25 2026" or "S05E06-10"
+* Fix Milkie recent search stops with an error when its site sends a login reply that is not the expected data
 
 
 ### 3.36.18 (2026-11-25 14:30:00 UTC)
