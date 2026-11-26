@@ -10170,10 +10170,20 @@ class ConfigProviders(Config):
             elif src_name in torrent_rss_sources:
                 torrent_rss_sources[src_name].enabled = src_enabled
 
+        # the login settings of a provider, a setting not saved yet (None) is the same as an empty one
+        login_of = (lambda p: [getattr(p, cur_a, None) or '' for cur_a in (
+            'username', 'password', 'api_key', 'passkey', 'digest', 'hash')])
+
+        def login_changed(p, was):
+            if was != login_of(p):
+                p.cache.set_last_update(datetime(2000, 1, 1))
+                logger.debug(f'{p.name} login setting changed, the next recent search updates its cache')
+
         # update torrent source settings
         for torrent_src in [src for src in sickgear.providers.sorted_sources()
                             if sickgear.GenericProvider.TORRENT == src.providerType]:  # type: TorrentProvider
             src_id_prefix = torrent_src.get_id() + '_'
+            login_was = login_of(torrent_src)
 
             attr = 'url_edit'
             if getattr(torrent_src, attr, None):
@@ -10217,10 +10227,14 @@ class ConfigProviders(Config):
             ]):
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
 
+            # a changed login is used by the next search, a cache update made before it (e.g. no cookie) does not wait
+            login_changed(torrent_src, login_was)
+
         # update nzb source settings
         for nzb_src in [src for src in sickgear.providers.sorted_sources() if
                         sickgear.GenericProvider.NZB == src.providerType]:
             src_id_prefix = nzb_src.get_id() + '_'
+            login_was = login_of(nzb_src)
 
             for attr in [x for x in ['api_key', 'digest'] if hasattr(nzb_src, x)]:
                 key = str(kwargs.get(src_id_prefix + attr, '')).strip()
@@ -10245,6 +10259,8 @@ class ConfigProviders(Config):
             for (attr, default) in [('scene_or_contain', ''), ('search_mode', 'eponly')]:
                 if hasattr(nzb_src, attr):
                     setattr(nzb_src, attr, str(kwargs.get(src_id_prefix + attr) or default).strip())
+
+            login_changed(nzb_src, login_was)
 
         sickgear.NEWZNAB_DATA = '!!!'.join([x.config_str() for x in sickgear.newznab_providers])
         sickgear.PROVIDER_ORDER = provider_list

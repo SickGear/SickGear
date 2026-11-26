@@ -176,6 +176,13 @@
 * Fix log filter freezes SickGear when a log line is made while a torrent provider looks up its home page
 
 
+### 3.36.20 (2026-11-26 18:05:00 UTC)
+
+* Fix a newznab provider that gives an error on the maxage value, search it without that parameter
+* Fix a changed Cookies setting of a provider is not used until a restart, the cookies of an earlier fetch were sent
+* Fix a recent search skips a provider for a while after its login setting is changed, e.g. a new cookie
+
+
 ### 3.36.19 (2026-11-26 09:30:00 UTC)
 
 * Fix EZTV search finds no results for a show whose IMDb id has a leading zero

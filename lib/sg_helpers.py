@@ -954,7 +954,10 @@ def get_url(url,  # type: AnyStr
         parsed_url = urlparse(url)
         domain = parsed_url.netloc
         if domain in memcache_cookies:
-            session.cookies.update(memcache_cookies[domain])
+            # add only the cookies the session has not got, a cookie the session has can be new, e.g. a saved setting
+            have = {(cur_c.domain, cur_c.path, cur_c.name) for cur_c in session.cookies}
+            for cur_c in memcache_cookies[domain]:
+                (cur_c.domain, cur_c.path, cur_c.name) not in have and session.cookies.set_cookie(cur_c)
 
     # download and save file or simply fetch url
     savename = kwargs.pop('savename', None)
