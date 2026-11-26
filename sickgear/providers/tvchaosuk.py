@@ -25,7 +25,8 @@ from dateutil.parser import parse
 from . import generic
 from .. import logger
 from ..config import naming_ep_type
-from ..helpers import try_int
+from ..helpers import anon_url, try_int
+from browser_ua import get_ua
 from bs4_parser import BS4Parser
 from _23 import unquote_plus
 
@@ -37,21 +38,23 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         self.url_base = 'https://tvchaosuk.com/'
         self.urls = {'config_provider_home_uri': self.url_base,
-                     'login_action': f'{self.url_base}login',
-                     'search': self.url_base + 'torrents/filter?%s' % '&'.join(
-                         ['search=%s', 'page=0', 'tmdb=', 'imdb=', 'tvdb=', 'description=', 'uploader=', 'view=list',
-                          'start_year=', 'end_year=', 'sorting=created_at', 'direction=desc', 'qty=100', '_token=%s',
-                          'types[]=SD', 'types[]=HD720p', 'types[]=HD1080p',
-                          'types[]=SD Pack', 'types[]=HD720p Pack', 'types[]=HD1080p Pack'])}
+                     'login': self.url_base,
+                     'search': f'{self.url_base}torrents/filter'}
 
         self.url = self.urls['config_provider_home_uri']
 
-        self.username, self.password, self._token, \
-            self.freeleech, self.minseed, self.minleech, self.use_after_get_data = 7 * [None]
+        self.headers['User-Agent'] = get_ua()
+        self.session.headers['User-Agent'] = self.headers['User-Agent']
+
+        self.digest, self._token, self.freeleech, self.minseed, self.minleech = 5 * [None]
 
     def _authorised(self, **kwargs):
 
-        return super(TVChaosUKProvider, self)._authorised(logged_in=self.logged_in, post_params={'remember': '1'})
+        if not self.digest:
+            logger.warning(f'{self.name} needs the Cookies setting from a logged in browser session')
+            return False
+        return super(TVChaosUKProvider, self)._authorised(
+            logged_in=self.logged_in, failed_msg=(lambda y=None: 'Invalid cookie details for %s. Check settings'))
 
     def logged_in(self, resp=None):
 
@@ -76,31 +79,35 @@ class TVChaosUKProvider(generic.TorrentProvider):
         items = {'Cache': [], 'Season': [], 'Episode': [], 'Propers': []}
 
         rc = dict([(k, re.compile(f'(?i){v}')) for (k, v) in {
-            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download'}.items()])
+            'info': r'/torrents?/(?P<tid>(?P<tid_num>\d{2,})[^"]*)', 'get': 'download',
+            'free': r'^\s*(?:free|weekly\s+freeleech)\s*$'}.items()])
         for mode in search_params:
             for search_string in search_params[mode]:
                 search_string = unquote_plus(search_string)
 
-                vals = [i for i in range(5, 16)]
-                random.SystemRandom().shuffle(vals)
-                attempts = html = soup = tbl = None
-                fetch = 'failed fetch'
-                for attempts, s in enumerate((0, vals[0], vals[5], vals[10])):
+                html = soup = tbl = None
+                # the site search page posts this form by xhr, the headers are as its page script sends them
+                post_data = {'_token': self._token, 'search': search_string, 'except': '', 'description': '',
+                             'uploader': '', 'imdb': '', 'tvdb': '', 'view': 'list', 'tmdb': '', 'start_year': '',
+                             'end_year': '', 'sorting': 'created_at', 'direction': 'desc', 'page': '0', 'qty': '50'}
+                headers = dict(self.headers, **{
+                    'Accept': '*/*', 'Origin': self.url_base.rstrip('/'), 'X-Requested-With': 'XMLHttpRequest',
+                    'X-Csrf-Token': '[object HTMLMetaElement]'})
+                for s in (0, random.SystemRandom().choice(range(5, 16))):
                     time.sleep(s)
-                    html = self.get_url(self.urls['search'] % (search_string, self._token))
+                    html = self.get_url(self.urls['search'], post_data=post_data, headers=headers)
                     if self.should_skip():
                         return results
-                    if html:
-                        try:
-                            soup = BS4Parser(html).soup
-                            tbl = soup.find('table', class_='table')
-                            if tbl:
-                                fetch = 'data fetched'
-                                break
-                        except (BaseException, Exception):
-                            pass
-                if attempts:
-                    logger.log(f'{mode} {fetch} after {attempts + 1} attempts')
+                    if html:  # only a failed fetch is tried again, a page with no results table will not change
+                        break
+                if html:
+                    try:
+                        soup = BS4Parser(html).soup
+                        tbl = soup.find('table', class_='table')
+                    except (BaseException, Exception):
+                        pass
+                    if not tbl and not self._has_no_results(html):
+                        logger.warning(f'{mode} search page has no results table, the site layout may have changed')
 
                 cnt = len(items[mode])
                 try:
@@ -121,8 +128,10 @@ class TVChaosUKProvider(generic.TorrentProvider):
                             head = head if None is not head else self._header_row(tr)
                             seeders, leechers, size = [try_int(n, n) for n in [
                                 cells[head[x]].get_text().strip() for x in ('seed', 'leech', 'size')]]
-                            if self._reject_item(seeders, leechers, self.freeleech and (
-                                    None is tr.find('i', class_='fa-star'))):
+                            # a free row has a star, a free or a weekly freeleech badge
+                            if self._reject_item(seeders, leechers, self.freeleech and not (
+                                    tr.find('i', class_='fa-star') or tr.find(title=rc['free'])
+                                    or tr.find(attrs={'data-original-title': rc['free']}))):
                                 continue
 
                             title = tr.find('a', href=rc['info']).get_text().strip()
@@ -160,19 +169,43 @@ class TVChaosUKProvider(generic.TorrentProvider):
     @staticmethod
     def regulate_title(title, mode='-', search_string=''):
 
+        # keep a starred proper or repack, drop uploader notes e.g. *Note*, * NOTE, **SEE LISTING**, @ *https://...*
+        title = re.sub(r'(?i)\*+\s*(proper|repack)\s*\*+', r'\1', title)
+        title = re.sub(r'(?i)\s*@\s*\*?https?://\S+|\s*\*+[^*]*\*+|\s*\*+\s*note\b.*$', '', title)
+        # a trailing proper or repack after a dash goes inside the release name
+        title = re.sub(r'(?i)\s+-\s+(proper|repack)\s*$', r' \1', title)
+        # month first dates e.g. Nov 25 2026 -> 25 Nov 2026, and Oct 26-28 2026 -> 26-28 Oct 2026
+        title = re.sub(r'\b([A-Z][a-z]{2,8})\s+(\d{1,2}(?:st|nd|rd|th)?(?:\s*-\s*\d{1,2})?),?\s+((?:19|20)\d\d)\b',
+                       r'\2 \1 \3', title)
+        # a multi episode range is not one air date, so drop its date e.g. S05E06-10 (23-27 Nov 2026)
+        if re.search(r'(?i)S\d+E\d+\s*-\s*E?\d+', title):
+            title = re.sub(r'\s*\(\d{1,2}(?:st|nd|rd|th)?(?:\s*-\s*\d{1,2})?\s+[A-Za-z]+\s+(?:19|20)\d\d\)', '', title)
+        # a season of years beside an air date is not part of the show name e.g. Show 2026-27 (22 Nov 2026)
+        if re.search(r'\(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+(?:19|20)\d\d\)', title):
+            title = re.sub(r'\s+(?:19|20)\d\d-\d\d(?=\s)', '', title)
+        # day first numeric dates as a month name date that is handled below e.g. (22-11-2026) -> (22 Nov 2026)
+        title = re.sub(r'\((\d{1,2})-(1[0-2]|0?[1-9])-((?:19|20)\d\d)\)', lambda m: '(%s %s %s)' % (
+            m.group(1), ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')[
+                int(m.group(2)) - 1], m.group(3)), title)
+        # tags of resolution as release names use them e.g. FHD -> 1080p, UHD -> 2160p, 540 -> 540p
+        title = re.sub(r'(?i)\bFHD\b', '1080p', title)
+        title = re.sub(r'(?i)\b(?:UHD|4K)\b', '2160p', title)
+        title = re.sub(r'(\[[^]]*?\b(?:360|468|480|504|540|576|720|1080|2160))(?=[\s\]])', r'\1p', title)
+        # a standard definition name has no resolution tag, except the 480p that is known e.g. 540p, 576p, SD
+        title = re.sub(r'(?i)\s*\b(?:360|468|504|540|576)p\b|(?<=\[)\s*SD\b\s*|\s+SD\b(?=[\s\]])', '', title)
         # normalise abnormal naming patterns e.g. 2019/20 -> 2019
         title = re.sub(r'((?:19|20)\d\d)/20(\d\d)?', r'\1', title)
         # s<x> ep<y> -> s<x>e<y>
         title = re.sub(r'(?i)s(\d\d+)[\W]*?e+(?:p|pisode)*(\d\d+)', r'S\1E\2', title)
 
-        has_series = re.findall(r'(?i)(.*?series[^\d]*?\d+)(.*)', title)
+        has_series = re.findall(r'(?i)(.*?\bseries\b[^\d]*?\d+)(.*)', title)
         if has_series:
             rc_xtras = re.compile(r'(?i)([. _-]|^)(special|extra)s?\w*([. _-]|$)')
             has_special = rc_xtras.findall(has_series[0][1])
             if has_special:
                 title = has_series[0][0] + rc_xtras.sub(list(set(
                     list(has_special[0][0]) + list(has_special[0][2])))[0], has_series[0][1])
-            title = re.sub('(?i)series', r'Season', title)
+            title = re.sub(r'(?i)\bseries\b', r'Season', title)
 
         years = re.findall(r'((?:19|20)\d\d)', title)
         title = re.sub(r'(19|20)\d\d', r'{{yr}}', title)
@@ -225,17 +258,17 @@ class TVChaosUKProvider(generic.TorrentProvider):
                  r'(?i)(?:\d{3,4}(?:[pi]|hd)|hd(?:tv)?\s*\d{3,4}(?:[pi])?)',
                  '''
                  (?i)(hr.ws.pdtv|blu.?ray|hddvd|
-                 pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip|mpeg-?2)
+                 pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip)
                  ''', '''
-                 (?i)([hx].?26[45]|divx|xvid)
+                 (?i)([hx].?26[45]|hevc|av1|vp9|divx|xvid|mpeg-?2)
                  ''', '''
                  (?i)(avi|mkv|mp4|sub(?:b?ed|pack|s))
                  ''')]
         title = ('%s`%s' % (
             re.sub('|'.join(['|'.join([re.escape(y) for y in x]) for x in tags if x]).strip('|'), '', t[-1]),
-            re.sub(r'(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p',
-                   '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
-            ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
+            re.sub(r'(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p', '`'.join(['`'.join(x) for x in tags[:2]]))
+            # resolution, then source, then codec, as in a release name
+            + '`' + '`'.join(tags[2] or ['HDTV']) + '`' + '`'.join(tags[3] or ['x264'])))
         title = re.sub(r'([hx]26[45])p', r'\1', title)
         for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
                   (f'(?i){bl}(Proper){br}', r'`\1`'), (rf'{bl}\s*{br}', '`')]:
@@ -269,9 +302,13 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         titles += [title]
 
+        # source tags as release names spell them e.g. hdtv -> HDTV, WebRip -> WEBRip
+        standard = (lambda name: re.sub(r'(?i)\bweb.?dl\b', 'WEB-DL', re.sub(r'(?i)\bweb.?rip\b', 'WEBRip', re.sub(
+            r'(?i)\bhdtv\b', 'HDTV', name))))
+
         result = []
         for cur_item in titles:
-            sxe_find = r'(?i)%s' % (sxe_build, r'S\d\d+E\d\d+|season\s*\d+')[not sxe_build]
+            sxe_find = r'(?i)%s' % (sxe_build, r'S\d\d+E\d\d+(?:-E?\d\d+)?|season\s*\d+')[not sxe_build]
             sxe = re.findall(sxe_find, cur_item) or ''
             if sxe:
                 sxe = sxe[0]
@@ -296,20 +333,13 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     end = [pre_post[0][1]]
 
             parts += ([sxe], [])[not sxe] + ([dated], [])[not dated] + end
-            result += [re.sub(r'(\s\.|\.\s|\s+)', '.', ' '.join(parts))]
+            result += [standard(re.sub(r'[][]', '', re.sub(r'(\s\.|\.\s|\s+)', '.', ' '.join(parts))))]
 
         return result
 
     @staticmethod
     def regulate_cache_torrent_file(title):
         return re.sub(r'\b(\s*subs)\b([\W\w]{0,20})$', r'\2', title)
-
-    def after_get_data(self, result):
-        if self.use_after_get_data:
-            try:
-                self.get_url(self.url_base + 'thanks/%s' % re.findall(r'download/(\d+)', result.url)[0])
-            except IndexError:
-                pass
 
     def _season_strings(self, ep_obj, **kwargs):
 
@@ -330,13 +360,14 @@ class TVChaosUKProvider(generic.TorrentProvider):
                 ep_detail=(lambda e: [naming_ep_type[2] % e] + (
                     [], ['%(episodenumber)d of' % e])[1 == try_int(e.get('seasonnumber'))]), **kwargs)
 
-    @staticmethod
-    def ui_string(key):
+    def ui_string(self, key):
 
         return ('tvchaosuk_tip' == key
                 and 'releases are often "Air by date release names" - edit search settings of show if required'
-                or 'tvchaosuk_use_after_get_data' == key and 'Send "Say thanks!"'
-                or 'tvchaosuk_use_after_get_data_tip' == key and 'to each release that is snatched'
+                or 'tvchaosuk_digest' == key and (
+                    'use... all cookies of a logged in browser session,'
+                    ' e.g. \'<name>_session=xx; remember_web_<id>=yy\''
+                    ' from <a target="_blank" href="%s">%s</a>' % (anon_url(self.url_base), self.url_base.strip('/')))
                 or '')
 
 

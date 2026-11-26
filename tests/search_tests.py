@@ -6,6 +6,8 @@ warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certi
 import datetime
 import unittest
 from os.path import abspath, dirname, join
+from types import SimpleNamespace
+from unittest import mock
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
@@ -186,7 +188,46 @@ class WantedEpisodesTests(test.SickbeardTestDBCase):
         self.assertEqual({1: {1, 2, 5}}, self.show_obj.unwanted_sxe)
 
 
+
+class BestUsableResultTests(unittest.TestCase):
+    """ the best result is picked, and a bad torrent drops out so the next best is tried """
+
+    def pick(self, results, bad=(), result_type='torrent'):
+        found = [SimpleNamespace(name=n, quality=q, resultType=result_type) for n, q in results]
+        tried = []
+
+        def best(results, **kwargs):  # the highest quality, as the real helper picks by quality
+            return results and max(results, key=lambda r: r.quality) or None
+
+        def usable(result, **kwargs):  # a rigged torrent check, a name in bad fails it
+            tried.append(result.name)
+            return None if result.name in bad else result
+        with mock.patch.object(search, '_pick_best_result_helper', side_effect=best), \
+                mock.patch.object(search, '_usable_torrent', side_effect=usable):
+            picked = search._best_usable_result(found, show_obj=None)
+        return picked and picked.name, tried
+
+    def test_good_best_torrent_is_picked_at_once(self):
+        self.assertEqual(('remux', ['remux']), self.pick([('web', 2), ('remux', 3), ('sd', 1)]))
+
+    def test_bad_best_torrent_gives_the_next_best(self):
+        self.assertEqual(('web', ['remux', 'web']), self.pick([('web', 2), ('remux', 3), ('sd', 1)], bad=('remux',)))
+
+    def test_bad_torrents_are_passed_until_a_good_one(self):
+        self.assertEqual(('sd', ['remux', 'web', 'sd']),
+                         self.pick([('web', 2), ('remux', 3), ('sd', 1)], bad=('remux', 'web')))
+
+    def test_all_torrents_bad_gives_none(self):
+        self.assertEqual((None, ['remux', 'web']), self.pick([('web', 2), ('remux', 3)], bad=('remux', 'web')))
+
+    def test_nzb_is_not_torrent_checked(self):
+        self.assertEqual(('remux', []), self.pick([('web', 2), ('remux', 3)], bad=('remux',), result_type='nzb'))
+
+    def test_no_results(self):
+        self.assertEqual((None, []), self.pick([]))
+
+
 if '__main__' == __name__:
-    for cur_case in (ProperTests, CanRejectTests, WantedEpisodesTests):
+    for cur_case in (ProperTests, CanRejectTests, WantedEpisodesTests, BestUsableResultTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

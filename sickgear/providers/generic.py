@@ -827,8 +827,8 @@ class GenericProvider(object):
         :return:
         """
 
-        # check for auth
-        if not self._authorised():
+        # check for auth, a magnet link needs no provider site as it is fetched from a torrent cache or saved as is
+        if not (result.url or '').lower().startswith('magnet:') and not self._authorised():
             return False
 
         if GenericProvider.TORRENT == self.providerType:
@@ -849,7 +849,7 @@ class GenericProvider(object):
                     return False
 
                 urls = ['http%s://%s/torrent/%s.torrent' % (u + (btih.upper(),))
-                        for u in (('s', 'itorrents.org'), ('s', 'torrage.info'))]
+                        for u in (('s', 'itorrents.net'), ('s', 'torrage.info'))]
             except (BaseException, Exception):
                 link_type = 'torrent'
                 urls = [result.url]
@@ -1986,8 +1986,11 @@ class TorrentProvider(GenericProvider):
                 return None
         elif last_url:
             last_url = last_url.replace('getrss.php', '/')  # correct develop typo after a network outage (0.11>0.12)
-            last_url in url_list and url_list.remove(last_url)
-            url_list.insert(0, last_url)
+            if last_url in url_list:  # a remembered home is tried first while it is still a listed home
+                url_list.remove(last_url)
+                url_list.insert(0, last_url)
+            else:  # drop a remembered home that is no longer listed, and its expiry that skips the page check
+                last_url, expire = '', None
 
         if not self.enabled:
             return last_url
@@ -2046,7 +2049,8 @@ class TorrentProvider(GenericProvider):
             (logged_in, (lambda y=None: self.has_all_cookies())),
             (failed_msg, (lambda y='': maxed_out(y) and 'Urgent abort, running low on login attempts. ' +
                                                         'Password flushed to prevent service disruption to %s.' or
-                          (re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
+                          (isinstance(y, string_types) and
+                           re.search(r'(?i)(username|password)((<[^>]+>)|\W)*' +
                                      r'(or|and|/|\s)((<[^>]+>)|\W)*(password|incorrect)', y) and
                            'Invalid username or password for %s. Check settings' or
                            'Failed to authenticate or parse a response from %s, abort provider')))
