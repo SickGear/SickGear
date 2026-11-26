@@ -699,10 +699,9 @@ class NewznabProvider(generic.NZBProvider):
             rel_per_ep, limit_per_ep = 5, 10
         else:
             rel_per_ep = per_ep
-        rel = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show_obj.is_scene else
-                               ep_obj.eps_aired_in_season * rel_per_ep) / hits_per_page)))
-        rel_limit = max(1, int(ceil((ep_obj.eps_aired_in_scene_season if ep_obj.show_obj.is_scene else
-                                     ep_obj.eps_aired_in_season * limit_per_ep) / hits_per_page)))
+        eps_aired = ep_obj.eps_aired_in_scene_season if ep_obj.show_obj.is_scene else ep_obj.eps_aired_in_season
+        rel = max(1, int(ceil(eps_aired * rel_per_ep / hits_per_page)))
+        rel_limit = max(1, int(ceil(eps_aired * limit_per_ep / hits_per_page)))
         season_search = rel < (len(searches) * 100 // hits_per_page)
         if not season_search:
             needed = NeededQualities()
