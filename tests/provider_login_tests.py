@@ -52,6 +52,21 @@ class MilkieLoginTests(unittest.TestCase):
         self.assertFalse(provider._authorised())
 
 
+class LoginLogTests(unittest.TestCase):
+    """ a login logs a debug line, so the log shows when a provider logs in """
+
+    def test_login_is_logged(self):
+        provider = TorrentProvider('Login Prov')
+        provider.url_base, provider.username, provider.password = 'http://login.test/', 'user', 'pass'
+        provider.should_skip = lambda *args, **kwargs: False
+        for cur_reply, cur_logged in (('welcome', True), ('wrong password', False)):
+            provider.get_url = lambda url, reply=cur_reply, **kwargs: reply
+            with mock.patch('sickgear.providers.generic.logger') as log:
+                self.assertEqual(cur_logged, bool(provider._authorised(
+                    logged_in=(lambda y=None: 'welcome' == y), url='http://login.test/login')))
+            self.assertEqual(cur_logged, mock.call('Login Prov logged in') in log.debug.call_args_list)
+
+
 class JsonReplyLoginTests(unittest.TestCase):
     """ a login step reply that is not the expected json fails the login, it does not raise """
     bad_replies = ('not json', None, [], {}, {'response': None}, {'Fs': None}, [None])
@@ -168,5 +183,5 @@ class LoginSettingSaveTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for case in (MilkieLoginTests, JsonReplyLoginTests, CookieSettingTests, LoginSettingSaveTests):
+    for case in (MilkieLoginTests, LoginLogTests, JsonReplyLoginTests, CookieSettingTests, LoginSettingSaveTests):
         unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromTestCase(case))
