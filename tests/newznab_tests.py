@@ -332,6 +332,31 @@ class FakeProviderTests(test.SickbeardTestDBCase):
             self.assertEqual(cur_test['cats'], newznab_provider.cats, msg=msg)
             self.assertEqual(cur_test['all_cats'], newznab_provider.all_cats, msg=msg)
 
+    def test_search_without_maxage_after_provider_rejects_it(self):
+        urls = []
+
+        class NoMaxage(FakeNewznabProvider):
+            def get_url(self, url, *args, **kwargs):
+                urls.append(url)
+                if 'maxage=' in url:
+                    return ('<?xml version="1.0" encoding="UTF-8"?>'
+                            '<error code="200" description="Invalid parameter: maxage"/>')
+                return ('<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" '
+                        'xmlns:newznab="http://www.newznab.com/DTD/2010/feeds/attributes/"><channel>'
+                        '<newznab:response offset="0" total="0"/></channel></rss>')
+
+        provider = NoMaxage('test', 'https://fake.fake/', data_files_dict={})
+        base_params = {'t': 'tvsearch', 'maxage': 99999, 'limit': 100, 'offset': 0}
+        needed = sickgear.common.NeededQualities(need_all=True)
+        provider._search_core({'Cache': [{}]}, needed=needed, base_params=base_params, base_params_rss={})
+        self.assertEqual(2, len(urls))
+        self.assertIn('maxage=99999', urls[0])
+        self.assertNotIn('maxage', urls[1])
+        # later searches go without maxage at once
+        provider._search_core({'Cache': [{}]}, needed=needed, base_params=base_params, base_params_rss={})
+        self.assertEqual(3, len(urls))
+        self.assertNotIn('maxage', urls[2])
+
 
 if '__main__' == __name__:
     if 1 < len(sys.argv):

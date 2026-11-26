@@ -160,6 +160,7 @@ class NewznabProvider(generic.NZBProvider):
         self._caps_cats = {}
         self._caps_all_cats = []
         self._caps_need_apikey = {'need': False, 'date': datetime.date.fromordinal(1)}
+        self._no_maxage = False  # True once the provider gives an error about the maxage parameter
         self._limits = 100
         self._last_recent_search = None
         self._caps_last_updated = datetime.datetime.fromordinal(1)
@@ -407,6 +408,12 @@ class NewznabProvider(generic.NZBProvider):
             code = try_int(data.get('code'))
             description = data.get('description') or ''
             msg = ('', f': {description}')[bool(description)]
+
+            if 'maxage' in description.lower() and not self._no_maxage:
+                # e.g. "invalid parameter: maxage", searches go without it from now on
+                self._no_maxage = True
+                logger.log(f'{self.name} does not take the maxage parameter, searching without it{msg}')
+                return False
 
             if code not in (100, 101, 102, 401, 429, 500, 910):
                 logger.warning(f'Unknown error given from {self.name}{msg}')
@@ -974,6 +981,8 @@ class NewznabProvider(generic.NZBProvider):
                 # workaround a strange glitch
                 if sum([ord(i) for i in self.get_id()]) in [383] and 5 == 14 - request_params['maxage']:
                     request_params['maxage'] += 1
+                if self._no_maxage:
+                    request_params.pop('maxage', None)
 
                 offset = 0
                 batch_count = not 0
@@ -1006,6 +1015,8 @@ class NewznabProvider(generic.NZBProvider):
                         break
 
                     if not self._check_auth_from_data(parsed_xml, search_url):
+                        if self._no_maxage and None is not request_params.pop('maxage', None):
+                            continue  # the provider does not take maxage, search again without it
                         break
 
                     if 'rss' != parsed_xml.tag:
