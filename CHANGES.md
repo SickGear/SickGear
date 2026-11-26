@@ -1,4 +1,9 @@
-﻿### 3.36.19 (2026-11-26 09:30:00 UTC)
+﻿### 3.36.20 (2026-11-26 16:20:00 UTC)
+
+* Fix a newznab provider that gives an error on the maxage value, search it without that parameter
+
+
+### 3.36.19 (2026-11-26 09:30:00 UTC)
 
 * Fix EZTV search finds no results for a show whose IMDb id has a leading zero
 * Fix EZTV recent and Propers search fail with an error, as they are made with no show ids
