@@ -157,6 +157,7 @@
 * Add a tunnel route for a provider that is blocked and has no ECH route, with checked certificates at each step
 * Add Blocked provider fallback setting, off by default, with a choice per provider and a top notice
 * Fix a provider uid learnt at login is emptied by a save of the providers page, when the page has no uid field for it
+* Fix a typo in the debug log line of building an anime allow and block list
 
 
 [develop]

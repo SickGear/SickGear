@@ -56,7 +56,7 @@ class AniGroupList(object):
         self.load()
 
     def load(self):
-        logger.debug(f'Building allow amd block list for {self.tvid_prodid}')
+        logger.debug(f'Building allow and block list for {self.tvid_prodid}')
         self.allowlist = self._load_list('allowlist')
         self.blocklist = self._load_list('blocklist')
 
