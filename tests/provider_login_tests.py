@@ -1,13 +1,18 @@
 import sys
+import threading
 import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 
 import unittest
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from os.path import abspath, dirname, join
 
 sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
+import requests
+
+import sg_helpers
 from sickgear.providers.milkie import MilkieProvider
 from sickgear.providers.nebulance import NebulanceProvider
 from sickgear.providers.speedapp import SpeedAppProvider
@@ -77,6 +82,51 @@ class JsonReplyLoginTests(unittest.TestCase):
             self.assertEqual([41], provider.categories['Cache'])
 
 
+class CookieSettingTests(unittest.TestCase):
+    """ a Cookies setting saved after a fetch is sent, the cookies remembered from that fetch do not replace it """
+
+    def setUp(self):
+        sent = self.sent = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                sent.append(self.headers.get('Cookie', ''))
+                self.send_response(200)
+                self.send_header('Content-Length', '2')
+                self.end_headers()
+                self.wfile.write(b'ok')
+
+            def log_message(self, *args):
+                pass
+
+        self.server = HTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.url = 'http://127.0.0.1:%s/' % self.server.server_address[1]
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def test_saved_cookie_is_sent(self):
+        session, memcache = requests.Session(), {}
+        for cur_value in ('old', 'new', 'new'):
+            # as check_auth_cookie() adds the setting to the provider session before each fetch
+            requests.utils.add_dict_to_cookiejar(session.cookies, {'sid': cur_value})
+            self.assertEqual('ok', sg_helpers.get_url(self.url, session=session, memcache_cookies=memcache,
+                                                      nocache=True))
+        self.assertEqual(['sid=old', 'sid=new', 'sid=new'], self.sent)
+
+    def test_remembered_cookie_is_added_to_a_new_session(self):
+        memcache = {}
+        sg_helpers.get_url(self.url, session=requests.Session(), memcache_cookies=memcache, nocache=True)
+        self.assertEqual([''], self.sent)
+        session = requests.Session()
+        session.cookies.set('sid', 'kept')
+        sg_helpers.get_url(self.url, session=session, memcache_cookies=memcache, nocache=True)
+        sg_helpers.get_url(self.url, session=requests.Session(), memcache_cookies=memcache, nocache=True)
+        self.assertEqual(['', 'sid=kept', 'sid=kept'], self.sent)
+
+
 if '__main__' == __name__:
-    for case in (MilkieLoginTests, JsonReplyLoginTests):
+    for case in (MilkieLoginTests, JsonReplyLoginTests, CookieSettingTests):
         unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromTestCase(case))
