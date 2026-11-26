@@ -46,7 +46,7 @@ from . import classes, db, helpers, history, image_cache, logger, network_timezo
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_BEST, \
     SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, Quality, qualityPresetStrings, statusStrings
 from .name_parser.parser import NameParser
-from .helpers import df, find_mount_point, starify
+from .helpers import df, find_mount_point, starify, starify_url_keys
 from .indexers import indexer_api, indexer_config
 from .indexers.indexer_config import *
 from tvinfo_base.exceptions import *
@@ -1839,6 +1839,7 @@ class CMD_SickGearLogs(ApiCall):
                                 cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
                                                        replacements[cur_line[cur_change.start():cur_change.end()]],
                                                        cur_line[cur_change.end():])
+                            cur_line = starify_url_keys(cur_line)
 
                         final_data.append(cur_line)
                         if any(normal_data):

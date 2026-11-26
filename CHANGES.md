@@ -179,6 +179,11 @@
 * Fix log filter freezes SickGear when a log line is made while a torrent provider looks up its home page
 
 
+### 3.36.21 (2026-11-26 21:40:00 UTC)
+
+* Fix a key that a provider gets from its site shows in the log, e.g. an auth key or passkey in an address
+
+
 ### 3.36.20 (2026-11-26 18:05:00 UTC)
 
 * Fix a newznab provider that gives an error on the maxage value, search it without that parameter

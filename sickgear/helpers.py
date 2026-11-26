@@ -897,6 +897,20 @@ def starify(text, verify=False):
               set('*') == set((text[len(text) // 2:], text[4:-4])[12 <= len(text)]))[verify]
 
 
+# the value of a key in an address, whatever its source, e.g. a passkey in a download link from a site page
+rxc_url_key = re.compile(r'(?i)(?<![\w-])(?:passkey|torrent_pass|authkey|auth|api_?key|rss_?key|secret_key|_?token'
+                         r'''|key)=([^&\s"'<>;]{6,})''')
+
+
+def starify_url_keys(text):
+    """
+    :param text: text, e.g. a log line
+    :type text: AnyStr
+    :return: text with the value of each key in an address masked
+    """
+    return rxc_url_key.sub(lambda m: m.group(0)[:m.start(1) - m.start(0)] + starify(m.group(1)), text)
+
+
 """
 Encryption
 ==========

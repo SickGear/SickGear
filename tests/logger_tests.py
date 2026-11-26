@@ -88,6 +88,31 @@ class RedactingFilterTests(unittest.TestCase):
         with unittest.mock.patch.object(sickgear.providers, 'sorted_sources', return_value=[prov]):
             self.assertIn('heldkey123', self.orig(True))
 
+    def test_keys_from_a_login_are_masked(self):
+        from sickgear.providers import generic
+        prov = generic.TorrentProvider('TestProv')
+        prov.user_authkey, prov.user_passkey, prov._token, prov._dkey = (
+            'authkey1234567', 'passkey1234567', 'token12345678', 'dkey123456789')
+        with unittest.mock.patch.object(sickgear.providers, 'sorted_sources', return_value=[prov]):
+            masked, dupe_check = self.orig(True), self.orig(False)
+        for cur_key in ('authkey1234567', 'passkey1234567', 'token12345678', 'dkey123456789'):
+            self.assertIn(cur_key, masked)
+            self.assertNotIn(cur_key, dupe_check)
+
+    def test_key_in_an_address_is_masked_whatever_its_source(self):
+        self.set_auths([])
+        f = logger.RedactingFilter()
+        for cur_msg, cur_masked in (
+                ('Downloaded X from https://t.example/dl.php?id=12&passkey=0123456789abcdef',
+                 'Downloaded X from https://t.example/dl.php?id=12&passkey=0123********cdef'),
+                ('get ajax.php?action=browse&auth=a1b2c3d4e5&torrent_pass=zz99yy88xx',
+                 'get ajax.php?action=browse&auth=a1b2c*****&torrent_pass=zz99y*****'),
+                ('rss?rsskey=abcdef123456;x', 'rss?rsskey=abcd****3456;x'),
+                ('oauth=abcdefgh keymap=abcdefgh id=1 key=abc', 'oauth=abcdefgh keymap=abcdefgh id=1 key=abc')):
+            rec = _rec(cur_msg)
+            f.filter(rec)
+            self.assertEqual(cur_masked, rec.getMessage())
+
     def test_reset_picks_up_new_secret(self):
         f = logger.RedactingFilter()
         f.filter(_rec('warm cache'))

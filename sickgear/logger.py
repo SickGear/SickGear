@@ -87,30 +87,32 @@ class RedactingFilter(logging.Filter):
 
     @classmethod
     def _mask(cls, text):
-        return cls._rxc.sub(lambda m: sickgear.helpers.starify(m.group(0)), text)
+        if cls._rxc:
+            text = cls._rxc.sub(lambda m: sickgear.helpers.starify(m.group(0)), text)
+        # the value of a key in an address is masked whatever its source, e.g. a passkey in a link from a site page
+        return sickgear.helpers.starify_url_keys(text)
 
     @classmethod
     def mask_text(cls, text):
         """Mask secrets in text destined for somewhere other than a log handler (UI error list, exit message)."""
         cls._refresh()
-        if cls._rxc and isinstance(text, str):
+        if isinstance(text, str):
             return cls._mask(text)
         return text
 
     def filter(self, record):
         self._refresh()
-        if self._rxc:
-            try:
-                record.msg, record.args = self._mask(record.getMessage()), ()
-            except (BaseException, Exception):
-                pass
-            if record.exc_info and not record.exc_text:
-                # pre-render so Formatter uses the masked text instead of the raw exc_info
-                record.exc_text = logging.Formatter().formatException(record.exc_info)
-            if record.exc_text:
-                record.exc_text = self._mask(record.exc_text)
-            if record.stack_info:
-                record.stack_info = self._mask(record.stack_info)
+        try:
+            record.msg, record.args = self._mask(record.getMessage()), ()
+        except (BaseException, Exception):
+            pass
+        if record.exc_info and not record.exc_text:
+            # pre-render so Formatter uses the masked text instead of the raw exc_info
+            record.exc_text = logging.Formatter().formatException(record.exc_info)
+        if record.exc_text:
+            record.exc_text = self._mask(record.exc_text)
+        if record.stack_info:
+            record.stack_info = self._mask(record.stack_info)
         return True
 
 

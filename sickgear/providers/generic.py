@@ -861,9 +861,10 @@ class GenericProvider(object):
         for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
-            # username/uid only for log masking (keys=True), same username at two sites is not a duplicate auth
+            # username/uid and keys that a login gives only for log masking (keys=True),
+            # same username at two sites is not a duplicate auth
             for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']
-                           + ([], ['username', 'uid'])[keys]):
+                           + ([], ['username', 'uid', 'user_authkey', 'user_passkey', '_token', '_dkey'])[keys]):
                 if 'url' == cur_kt:
                     # read the url held, the url property of a torrent provider fetches its home page and that fetch
                     # logs, so the log filter that calls this would start the fetch again from inside each log line

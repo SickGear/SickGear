@@ -369,7 +369,33 @@ class HachoirParserTests(unittest.TestCase):
         self.assertIsNone(guessParser(StringInputStream(b'PK' + bytes([3, 4] + [0] * 64))))
 
 
+class LogKeyMaskTests(unittest.TestCase):
+    """ a key that a provider gets from its site is masked where the log is shown """
+
+    def test_key_in_an_address_is_masked_whatever_its_source(self):
+        for cur_line, cur_masked in (
+                ('Downloaded X from https://t.example/dl.php?id=12&passkey=0123456789abcdef',
+                 'Downloaded X from https://t.example/dl.php?id=12&passkey=0123********cdef'),
+                ('get https://t.example/ajax.php?action=browse&amp;auth=a1b2c3d4e5&amp;torrent_pass=zz99yy88xx',
+                 'get https://t.example/ajax.php?action=browse&amp;auth=a1b2c*****&amp;torrent_pass=zz99y*****'),
+                ('rss?rsskey=abcdef123456;x', 'rss?rsskey=abcd****3456;x'),
+                ('oauth=abcdefgh keymap=abcdefgh id=1 key=abc', 'oauth=abcdefgh keymap=abcdefgh id=1 key=abc')):
+            self.assertEqual(cur_masked, helpers.starify_url_keys(cur_line))
+
+    def test_keys_from_a_login_are_masked(self):
+        import sickgear
+        from sickgear.providers import generic
+        prov = generic.TorrentProvider('TestProv')
+        prov.user_authkey, prov.user_passkey, prov._token, prov._dkey = (
+            'authkey1234567', 'passkey1234567', 'token12345678', 'dkey123456789')
+        with mock.patch.object(sickgear.providers, 'sorted_sources', return_value=[prov]):
+            masked = list(generic.GenericProvider.dedupe_auths(True))
+        for cur_key in ('authkey1234567', 'passkey1234567', 'token12345678', 'dkey123456789'):
+            self.assertIn(cur_key, masked)
+
+
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, MediaStatsTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests, HachoirParserTests):
+    for cur_case in (HelpersTests, FlagCodeTests, MediaStatsTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests, HachoirParserTests, LogKeyMaskTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)
