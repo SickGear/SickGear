@@ -1,4 +1,9 @@
-﻿### 3.37.0 (2026-11-26 23:00:00 UTC)
+﻿### 3.38.x (2026-xx-xx xx:xx:00 UTC)
+
+* Fix a show that uses scene numbering gets too few newznab results per season search, a busy season can miss a release
+
+
+### 3.37.0 (2026-11-26 23:00:00 UTC)
 
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
 * Update browser_ua from user-agents 2.1.38 (a78437e) to v2.1.246 (53a8923)
