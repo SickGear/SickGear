@@ -689,7 +689,9 @@ class GenericProvider(object):
         for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
-            for cur_kt in ['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']:
+            # keys that a login gives only for log masking (keys=True)
+            for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']
+                           + ([], ['user_authkey', 'user_passkey', '_token', '_dkey'])[keys]):
                 auth = (getattr(cur_p, cur_kt, '') or '').strip()
                 if auth and '0' != auth and 'sg=0' != auth:
                     auth = rxc_cookie.sub('', auth)
