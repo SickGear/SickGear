@@ -51,6 +51,25 @@ class MilkieLoginTests(unittest.TestCase):
                                                   or url == provider.urls['auth'] and 'not json' or None)
         self.assertFalse(provider._authorised())
 
+    def test_one_login_for_many_fetches(self):
+        provider = MilkieProvider()
+        provider.enabled, provider.username, provider.password = True, 'user', 'pass'
+        provider.should_skip = lambda *args, **kwargs: False
+        logins = []
+
+        def get_url(url, **kwargs):
+            if url == provider.urls['login']:
+                logins.append(url)
+                return {'token': 'tok'}
+            return url == provider.urls['auth'] and {'user': {'apiKey': 'AAA'}} or None
+        provider.get_url = get_url
+        for _ in range(3):
+            self.assertTrue(provider._authorised())
+        self.assertEqual(1, len(logins))
+        provider._token = None  # as a failed search does
+        self.assertTrue(provider._authorised())
+        self.assertEqual(2, len(logins))
+
 
 class JsonReplyLoginTests(unittest.TestCase):
     """ a login step reply that is not the expected json fails the login, it does not raise """
@@ -76,6 +95,20 @@ class JsonReplyLoginTests(unittest.TestCase):
                 reply if url.endswith('checkpoint/API') else '<html>speed</html>'))
             provider.digest = ''
             self.assertFalse(provider._authorised())
+
+    def test_speedapp_one_token_test_for_many_fetches(self):
+        tests = []
+
+        def get_url(url, **kwargs):
+            if url == provider.urls['login']:
+                tests.append(url)
+                return {'scopes': list(provider.perms)}
+            return [{'id': 41, 'name': 'TV HD'}]
+        provider = self.prepare(SpeedAppProvider(), get_url)
+        provider.api_key = 'token'
+        for _ in range(3):
+            self.assertTrue(provider._authorised())
+        self.assertEqual(1, len(tests))
 
     def test_speedapp_categories_reply(self):
         for item in self.bad_replies:

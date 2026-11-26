@@ -1,4 +1,9 @@
-﻿### 3.36.21 (2026-11-26 21:40:00 UTC)
+﻿### 3.36.22 (2026-xx-xx xx:xx:00 UTC)
+
+* Fix a provider logs in to its site again before each fetch, its login check cleared the login it had made
+
+
+### 3.36.21 (2026-11-26 21:40:00 UTC)
 
 * Fix a key that a provider gets from its site shows in the log, e.g. an auth key or passkey in an address
 

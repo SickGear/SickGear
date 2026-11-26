@@ -50,6 +50,8 @@ class SpeedAppProvider(generic.TorrentProvider):
 
     def logged_in(self, resp=None):
 
+        if None is resp:  # a check before a fetch, the token tested last is kept
+            return bool(self._authd) and not any(self.perms_needed)
         self._authd = None
         self.perms_needed = self.perms
         if isinstance(resp, dict) and isinstance(resp.get('scopes'), list):
