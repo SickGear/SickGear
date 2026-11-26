@@ -9558,6 +9558,38 @@ class ConfigSearch(Config):
             pass
         return t.respond()
 
+    # noinspection PyMethodMayBeStatic
+    def tunnel_notice_close(self):
+        """
+        close the top notice of the blocked provider fallback until a restart, for each provider it named, the third
+        close for a provider hides it for good
+        """
+        closed_now = sickgear.MEMCACHE.setdefault('provider_tunnel_notice_closed', set())
+        for cur_item in sickgear.providers.tunnel_notice_items():
+            pid = cur_item[0]
+            closed_now.add(pid)
+            sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED[pid] = min(3, sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED.get(pid, 0) + 1)
+        sickgear.save_config()
+        return json_dumps(dict(closed=sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED))
+
+    # noinspection PyMethodMayBeStatic
+    def tunnel_use(self, pid=None):
+        """
+        turn on the blocked provider fallback for one provider from the top notice, only for a provider that uses it
+        by default, a provider that may ban an account used from a VPN address is ticked by the user on the setting
+        """
+        provider = next((cur_p for cur_p in sickgear.providers.sorted_sources() if pid == cur_p.get_id()), None)
+        if not provider or not provider.tunnel_default_on() or sickgear.PROXY_SETTING:
+            return json_dumps(dict(used=False))
+        left_out = set(sickgear.PROVIDER_TUNNEL_EXCLUDE)
+        if not sickgear.PROVIDER_TUNNEL:
+            # another provider that looks blocked keeps its own choice, rather than use the tunnel with this click
+            left_out |= set(sickgear.PROVIDER_TUNNEL_BLOCKED)
+        sickgear.PROVIDER_TUNNEL = True
+        sickgear.PROVIDER_TUNNEL_EXCLUDE = sorted(left_out - {pid})
+        sickgear.save_config()
+        return json_dumps(dict(used=True))
+
     def save_search(self, nzb_dir=None, torrent_dir=None,
                     recentsearch_interval=None, backlog_period=None, backlog_limited_period=None, backlog_nofull=None,
                     recentsearch_frequency=None, backlog_frequency=None, backlog_days=None,
@@ -9565,7 +9597,8 @@ class ConfigSearch(Config):
                     usenet_retention=None, ignore_words=None, require_words=None,
                     download_propers=None, propers_webdl_onegrp=None,
                     search_unaired=None, unaired_recent_search_only=None, flaresolverr_host=None,
-                    dns_resolver=None, allow_high_priority=None,
+                    dns_resolver=None, provider_tunnel=None, provider_tunnel_shown=None, provider_tunnel_use=None,
+                    allow_high_priority=None,
                     sab_username=None, sab_password=None, sab_apikey=None, sab_category=None, sab_host=None,
                     nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
                     nzbget_use_https=None, nzbget_priority=None, nzbget_parent_map=None,
@@ -9637,6 +9670,13 @@ class ConfigSearch(Config):
                 sickgear.DNS_RESOLVER = dns_resolver
                 sg_helpers.DNS_RESOLVER = dns_resolver
                 sickgear.providers.apply_dns_resolver(dns_resolver)
+
+        if None is not provider_tunnel_shown:  # the form leaves the setting out while a user proxy is set
+            sickgear.PROVIDER_TUNNEL = bool(config.checkbox_to_value(provider_tunnel))
+            sickgear.PROVIDER_TUNNEL_USE, sickgear.PROVIDER_TUNNEL_EXCLUDE = config.provider_tunnel_choices(
+                sickgear.PROVIDER_TUNNEL_USE, sickgear.PROVIDER_TUNNEL_EXCLUDE, provider_tunnel_shown,
+                provider_tunnel_use,
+                [cur_p.get_id() for cur_p in sickgear.providers.sorted_sources() if cur_p.tunnel_default_on()])
 
         sickgear.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 

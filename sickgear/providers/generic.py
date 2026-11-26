@@ -41,6 +41,7 @@ from six import string_types
 
 import sg_ech
 import sg_helpers
+import sg_tunnel
 import sickgear
 from exceptions_helper import SickGearException, AuthException, ex
 from .. import classes, db, helpers, logger, tvcache
@@ -254,6 +255,8 @@ class GenericProvider(object):
         self.cache = tvcache.TVCache(self)
 
         self.session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(sg_helpers.DNS_RESOLVER))
+        self._tunnel_on = False  # True after a fetch got through via the tunnel route, then it goes first
+        self._tunnel_note = None  # the last tunnel state logged for this provider
 
         self.headers = {
             # Using USER_AGENT instead of Mozilla to keep same user agent along authentication and download phases,
@@ -592,16 +595,32 @@ class GenericProvider(object):
 
         # noinspection PyUnusedLocal
         log_failure_url = False
+        if self._tunnel_on and not self._tunnel_allowed():
+            self._tunnel_on = False  # the fallback is now off for this provider, so go direct, a block is then noted
         try:
             try:
-                data = helpers.get_url(url, *args, ech_retry=True, **kwargs)
+                if self._tunnel_on:
+                    data = self._tunnel_get(url, *args, **kwargs)
+                else:
+                    data = helpers.get_url(url, *args, ech_retry=True, defer_connect_log=True, **kwargs)
             except requests.exceptions.ConnectionError as e:
-                if not getattr(e, 'sg_ech_routed', False):
-                    raise
-                # sessions are rebuilt to look the blocked name up via DoH for ECH, try once more with the new one
-                if 'session' in kwargs:
-                    kwargs['session'] = self.session
-                data = helpers.get_url(url, *args, **kwargs)
+                if self._tunnel_on:
+                    # the tunnel route failed, go direct, a direct failure tries the tunnel again on the next fetch
+                    self._tunnel_on = False
+                    data = helpers.get_url(url, *args, **kwargs)
+                elif getattr(e, 'sg_ech_routed', False):
+                    # sessions are rebuilt to look the blocked name up via DoH for ECH, try once more with the new one
+                    if 'session' in kwargs:
+                        kwargs['session'] = self.session
+                    data = helpers.get_url(url, *args, **kwargs)
+                else:
+                    # blocked with no ECH route, or down, try the tunnel route
+                    try:
+                        data = self._tunnel_get(url, *args, cause=e, **kwargs)
+                    except requests.exceptions.ConnectionError:
+                        # no page via the tunnel either, log the direct failure as a warning, it was debug so far
+                        getattr(e, 'sg_connect_msg', None) and logger.warning(e.sg_connect_msg)
+                        raise
             if data and not isinstance(data, tuple) \
                     or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:
@@ -645,6 +664,147 @@ class GenericProvider(object):
         if log_failure_url:
             self.log_failure_url(url, post_data, post_json)
         return data
+
+    @staticmethod
+    def _provider_data():
+        # type: (...) -> Optional[Dict]
+        """
+        :return: the extdata provider data, fetched again when older than 10 minutes
+        """
+        data_attr = 'PROVIDER_DATA'
+        data_refresh = 'PROVIDER_DATA_REFRESH'
+        obf = getattr(sickgear, data_attr, None)
+        now = int(time.time())
+        data_window = getattr(sickgear, data_refresh, now - 1)
+        if data_window < now:
+            setattr(sickgear, data_refresh, (10*60) + now)
+            url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/main/SickGear/data.txt'
+            obf_new = helpers.get_url(url, parse_json=True) or {}
+            if obf_new:
+                setattr(sickgear, data_attr, obf_new)
+                obf = obf_new
+        return obf
+
+    def _tunnel_get(self, url, *args, **kwargs):
+        # type: (AnyStr, Any, Any) -> Optional[AnyStr, Dict]
+        """
+        fetch url via the tunnel route, used after a direct fetch failed with no ECH route, and first once it worked
+
+        :param url: url to fetch
+        :param args: params to pass through to get_url
+        :param kwargs: keyword params to pass through to get_url, cause is the error of the direct fetch
+        :return: data fetched, raise cause or a connection error when the tunnel is not usable or the site fails
+        """
+        cause = kwargs.pop('cause', None) or requests.exceptions.ConnectionError('tunnel route failed')
+        if not self._tunnel_allowed():
+            self._note_blocked(cause)
+            raise cause
+        sg_tunnel.load(self._provider_data())
+        for _ in range(3):
+            proxy = sg_tunnel.proxy()
+            if not proxy:
+                break
+            try:
+                data = helpers.get_url(url, *args, **dict(kwargs, tunnel_proxy=proxy, mute_connect_err=True))
+            except requests.exceptions.HTTPError as e:
+                sg_tunnel.succeeded(proxy)  # the site answered through the tunnel
+                self._tunnel_use()
+                prepend = (f'[{self.name}] :: ', '')[f'[{self.name}]' in threading.current_thread().name]
+                logger.debug(f'{prepend}tunnel fetch got HTTP {getattr(e.response, "status_code", "?")} from {url}')
+                raise
+            except requests.exceptions.ConnectionError as e:
+                fault = sg_tunnel.endpoint_fault(e)
+                if fault:
+                    sg_tunnel.failed(proxy, fault)  # an endpoint or login fault, try the next endpoint
+                    continue
+                self._tunnel_log('no page via the tunnel route either (site down?)', sg_tunnel.scrub(ex(e)))
+                raise cause
+            sg_tunnel.succeeded(proxy)
+            self._tunnel_use()
+            return data
+        state, reason = sg_tunnel.state()
+        self._tunnel_log(f'tunnel route not usable, {reason or state}')
+        raise cause
+
+    def download_file(self, url, filename, **kwargs):
+        # type: (AnyStr, AnyStr, Any) -> bool
+        """
+        download url to filename direct, then via the tunnel route, or the other way round once the tunnel got through
+
+        :return: success of download
+        """
+        for cur_route in (('direct', 'tunnel'), ('tunnel', 'direct'))[self._tunnel_on]:
+            if 'direct' == cur_route:
+                if helpers.download_file(url, filename, **kwargs):
+                    return True
+                continue
+            if not self._tunnel_allowed():
+                continue
+            sg_tunnel.load(self._provider_data())
+            proxy = sg_tunnel.proxy()
+            if not proxy:
+                state, reason = sg_tunnel.state()
+                self._tunnel_log(f'tunnel route not usable, {reason or state}')
+                continue
+            if helpers.download_file(url, filename, tunnel_proxy=proxy, mute_connect_err=True, **kwargs):
+                sg_tunnel.succeeded(proxy)
+                self._tunnel_use()
+                return True
+        return False
+
+    # private trackers whose rules allow access by VPN, they use the fallback by default as public access providers do
+    TUNNEL_DEFAULT_ON = ('iptorrents', 'speedcd', 'torrentday', 'torrenting', 'torrentleech')
+
+    def tunnel_default_on(self):
+        # type: (...) -> bool
+        """
+        :return: True when this provider uses the fallback unless the user unticks it, a provider that may ban an
+         account used from a VPN address is off until the user ticks it
+        """
+        return self.get_id() in self.TUNNEL_DEFAULT_ON or self.is_public_access()
+
+    def tunnel_use(self):
+        # type: (...) -> bool
+        """
+        :return: True when this provider uses the fallback, by a choice the user saved, else by its default
+        """
+        pid = self.get_id()
+        return pid in sickgear.PROVIDER_TUNNEL_USE or (
+            pid not in sickgear.PROVIDER_TUNNEL_EXCLUDE and self.tunnel_default_on())
+
+    def _tunnel_allowed(self):
+        # type: (...) -> bool
+        """
+        :return: True when the fallback setting is on, the user has no proxy setting (it stays the only route), and
+         this provider uses the fallback
+        """
+        return bool(sickgear.PROVIDER_TUNNEL and not sickgear.PROXY_SETTING and self.tunnel_use())
+
+    def _note_blocked(self, error):
+        # type: (BaseException) -> None
+        """
+        note a failed TLS handshake that ECH did not get past, it looks like a block, the top notice then offers the
+        fallback for this provider, with what the ECH check found, while the fallback is off or not ticked for it
+        """
+        if not sickgear.PROXY_SETTING and not self._tunnel_allowed() and getattr(error, 'sg_ech_outcome', None):
+            sickgear.PROVIDER_TUNNEL_BLOCKED[self.get_id()] = (self.name, error.sg_ech_outcome)
+
+    def _tunnel_use(self):
+        sickgear.PROVIDER_TUNNEL_BLOCKED.pop(self.get_id(), None)  # it gets through, so no notice for it
+        if not self._tunnel_on:
+            self._tunnel_on = True
+            self._tunnel_log('direct fetch failed, the tunnel route gets through, check that the provider rules allow'
+                             ' access by VPN or proxy', level=logger.MESSAGE)
+
+    def _tunnel_log(self, note, detail=None, level=logger.WARNING):
+        # type: (AnyStr, Optional[AnyStr], int) -> None
+        """ log a tunnel state of this provider once, until it changes """
+        if note != self._tunnel_note:
+            self._tunnel_note = note
+            # name the provider unless the search thread name already does, as at the too many requests warning
+            prepend = (f'[{self.name}] :: ', '')[f'[{self.name}]' in threading.current_thread().name]
+            logger.log(f'{prepend}{note}', level)
+            detail and logger.debug(f'{prepend}tunnel detail: {detail}')
 
     def log_failure_url(self, url, post_data=None, post_json=None):
         # type: (AnyStr, Optional[AnyStr], Optional[AnyStr]) -> None
@@ -875,8 +1035,8 @@ class GenericProvider(object):
             cache_file = os.path.join(cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
-                                               failure_monitor=False):
+            if cached or self.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
+                                            failure_monitor=False):
 
                 if self._verify_download(cache_file):
                     logger.log(f'Downloaded {self.name} result from {url}')
@@ -1900,18 +2060,7 @@ class TorrentProvider(GenericProvider):
         :param url_exclude:
         :return:
         """
-        data_attr = 'PROVIDER_DATA'
-        data_refresh = 'PROVIDER_DATA_REFRESH'
-        obf = getattr(sickgear, data_attr, None)
-        now = int(time.time())
-        data_window = getattr(sickgear, data_refresh, now - 1)
-        if data_window < now:
-            setattr(sickgear, data_refresh, (10*60) + now)
-            url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/main/SickGear/data.txt'
-            obf_new = helpers.get_url(url, parse_json=True) or {}
-            if obf_new:
-                setattr(sickgear, data_attr, obf_new)
-                obf = obf_new
+        obf = self._provider_data()
 
         urls = []
 

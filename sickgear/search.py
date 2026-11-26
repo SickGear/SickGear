@@ -820,7 +820,8 @@ def cache_torrent_file(
     cache_file = os.path.join(sickgear.CACHE_DIR or helpers.get_system_temp_dir(),
                               f'{helpers.sanitize_filename(search_result.name)}.torrent')
 
-    if not helpers.download_file(
+    # via the provider, it takes the tunnel route where the site is blocked
+    if not search_result.provider.download_file(
             search_result.url, cache_file, session=search_result.provider.session, failure_monitor=False):
         return
 

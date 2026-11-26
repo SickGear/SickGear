@@ -2,6 +2,25 @@
 /** @namespace config.defaultHost */
 $(document).ready(function(){
 
+	// the blocked provider notice links here, the setting is advanced, so show advanced settings and go to it,
+	// after the ready handler of config.js that binds the More Gear button, this file loads first
+	if ('#provider-tunnel' === window.location.hash) {
+		setTimeout(function() {
+			if (!$('#provider-tunnel').is(':visible'))
+				$('.feature-toggle:first').click();
+			setTimeout(function() {
+				document.getElementById('provider-tunnel').scrollIntoView({block: 'center'});
+				$('#provider-tunnel-on').focus();
+			}, 300);
+		}, 0);
+	}
+
+	$('#provider-tunnel-use .tunnel-show-all').on('click', function() {
+		$('#provider-tunnel-use').addClass('tunnel-show-all-on');
+		$('#provider-tunnel-use .tunnel-none').remove();
+		$(this).remove();
+	});
+
 	var loading = '<img src="' + $.SickGear.Root + '/images/loading16' + themeSpinner + '.gif" height="16" width="16">',
 		handleSCGI = function() {
 			var opts$ = $('#torrent-username-option,#torrent-password-option');

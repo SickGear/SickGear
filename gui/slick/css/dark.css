@@ -348,8 +348,28 @@ pre .log-stop{
 	border-top-right-radius:5px
 }
 
+#provider-tunnel-use .tunnel-risk{
+	color:#ebbf6a
+}
+
+#provider-tunnel-use .tunnel-provider:hover{
+	background-color:rgba(255, 255, 255, .06)
+}
+
+#provider-tunnel-use .tunnel-blocked-tag{
+	border-color:rgba(235, 191, 106, .5);
+	background-color:rgba(235, 191, 106, .14);
+	color:#ebbf6a
+}
+
+#provider-tunnel-use .tunnel-private-tag{
+	border-color:rgba(255, 255, 255, .25);
+	color:#bbb
+}
+
 .topbar-notification{
 	width:600px;
+	max-width:calc(100% - 32px);
 	text-align:center;
 	margin-left:auto;
 	margin-right:auto;

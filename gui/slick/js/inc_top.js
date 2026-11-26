@@ -187,3 +187,17 @@ $(function(){
 	});
 
 });
+
+// the blocked provider notice, turn the fallback on for a provider that uses it by default
+$(document).on('click', '#provider-tunnel-notice .tunnel-notice-use', function() {
+	const btn$ = $(this).prop('disabled', true), name = btn$.data('name');
+	$.post($.SickGear.Root + '/config/search/tunnel-use', {_xsrf: Cookies.get('_xsrf'), pid: btn$.data('pid')}, null, 'json')
+		.done(function(data) {
+			btn$.replaceWith($('<span>').text(data.used
+				? name + ' uses the tunnel now, Blocked provider fallback is on'
+				: name + ' can not use the tunnel from here, see Blocked provider fallback'));
+		})
+		.fail(function() {
+			btn$.prop('disabled', false);
+		});
+});

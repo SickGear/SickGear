@@ -429,10 +429,187 @@ class ProviderRetryTests(unittest.TestCase):
         old_session.close.assert_not_called()
 
     def test_not_routed_counts_failure(self):
+        # no tunnel data, the tunnel route is not usable and the direct error counts
+        self.provider._provider_data = lambda: None
         data, fetch = self.fetch(requests.exceptions.ConnectionError('refused'))
         self.assertIsNone(data)
         self.assertEqual(1, fetch.call_count)
         self.assertEqual(1, self.provider.failure_count)
+
+    def test_not_routed_tries_tunnel(self):
+        tunnel = mock.Mock(return_value='tunnel data')
+        self.provider._tunnel_get = tunnel
+        with mock.patch.object(self.generic.helpers, 'get_url',
+                               side_effect=requests.exceptions.ConnectionError('refused')) as fetch:
+            data = self.provider.get_url('https://blocked.example/')
+        self.assertEqual('tunnel data', data)
+        self.assertEqual(1, fetch.call_count)
+        self.assertIsInstance(tunnel.call_args.kwargs['cause'], requests.exceptions.ConnectionError)
+        self.assertEqual(0, self.provider.failure_count)
+
+    def test_fallback_turned_off_after_tunnel_use_goes_direct_and_notes_block(self):
+        sg, pid = self.generic.sickgear, self.provider.get_id()
+        tls = requests.exceptions.ConnectionError('reset')
+        tls.sg_ech_outcome = sg_ech.NOTHING
+        self.provider._tunnel_on = True
+        with mock.patch.object(sg, 'PROVIDER_TUNNEL', False), mock.patch.object(sg, 'PROXY_SETTING', ''),                 mock.patch.object(sg, 'PROVIDER_TUNNEL_BLOCKED', {}),                 mock.patch.object(self.generic.helpers, 'get_url', side_effect=tls) as fetch:
+            self.provider.get_url('https://blocked.example/')
+            self.assertFalse(self.provider._tunnel_on)
+            self.assertTrue(fetch.call_args.kwargs.get('ech_retry'))
+            self.assertEqual({pid: ('TestProv', sg_ech.NOTHING)}, sg.PROVIDER_TUNNEL_BLOCKED)
+
+    def test_direct_failure_logged_as_warning_only_when_tunnel_fails(self):
+        for tunnel_result, warned in (('tunnel data', False),
+                                      (requests.exceptions.ConnectionError('tunnel down too'), True)):
+            self.provider._tunnel_on = False
+            self.provider._tunnel_get = mock.Mock(side_effect=[tunnel_result])
+            error = requests.exceptions.ConnectionError('refused')
+            error.sg_connect_msg = 'Connection error msg:refused while loading URL https://blocked.example/'
+            with mock.patch.object(self.generic.helpers, 'get_url', side_effect=error) as fetch,                     mock.patch.object(self.generic.logger, 'warning') as warning:
+                self.provider.get_url('https://blocked.example/')
+            self.assertTrue(fetch.call_args.kwargs['defer_connect_log'])
+            self.assertEqual(warned, mock.call(error.sg_connect_msg) in warning.call_args_list, tunnel_result)
+
+    def test_get_url_defers_connection_warning_to_debug(self):
+        with mock.patch.object(sg_helpers.logger, 'warning') as warning,                 mock.patch.object(sg_helpers.logger, 'debug') as debug:
+            with self.assertRaises(requests.exceptions.ConnectionError) as ctx:
+                get_url('https://blocked.example/', session=_RaisingSession(
+                    requests.exceptions.ConnectionError('refused')), raise_exceptions=True, failure_monitor=False,
+                    defer_connect_log=True)
+        self.assertIn('refused', ctx.exception.sg_connect_msg)
+        self.assertFalse([c for c in warning.call_args_list if 'Connection error' in c.args[0]])
+        self.assertIn(mock.call(ctx.exception.sg_connect_msg), debug.call_args_list)
+
+    def download(self, tunnel_on, direct_ok, tunnel_ok):
+        self.provider._tunnel_on = tunnel_on
+        self.provider._provider_data = lambda: None
+        calls = []
+
+        def download_file(url, filename, **kwargs):
+            route = ('direct', 'tunnel')['tunnel_proxy' in kwargs]
+            calls.append(route)
+            return (direct_ok, tunnel_ok)['tunnel' == route]
+        with mock.patch.object(self.generic.helpers, 'download_file', side_effect=download_file), \
+                mock.patch.object(self.generic.sickgear, 'PROVIDER_TUNNEL', True), \
+                mock.patch.object(self.generic.sg_tunnel, 'proxy', return_value='https://u:p@192.0.2.1:443'), \
+                mock.patch.object(self.generic.sg_tunnel, 'load'), \
+                mock.patch.object(self.generic.sg_tunnel, 'succeeded'):
+            ok = self.provider.download_file('https://blocked.example/dl/1', 'f.torrent', session=None)
+        return ok, calls
+
+    def test_download_tries_tunnel_after_direct_fails(self):
+        self.assertEqual((True, ['direct', 'tunnel']), self.download(False, False, True))
+        self.assertTrue(self.provider._tunnel_on)
+
+    def test_download_tunnel_first_once_on(self):
+        self.assertEqual((True, ['tunnel']), self.download(True, False, True))
+        self.assertEqual((True, ['tunnel', 'direct']), self.download(True, True, False))
+
+    def test_download_direct_only_with_user_proxy(self):
+        with mock.patch.object(self.generic.sickgear, 'PROXY_SETTING', 'http://127.0.0.1:1'):
+            self.assertEqual((False, ['direct']), self.download(False, False, True))
+
+    def test_tunnel_allowed_by_setting_user_proxy_and_provider_choice(self):
+        sg, pid = self.generic.sickgear, self.provider.get_id()
+        # the test provider is public access, so on by default
+        for on, user_proxy, use, left_out, public, allowed in (
+                (False, '', [], [], True, False), (True, '', [], [], True, True),
+                (True, 'http://127.0.0.1:1', [], [], True, False), (True, '', [], [pid], True, False),
+                (True, '', [], [], False, False), (True, '', [pid], [], False, True)):
+            self.provider.is_public_access = lambda: public
+            with mock.patch.object(sg, 'PROVIDER_TUNNEL', on), mock.patch.object(sg, 'PROXY_SETTING', user_proxy), \
+                    mock.patch.object(sg, 'PROVIDER_TUNNEL_USE', use), \
+                    mock.patch.object(sg, 'PROVIDER_TUNNEL_EXCLUDE', left_out):
+                self.assertEqual(allowed, self.provider._tunnel_allowed(), (on, user_proxy, use, left_out, public))
+
+    def test_named_private_trackers_on_by_default(self):
+        for name, default_on in (('TorrentDay', True), ('SpeedCD', True), ('PrivateTracker', False)):
+            provider = self.generic.TorrentProvider(name)
+            provider.is_public_access = lambda: False
+            self.assertEqual(default_on, provider.tunnel_default_on(), name)
+
+    def test_blocked_fetch_noted_for_the_notice_while_not_used(self):
+        sg, pid = self.generic.sickgear, self.provider.get_id()
+        tls = requests.exceptions.ConnectionError('reset')
+        tls.sg_ech_outcome = sg_ech.ECH_OFF
+        down = requests.exceptions.ConnectionError('refused')  # no TLS handshake failure, so no outcome
+        # off, on but this provider left out, on and used (the tunnel then gives no route here), off with no TLS
+        for on, left_out, error, noted in ((False, [], tls, True), (True, [pid], tls, True), (True, [], tls, False),
+                                           (False, [], down, False)):
+            with mock.patch.object(sg, 'PROVIDER_TUNNEL', on), mock.patch.object(sg, 'PROXY_SETTING', ''), \
+                    mock.patch.object(sg, 'PROVIDER_TUNNEL_EXCLUDE', left_out), \
+                    mock.patch.object(sg, 'PROVIDER_TUNNEL_BLOCKED', {}), \
+                    mock.patch.object(self.generic.sg_tunnel, 'proxy', return_value=None):
+                with self.assertRaises(requests.exceptions.ConnectionError):
+                    self.provider._tunnel_get('https://blocked.example/', cause=error)
+                self.assertEqual(({}, {pid: ('TestProv', sg_ech.ECH_OFF)})[noted], sg.PROVIDER_TUNNEL_BLOCKED,
+                                 (on, left_out, error))
+
+    def test_tunnel_choices_saved_where_they_differ_from_the_default(self):
+        from sickgear.config import provider_tunnel_choices
+        # a and b on by default, c off; listed a b c, ticked b c; z saved earlier and not listed
+        self.assertEqual((['c', 'z'], ['a', 'y']),
+                         provider_tunnel_choices(['z'], ['y'], 'a b c', ['b', 'c'], ['a', 'b']))
+        # all at their default, nothing saved but the providers that were not listed
+        self.assertEqual((['z'], ['y']),
+                         provider_tunnel_choices(['z', 'c'], ['y', 'a'], 'a b c', ['a', 'b'], ['a', 'b']))
+        self.assertEqual(([], ['a', 'b']), provider_tunnel_choices([], [], 'a b c', None, ['a', 'b']))
+        self.assertEqual((['a'], []), provider_tunnel_choices([], [], 'a', 'a', []))  # off by default, ticked
+
+    def test_notice_close_counts_per_provider_once_per_run_up_to_three(self):
+        from sickgear import providers, webserve
+        sg = self.generic.sickgear
+        other = self.generic.TorrentProvider('OtherProv')
+        blocked = {'testprov': ('TestProv', sg_ech.NOTHING), 'otherprov': ('OtherProv', sg_ech.NOTHING)}
+        with mock.patch.object(sg, 'PROVIDER_TUNNEL', False), mock.patch.object(sg, 'save_config'), \
+                mock.patch.object(sg, 'PROVIDER_TUNNEL_BLOCKED', blocked), \
+                mock.patch.object(sg, 'PROVIDER_TUNNEL_NOTICE_CLOSED', {'testprov': 2}), \
+                mock.patch.object(providers, 'sorted_sources', return_value=[self.provider, other]), \
+                mock.patch.dict(sg.MEMCACHE, {}):
+            sg.MEMCACHE.pop('provider_tunnel_notice_closed', None)
+            self.assertEqual(['otherprov', 'testprov'], [x[0] for x in providers.tunnel_notice_items()])
+            for _ in range(2):
+                webserve.ConfigSearch.tunnel_notice_close(None)
+            self.assertEqual({'testprov': 3, 'otherprov': 1}, sg.PROVIDER_TUNNEL_NOTICE_CLOSED)
+            self.assertEqual([], providers.tunnel_notice_items())
+            sg.MEMCACHE.pop('provider_tunnel_notice_closed', None)  # as after a restart
+            self.assertEqual(['otherprov'], [x[0] for x in providers.tunnel_notice_items()])
+
+    def test_notice_one_click_only_for_a_provider_on_by_default(self):
+        import json
+        from sickgear import providers, webserve
+        sg = self.generic.sickgear
+        private = self.generic.TorrentProvider('PrivateTracker')
+        private.is_public_access = lambda: False
+        other = self.generic.TorrentProvider('OtherProv')
+        other.is_public_access = lambda: True
+        blocked = {'testprov': ('TestProv', sg_ech.NOTHING), 'privatetracker': ('PrivateTracker', sg_ech.NOTHING),
+                   'otherprov': ('OtherProv', sg_ech.NOTHING)}
+        with mock.patch.object(sg, 'PROVIDER_TUNNEL', False), mock.patch.object(sg, 'save_config'),                 mock.patch.object(sg, 'PROXY_SETTING', ''), mock.patch.object(sg, 'PROVIDER_TUNNEL_USE', []),                 mock.patch.object(sg, 'PROVIDER_TUNNEL_EXCLUDE', ['testprov']),                 mock.patch.object(sg, 'PROVIDER_TUNNEL_BLOCKED', blocked),                 mock.patch.object(sg, 'PROVIDER_TUNNEL_NOTICE_CLOSED', {}),                 mock.patch.object(providers, 'sorted_sources', return_value=[self.provider, private, other]),                 mock.patch.dict(sg.MEMCACHE, {}):
+            sg.MEMCACHE.pop('provider_tunnel_notice_closed', None)
+            self.assertEqual([('otherprov', True), ('privatetracker', False), ('testprov', True)],
+                             [(x[0], x[3]) for x in providers.tunnel_notice_items()])
+            self.assertEqual({'used': False}, json.loads(webserve.ConfigSearch.tunnel_use(None, pid='privatetracker')))
+            self.assertFalse(sg.PROVIDER_TUNNEL)
+            with mock.patch.object(sg, 'PROXY_SETTING', 'http://127.0.0.1:1'):
+                self.assertEqual({'used': False}, json.loads(webserve.ConfigSearch.tunnel_use(None, pid='testprov')))
+            self.assertEqual({'used': True}, json.loads(webserve.ConfigSearch.tunnel_use(None, pid='testprov')))
+            self.assertTrue(sg.PROVIDER_TUNNEL)
+            # the other blocked providers keep their own button, the clicked one uses the tunnel
+            self.assertEqual(['otherprov', 'privatetracker'], sg.PROVIDER_TUNNEL_EXCLUDE)
+            self.assertEqual(['otherprov', 'privatetracker'], [x[0] for x in providers.tunnel_notice_items()])
+            # with the fallback on, a click changes only its own provider
+            self.assertEqual({'used': True}, json.loads(webserve.ConfigSearch.tunnel_use(None, pid='otherprov')))
+            self.assertEqual(['privatetracker'], sg.PROVIDER_TUNNEL_EXCLUDE)
+
+    def test_tunnel_first_then_direct_on_tunnel_failure(self):
+        self.provider._tunnel_on = True
+        self.provider._tunnel_get = mock.Mock(side_effect=requests.exceptions.ConnectionError('tunnel down'))
+        with mock.patch.object(self.generic.helpers, 'get_url', return_value='direct data') as fetch:
+            data = self.provider.get_url('https://blocked.example/')
+        self.assertEqual('direct data', data)
+        self.assertEqual(1, fetch.call_count)
+        self.assertFalse(self.provider._tunnel_on)
 
 
 class EchRetryLogTests(unittest.TestCase):
@@ -443,7 +620,10 @@ class EchRetryLogTests(unittest.TestCase):
 
     def fetch(self, ech_retry):
         lines, counts = [], []
-        with mock.patch.object(sg_ech, 'check_ssl_failure', return_value=sg_ech.ROUTED),                 mock.patch.object(sg_helpers.logger, 'warning', side_effect=lambda m: lines.append('warning')),                 mock.patch.object(sg_helpers.logger, 'debug', side_effect=lambda m: lines.append('debug')),                 mock.patch.object(sg_helpers.DOMAIN_FAILURES, 'inc_failure_count',
+        with mock.patch.object(sg_ech, 'check_ssl_failure', return_value=sg_ech.ROUTED), \
+                mock.patch.object(sg_helpers.logger, 'warning', side_effect=lambda m: lines.append('warning')), \
+                mock.patch.object(sg_helpers.logger, 'debug', side_effect=lambda m: lines.append('debug')), \
+                mock.patch.object(sg_helpers.DOMAIN_FAILURES, 'inc_failure_count',
                                   side_effect=lambda *a: counts.append(a)),                 mock.patch.object(sg_helpers, 'save_failure'):
             with self.assertRaises(requests.exceptions.ConnectionError):
                 get_url(self.url, raise_exceptions=True, nocache=True, ech_retry=ech_retry,
