@@ -169,19 +169,43 @@ class TVChaosUKProvider(generic.TorrentProvider):
     @staticmethod
     def regulate_title(title, mode='-', search_string=''):
 
+        # keep a starred proper or repack, drop uploader notes e.g. *Note*, * NOTE, **SEE LISTING**, @ *https://...*
+        title = re.sub(r'(?i)\*+\s*(proper|repack)\s*\*+', r'\1', title)
+        title = re.sub(r'(?i)\s*@\s*\*?https?://\S+|\s*\*+[^*]*\*+|\s*\*+\s*note\b.*$', '', title)
+        # a trailing proper or repack after a dash goes inside the release name
+        title = re.sub(r'(?i)\s+-\s+(proper|repack)\s*$', r' \1', title)
+        # month first dates e.g. Nov 25 2026 -> 25 Nov 2026, and Oct 26-28 2026 -> 26-28 Oct 2026
+        title = re.sub(r'\b([A-Z][a-z]{2,8})\s+(\d{1,2}(?:st|nd|rd|th)?(?:\s*-\s*\d{1,2})?),?\s+((?:19|20)\d\d)\b',
+                       r'\2 \1 \3', title)
+        # a multi episode range is not one air date, so drop its date e.g. S05E06-10 (23-27 Nov 2026)
+        if re.search(r'(?i)S\d+E\d+\s*-\s*E?\d+', title):
+            title = re.sub(r'\s*\(\d{1,2}(?:st|nd|rd|th)?(?:\s*-\s*\d{1,2})?\s+[A-Za-z]+\s+(?:19|20)\d\d\)', '', title)
+        # a season of years beside an air date is not part of the show name e.g. Show 2026-27 (22 Nov 2026)
+        if re.search(r'\(\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+\s+(?:19|20)\d\d\)', title):
+            title = re.sub(r'\s+(?:19|20)\d\d-\d\d(?=\s)', '', title)
+        # day first numeric dates as a month name date that is handled below e.g. (22-11-2026) -> (22 Nov 2026)
+        title = re.sub(r'\((\d{1,2})-(1[0-2]|0?[1-9])-((?:19|20)\d\d)\)', lambda m: '(%s %s %s)' % (
+            m.group(1), ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')[
+                int(m.group(2)) - 1], m.group(3)), title)
+        # tags of resolution as release names use them e.g. FHD -> 1080p, UHD -> 2160p, 540 -> 540p
+        title = re.sub(r'(?i)\bFHD\b', '1080p', title)
+        title = re.sub(r'(?i)\b(?:UHD|4K)\b', '2160p', title)
+        title = re.sub(r'(\[[^]]*?\b(?:360|468|480|504|540|576|720|1080|2160))(?=[\s\]])', r'\1p', title)
+        # a standard definition name has no resolution tag, except the 480p that is known e.g. 540p, 576p, SD
+        title = re.sub(r'(?i)\s*\b(?:360|468|504|540|576)p\b|(?<=\[)\s*SD\b\s*|\s+SD\b(?=[\s\]])', '', title)
         # normalise abnormal naming patterns e.g. 2019/20 -> 2019
         title = re.sub(r'((?:19|20)\d\d)/20(\d\d)?', r'\1', title)
         # s<x> ep<y> -> s<x>e<y>
         title = re.sub(r'(?i)s(\d\d+)[\W]*?e+(?:p|pisode)*(\d\d+)', r'S\1E\2', title)
 
-        has_series = re.findall(r'(?i)(.*?series[^\d]*?\d+)(.*)', title)
+        has_series = re.findall(r'(?i)(.*?\bseries\b[^\d]*?\d+)(.*)', title)
         if has_series:
             rc_xtras = re.compile(r'(?i)([. _-]|^)(special|extra)s?\w*([. _-]|$)')
             has_special = rc_xtras.findall(has_series[0][1])
             if has_special:
                 title = has_series[0][0] + rc_xtras.sub(list(set(
                     list(has_special[0][0]) + list(has_special[0][2])))[0], has_series[0][1])
-            title = re.sub('(?i)series', r'Season', title)
+            title = re.sub(r'(?i)\bseries\b', r'Season', title)
 
         years = re.findall(r'((?:19|20)\d\d)', title)
         title = re.sub(r'(19|20)\d\d', r'{{yr}}', title)
@@ -234,17 +258,17 @@ class TVChaosUKProvider(generic.TorrentProvider):
                  r'(?i)(?:\d{3,4}(?:[pi]|hd)|hd(?:tv)?\s*\d{3,4}(?:[pi])?)',
                  '''
                  (?i)(hr.ws.pdtv|blu.?ray|hddvd|
-                 pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip|mpeg-?2)
+                 pdtv|hdtv|dsr|tvrip|web.?(?:dl|rip)|dvd.?rip|b[r|d]rip)
                  ''', '''
-                 (?i)([hx].?26[45]|divx|xvid)
+                 (?i)([hx].?26[45]|hevc|av1|vp9|divx|xvid|mpeg-?2)
                  ''', '''
                  (?i)(avi|mkv|mp4|sub(?:b?ed|pack|s))
                  ''')]
         title = ('%s`%s' % (
             re.sub('|'.join(['|'.join([re.escape(y) for y in x]) for x in tags if x]).strip('|'), '', t[-1]),
-            re.sub(r'(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p',
-                   '`'.join(['`'.join(x) for x in tags[:-1]]).rstrip('`')) +
-            ('', '`hdtv')[not any(tags[2])] + ('', '`x264')[not any(tags[3])]))
+            re.sub(r'(?i)(?:hd(?:tv)?\s*)?(\d{3,4})(?:hd|p)?', r'\1p', '`'.join(['`'.join(x) for x in tags[:2]]))
+            # resolution, then source, then codec, as in a release name
+            + '`' + '`'.join(tags[2] or ['HDTV']) + '`' + '`'.join(tags[3] or ['x264'])))
         title = re.sub(r'([hx]26[45])p', r'\1', title)
         for r in [(r'(?i)(?:\W(?:Series|Season))?\W(Repack)\W', r'`\1`'),
                   (f'(?i){bl}(Proper){br}', r'`\1`'), (rf'{bl}\s*{br}', '`')]:
@@ -278,9 +302,13 @@ class TVChaosUKProvider(generic.TorrentProvider):
 
         titles += [title]
 
+        # source tags as release names spell them e.g. hdtv -> HDTV, WebRip -> WEBRip
+        standard = (lambda name: re.sub(r'(?i)\bweb.?dl\b', 'WEB-DL', re.sub(r'(?i)\bweb.?rip\b', 'WEBRip', re.sub(
+            r'(?i)\bhdtv\b', 'HDTV', name))))
+
         result = []
         for cur_item in titles:
-            sxe_find = r'(?i)%s' % (sxe_build, r'S\d\d+E\d\d+|season\s*\d+')[not sxe_build]
+            sxe_find = r'(?i)%s' % (sxe_build, r'S\d\d+E\d\d+(?:-E?\d\d+)?|season\s*\d+')[not sxe_build]
             sxe = re.findall(sxe_find, cur_item) or ''
             if sxe:
                 sxe = sxe[0]
@@ -305,7 +333,7 @@ class TVChaosUKProvider(generic.TorrentProvider):
                     end = [pre_post[0][1]]
 
             parts += ([sxe], [])[not sxe] + ([dated], [])[not dated] + end
-            result += [re.sub(r'(\s\.|\.\s|\s+)', '.', ' '.join(parts))]
+            result += [standard(re.sub(r'[][]', '', re.sub(r'(\s\.|\.\s|\s+)', '.', ' '.join(parts))))]
 
         return result
 
