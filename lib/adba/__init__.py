@@ -253,7 +253,8 @@ class Connection(threading.Thread):
         """
         config = ConfigParser()
         config.read(self.SessionFile)
-        if config['DEFAULT']['loggedin'] == 'yes':
+        # .get, there is no session file before the first login
+        if 'yes' == config['DEFAULT'].get('loggedin'):
             self.link.session = config.get('DEFAULT', 'sessionkey')
             result = self.handle(LogoutCommand(), callback)
             if cutConnection:

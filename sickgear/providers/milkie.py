@@ -59,6 +59,7 @@ class MilkieProvider(generic.TorrentProvider):
                                 headers=dict(Authorization=f'Bearer {self._token}'), parse_json=True)
             user = isinstance(resp, dict) and resp.get('user')
             self._dkey = isinstance(user, dict) and (user.get('apiKey') or user.get('downloadKey'))
+            logger.RedactingFilter.reset()  # mask the new keys from the next log line
         return bool(self._token) and bool(self._dkey)
 
     def _search_provider(self, search_params, **kwargs):

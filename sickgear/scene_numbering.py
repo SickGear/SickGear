@@ -22,9 +22,8 @@
 import traceback
 from sqlite3 import Row
 
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, logger
 from .helpers import try_int
 from .sgdatetime import SGDatetime
@@ -754,6 +753,11 @@ def _get_sea(tvid, prodid, season=None, episode=None, absolute_number=None):
     return season, episode, absolute_number
 
 
+# the time of the next read of the xem_refresh table for a show. xem_refresh is called a few times for each episode
+# of a show that loads, with this, the table is read once a day for a show and not on every call
+_xem_next_check = {}  # type: Dict[Tuple[int, int], int]
+
+
 def xem_refresh(tvid, prodid, force=False):
     """
     Refresh data from xem for a tv show
@@ -769,10 +773,16 @@ def xem_refresh(tvid, prodid, force=False):
         return
 
     tvid, prodid = int(tvid), int(prodid)
-    tvinfo = sickgear.TVInfoAPI(tvid)
 
-    if 'xem_origin' not in tvinfo.config \
-            or prodid not in sickgear.scene_exceptions.MEMCACHE['release_map_xem'].get(tvid, []):
+    if prodid not in sickgear.scene_exceptions.MEMCACHE['release_map_xem'].get(tvid, []):
+        return
+
+    now = SGDatetime.timestamp_near()
+    if not force and now < _xem_next_check.get((tvid, prodid), 0):
+        return
+
+    tvinfo = sickgear.TVInfoAPI(tvid)
+    if 'xem_origin' not in tvinfo.config:
         return
 
     xem_origin = tvinfo.config['xem_origin']
@@ -792,9 +802,12 @@ def xem_refresh(tvid, prodid, force=False):
             """, [tvid, prodid])
         if sql_result:
             last_refresh = int(sql_result[0]['last_refreshed'])
-            refresh = SGDatetime.timestamp_near() > last_refresh + max_refresh_age_secs
+            refresh = now > last_refresh + max_refresh_age_secs
         else:
+            last_refresh = now
             refresh = True
+
+        _xem_next_check[(tvid, prodid)] = (last_refresh, now)[refresh or force] + max_refresh_age_secs
 
         if refresh or force:
             logger.debug(f'Looking up XEM scene mapping for show {prodid} on {tvinfo.name}')

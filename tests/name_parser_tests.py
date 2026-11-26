@@ -1,11 +1,12 @@
 import datetime
-import os.path
 import test_lib as test
 import sys
 import unittest
+from os.path import abspath, dirname, join, normpath
+from unittest import mock
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import sickgear
 from sickgear import db, name_cache, tv
@@ -629,7 +630,7 @@ class ComboTests(unittest.TestCase):
         for (name, result, which_regexes) in combination_test_cases:
             # Normalise the paths. Converts UNIX-style paths into Windows-style
             # paths when test is run on Windows.
-            self._test_combo(os.path.normpath(name), result, which_regexes)
+            self._test_combo(normpath(name), result, which_regexes)
 
 
 class BasicTests(unittest.TestCase):
@@ -950,6 +951,50 @@ class ExtraInfoNoNameTests(test.SickbeardTestDBCase):
                 self.assertEqual(n_ep, case[3])
 
 
+class AnimeYearInNameTests(test.SickbeardTestDBCase):
+
+    def tearDown(self):
+        super(AnimeYearInNameTests, self).tearDown()
+        sickgear.showList = []
+        sickgear.showDict = {}
+        name_cache.nameCache = {}
+
+    def test_year_is_not_an_absolute_number(self):
+        # the year of the show name is read as an absolute episode number where a quality as `HD` or `SD` follows,
+        # no episode has that number, so the season and the episode of the name must be used
+        tvs = TVShowTest(True, 'Berserk (2016)', 2, 1, 2016)
+        tvs.sxe_ep_obj = {1: {1: TVEpisodeTest('The Branded Swordsman'), 4: TVEpisodeTest('Revelations')}}
+        sickgear.showList = [tvs]
+        sickgear.showDict = {tvs.sid_int: tvs}
+        name_cache.nameCache = {}
+        name_cache.build_name_cache()
+
+        for name, season, episodes in [
+            ('Berserk.2016.s01e01.The.Branded.Swordsman.HD.TV.mp4', 1, [1]),
+            ('Berserk.2016.s01e04.Revelations.SD.TV.mkv', 1, [4]),
+            ('Berserk.2016.s01e01.The.Branded.Swordsman.mkv', 1, [1]),
+        ]:
+            result = parser.NameParser(show_obj=tvs).parse(name, cache_result=False)
+            self.assertEqual((season, episodes), (result.season_number, result.episode_numbers), msg=name)
+            self.assertEqual([], result.ab_episode_numbers, msg=name)
+
+
+class ParseLogTests(unittest.TestCase):
+    """ a show refresh parses each media file and asks for no debug line of the result """
+
+    def parse_lines(self, name, **kwargs):
+        np = parser.NameParser(testing=True, show_obj=TVShowTest(name='Show Name'))
+        with mock.patch.object(parser.logger, 'debug') as cur_debug:
+            np.parse(name, cache_result=False, **kwargs)
+        return [cur_call.args[0] for cur_call in cur_debug.call_args_list if cur_call.args[0].startswith('Parsed ')]
+
+    def test_result_is_logged(self):
+        self.assertEqual(1, len(self.parse_lines('Show.Name.S01E02.720p.HDTV.x264-GRP')))
+
+    def test_result_is_not_logged(self):
+        self.assertEqual([], self.parse_lines('Show.Name.S01E03.720p.HDTV.x264-GRP', log_result=False))
+
+
 class OrderedDefaultdictTests(unittest.TestCase):
 
     def test_ordereddefaultdict(self):
@@ -980,6 +1025,9 @@ if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(ComboTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+    suite = unittest.TestLoader().loadTestsFromTestCase(AnimeYearInNameTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
     suite = unittest.TestLoader().loadTestsFromTestCase(UnicodeTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
@@ -996,4 +1044,10 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(MultiSceneNumbering)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(DupeNameTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(ParseLogTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

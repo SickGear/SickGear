@@ -25,18 +25,19 @@ functions are encouraged instead of this module where applicable. See the
 docstrings on each function for details.
 """
 
+import binascii
 import html
 import json
 import re
+import typing
 import urllib.parse
+from collections.abc import Callable
+from typing import Any
 
 from tornado.util import unicode_type
 
-import typing
-from typing import Union, Any, Optional, Dict, List, Callable
 
-
-def xhtml_escape(value: Union[str, bytes]) -> str:
+def xhtml_escape(value: str | bytes) -> str:
     """Escapes a string so it is valid within HTML or XML.
 
     Escapes the characters ``<``, ``>``, ``"``, ``'``, and ``&``.
@@ -59,7 +60,7 @@ def xhtml_escape(value: Union[str, bytes]) -> str:
     return html.escape(to_unicode(value))
 
 
-def xhtml_unescape(value: Union[str, bytes]) -> str:
+def xhtml_unescape(value: str | bytes) -> str:
     """Un-escapes an XML-escaped string.
 
     Equivalent to `html.unescape` except that this function always returns
@@ -96,10 +97,10 @@ def json_encode(value: Any) -> str:
     return json.dumps(value).replace("</", "<\\/")
 
 
-def json_decode(value: Union[str, bytes]) -> Any:
+def json_decode(value: str | bytes) -> Any:
     """Returns Python objects for the given JSON string.
 
-    Supports both `str` and `bytes` inputs. Equvalent to `json.loads`.
+    Supports both `str` and `bytes` inputs. Equivalent to `json.loads`.
     """
     return json.loads(value)
 
@@ -109,7 +110,7 @@ def squeeze(value: str) -> str:
     return re.sub(r"[\x00-\x20]+", " ", value).strip()
 
 
-def url_escape(value: Union[str, bytes], plus: bool = True) -> str:
+def url_escape(value: str | bytes, plus: bool = True) -> str:
     """Returns a URL-encoded version of the given value.
 
     Equivalent to either `urllib.parse.quote_plus` or `urllib.parse.quote` depending on the ``plus``
@@ -129,20 +130,18 @@ def url_escape(value: Union[str, bytes], plus: bool = True) -> str:
 
 
 @typing.overload
-def url_unescape(value: Union[str, bytes], encoding: None, plus: bool = True) -> bytes:
+def url_unescape(value: str | bytes, encoding: None, plus: bool = True) -> bytes:
     pass
 
 
 @typing.overload
-def url_unescape(
-    value: Union[str, bytes], encoding: str = "utf-8", plus: bool = True
-) -> str:
+def url_unescape(value: str | bytes, encoding: str = "utf-8", plus: bool = True) -> str:
     pass
 
 
 def url_unescape(
-    value: Union[str, bytes], encoding: Optional[str] = "utf-8", plus: bool = True
-) -> Union[str, bytes]:
+    value: str | bytes, encoding: str | None = "utf-8", plus: bool = True
+) -> str | bytes:
     """Decodes the given value from a URL.
 
     The argument may be either a byte or unicode string.
@@ -170,13 +169,56 @@ def url_unescape(
         return unquote(to_basestring(value), encoding=encoding)
 
 
+# Swaps % and = so that binascii.a2b_qp, which decodes =XX in C, can decode
+# percent escapes.
+_PERCENT_EQUALS_SWAP = bytes.maketrans(b"%=", b"=%")
+
+
+def _unquote_to_bytes(data: bytes) -> bytes:
+    """Equivalent to `urllib.parse.unquote_to_bytes`, but fast.
+
+    The standard library's version (as of Python 3.14) creates an object for
+    every ``%`` in its input, which makes large escaped bodies cost many
+    times their size in memory and microseconds per byte. This does the
+    work in a few passes over the data in C.
+    """
+    if b"%" not in data:
+        return data
+    # After the swap, escapes are =XX and literal = signs are %, which
+    # a2b_qp passes through. a2b_qp also passes through = that is not
+    # followed by two hex digits (an invalid escape), and the final swap
+    # turns those back into %.
+    data = data.translate(_PERCENT_EQUALS_SWAP)
+    # Escapes that decode to % or = would be swapped too, so exchange them
+    # first. Each token is three bytes with = only at the start, so these
+    # replacements can't create or break other tokens; =3d is free to use
+    # as a placeholder once it has been normalized away.
+    data = (
+        data.replace(b"=3d", b"=3D")
+        .replace(b"=25", b"=3d")
+        .replace(b"=3D", b"=25")
+        .replace(b"=3d", b"=3D")
+    )
+    # a2b_qp decodes == as =, consuming both. The first = of a pair is
+    # always an invalid escape, so make it explicit. Two passes are needed
+    # because replace() doesn't see the pair formed where two matches meet.
+    data = data.replace(b"==", b"=3D=").replace(b"==", b"=3D=")
+    # a2b_qp treats = before a line break or at the end as a soft line break
+    # and drops it (after =\r, everything up to the next \n). Those are
+    # invalid escapes too.
+    data = data.replace(b"=\n", b"=3D\n").replace(b"=\r", b"=3D\r")
+    if data.endswith(b"="):
+        data += b"3D"
+    return binascii.a2b_qp(data).translate(_PERCENT_EQUALS_SWAP)
+
+
 def parse_qs_bytes(
-    qs: Union[str, bytes],
+    qs: str | bytes,
     keep_blank_values: bool = False,
     strict_parsing: bool = False,
     *,
-    max_num_fields: Optional[int] = None,
-) -> Dict[str, List[bytes]]:
+    max_num_fields: int | None = None,
+) -> dict[str, list[bytes]]:
     """Parses a query string like urlparse.parse_qs,
     but takes bytes and returns the values as byte strings.
 
@@ -187,22 +229,26 @@ def parse_qs_bytes(
     .. versionadded:: 6.5.8
        The ``max_num_fields`` argument. ValueError is raised if this limit is exceeded.
     """
-    # This is gross, but python3 doesn't give us another way.
-    # Latin1 is the universal donor of character encodings.
-    if isinstance(qs, bytes):
-        qs = qs.decode("latin1")
-    result = urllib.parse.parse_qs(
-        qs,
-        keep_blank_values,
-        strict_parsing,
-        encoding="latin1",
-        errors="strict",
-        max_num_fields=max_num_fields,
-    )
-    encoded = {}
-    for k, v in result.items():
-        encoded[k] = [i.encode("latin1") for i in v]
-    return encoded
+    # This follows urllib.parse.parse_qsl, with a faster unquote.
+    if isinstance(qs, str):
+        qs = qs.encode("latin1")
+    result: dict[str, list[bytes]] = {}
+    if not qs:
+        return result
+    if max_num_fields is not None and 1 + qs.count(b"&") > max_num_fields:
+        raise ValueError("Max number of fields exceeded")
+    for field in qs.split(b"&"):
+        if not field and not strict_parsing:
+            continue
+        name, has_eq, value = field.partition(b"=")
+        if not has_eq and strict_parsing:
+            raise ValueError("bad query field: %r" % (field,))
+        if value or keep_blank_values:
+            key = _unquote_to_bytes(name.replace(b"+", b" ")).decode("latin1")
+            result.setdefault(key, []).append(
+                _unquote_to_bytes(value.replace(b"+", b" "))
+            )
+    return result
 
 
 _UTF8_TYPES = (bytes, type(None))
@@ -223,7 +269,7 @@ def utf8(value: None) -> None:
     pass
 
 
-def utf8(value: Union[None, str, bytes]) -> Optional[bytes]:
+def utf8(value: None | str | bytes) -> bytes | None:
     """Converts a string argument to a byte string.
 
     If the argument is already a byte string or None, it is returned unchanged.
@@ -254,7 +300,7 @@ def to_unicode(value: None) -> None:
     pass
 
 
-def to_unicode(value: Union[None, str, bytes]) -> Optional[str]:
+def to_unicode(value: None | str | bytes) -> str | None:
     """Converts a string argument to a unicode string.
 
     If the argument is already a unicode string or None, it is returned
@@ -309,11 +355,11 @@ _URL_RE = re.compile(
 
 
 def linkify(
-    text: Union[str, bytes],
+    text: str | bytes,
     shorten: bool = False,
-    extra_params: Union[str, Callable[[str], str]] = "",
+    extra_params: str | Callable[[str], str] = "",
     require_protocol: bool = False,
-    permitted_protocols: List[str] = ["http", "https"],
+    permitted_protocols: list[str] = ["http", "https"],
 ) -> str:
     """Converts plain text into HTML with links.
 
@@ -407,7 +453,7 @@ def linkify(
         return f'<a href="{href}"{params}>{url}</a>'
 
     # First HTML-escape so that our strings are all safe.
-    # The regex is modified to avoid character entites other than &amp; so
+    # The regex is modified to avoid character entities other than &amp; so
     # that we won't pick up &quot;, etc.
     text = _unicode(xhtml_escape(text))
     return _URL_RE.sub(make_link, text)

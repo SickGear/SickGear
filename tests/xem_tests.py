@@ -16,16 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 import re
 import sys
 import unittest
+from os.path import abspath, dirname, join
+from unittest import mock
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import test_lib as test
 import sickgear
+from sickgear import db, scene_numbering
+from sickgear.sgdatetime import SGDatetime
 from sickgear.tv import TVShow
 
 
@@ -66,9 +69,67 @@ class XEMBasicTests(test.SickbeardTestDBCase):
         #     print("Matched " + curRegex + " to " + name)
 
 
+class XEMRefreshTests(test.SickbeardTestDBCase):
+    """ the many calls of xem_refresh for the episodes of one show read the db once, and ask xem once a day """
+
+    def setUp(self):
+        super(XEMRefreshTests, self).setUp()
+        scene_numbering._xem_next_check.clear()
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {1: [123456]}
+        self.selects = []
+        org_select = db.DBConnection.select
+
+        def select(conn, query, *args, **kwargs):
+            self.selects.append(query)
+            return org_select(conn, query, *args, **kwargs)
+
+        self.patches = [mock.patch.object(db.DBConnection, 'select', select),
+                        mock.patch('sickgear.helpers.get_url', return_value=None)]
+        self.get_url = [_p.start() for _p in self.patches][1]
+
+    def tearDown(self):
+        for cur_patch in self.patches:
+            cur_patch.stop()
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        scene_numbering._xem_next_check.clear()
+        super(XEMRefreshTests, self).tearDown()
+
+    @staticmethod
+    def refreshed_at(timestamp):
+        with db.DBConnection() as sg_db:
+            sg_db.upsert('xem_refresh', dict(last_refreshed=timestamp), dict(indexer=1, indexer_id=123456))
+
+    def test_table_is_read_once(self):
+        self.refreshed_at(SGDatetime.timestamp_near() - 60)
+        for _ in range(5):
+            scene_numbering.xem_refresh(1, 123456)
+        self.assertEqual(1, len(self.selects))
+        self.get_url.assert_not_called()
+
+    def test_old_data_is_refreshed_once(self):
+        self.refreshed_at(SGDatetime.timestamp_near() - 90000)
+        for _ in range(5):
+            scene_numbering.xem_refresh(1, 123456)
+        self.assertEqual(1, len(self.selects))
+        self.get_url.assert_called_once()
+
+    def test_force_refreshes(self):
+        self.refreshed_at(SGDatetime.timestamp_near() - 60)
+        scene_numbering.xem_refresh(1, 123456)
+        scene_numbering.xem_refresh(1, 123456, force=True)
+        self.get_url.assert_called_once()
+
+    def test_show_with_no_xem_mapping(self):
+        scene_numbering.xem_refresh(1, 999)
+        self.assertEqual([], self.selects)
+
+
 if '__main__' == __name__:
     print('==================')
     print('STARTING - XEM Scene Numbering TESTS')
     print('==================')
     print('######################################################################')
-    suite = unittest.TestLoader().loadTestsFromTestCase(XEMBasicTests)
+    for cur_case in (XEMBasicTests, XEMRefreshTests):
+        suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
+        unittest.TextTestRunner(verbosity=2).run(suite)

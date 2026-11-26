@@ -21,9 +21,7 @@ import traceback
 from . import generic
 from .. import logger
 from ..helpers import try_int
-
 from bs4_parser import BS4Parser
-
 from _23 import quote_plus
 
 
@@ -58,7 +56,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
                 search_url = self.urls['browse'] if 'Cache' == mode \
                     else self.urls['search'] % (quote_plus(search_string))
 
-                html = self.get_url(search_url, provider=self)
+                html = self.get_url(search_url, provider=self, proxy_browser=True)
                 if self.should_skip():
                     return results
 
@@ -118,7 +116,7 @@ class LimeTorrentsProvider(generic.TorrentProvider):
 
     def get_data(self, url):
         result = None
-        html = self.get_url(url)
+        html = self.get_url(url, proxy_browser=True)
         if self.should_skip():
             return result
 

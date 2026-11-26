@@ -3,6 +3,7 @@ from _typeshed import Incomplete
 
 VALID_URL_RE: Incomplete
 VALID_QUERY_RE: Incomplete
+URL_PATH_SAFE_CHARS: str
 STRING_DELIMITERS: str
 STRING_DELIMITERS_NO_WS: str
 NOTIFY_CUSTOM_ADD_TOKENS: Incomplete
@@ -22,6 +23,7 @@ URL_DETECTION_RE: Incomplete
 EMAIL_DETECTION_RE: Incomplete
 UUID4_RE: Incomplete
 VALID_PYTHON_FILE_RE: Incomplete
+QSD_FULL_MODE_KEYS: Incomplete
 REGEX_VALIDATE_LOOKUP: Incomplete
 
 def is_ipaddr(addr, ipv4: bool = True, ipv6: bool = True):

@@ -1,14 +1,13 @@
 import json
-import os.path
 import sys
 import unittest
+from os.path import abspath, dirname, join
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import requests
 from requests.models import Response
-
 from cfscrape import CloudflareScraper
 
 FS_URL = 'http://flaresolverr.test:8191'

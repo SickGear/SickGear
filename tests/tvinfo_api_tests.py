@@ -6,7 +6,6 @@ warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certi
 
 import test_lib as test
 
-from datetime import date as org_date, datetime as org_datetime
 import datetime
 import gc
 import hashlib
@@ -16,19 +15,24 @@ import sys
 import unittest
 import os.path
 import shutil
-sys.path.insert(1, os.path.abspath('..'))
+from datetime import date as org_date, datetime as org_datetime
+from os.path import abspath, basename, dirname, join, splitext
+from unittest import mock
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+
+import requests
 
 import sickgear
 from sickgear.indexers.indexer_config import TVINFO_TVDB, TVINFO_TMDB, TVINFO_TVMAZE, TVINFO_TRAKT, TVINFO_IMDB, \
     TVINFO_TVDB_SLUG, TVINFO_TRAKT_SLUG
-from lib.tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
+from tvinfo_base import TVInfoPerson as TVInfoPerson_lib, TVInfoImage as TVInfoImage_lib, \
     TVInfoSocialIDs as TVInfoSocialIDs_lib, TVInfoCharacter as TVInfoCharacter_lib, TVInfoShow as TVInfoShow_lib, \
     TVInfoIDs as TVInfoIDs_lib, CastList as CastList_lib, CrewList as CrewList_lib, \
     TVInfoEpisode as TVInfoEpisode_lib, TVInfoSeason as TVInfoSeason_lib, \
     TVInfoNetwork as TVInfoNetwork_lib
 from tvinfo_base import TVInfoPerson, TVInfoImage, TVInfoSocialIDs, TVInfoCharacter, TVInfoShow, TVInfoIDs, CastList, \
     CrewList, RoleTypes, TVInfoEpisode, TVInfoSeason, TVInfoNetwork
-import requests
+from tvinfo_base.base import ShowContainer
 
 # noinspection PyUnreachableCode
 if False:
@@ -36,11 +40,11 @@ if False:
 
 NoneType = type(None)
 threading_Lock = (type(threading.Lock()), type(threading.RLock()))
-file_dir = os.path.dirname(__file__)
+file_dir = dirname(__file__)
 sickgear.CACHE_DIR = os.path.join(file_dir, 'cache')
 os.makedirs(sickgear.CACHE_DIR, exist_ok=True)
 
-test_base_name = os.path.splitext(os.path.basename(__file__))[0]
+test_base_name = splitext(basename(__file__))[0]
 mock_data_dir = os.path.join(file_dir, 'mock_data', test_base_name)
 os.makedirs(mock_data_dir, exist_ok=True)
 cast_types = [t for t in RoleTypes.reverse.keys() if t < RoleTypes.crew_limit]
@@ -71,6 +75,7 @@ def _make_filename(file_str, file_ext, extra_strs=None):
 def _mock_get(*args, **kwargs):
     url = (1 < len(args) and args[1]) or kwargs.get('url')
     post = 'post' == kwargs.pop('method', 'get')
+    live_on_miss = kwargs.pop('live_on_miss', False)
     resp = requests.Response()
     resp.url = url
     resp.status_code = 200
@@ -90,13 +95,14 @@ def _mock_get(*args, **kwargs):
     elif not disable_content_creation:
         kw = kwargs.copy()
         kw.update({'params': args[0].params, 'headers': args[0].headers})
-        if post:
-            resp = requests.post(*args[1:], **kw)
-        else:
-            resp = requests.get(*args[1:], **kw)
+        # by the saved method, a live request would come back to this mock
+        with requests.Session() as live:
+            resp = backup_session_request(live, ('GET', 'POST')[post], *args[1:], **kw)
         if not post or 'imdb.com' in url:
             with lzma.open(data_file, 'wb') as fd:
                 fd.write(resp.content)
+    elif live_on_miss:
+        return backup_session_request(args[0], ('GET', 'POST')[post], *args[1:], **kwargs)
     else:
         print(f'error getting: {url}')
     return resp
@@ -110,6 +116,13 @@ def _mock_post(*args, **kwargs):
     # resp.status_code = 200
     # resp._content = ''
     # return resp
+
+
+def _mock_request(session, method, url, *args, **kwargs):
+    # get_url sends through Session.request, e.g. request('GET', url). The IMDb login by requests.post has no
+    # recorded file, it goes live as when only get and post were mocked
+    kwargs.update(method=method.lower(), live_on_miss='api.imdbws.com/authentication/' in url)
+    return _mock_get(session, url, *args, **kwargs)
 
 
 browse_start_date_filename = os.path.join(mock_data_dir, 'browse_start_date.data')
@@ -172,6 +185,7 @@ def _load_pickle_file(f_name):
 
 backup_session_get = requests.sessions.Session.get
 backup_session_post = requests.sessions.Session.post
+backup_session_request = requests.sessions.Session.request
 
 
 def _check_types(obj, check_list):
@@ -576,6 +590,7 @@ class TVInfoTests(test.SickbeardTestDBCase):
         datetime.datetime = _FakeDateTime
         requests.sessions.Session.get = _mock_get
         requests.sessions.Session.post = _mock_post
+        requests.sessions.Session.request = _mock_request
         # if disable_content_creation:
         #     requests.sessions.Session.post = _mock_post
 
@@ -599,6 +614,7 @@ class TVInfoTests(test.SickbeardTestDBCase):
         datetime.datetime = datetime_datetime_backup
         requests.sessions.Session.get = backup_session_get
         requests.sessions.Session.post = backup_session_post
+        requests.sessions.Session.request = backup_session_request
 
     def tearDown(self):
         super(TVInfoTests, self).tearDown()
@@ -799,7 +815,40 @@ class TVInfoTests(test.SickbeardTestDBCase):
                             raise e
 
 
+class ShowContainerTests(unittest.TestCase):
+
+    def test_number_of_cached_shows_is_limited(self):
+        container = ShowContainer()
+        for show_id in range(1, 41):
+            container[show_id] = TVInfoShow()
+            self.assertLessEqual(len(container), container.max_entries)
+        # the newest are kept
+        self.assertEqual(list(range(41 - container.max_entries, 41)), sorted(container))
+
+    def test_limit_is_set_by_the_config(self):
+        # the app sets the limit for all containers from its config
+        with mock.patch.object(ShowContainer, 'max_entries', 3):
+            container = ShowContainer()
+            for show_id in range(1, 11):
+                container[show_id] = TVInfoShow()
+            self.assertEqual([8, 9, 10], sorted(container))
+
+    def test_show_in_use_is_kept(self):
+        container = ShowContainer()
+        container[1] = TVInfoShow()
+        other_thread = threading.Thread(target=container[1].lock.acquire)
+        other_thread.start()
+        other_thread.join()
+        for show_id in range(2, 41):
+            container[show_id] = TVInfoShow()
+        self.assertIn(1, container)
+        self.assertLessEqual(len(container), 1 + container.max_entries)
+
+
 if '__main__' == __name__:
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(ShowContainerTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
 
     print('===============================')
     print('STARTING - TV Info TESTS')
@@ -811,5 +860,6 @@ if '__main__' == __name__:
     finally:
         requests.sessions.Session.get = backup_session_get
         requests.sessions.Session.post = backup_session_post
+        requests.sessions.Session.request = backup_session_request
         datetime.date = datetime_date_backup
         datetime.datetime = datetime_datetime_backup

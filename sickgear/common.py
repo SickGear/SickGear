@@ -13,22 +13,34 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from functools import reduce
+
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.metadata', 'hachoir.metadata.metadata_item', 'hachoir.parser', 'hachoir.stream']
+
 import operator
 import os.path
 import platform
 import re
 import traceback
 import uuid
-
-import sickgear
+from functools import reduce
 
 from six import integer_types, string_types
+from hachoir.parser import createParser
+from hachoir.metadata import extractMetadata
+from hachoir.metadata.metadata_item import QUALITY_NORMAL
+from hachoir.stream import InputStreamError
+
+import sickgear
+from exceptions_helper import ex
+from sickgear import logger
+from sickgear.video_size import video_size
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
 if False:
-    from typing import List, Tuple
+    from typing import List, Optional, Tuple
 
 try:
     INSTANCE_ID = str(uuid.uuid1())
@@ -76,6 +88,60 @@ multiEpStrings = {NAMING_REPEAT: 'Repeat',
                   NAMING_EXTEND: 'Extend',
                   NAMING_LIMITED_EXTEND: 'Extend (Limited)',
                   NAMING_LIMITED_EXTEND_E_PREFIXED: 'Extend (Limited, E-prefixed)'}
+
+# the metadata of the last file read, a refresh or post processing asks for the codec and the quality of one file
+_last_file_metadata = (None, None)
+
+
+def _file_metadata(filename):
+    """
+    the metadata that hachoir reads from a media file, the file is closed after the read
+
+    :param filename: filename
+    :type filename: AnyStr
+    :return: metadata, or None for a file with no parser or no metadata
+    """
+    global _last_file_metadata
+    try:
+        cur_stat = os.stat(filename)
+        # a file rewritten with the same size within one tick of the clock keeps its size and time, its start differs
+        with open(filename, 'rb') as fh:
+            head = fh.read(4096)
+    except OSError:
+        return None
+    # a file that is replaced or changed has another size, time or start, so it is read again
+    key = (filename, cur_stat.st_size, cur_stat.st_mtime_ns, hash(head))
+    if key == _last_file_metadata[0]:
+        return _last_file_metadata[1]
+
+    parser = extract = None
+    msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
+    try:
+        parser = createParser(filename)
+    except InputStreamError as e:
+        logger.warning(msg % (filename, ex(e)))
+    except (BaseException, Exception) as e:
+        logger.error(msg % (filename, ex(e)))
+        logger.error(traceback.format_exc())
+
+    if parser:
+        try:
+            args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
+            parser.parse_exif = False
+            parser.parse_photoshop_content = False
+            parser.parse_comments = False
+            extract = extractMetadata(parser, quality=QUALITY_NORMAL, **args)
+        except (BaseException, Exception) as e:
+            logger.warning(msg % (filename, ex(e)))
+        # a file that stays open cannot be moved or deleted on Windows
+        try:
+            # noinspection PyProtectedMember
+            parser.stream._input.close()
+        except (BaseException, Exception):
+            pass
+
+    _last_file_metadata = (key, extract)
+    return extract
 
 
 class Quality(object):
@@ -264,7 +330,6 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        from sickgear import logger
         name = os.path.basename(name)
 
         name_has = (lambda quality_list, func=all: func([re.search(q, name, re.I) for q in quality_list]))
@@ -358,64 +423,36 @@ class Quality(object):
         :return:
         :rtype: int
         """
-        from exceptions_helper import ex
-        from sickgear import logger
         if os.path.isfile(filename):
 
-            from lib.hachoir.parser import createParser
-            from lib.hachoir.metadata import extractMetadata
-            from lib.hachoir.metadata.metadata_item import QUALITY_BEST
-            from lib.hachoir.stream import InputStreamError
-
-            parser = height = width = None
-            msg = 'Hachoir can\'t parse file "%s" content quality because it found error: %s'
-            try:
-                parser = createParser(filename)
-            except InputStreamError as e:
-                logger.warning(msg % (filename, ex(e)))
-            except (BaseException, Exception) as e:
-                logger.error(msg % (filename, ex(e)))
-                logger.error(traceback.format_exc())
-
-            if parser:
-                extract = None
+            height = width = None
+            extract = _file_metadata(filename)
+            if extract:
                 try:
-                    args = ({}, {'scan_index': False})['.avi' == filename[-4::].lower()]
-                    parser.parse_exif = False
-                    parser.parse_photoshop_content = False
-                    parser.parse_comments = False
-                    extract = extractMetadata(parser, quality=QUALITY_BEST, **args)
-                except (BaseException, Exception) as e:
-                    logger.warning(msg % (filename, ex(e)))
-                if extract:
+                    height = extract.get('height')
+                    width = extract.get('width')
+                except (AttributeError, ValueError):
                     try:
-                        height = extract.get('height')
-                        width = extract.get('width')
+                        for metadata in extract.iterGroups():
+                            if re.search('(?i)video', metadata.header):
+                                height = metadata.get('height')
+                                width = metadata.get('width')
+                                break
                     except (AttributeError, ValueError):
-                        try:
-                            for metadata in extract.iterGroups():
-                                if re.search('(?i)video', metadata.header):
-                                    height = metadata.get('height')
-                                    width = metadata.get('width')
-                                    break
-                        except (AttributeError, ValueError):
-                            pass
+                        pass
 
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
+            if None is height:
+                # ts, m2ts, mpg, vob, rm, rmvb and wtv files hold the picture size where hachoir does not read it
+                width, height = video_size(filename)
 
-                    tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
-                    if None is not height and height >= tolerance(352, 5):
-                        if height <= tolerance(720, 2) and (None is width or width < tolerance(1280, 2)):
-                            return Quality.SDTV
-                        if 1100 < height or (None is not width and 2000 < width):
-                            return Quality.UHD4KWEB
-                        return (Quality.HDTV, Quality.FULLHDTV)[
-                            height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
-                else:
-                    # a file that stays open cannot be moved or deleted on Windows
-                    # noinspection PyProtectedMember
-                    parser.stream._input.close()
+            tolerance = (lambda value, percent: int(round(value - (value * percent / 100.0))))
+            if None is not height and height >= tolerance(352, 5):
+                if height <= tolerance(720, 2) and (None is width or width < tolerance(1280, 2)):
+                    return Quality.SDTV
+                if 1100 < height or (None is not width and 2000 < width):
+                    return Quality.UHD4KWEB
+                return (Quality.HDTV, Quality.FULLHDTV)[
+                    height >= tolerance(1080, 1) or (None is not width and width >= tolerance(1920, 4))]
         return Quality.UNKNOWN
 
     @staticmethod
@@ -518,6 +555,217 @@ class Quality(object):
     DOWNLOADED = None
     ARCHIVED = None
     FAILED = None
+
+
+class VideoCodec:
+    VC_UNKNOWN = 0
+    VC_MPEG1 = 1
+    VC_MPEG2 = 2
+    VC_DivXvid = 3
+    VC_VC1 = 4
+    VC_264 = 5
+    VC_VP9 = 6
+    VC_265 = 7
+    VC_AV1 = 8
+    VC_VVC = 9
+    VC_AV2 = 10
+
+    # used for release names
+    videocodec_regex = {
+        VC_264: r'(?:(?:x|h)[. _-]?264|avc)',
+        VC_265: r'(?:(?:x|h)[. _-]?265|hevc)',
+        VC_DivXvid: r'(?:divx|xvid)',
+        VC_VP9: r'vp9',
+        VC_VC1: r'(?<!a)vc1',
+        VC_AV1: r'av1',
+        VC_AV2: r'av2',
+        VC_VVC: r'(?:(?:x|h)[. _-]?266|vvc)',
+        VC_MPEG1: r'mpeg.?1',
+        VC_MPEG2: r'mpeg.?2'
+    }
+
+    # used for codec identification from file metadata/header
+    videocodec_ident_regex = {
+        VC_264: r'(?:264|avc1?)',
+        VC_265: r'(?:265|hevc|hvc1|hev1)',
+        # MPEG-4 part 2, by its fourcc and by the names that mkv, mp4 and ts give it
+        VC_DivXvid: r'(?:divx|xvid|dx50|fmp4|mp4[sv]|m4s2|3iv[x2]|mpeg-?4 visual|mpeg4/is[o0]/(?:a?sp|ap)|14496-2)',
+        VC_VP9: r'vp.?9',
+        # Windows Media Video 9 is VC-1
+        VC_VC1: r'(?:wvc1|wmv3|wmva|windows media video v?9|(?<![a-z])vc[-_ ]?1)',
+        # AV1X is Avid 1:1
+        VC_AV1: r'av0?1(?!x)',
+        VC_AV2: r'av0?2',
+        VC_VVC: r'(?:266|vvc)',
+        VC_MPEG1: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?1|mpg1|mp1v|m1v).*$',
+        VC_MPEG2: r'^(?!.*(?:26[4-9]|\bhevc\b|\bvvc\b|\bavc)).*(?:mpeg.?2|mpg2|mp2v|m2v|h.?222|h.?262).*$'
+    }
+
+    compiled_vc_ident_regex = {_c_k: re.compile(f'{_c_vc}', flags=re.I)
+                               for _c_k, _c_vc in videocodec_ident_regex.items()}
+
+    videocodec_names = {
+        VC_UNKNOWN: 'Unknown',
+        VC_MPEG1: 'MPEG-1',
+        VC_MPEG2: 'MPEG-2',
+        VC_DivXvid: 'DivX/Xvid',
+        VC_VC1: 'VC-1',
+        VC_264: 'H.264',
+        VC_VP9: 'VP9',
+        VC_265: 'H.265',
+        VC_AV1: 'AV1',
+        VC_VVC: 'H.266',
+        VC_AV2: 'AV2'
+    }
+
+    compiled_vc_regex = {_c_k: re.compile(f'[. _-]{_c_vc}\\b', flags=re.I)
+                         for _c_k, _c_vc in videocodec_regex.items()}
+
+    videocodec_html_class = {
+        VC_UNKNOWN: 'vc-unknown',
+        VC_264: 'vc-264',
+        VC_265: 'vc-265',
+        VC_DivXvid: 'vc-xvid',
+        VC_MPEG1: 'vc-mpeg1',
+        VC_MPEG2: 'vc-mpeg2',
+        VC_VP9: 'vc-vp9',
+        VC_VC1: 'vc-vc1',
+        VC_AV1: 'vc-av1',
+        VC_AV2: 'vc-av2',
+        VC_VVC: 'vc-vvc',
+    }
+
+    @staticmethod
+    def combine_vcs(snatched_vc, file_vc):
+        # type: (int, int) -> int
+        """
+        combine snatched and downlaoded video codec
+
+        :param snatched_vc: snatched video codec
+        :param file_vc: file video codec
+        """
+        return (snatched_vc or 0) * 100 + (file_vc or 0)
+
+    @staticmethod
+    def split_vc(vc):
+        # type: (int) -> Tuple[int, int]
+        """
+        split videocodec into snatched and file codec
+
+        :param vc: video codec
+        """
+        return (vc or 0) // 100, (vc or 0) % 100
+
+    @staticmethod
+    def get_file_vc(vc):
+        # type: (int) -> int
+        """
+        return file video codec part of combined video codec
+
+        :param vc: video codec value
+        """
+        return (vc or 0) % 100
+
+    @staticmethod
+    def get_snatch_vc(vc):
+        # type: (int) -> int
+        """
+        return snatch video codec part of combined video codec
+
+        :param vc: video codec value
+        """
+        return (vc or 0) // 100
+
+    @staticmethod
+    def set_snatched_vc(cur_video_codec, snatched_vc):
+        # type: (int, int) -> int
+        """
+        add/replace snatched video codec to existing video codec value
+
+        :param cur_video_codec: exiting current combined video codec value
+        :param snatched_vc: snatched video codec to to add/replaced
+        """
+        return  ((snatched_vc or 0) * 100) + ((cur_video_codec or 0) % 100)
+
+    @staticmethod
+    def set_file_vc(cur_video_codec, file_vc):
+        # type: (int, int) -> int
+        """
+        add/replace file video codec to existing combined video codec
+
+        :param cur_video_codec: exiting current combined video codec value
+        :param file_vc: file video codec to to add/replaced
+        """
+        return (((cur_video_codec or 0) // 100) * 100) + (file_vc or 0)
+
+    @staticmethod
+    def get_html_class(codec_id):
+        # type: (int) -> str
+        return VideoCodec.videocodec_html_class.get(codec_id, 'vc-unknown')
+
+    @staticmethod
+    def get_name(codec_id, release_name=None):
+        # type: (int, Optional[str]) -> str
+        """
+        return display name of video codec, in the x26N form when release_name has that form of this codec
+
+        :param codec_id: video codec
+        :param release_name: release name
+        """
+        name = VideoCodec.videocodec_names.get(codec_id, '')
+        if release_name and name.startswith('H.26') \
+                and re.search(r'[. _-]x[. _-]?%s\b' % name[2:], release_name, flags=re.I):
+            return 'x%s' % name[2:]
+        return name
+
+    @staticmethod
+    def get_videocodec_from_name(release_name):
+        # type: (str) -> int
+        """
+        Parse release_name to find used videocodec
+
+        :param release_name: release name to parse
+        :return: VideoCodec constant
+        """
+        if isinstance(release_name, str):
+            for _current_vc_type, _current_vc in VideoCodec.compiled_vc_regex.items():
+                if _current_vc.search(release_name):
+                    return _current_vc_type
+
+        return VideoCodec.VC_UNKNOWN
+
+    @staticmethod
+    def get_file_video_codec(filename):
+        # type: (str) -> Optional[int]
+        """
+
+        :param filename: filename
+        """
+        if not os.path.isfile(filename):
+            return None
+
+        extract, vc = _file_metadata(filename), None
+        if not extract:
+            return None
+        try:
+            file_data = extract.exportDictionary()
+            # a file with no video stream, or with no codec name for it, gives None
+            vc = next((v for k, v in file_data.items() if k.startswith('Video')), {}).get('Compression')
+        except (AttributeError, ValueError):
+            try:
+                for metadata in extract.iterGroups():
+                    if re.search('(?i)video', metadata.header):
+                        vc = metadata.get('Compression')
+                        break
+            except (AttributeError, ValueError):
+                return None
+
+        if not vc:
+            return None
+        for _current_vc_type, _current_vc in VideoCodec.compiled_vc_ident_regex.items():
+            if _current_vc.search(f'{vc}'):
+                return _current_vc_type
+        return VideoCodec.VC_UNKNOWN
 
 
 class WantedQualities(dict):
@@ -761,3 +1009,29 @@ class NeededQualities(object):
                     self.need_webdl = True
                 if not self.need_uhd and max(wanted_qualities) > NeededQualities.max_hd:
                     self.need_uhd = True
+
+
+class DOWNLOAD_CLIENTS():
+    NZBGET = 1
+    SABNZBD = 2
+    NZB_BLACKHOLE = 3
+    TORRENT = 10
+    TORRENT_BLACKHOLE = 11
+
+    IDS = {
+        'nzbget': NZBGET,
+        'sabnzbd': SABNZBD,
+        'blackhole': NZB_BLACKHOLE,
+        'torrent': TORRENT,
+        'torrent-blackhole': TORRENT_BLACKHOLE,
+    }
+
+    REVERSE_IDS = {v: k for k,v in IDS.items()}
+
+    TRUSTED_CLIENT_IDS = [SABNZBD]
+
+
+# `from sickgear.common import *` is used by templates. A star import copies each name that is listed here,
+# and a copy of a name of a lazy module loads that module. So this is every public name but those
+__all__ = [_name for _name in list(globals()) if not _name.startswith('_')
+           and _name not in ('createParser', 'extractMetadata', 'QUALITY_NORMAL', 'InputStreamError')]

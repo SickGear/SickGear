@@ -17,10 +17,9 @@
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, SO_BROADCAST, SHUT_RDWR
 
+import sickgear
 from .generic import Notifier
 from json_helper import json_loads
-import sickgear
-
 from _23 import decode_bytes, decode_str
 
 # noinspection PyUnreachableCode
@@ -29,6 +28,8 @@ if False:
 
 
 class EmbyNotifier(Notifier):
+    # the hosts and keys of the last setting that was warned about, a check of the same setting logs only a debug line
+    warned_config = None
     EMBY_API = 1
     JELLYFIN_API = 2
     # noinspection HttpUrlsUsage
@@ -204,9 +205,13 @@ class EmbyNotifier(Notifier):
 
         if len(hosts) != len(apikeys):
             message = ('Not enough Api keys for hosts', 'More Api keys than hosts')[len(apikeys) > len(hosts)]
-            self._log_warning(f'{message}, check your settings')
+            # the watched state check runs every 10 minutes, so a setting is warned about once, until it changes
+            config = (tuple(hosts), tuple(apikeys))
+            (self._log_warning, self._log_debug)[config == EmbyNotifier.warned_config](f'{message}, check your settings')
+            EmbyNotifier.warned_config = config
             return False, False, message
 
+        EmbyNotifier.warned_config = None
         return hosts, apikeys, 'OK'
 
     def _notify(self, title, body, hosts=None, apikeys=None, **kwargs):

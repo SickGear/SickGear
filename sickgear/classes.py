@@ -13,23 +13,23 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from collections import OrderedDict
-
 import copy
 import datetime
 import os
 import re
 import threading
+from collections import OrderedDict
+
+from six import integer_types, string_types
 
 import sickgear
 from ._legacy_classes import LegacySearchResult, LegacyProper
-from .common import Quality
-
-from six import integer_types, string_types
+from .common import Quality, VideoCodec
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Callable, Dict, List, Optional
+    from .tv import TVShow
 
 
 class SearchResult(LegacySearchResult):
@@ -63,6 +63,9 @@ class SearchResult(LegacySearchResult):
         # assign function for after getting the download data
         self.after_get_data_func = None  # type: Callable or None
 
+        self.season = None  # type: Optional[int]
+
+        self.episode_numbers = []  # type: List[int]
         # list of TVEpisode objects that this result is associated with
         self.ep_obj_list = ep_obj_list  # type: Optional[List[sickgear.tv.TVEpisode]]
 
@@ -87,8 +90,13 @@ class SearchResult(LegacySearchResult):
         # is a repack
         self.is_repack = False  # type: bool
 
+        # is a season pack
+        self.is_season_pack = False  # type: bool
+
         # provider unique id
         self.puid = None  # type: Any
+
+        self._vc = None  # type: Optional[int]
 
         # path to cache file
         self.cache_filepath = ''  # type: AnyStr
@@ -96,6 +104,26 @@ class SearchResult(LegacySearchResult):
         # priority of result
         # -1 = low, 0 = normal, 1 = high
         self.priority = 0  # type: int
+
+    @property
+    def puid_str(self):
+        # type: (...) -> Optional[str]
+        """
+        returns a string of provider name + puid
+        """
+        if self.puid:
+            return f'[[{getattr(self.provider, "name", "unknown")}]]-{self.puid}'
+        return None
+
+    @property
+    def video_codec(self):
+        # type: (...) -> Optional[int]
+        """
+        returns const from common VideoCodec class
+        """
+        if None is self._vc and self.name:
+            self._vc = VideoCodec.get_videocodec_from_name(self.name)
+        return self._vc
 
     @property
     def show_obj(self):
@@ -245,22 +273,16 @@ class AllShowInfosNoFilterListUI(ShowInfoFilter):
 
 class Proper(LegacyProper):
     def __init__(self, name, url, date, show_obj, parsed_show_obj=None, size=-1, puid=None, **kwargs):
+        # type: (AnyStr, AnyStr, datetime.datetime, Optional[TVShow], Optional[TVShow], int, Optional[AnyStr], Any) -> None
         """
 
         :param name: release name
-        :type name: AnyStr
         :param url: url
-        :type url: AnyStr
         :param date: date
-        :type date:
         :param show_obj: show object or None
-        :type show_obj: sickgear.tv.TVShow or None
         :param parsed_show_obj: parsed show object
-        :type parsed_show_obj: sickbread.tv.TVShow
         :param size: size
-        :type size: int or long
         :param puid: puid
-        :type puid: AnyStr
         :param kwargs:
         """
         self.name = name
@@ -277,12 +299,35 @@ class Proper(LegacyProper):
         self.show_obj = show_obj
         self.tvid = None  # type: Optional[int]
         self.prodid = -1  # type: int
-        self.season = -1  # type: int
-        self.episode = -1  # type: int
+        self.season = kwargs.get('season', -1)  # type: int
+        self.episode = kwargs.get('episode', -1)  # type: int
         self.scene_season = -1  # type: int
         self.scene_episode = -1  # type: int
 
+        self.episode_numbers = kwargs.get('episode_numbers', [])  # type: Optional[List[int]]
+        self._vc = None  # type: Optional[int]
+
         super(Proper, self).__init__(**kwargs)
+
+    @property
+    def puid_str(self):
+        # type: (...) -> Optional[str]
+        """
+        returns a string of provider name + puid
+        """
+        if self.puid:
+            return f'[[{getattr(self.provider, "name", "unknown")}]]-{self.puid}'
+        return None
+
+    @property
+    def video_codec(self):
+        # type: (...) -> Optional[int]
+        """
+        returns const from common VideoCodec class
+        """
+        if None is self._vc and self.name:
+            self._vc = VideoCodec.get_videocodec_from_name(self.name)
+        return self._vc
 
     @property
     def show_obj(self):

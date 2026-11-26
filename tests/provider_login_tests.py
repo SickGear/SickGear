@@ -71,6 +71,21 @@ class MilkieLoginTests(unittest.TestCase):
         self.assertEqual(2, len(logins))
 
 
+class LoginLogTests(unittest.TestCase):
+    """ a login logs a debug line, so the log shows when a provider logs in """
+
+    def test_login_is_logged(self):
+        provider = TorrentProvider('Login Prov')
+        provider.url_base, provider.username, provider.password = 'http://login.test/', 'user', 'pass'
+        provider.should_skip = lambda *args, **kwargs: False
+        for cur_reply, cur_logged in (('welcome', True), ('wrong password', False)):
+            provider.get_url = lambda url, reply=cur_reply, **kwargs: reply
+            with mock.patch('sickgear.providers.generic.logger') as log:
+                self.assertEqual(cur_logged, bool(provider._authorised(
+                    logged_in=(lambda y=None: 'welcome' == y), url='http://login.test/login')))
+            self.assertEqual(cur_logged, mock.call('Login Prov logged in') in log.debug.call_args_list)
+
+
 class JsonReplyLoginTests(unittest.TestCase):
     """ a login step reply that is not the expected json fails the login, it does not raise """
     bad_replies = ('not json', None, [], {}, {'response': None}, {'Fs': None}, [None])
@@ -189,7 +204,7 @@ class CookieSettingTests(unittest.TestCase):
 class LoginSettingSaveTests(unittest.TestCase):
     """ a saved change to a login setting lets the next search update the provider cache, it does not wait """
 
-    def save(self, digest, **attrs):
+    def save(self, digest, form=None, **attrs):
         provider = TorrentProvider('Cookie Prov')
         provider.digest = 'uid=1;pass=old'
         for cur_attr, cur_value in attrs.items():
@@ -199,7 +214,7 @@ class LoginSettingSaveTests(unittest.TestCase):
                                     USE_NZBS=False, USE_TORRENTS=False),                 mock.patch.object(webserve.helpers, 'clear_unused_providers'),                 mock.patch.object(webserve.threading, 'Thread'), mock.patch.object(webserve, 'ui'):
             webserve.ConfigProviders.save_providers(
                 mock.MagicMock(), provider_order='%s:1' % provider.get_id(),
-                **{'%s_digest' % provider.get_id(): digest})
+                **dict({'%s_digest' % provider.get_id(): digest}, **(form or {})))
         return provider
 
     def test_changed_cookie(self):
@@ -214,8 +229,14 @@ class LoginSettingSaveTests(unittest.TestCase):
         # e.g. a uid that a login gives, or an api key not saved yet, is not a change made on the page
         provider = self.save('uid=1;pass=old', uid='123', api_key=None)
         provider.cache.set_last_update.assert_not_called()
+        self.assertEqual('123', provider.uid)
+
+    def test_changed_uid_on_the_page(self):
+        provider = self.save('uid=1;pass=old', form={'cookie_prov_uid': '456'}, uid='123')
+        self.assertEqual('456', provider.uid)
+        provider.cache.set_last_update.assert_called_once()
 
 
 if '__main__' == __name__:
-    for case in (MilkieLoginTests, JsonReplyLoginTests, CookieSettingTests, LoginSettingSaveTests):
+    for case in (MilkieLoginTests, LoginLogTests, JsonReplyLoginTests, CookieSettingTests, LoginSettingSaveTests):
         unittest.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromTestCase(case))

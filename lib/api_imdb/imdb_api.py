@@ -10,17 +10,21 @@ import hashlib
 import logging
 import os
 import re
-import requests
 import time
 import traceback
+
+import imdbgql
+import imdbpie
+import requests
+from dateutil.parser import parser
+from six.moves import http_client as httplib
+from six.moves.urllib.parse import urlencode, urljoin, quote, unquote
 
 from .imdb_exceptions import *
 # from bs4_parser import BS4Parser
 from exceptions_helper import ex
-from lib import imdbpie, imdbgql
-from lib.dateutil.parser import parser
-# from lib.tvinfo_base.exceptions import BaseTVinfoShownotfound
-from lib.tvinfo_base import (
+# from tvinfo_base.exceptions import BaseTVinfoShownotfound
+from tvinfo_base import (
     TVInfoCharacter, TVInfoPerson, PersonGenders, TVINFO_IMDB,
     # TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_TMDB, TVINFO_TRAKT,
     # TVINFO_TVDB, TVINFO_TVRAGE, TVINFO_X, TVINFO_WIKIPEDIA,
@@ -28,10 +32,6 @@ from lib.tvinfo_base import (
     BaseTVinfoError, CastList, RoleTypes)
 from sg_helpers import clean_data, enforce_type, get_url, try_int, ConnectionSkipException
 from json_helper import json_loads, json_dumps, is_orjson, JSONEncoder, JSON_INDENT
-
-from six import iteritems
-from six.moves import http_client as httplib
-from six.moves.urllib.parse import urlencode, urljoin, quote, unquote
 
 
 # noinspection PyUnreachableCode
@@ -162,7 +162,7 @@ class IMDbIndexer(TVInfoBase):
 
         results = []
         if ids:
-            for t, p in iteritems(ids):
+            for t, p in ids.items():
                 if t in self.supported_id_searches:
                     if t == TVINFO_IMDB:
                         cache_id_key = 's-id-%s-%s' % (TVINFO_IMDB, p)

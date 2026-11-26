@@ -1,0 +1,17 @@
+#import sickgear
+##
+#set $checked = ' checked="checked"'
+##
+<% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
+##
+## the flat folder option of add show
+##
+				<div class="field-pair">
+					<label for="flatten_folders">
+						<span class="component-title">Flat folder structure</span>
+						<span class="component-desc">
+							<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''#>
+							<p>put all episodes in the show folder, without season folders</p>
+						</span>
+					</label>
+				</div>

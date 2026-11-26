@@ -20,10 +20,9 @@ import re
 import threading
 import traceback
 
+import sickgear
 # noinspection PyPep8Naming
 from exceptions_helper import ex
-
-import sickgear
 from . import common, db, failed_history, generic_queue, helpers, \
     history, logger, network_timezones, properFinder, search, ui
 from .classes import Proper, SimpleNamespace
@@ -424,9 +423,13 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
                 except (BaseException, Exception):
                     continue
                 if show_obj:
+                    ep_nbs = [int(_n) for _n in cur_result['episodes'].split('|') if len(_n)]
+                    ep_nb = None if not ep_nbs else ep_nbs[0]
                     propers.setdefault(cur_result['provider'], []).append(
                         Proper(cur_result['name'], cur_result['url'],
-                               datetime.datetime.fromtimestamp(cur_result['time']), show_obj, parsed_show_obj=show_obj))
+                               datetime.datetime.fromtimestamp(cur_result['time']), show_obj, parsed_show_obj=show_obj,
+                               size=cur_result['size'], puid=cur_result['uid'],
+                               season=cur_result['season'], episode=ep_nb, episode_numbers=ep_nbs))
 
         if propers:
             logger.log('Found Proper/Repack/Real in recent search, sending data to properfinder')
@@ -485,6 +488,9 @@ class RecentSearchQueueItem(generic_queue.QueueItem):
             except (BaseException, Exception):
                 # if an error occurred assume the episode hasn't aired yet
                 continue
+
+            # reset episode per season counts
+            show_obj.aired_in_season_update_time = datetime.datetime(2000, 1, 1)
 
             ep_obj = show_obj.get_episode(int(cur_result['season']), int(cur_result['episode']))
             with ep_obj.lock:
@@ -638,8 +644,8 @@ class ManualSearchQueueItem(BaseSearchQueueItem):
             logger.log(f'Beginning manual search for: [{self.segment.pretty_name()}]')
             self.started = True
 
-            ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
-            set_wanted_aired(self.segment, True, ep_count, ep_count_scene, manual=True)
+            get_aired_in_season(self.show_obj)
+            set_wanted_aired(self.segment, True, manual=True)
             if not getattr(self.segment, 'wanted_quality', None):
                 ep_status, ep_quality = common.Quality.split_composite_status(self.segment.status)
                 self.segment.wanted_quality = search.get_wanted_qualities(self.segment, ep_status, ep_quality,
@@ -728,9 +734,9 @@ class BacklogQueueItem(BaseSearchQueueItem):
         is_error = False
         try:
             if not self.standard_backlog:
-                ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
+                get_aired_in_season(self.show_obj)
                 for ep_obj in self.segment:  # type: sickgear.tv.TVEpisode
-                    set_wanted_aired(ep_obj, True, ep_count, ep_count_scene)
+                    set_wanted_aired(ep_obj, True)
 
             logger.log(f'Beginning backlog search for: [{self.show_obj.unique_name}]')
             search_result = search.search_providers(
@@ -770,8 +776,8 @@ class BacklogQueueItem(BaseSearchQueueItem):
 
 
 class FailedQueueItem(BaseSearchQueueItem):
-    def __init__(self, show_obj, segment, uid=None):
-        # type: (sickgear.tv.TVShow, List[sickgear.tv.TVEpisode], AnyStr) -> None
+    def __init__(self, show_obj, segment, uid=None, client=None, client_uid=None, puid=None):
+        # type: (sickgear.tv.TVShow, List[sickgear.tv.TVEpisode], AnyStr, str, int, str) -> None
         """
 
         :param show_obj: show object
@@ -781,6 +787,9 @@ class FailedQueueItem(BaseSearchQueueItem):
         super(FailedQueueItem, self).__init__(show_obj, segment, 'Retry', FAILED_SEARCH, uid=uid)
         self.priority = generic_queue.QueuePriorities.HIGH  # type: int
         self.name = f'RETRY-{show_obj.tvid_prodid}'  # type: AnyStr
+        self.client = client
+        self.client_uid = client_uid
+        self.puid = puid
         self.started = None
 
     def run(self):
@@ -788,7 +797,7 @@ class FailedQueueItem(BaseSearchQueueItem):
         self.started = True
 
         try:
-            ep_count, ep_count_scene = get_aired_in_season(self.show_obj)
+            get_aired_in_season(self.show_obj)
             for ep_obj in self.segment:  # type: sickgear.tv.TVEpisode
 
                 logger.log(f'Marking episode as bad: [{ep_obj.pretty_name()}]')
@@ -797,12 +806,12 @@ class FailedQueueItem(BaseSearchQueueItem):
                 (release, provider) = failed_history.find_release(ep_obj)
                 failed_history.revert_episode(ep_obj)
                 if release:
-                    failed_history.add_failed(release)
-                    history.log_failed(ep_obj, release, provider)
+                    failed_history.add_failed(release, puid=self.puid, client=self.client, client_uid=self.client_uid)
+                    history.log_failed(ep_obj, release, provider, self.client, self.client_uid, self.puid)
 
                 logger.log(f'Beginning failed download search for: [{ep_obj.pretty_name()}]')
 
-                set_wanted_aired(ep_obj, True, ep_count, ep_count_scene, manual=True)
+                set_wanted_aired(ep_obj, True, manual=True)
 
             search_result = search.search_providers(self.show_obj, self.segment, True, try_other_searches=True) or []
 

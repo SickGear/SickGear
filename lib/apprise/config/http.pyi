@@ -1,5 +1,6 @@
 from ..common import ConfigFormat as ConfigFormat, ContentIncludeMode as ContentIncludeMode
 from ..url import PrivacyMode as PrivacyMode
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS
 from .base import ConfigBase as ConfigBase
 from _typeshed import Incomplete
 

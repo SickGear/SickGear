@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from base64 import b64decode
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# hachoir is 190 modules and 10 MB that a start of the app does not need
+__lazy_modules__ = ['hachoir.parser', 'hachoir.stream']
+
 import codecs
 import datetime
 import itertools
@@ -26,10 +29,21 @@ import time
 import threading
 import socket
 import zlib
+from base64 import b64decode
 
-from exceptions_helper import SickGearException, AuthException, ex
+import requests
+import requests.cookies
+from cfscrape import CloudflareScraper
+from hachoir.parser import guessParser
+from hachoir.stream import FileInputStream
+from lxml_etree import etree
+from six import string_types
 
+import sg_ech
+import sg_helpers
+import sg_tunnel
 import sickgear
+from exceptions_helper import SickGearException, AuthException, ex
 from .. import classes, db, helpers, logger, tvcache
 from ..classes import NZBSearchResult, TorrentSearchResult, SearchResult
 from ..common import Quality, MULTI_EP_RESULT, SEASON_RESULT, USER_AGENT
@@ -39,16 +53,7 @@ from ..scene_exceptions import ReleaseMap
 from ..show_name_helpers import get_show_names_all_possible
 from ..sgdatetime import SGDatetime
 from ..tv import TVEpisode, TVShow
-
-from cfscrape import CloudflareScraper
-from lib.hachoir.parser import guessParser
-from lib.hachoir.stream import FileInputStream
-from lxml_etree import etree
-import requests
-import requests.cookies
-
 from _23 import decode_bytes, make_btih, quote, quote_plus, urlparse
-from six import string_types
 from sg_helpers import try_int
 
 # noinspection PyUnreachableCode
@@ -249,7 +254,9 @@ class GenericProvider(object):
 
         self.cache = tvcache.TVCache(self)
 
-        self.session = CloudflareScraper.create_scraper()
+        self.session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(sg_helpers.DNS_RESOLVER))
+        self._tunnel_on = False  # True after a fetch got through via the tunnel route, then it goes first
+        self._tunnel_note = None  # the last tunnel state logged for this provider
 
         self.headers = {
             # Using USER_AGENT instead of Mozilla to keep same user agent along authentication and download phases,
@@ -588,8 +595,32 @@ class GenericProvider(object):
 
         # noinspection PyUnusedLocal
         log_failure_url = False
+        if self._tunnel_on and not self._tunnel_allowed():
+            self._tunnel_on = False  # the fallback is now off for this provider, so go direct, a block is then noted
         try:
-            data = helpers.get_url(url, *args, **kwargs)
+            try:
+                if self._tunnel_on:
+                    data = self._tunnel_get(url, *args, **kwargs)
+                else:
+                    data = helpers.get_url(url, *args, ech_retry=True, defer_connect_log=True, **kwargs)
+            except requests.exceptions.ConnectionError as e:
+                if self._tunnel_on:
+                    # the tunnel route failed, go direct, a direct failure tries the tunnel again on the next fetch
+                    self._tunnel_on = False
+                    data = helpers.get_url(url, *args, **kwargs)
+                elif getattr(e, 'sg_ech_routed', False):
+                    # sessions are rebuilt to look the blocked name up via DoH for ECH, try once more with the new one
+                    if 'session' in kwargs:
+                        kwargs['session'] = self.session
+                    data = helpers.get_url(url, *args, **kwargs)
+                else:
+                    # blocked with no ECH route, or down, try the tunnel route
+                    try:
+                        data = self._tunnel_get(url, *args, cause=e, **kwargs)
+                    except requests.exceptions.ConnectionError:
+                        # no page via the tunnel either, log the direct failure as a warning, it was debug so far
+                        getattr(e, 'sg_connect_msg', None) and logger.warning(e.sg_connect_msg)
+                        raise
             if data and not isinstance(data, tuple) \
                     or isinstance(data, tuple) and data[0]:
                 if 0 != self.failure_count:
@@ -633,6 +664,147 @@ class GenericProvider(object):
         if log_failure_url:
             self.log_failure_url(url, post_data, post_json)
         return data
+
+    @staticmethod
+    def _provider_data():
+        # type: (...) -> Optional[Dict]
+        """
+        :return: the extdata provider data, fetched again when older than 10 minutes
+        """
+        data_attr = 'PROVIDER_DATA'
+        data_refresh = 'PROVIDER_DATA_REFRESH'
+        obf = getattr(sickgear, data_attr, None)
+        now = int(time.time())
+        data_window = getattr(sickgear, data_refresh, now - 1)
+        if data_window < now:
+            setattr(sickgear, data_refresh, (10*60) + now)
+            url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/main/SickGear/data.txt'
+            obf_new = helpers.get_url(url, parse_json=True) or {}
+            if obf_new:
+                setattr(sickgear, data_attr, obf_new)
+                obf = obf_new
+        return obf
+
+    def _tunnel_get(self, url, *args, **kwargs):
+        # type: (AnyStr, Any, Any) -> Optional[AnyStr, Dict]
+        """
+        fetch url via the tunnel route, used after a direct fetch failed with no ECH route, and first once it worked
+
+        :param url: url to fetch
+        :param args: params to pass through to get_url
+        :param kwargs: keyword params to pass through to get_url, cause is the error of the direct fetch
+        :return: data fetched, raise cause or a connection error when the tunnel is not usable or the site fails
+        """
+        cause = kwargs.pop('cause', None) or requests.exceptions.ConnectionError('tunnel route failed')
+        if not self._tunnel_allowed():
+            self._note_blocked(cause)
+            raise cause
+        sg_tunnel.load(self._provider_data())
+        for _ in range(3):
+            proxy = sg_tunnel.proxy()
+            if not proxy:
+                break
+            try:
+                data = helpers.get_url(url, *args, **dict(kwargs, tunnel_proxy=proxy, mute_connect_err=True))
+            except requests.exceptions.HTTPError as e:
+                sg_tunnel.succeeded(proxy)  # the site answered through the tunnel
+                self._tunnel_use()
+                prepend = (f'[{self.name}] :: ', '')[f'[{self.name}]' in threading.current_thread().name]
+                logger.debug(f'{prepend}tunnel fetch got HTTP {getattr(e.response, "status_code", "?")} from {url}')
+                raise
+            except requests.exceptions.ConnectionError as e:
+                fault = sg_tunnel.endpoint_fault(e)
+                if fault:
+                    sg_tunnel.failed(proxy, fault)  # an endpoint or login fault, try the next endpoint
+                    continue
+                self._tunnel_log('no page via the tunnel route either (site down?)', sg_tunnel.scrub(ex(e)))
+                raise cause
+            sg_tunnel.succeeded(proxy)
+            self._tunnel_use()
+            return data
+        state, reason = sg_tunnel.state()
+        self._tunnel_log(f'tunnel route not usable, {reason or state}')
+        raise cause
+
+    def download_file(self, url, filename, **kwargs):
+        # type: (AnyStr, AnyStr, Any) -> bool
+        """
+        download url to filename direct, then via the tunnel route, or the other way round once the tunnel got through
+
+        :return: success of download
+        """
+        for cur_route in (('direct', 'tunnel'), ('tunnel', 'direct'))[self._tunnel_on]:
+            if 'direct' == cur_route:
+                if helpers.download_file(url, filename, **kwargs):
+                    return True
+                continue
+            if not self._tunnel_allowed():
+                continue
+            sg_tunnel.load(self._provider_data())
+            proxy = sg_tunnel.proxy()
+            if not proxy:
+                state, reason = sg_tunnel.state()
+                self._tunnel_log(f'tunnel route not usable, {reason or state}')
+                continue
+            if helpers.download_file(url, filename, tunnel_proxy=proxy, mute_connect_err=True, **kwargs):
+                sg_tunnel.succeeded(proxy)
+                self._tunnel_use()
+                return True
+        return False
+
+    # private trackers whose rules allow access by VPN, they use the fallback by default as public access providers do
+    TUNNEL_DEFAULT_ON = ('iptorrents', 'speedcd', 'torrentday', 'torrenting', 'torrentleech')
+
+    def tunnel_default_on(self):
+        # type: (...) -> bool
+        """
+        :return: True when this provider uses the fallback unless the user unticks it, a provider that may ban an
+         account used from a VPN address is off until the user ticks it
+        """
+        return self.get_id() in self.TUNNEL_DEFAULT_ON or self.is_public_access()
+
+    def tunnel_use(self):
+        # type: (...) -> bool
+        """
+        :return: True when this provider uses the fallback, by a choice the user saved, else by its default
+        """
+        pid = self.get_id()
+        return pid in sickgear.PROVIDER_TUNNEL_USE or (
+            pid not in sickgear.PROVIDER_TUNNEL_EXCLUDE and self.tunnel_default_on())
+
+    def _tunnel_allowed(self):
+        # type: (...) -> bool
+        """
+        :return: True when the fallback setting is on, the user has no proxy setting (it stays the only route), and
+         this provider uses the fallback
+        """
+        return bool(sickgear.PROVIDER_TUNNEL and not sickgear.PROXY_SETTING and self.tunnel_use())
+
+    def _note_blocked(self, error):
+        # type: (BaseException) -> None
+        """
+        note a failed TLS handshake that ECH did not get past, it looks like a block, the top notice then offers the
+        fallback for this provider, with what the ECH check found, while the fallback is off or not ticked for it
+        """
+        if not sickgear.PROXY_SETTING and not self._tunnel_allowed() and getattr(error, 'sg_ech_outcome', None):
+            sickgear.PROVIDER_TUNNEL_BLOCKED[self.get_id()] = (self.name, error.sg_ech_outcome)
+
+    def _tunnel_use(self):
+        sickgear.PROVIDER_TUNNEL_BLOCKED.pop(self.get_id(), None)  # it gets through, so no notice for it
+        if not self._tunnel_on:
+            self._tunnel_on = True
+            self._tunnel_log('direct fetch failed, the tunnel route gets through, check that the provider rules allow'
+                             ' access by VPN or proxy', level=logger.MESSAGE)
+
+    def _tunnel_log(self, note, detail=None, level=logger.WARNING):
+        # type: (AnyStr, Optional[AnyStr], int) -> None
+        """ log a tunnel state of this provider once, until it changes """
+        if note != self._tunnel_note:
+            self._tunnel_note = note
+            # name the provider unless the search thread name already does, as at the too many requests warning
+            prepend = (f'[{self.name}] :: ', '')[f'[{self.name}]' in threading.current_thread().name]
+            logger.log(f'{prepend}{note}', level)
+            detail and logger.debug(f'{prepend}tunnel detail: {detail}')
 
     def log_failure_url(self, url, post_data=None, post_json=None):
         # type: (AnyStr, Optional[AnyStr], Optional[AnyStr]) -> None
@@ -689,10 +861,17 @@ class GenericProvider(object):
         for cur_p in sickgear.providers.sorted_sources():
             pid = cur_p.get_id()
             auths = set([])
-            # keys that a login gives only for log masking (keys=True)
-            for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash']
-                           + ([], ['user_authkey', 'user_passkey', '_token', '_dkey'])[keys]):
-                auth = (getattr(cur_p, cur_kt, '') or '').strip()
+            # username/uid and keys that a login gives only for log masking (keys=True),
+            # same username at two sites is not a duplicate auth
+            for cur_kt in (['password', 'passkey', 'api_key', 'key', 'digest', 'cookies', 'hash', 'url']
+                           + ([], ['username', 'uid', 'user_authkey', 'user_passkey', '_token', '_dkey'])[keys]):
+                if 'url' == cur_kt:
+                    # read the url held, the url property of a torrent provider fetches its home page and that fetch
+                    # logs, so the log filter that calls this would start the fetch again from inside each log line
+                    held = ('url', '_url')[isinstance(getattr(type(cur_p), 'url', None), property)]
+                    auth = urlparse((getattr(cur_p, held, '') or '').strip()).query  # rss urls carry keys
+                else:
+                    auth = (getattr(cur_p, cur_kt, '') or '').strip()
                 if auth and '0' != auth and 'sg=0' != auth:
                     auth = rxc_cookie.sub('', auth)
                     if '=' not in auth:
@@ -725,14 +904,22 @@ class GenericProvider(object):
             (sickgear.DISCORD_ACCESS_TOKEN, 'discord_access_token'),
             (('', sickgear.GROWL_HOST[:sickgear.GROWL_HOST.find('@')])['@' in sickgear.GROWL_HOST], 'growl_host'),
             (sickgear.PUSHBULLET_ACCESS_TOKEN, 'pushbullet_access_token'),
-            (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'),
+            (sickgear.PUSHOVER_APIKEY, 'pushover_apikey'), (sickgear.PUSHOVER_USERKEY, 'pushover_userkey'),
             (sickgear.PROWL_API, 'prowl_api'),
             (sickgear.PUSHALOT_AUTHORIZATIONTOKEN, 'pushalot_authorizationtoken'),
             (sickgear.SLACK_ACCESS_TOKEN, 'slack_access_token'),
             (sickgear.TELEGRAM_ACCESS_TOKEN, 'telegram_access_token'),
         ] + [(_k[1], f'sg_apikey_{_k[0]}') for _k in sickgear.API_KEYS if _k[1]] +\
             ([], [(sickgear.SUBTITLES_SERVICES_AUTH[0][1],
-                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)]:
+                   f'opensubs_{sickgear.SUBTITLES_SERVICES_AUTH[0][0]}')])[any(sickgear.SUBTITLES_SERVICES_AUTH)] +\
+            ([], [  # usernames only for log masking (keys=True), not for the duplicate auth warning
+                (sickgear.WEB_USERNAME, 'sickgear_username'), (sickgear.SAB_USERNAME, 'sab_username'),
+                (sickgear.NZBGET_USERNAME, 'nzbget_username'), (sickgear.TORRENT_USERNAME, 'torrent_username'),
+                (sickgear.KODI_USERNAME, 'kodi_username'), (sickgear.PLEX_USERNAME, 'plex_username'),
+                (sickgear.XBMC_USERNAME, 'xbmc_username'), (sickgear.EMAIL_USER, 'email_user'),
+                (sickgear.ANIDB_USERNAME, 'anidb_username'),
+                (any(sickgear.SUBTITLES_SERVICES_AUTH) and sickgear.SUBTITLES_SERVICES_AUTH[0][0], 'opensubs_user'),
+            ])[keys]:
             if not cur_auth[0] or 4 > len(cur_auth[0]):
                 continue
             if cur_auth[0] not in dedupe.keys():
@@ -849,8 +1036,8 @@ class GenericProvider(object):
             cache_file = os.path.join(cache_dir, base_name)
 
             self.session.headers['Referer'] = url
-            if cached or helpers.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
-                                               failure_monitor=False):
+            if cached or self.download_file(url, cache_file, session=self.session, allow_redirects='/it' not in url,
+                                            failure_monitor=False):
 
                 if self._verify_download(cache_file):
                     logger.log(f'Downloaded {self.name} result from {url}')
@@ -1311,6 +1498,8 @@ class GenericProvider(object):
                 continue
             result.show_obj = parsed_show_obj
             result.name = title
+            result.episode_numbers = episode_numbers
+            result.season = parse_result.season_number
             result.quality = quality
             result.release_group = release_group
             result.content = None
@@ -1331,6 +1520,7 @@ class GenericProvider(object):
                              f' {parse_result.episode_numbers}')
             elif 0 == len(ep_obj_results):
                 ep_num = SEASON_RESULT
+                result.is_season_pack = True
                 logger.debug('Separating full season result to check for later')
 
             if ep_num not in results:
@@ -1347,6 +1537,18 @@ class GenericProvider(object):
 
         return results
 
+    def _get_cached_propers(self, search_date):
+        # type: (datetime.date) -> List[classes.Proper]
+        cache_results = self.cache.list_propers(search_date)
+        results = []
+        for x in cache_results:
+            ep_nbs = [int(_n) for _n in x['episodes'].split('|') if len(_n)]
+            ep_nb = None if not ep_nbs else ep_nbs[0]
+            results.append(classes.Proper(x['name'], x['url'],
+                                          datetime.datetime.fromtimestamp(x['time']), self.show_obj, size=x['size'],
+                                          puid=x['uid'], season=x['season'], episode=ep_nb, episode_numbers=ep_nbs))
+        return results
+
     def find_propers(self, search_date=None, **kwargs):
         # type: (datetime.date, Any) -> List[classes.Proper]
         """
@@ -1355,10 +1557,7 @@ class GenericProvider(object):
         :param kwargs:
         :return:
         """
-        results = self.cache.list_propers(search_date)
-
-        return [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj) for x in
-                results]
+        return self._get_cached_propers(search_date)
 
     def seed_ratio(self):
         """
@@ -1538,9 +1737,7 @@ class NZBProvider(GenericProvider):
         :param kwargs:
         :return:
         """
-        cache_results = self.cache.list_propers(search_date)
-        results = [classes.Proper(x['name'], x['url'], datetime.datetime.fromtimestamp(x['time']), self.show_obj)
-                   for x in cache_results]
+        results = self._get_cached_propers(search_date)
 
         if self.should_skip():
             return results
@@ -1597,6 +1794,7 @@ class NZBProvider(GenericProvider):
                     continue
 
                 if not search_date or search_date < result_date:
+                    # todo: no size, puid set
                     search_result = classes.Proper(title, url, result_date, self.show_obj)
                     results.append(search_result)
 
@@ -1863,18 +2061,7 @@ class TorrentProvider(GenericProvider):
         :param url_exclude:
         :return:
         """
-        data_attr = 'PROVIDER_DATA'
-        data_refresh = 'PROVIDER_DATA_REFRESH'
-        obf = getattr(sickgear, data_attr, None)
-        now = int(time.time())
-        data_window = getattr(sickgear, data_refresh, now - 1)
-        if data_window < now:
-            setattr(sickgear, data_refresh, (10*60) + now)
-            url = 'https://raw.githubusercontent.com/SickGear/sickgear.extdata/main/SickGear/data.txt'
-            obf_new = helpers.get_url(url, parse_json=True) or {}
-            if obf_new:
-                setattr(sickgear, data_attr, obf_new)
-                obf = obf_new
+        obf = self._provider_data()
 
         urls = []
 
@@ -2100,6 +2287,7 @@ class TorrentProvider(GenericProvider):
             response = response[0]
         if not self.should_skip() and response:
             if logged_in(response):
+                logger.debug(f'{self.name} logged in')
                 return session
 
             if maxed_out(response) and hasattr(self, 'password'):

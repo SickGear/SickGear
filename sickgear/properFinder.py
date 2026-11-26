@@ -21,9 +21,10 @@ import re
 import threading
 import traceback
 
-from exceptions_helper import ex, MultipleShowObjectsException, AuthException
+from six import string_types
 
 import sickgear
+from exceptions_helper import ex, MultipleShowObjectsException, AuthException
 from . import db, failed_history, helpers, history, logger, search, show_name_helpers
 from .classes import Proper
 from .common import ARCHIVED, FAILED, DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER, \
@@ -31,9 +32,7 @@ from .common import ARCHIVED, FAILED, DOWNLOADED, SNATCHED_ANY, SNATCHED_PROPER,
 from .history import dateFormat
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime
-
 from _23 import map_consume
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

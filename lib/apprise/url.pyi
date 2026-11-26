@@ -1,10 +1,11 @@
 from .asset import AppriseAsset as AppriseAsset
 from .logger import logger as logger
 from .tag import AppriseTag as AppriseTag
-from .utils.parse import parse_bool as parse_bool, parse_list as parse_list, parse_phone_no as parse_phone_no, parse_url as parse_url, urlencode as urlencode
+from .utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS, parse_bool as parse_bool, parse_list as parse_list, parse_phone_no as parse_phone_no, parse_url as parse_url, urlencode as urlencode
 from _typeshed import Incomplete
 
 PATHSPLIT_LIST_DELIM: Incomplete
+URL_TOKEN_ALIASES: Incomplete
 
 class PrivacyMode:
     Secret: str
@@ -280,7 +281,7 @@ class URLBase:
             verify_host (:obj:`bool`, optional): a flag kept with the parsed
                  URL which some child classes will later use to verify SSL
                  keys (if SSL transactions take place).  Unless under very
-                 specific circumstances, it is strongly recomended that
+                 specific circumstances, it is strongly recommended that
                  you leave this default value set to True.
 
         Returns:

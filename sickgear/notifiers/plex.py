@@ -16,13 +16,13 @@
 
 import re
 
-from .generic import Notifier
-import sickgear
-from exceptions_helper import ex
-
-from _23 import b64encodestring, decode_str, etree, unquote_plus, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
+
+import sickgear
+from .generic import Notifier
+from exceptions_helper import ex
+from _23 import b64encodestring, decode_str, etree, unquote_plus, urlencode
 
 
 class PLEXNotifier(Notifier):

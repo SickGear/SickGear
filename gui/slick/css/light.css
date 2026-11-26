@@ -3,6 +3,7 @@
 	--link-hover:#09a2ff;
 	--text:#000;
 	--deselect-text:#eee;
+	--green-text:#393;
 }
 /* =======================================================================
 inc_top.tmpl
@@ -25,6 +26,109 @@ pre .prelight2{
 .navbar-default .navbar-nav .logger.errors.nnn,
 pre .prelight-num{
 	color:#eaab52
+}
+
+pre .log-start,
+pre .log-run{
+	color:#66670f
+}
+
+pre .log-stop{
+	background-color:rgba(183, 184, 44, 0.16)
+}
+
+.yes-no.is-yes{
+	color:#2a6e1f
+}
+
+/* bulk change, the slanted label of a sorted column sits on the fill colour, the cell fill covers only part of it */
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body,
+.tablesorter.rotate thead th.tablesorter-headerAsc .rotate-body2,
+.tablesorter.rotate thead th.tablesorter-headerDesc .rotate-body2,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.sort-action.tablesorter-headerDesc .rotate-body span{
+	background-color:#555
+}
+
+/* bulk change, a sorted column keeps the header colour, its label tag, arrow and bar mark it, so the mark does not
+   grow with the width of the column, Show Name has a tag as the slanted labels do */
+#bulk-change-table thead th.tablesorter-headerAsc,
+#bulk-change-table thead th.tablesorter-headerDesc,
+#bulk-change-table-sticky thead th.tablesorter-headerAsc,
+#bulk-change-table-sticky thead th.tablesorter-headerDesc,
+#bulk-change-table:not(.hasFilters) thead th.sort-icon-left{
+	background-color:#333
+}
+
+#bulk-change-table thead th.col-checkbox.tablesorter-headerAsc .tablesorter-header-inner > div,
+#bulk-change-table thead th.col-checkbox.tablesorter-headerDesc .tablesorter-header-inner > div,
+#bulk-change-table-sticky thead th.col-checkbox.tablesorter-headerAsc .tablesorter-header-inner > div,
+#bulk-change-table-sticky thead th.col-checkbox.tablesorter-headerDesc .tablesorter-header-inner > div,
+#bulk-change-table thead th.sort-icon-left.tablesorter-headerAsc .tablesorter-header-inner,
+#bulk-change-table thead th.sort-icon-left.tablesorter-headerDesc .tablesorter-header-inner,
+#bulk-change-table-sticky thead th.sort-icon-left.tablesorter-headerAsc .tablesorter-header-inner,
+#bulk-change-table-sticky thead th.sort-icon-left.tablesorter-headerDesc .tablesorter-header-inner{
+	display:inline-block;
+	margin:0 -4px;
+	padding:0 4px;
+	border-radius:2px;
+	background-color:#555
+}
+
+.tablesorter.rotate thead th.col-destructive span{
+	color:#ffc2b8
+}
+
+/* the filter boxes and menus of the bulk change header read as fields, an edge of 3:1 or more on the row, and show the
+   focus, a filter in use has a wider blue edge */
+#bulk-change-table .tablesorter-filter-row input[type="search"],
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"],
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter,
+#bulk-change-table-sticky .tablesorter-filter-row select.tablesorter-filter{
+	background:#fff;
+	color:#333;
+	box-shadow:inset 0 0 0 1px #767676
+}
+
+#bulk-change-table .tablesorter-filter-row .tablesorter-filter.filter-in-use,
+#bulk-change-table-sticky .tablesorter-filter-row .tablesorter-filter.filter-in-use{
+	box-shadow:inset 0 0 0 2px #2a6fb0
+}
+
+#bulk-change-table .tablesorter-filter-row input[type="search"]:focus-visible,
+#bulk-change-table-sticky .tablesorter-filter-row input[type="search"]:focus-visible,
+#bulk-change-table .tablesorter-filter-row select.tablesorter-filter:focus-visible{
+	box-shadow:inset 0 0 0 1px #767676, 0 0 0 2px #333
+}
+
+/* a sortable column of the bulk change header under the pointer, and a destructive label on the sorted fill */
+.tablesorter.rotate thead th.tablesorter-header:not(.sorter-false):not(.tablesorter-headerAsc):not(.tablesorter-headerDesc):hover{
+	background-color:#505050
+}
+
+/* a sorted Remove label keeps its soft red, on a dark red tag, 4.8:1 */
+.tablesorter.rotate thead th.col-destructive.tablesorter-headerAsc .rotate-body span,
+.tablesorter.rotate thead th.col-destructive.tablesorter-headerDesc .rotate-body span{
+	color:#ffc2b8;
+	background-color:#9b2f2f
+}
+
+/* the footer count of shows, 4.5:1 on the footer */
+#tfoot .stats{
+	color:#555
+}
+
+#bulk-change-table.hover-highlight tbody > tr:hover > td{
+	background-color:#f4f3c2
+}
+
+#bulk-change-table.hover-highlight tbody td:hover::after{
+	background-color:rgba(244, 236, 120, 0.35)
+}
+
+.yes-no.is-no{
+	color:#7a7466
 }
 
 .shows-not-found.nnnn .snf .sgicon-warning,
@@ -227,8 +331,28 @@ pre .prelight-num{
 	float:right
 }
 
+#provider-tunnel-use .tunnel-risk{
+	color:#7a5f2f
+}
+
+#provider-tunnel-use .tunnel-provider:hover{
+	background-color:rgba(0, 0, 0, .04)
+}
+
+#provider-tunnel-use .tunnel-blocked-tag{
+	border-color:#e3cf86;
+	background-color:#fcf8e3;
+	color:#7a5f2f
+}
+
+#provider-tunnel-use .tunnel-private-tag{
+	border-color:#ccc;
+	color:#666
+}
+
 .topbar-notification{
 	width:600px;
+	max-width:calc(100% - 32px);
 	text-align:center;
 	margin-left:auto;
 	margin-right:auto;
@@ -240,8 +364,9 @@ pre .prelight-num{
 inc_bottom.tmpl
 ========================================================================== */
 
+/* 5.6:1 on the white footer, 5:1 on a dialog */
 .footerhighlight{
-	color:#428bca
+	color:#2a6aa8
 }
 
 body#display-show.back-art .displayshow-wrapper a,
@@ -350,14 +475,15 @@ home_newShow.tmpl
 	background-color:rgb(245, 245, 245)
 }
 
+/* the dimmed article of a show name, 4.5:1 or more on the rows */
 .article{
-	color:#909090
+	color:#595959
 }
 
 .cast .person span, .cast .person a,
 .btn-inverse.dark-bg,
 #addRootDirTable td label .filepath,
-.grey-text{color:#666}
+.grey-text{color:#595959}
 .highlight-text{color:#000}
 
 #newShowPortal #displayText .show-name,
@@ -386,6 +512,15 @@ home_browseShows.tmpl
 #browse-list .show-card{
 	background-color:#dfdacf;
 	border:1px solid #111
+}
+
+#browse-list .card-detail .role{
+	color:#256325
+}
+
+#browse-list .card-detail [style*="color:#888"],
+#browse-list .card-detail .genre{
+	color:#5a5a5a !important
 }
 
 .browse-image{
@@ -862,6 +997,17 @@ input, textarea, select, .uneditable-input{
 	color:#000
 }
 
+/* the sizes of the dark theme, so a change of theme does not change the height of a table row or a filter box */
+input[type="checkbox"], input[type="radio"]{
+	color-scheme:light;
+	width:16px;
+	height:16px
+}
+
+input[type="search"]{
+	border:1px solid #ccc
+}
+
 .btn.hover-red:hover,
 .btn.hover-gold:hover,
 .btn.hover-green:hover
@@ -1264,10 +1410,6 @@ thead.tablesorter-stickyHeader{
 	background-color:#dfdacf
 }
 
-.sort-size-type.tablesorter-headerSorted{
-	background-color:#4a4a4a
-}
-
 .tablesorter tr.tablesorter-filter-row,
 .tablesorter tr.tablesorter-filter-row td{
 	text-align:center;
@@ -1310,6 +1452,39 @@ thead.tablesorter-stickyHeader{
 	border-bottom:0
 }
 
+/* a line of 3:1 on the header sets the action columns, Update to Remove, apart from the columns before them */
+#bulk-change-table thead th.col-actions-start,
+#bulk-change-table-sticky thead th.col-actions-start{
+	border-left:1px solid #888
+}
+
+/* the action columns, Update to Remove, are one block of controls, a darker header and a tint on their cells */
+.tablesorter.rotate thead th.sort-action,
+#bulk-change-table thead th.sort-action.tablesorter-headerAsc,
+#bulk-change-table thead th.sort-action.tablesorter-headerDesc,
+#bulk-change-table-sticky thead th.sort-action.tablesorter-headerAsc,
+#bulk-change-table-sticky thead th.sort-action.tablesorter-headerDesc,
+#bulk-change-table thead th.col-spacer,
+#bulk-change-table-sticky thead th.col-spacer{
+	background-color:#222
+}
+
+#bulk-change-table tbody td.col-action{
+	background-color:rgba(42, 111, 176, 0.07)
+}
+
+/* the keyboard focus, a ring in the text colour of the theme, the outline of the browser hardly shows on it */
+/* important, as the focus rules of the page library are more specific */
+html *:focus-visible{
+	outline:2px solid #333 !important;
+	outline-offset:1px !important
+}
+
+/* the space kept for the filter row before the table script adds it, in the colour of the row */
+#bulk-change-table:not(.hasFilters) thead th{
+	border-bottom:29px solid #d7d7d7
+}
+
 /* =======================================================================
 jquery.confirm.css
 ========================================================================== */
@@ -1329,6 +1504,12 @@ jquery.confirm.css
 .modal-header .modal-title,
 .modal-footer .btn{
 	color:#fff
+}
+
+/* a dialog button with no colour, such as Cancel, is light grey, so its text is dark */
+.modal-footer .btn:not(.green):not(.red){
+	color:#222;
+	text-shadow:0 1px 1px rgba(255,255,255,0.75)
 }
 
 .modal-body{

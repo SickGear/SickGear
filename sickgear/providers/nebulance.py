@@ -21,10 +21,8 @@ import traceback
 from . import generic
 from .. import common, logger
 from ..helpers import try_int
-
 from bs4_parser import BS4Parser
 from json_helper import json_dumps
-
 from _23 import unquote_plus
 
 
@@ -63,6 +61,7 @@ class NebulanceProvider(generic.TorrentProvider):
             if isinstance(response, dict) and isinstance(response.get('response'), dict):
                 self.user_authkey, self.user_passkey, self.uid = [response['response'].get(v)
                                                                   for v in ('authkey', 'passkey', 'id')]
+                logger.RedactingFilter.reset()  # mask the new keys from the next log line
         return self.user_authkey
 
     def _search_provider(self, search_params, **kwargs):

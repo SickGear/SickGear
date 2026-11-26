@@ -22,18 +22,20 @@ import time
 import traceback
 from urllib.parse import quote
 
+from six import string_types
+
 import exceptions_helper
+import sickgear
 from exceptions_helper import ex
 from sg_helpers import write_file
-
-import sickgear
 from . import clients, common, db, failed_history, helpers, history, logger, \
     notifiers, nzbget, nzbSplitter, show_name_helpers, sab, ui
-from .common import DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_EP_RESULT, SEASON_RESULT, Quality
+from .common import (DOWNLOAD_CLIENTS, DOWNLOADED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, MULTI_EP_RESULT,
+                     SEASON_RESULT, Quality)
 from .providers.generic import GenericProvider
 from .tv import TVEpisode, TVShow
 
-from six import string_types
+one_day_delta = datetime.timedelta(days=1)
 
 # noinspection PyUnreachableCode, PyStatementEffect
 if False:
@@ -113,14 +115,18 @@ def snatch_episode(result, end_status=SNATCHED):
     if 0 < result.properlevel:
         end_status = SNATCHED_PROPER
 
+    client_id = None
     # NZB files can be sent straight to SAB or saved to disk
     if result.resultType in ('nzb', 'nzbdata'):
         if 'blackhole' == sickgear.NZB_METHOD:
             dl_result = _download_result(result)
+            client_id = DOWNLOAD_CLIENTS.NZB_BLACKHOLE
         elif 'sabnzbd' == sickgear.NZB_METHOD:
             dl_result = sab.send_nzb(result)
+            client_id = DOWNLOAD_CLIENTS.SABNZBD
         elif 'nzbget' == sickgear.NZB_METHOD:
             dl_result = nzbget.send_nzb(result)
+            client_id = DOWNLOAD_CLIENTS.NZBGET
         else:
             logger.error(f'Unknown NZB action specified in config: {sickgear.NZB_METHOD}')
             dl_result = False
@@ -135,6 +141,7 @@ def snatch_episode(result, end_status=SNATCHED):
         # torrents are saved to disk when blackhole mode
         if 'blackhole' == sickgear.TORRENT_METHOD:
             dl_result = _download_result(result)
+            client_id = DOWNLOAD_CLIENTS.TORRENT_BLACKHOLE
         else:
             # make sure we have the torrent file content
             if not result.content and not result.url.startswith('magnet'):
@@ -144,6 +151,7 @@ def snatch_episode(result, end_status=SNATCHED):
                     return False
             # Snatches torrent with client
             dl_result = clients.get_client_instance(sickgear.TORRENT_METHOD)().send_torrent(result)
+            client_id = DOWNLOAD_CLIENTS.TORRENT
 
             if result.cache_filepath:
                 helpers.remove_file_perm(result.cache_filepath)
@@ -155,11 +163,11 @@ def snatch_episode(result, end_status=SNATCHED):
         return False
 
     if sickgear.USE_FAILED_DOWNLOADS:
-        failed_history.add_snatched(result)
+        failed_history.add_snatched(result, client=client_id, client_uid=dl_result)
 
     ui.notifications.message('Episode snatched', result.name)
 
-    history.log_snatch(result)
+    history.log_snatch(result, client_id, dl_result)
 
     # don't notify when we re-download an episode
     sql_l = []
@@ -170,6 +178,8 @@ def snatch_episode(result, end_status=SNATCHED):
                 cur_ep_obj.status = Quality.composite_status(SNATCHED_BEST, result.quality)
             else:
                 cur_ep_obj.status = Quality.composite_status(end_status, result.quality)
+
+            cur_ep_obj.video_codec = common.VideoCodec.set_snatched_vc(cur_ep_obj._video_codec, result.video_codec)
 
             item = cur_ep_obj.get_sql()
             if None is not item:
@@ -419,8 +429,6 @@ def is_first_best_match(ep_status, result):
 
 def set_wanted_aired(ep_obj,  # type: TVEpisode
                      unaired,  # type: bool
-                     ep_count,  # type: Dict[int, int]
-                     ep_count_scene,  # type: Dict[int, int]
                      manual=False  # type: bool
                      ):
     """
@@ -428,15 +436,10 @@ def set_wanted_aired(ep_obj,  # type: TVEpisode
 
     :param ep_obj: episode object
     :param unaired: include unaried episodes
-    :param ep_count: count of episodes in seasons
-    :param ep_count_scene: count of episodes in scene seasons
     :param manual: manual search
     """
     ep_status, ep_quality = common.Quality.split_composite_status(ep_obj.status)
     ep_obj.wanted_quality = get_wanted_qualities(ep_obj, ep_status, ep_quality, unaired=unaired, manual=manual)
-    ep_obj.eps_aired_in_season = ep_count.get(ep_obj.season, 0)
-    ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
-        ep_obj.scene_season, 0) if ep_obj.scene_season else ep_obj.eps_aired_in_season
 
 
 def get_wanted_qualities(ep_obj,  # type: TVEpisode
@@ -463,7 +466,7 @@ def get_wanted_qualities(ep_obj,  # type: TVEpisode
 
 
 def get_aired_in_season(show_obj, return_sql=False):
-    # type: (TVShow, bool) -> Union[Tuple[Dict[int, int], Dict[int, int]], Tuple[Dict[int, int], Dict[int, int], List]]
+    # type: (TVShow, bool) -> Optional[List[SQLITE_ROW]]
     """
     returns tuple of dicts with episode count per (scene) season and optional sql results
 
@@ -471,36 +474,39 @@ def get_aired_in_season(show_obj, return_sql=False):
     :param return_sql: return sql
     :return: returns tuple of dicts with episode count per (scene) season
     """
-    ep_count = {}
-    ep_count_scene = {}
-    tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
+    if (datetime.datetime.now() - show_obj.aired_in_season_update_time) > one_day_delta or return_sql:
+        ep_count = {}
+        ep_count_scene = {}
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).toordinal()
 
-    if show_obj.air_by_date:
-        sql_string = ('SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate'
-                      ' FROM [tv_episodes] AS ep, [tv_shows] AS show'
-                      ' WHERE ep.showid = show.indexer_id AND show.paused = 0 AND season != 0'
-                      ' AND ep.indexer = ? AND ep.showid = ?'
-                      ' AND show.air_by_date = 1')
-    else:
-        sql_string = ('SELECT status, season, scene_season, episode, airdate'
-                      ' FROM [tv_episodes]'
-                      ' WHERE indexer = ? AND showid = ?'
-                      ' AND season > 0')
+        if show_obj.air_by_date:
+            sql_string = ('SELECT ep.status, ep.season, ep.scene_season, ep.episode, ep.airdate'
+                          ' FROM [tv_episodes] AS ep, [tv_shows] AS show'
+                          ' WHERE ep.showid = show.indexer_id AND show.paused = 0 AND season != 0'
+                          ' AND ep.indexer = ? AND ep.showid = ?'
+                          ' AND show.air_by_date = 1')
+        else:
+            sql_string = ('SELECT status, season, scene_season, episode, airdate'
+                          ' FROM [tv_episodes]'
+                          ' WHERE indexer = ? AND showid = ?'
+                          ' AND season > 0')
 
-    with db.DBConnection() as sg_db:
-        sql_result = sg_db.select(sql_string, [show_obj.tvid, show_obj.prodid])
-        for cur_result in sql_result:
-            if 1 < helpers.try_int(cur_result['airdate']) <= tomorrow:
-                cur_season = helpers.try_int(cur_result['season'])
-                ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
-                cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
-                if -1 != cur_scene_season:
-                    ep_count_scene[cur_scene_season] = ep_count.setdefault(cur_scene_season, 0) + 1
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(sql_string, [show_obj.tvid, show_obj.prodid])
+            for cur_result in sql_result:
+                if 1 < helpers.try_int(cur_result['airdate']) <= tomorrow:
+                    cur_season = helpers.try_int(cur_result['season'])
+                    ep_count[cur_season] = ep_count.setdefault(cur_season, 0) + 1
+                    cur_scene_season = helpers.try_int(cur_result['scene_season'], -1)
+                    if -1 != cur_scene_season:
+                        ep_count_scene[cur_scene_season] = ep_count_scene.setdefault(cur_scene_season, 0) + 1
 
-    if return_sql:
-        return ep_count, ep_count_scene, sql_result
+            show_obj.aired_in_season = ep_count
+            show_obj.aired_in_scene_season = ep_count_scene
+            show_obj.aired_in_season_update_time = datetime.datetime.now()
 
-    return ep_count, ep_count_scene
+            if return_sql:
+                return sql_result
 
 
 def wanted_episodes(show_obj,  # type: TVShow
@@ -516,7 +522,7 @@ def wanted_episodes(show_obj,  # type: TVShow
     :param unaired: include unaired episodes
     :return: list or dict of wanted episode objects
     """
-    ep_count, ep_count_scene, sql_result_org = get_aired_in_season(show_obj, return_sql=True)
+    sql_result_org = get_aired_in_season(show_obj, return_sql=True)
 
     from_date_ord = from_date.toordinal()
     if unaired:
@@ -531,25 +537,27 @@ def wanted_episodes(show_obj,  # type: TVShow
 
     total_wanted = total_replacing = total_unaired = 0
 
-    if 0 < len(sql_result) and 2 < len(sql_result) - len(show_obj.sxe_ep_obj):
-        with db.DBConnection() as sg_db:
-            ep_sql_result = sg_db.select(
-                'SELECT * FROM tv_episodes'
-                ' WHERE indexer = ? AND showid = ?',
-                [show_obj.tvid, show_obj.prodid])
-    else:
-        ep_sql_result = None
-
     for result in sql_result:
-        ep_obj = show_obj.get_episode(int(result['season']), int(result['episode']), ep_result=ep_sql_result)
-        cur_status, cur_quality = common.Quality.split_composite_status(ep_obj.status)
-        ep_obj.wanted_quality = get_wanted_qualities(ep_obj, cur_status, cur_quality, unaired=unaired)
-        if not ep_obj.wanted_quality:
+        season, episode = int(result['season']), int(result['episode'])
+        ep_obj = show_obj.sxe_ep_obj.get(season, {}).get(episode)
+        # the status of a loaded episode can be newer than its db row
+        cur_status, cur_quality = common.Quality.split_composite_status(
+            int(result['status'] if None is ep_obj else ep_obj.status))
+        wanted_quality = sickgear.WANTEDLIST_CACHE.get_wantedlist(
+            show_obj.quality, show_obj.upgrade_once, cur_quality, cur_status, unaired)
+        if not wanted_quality:
+            # no episode object is made for an episode that is not wanted, the show keeps its number instead
+            if None is ep_obj:
+                show_obj.unwanted_sxe.setdefault(season, set()).add(episode)
+            else:
+                ep_obj.wanted_quality = wanted_quality
             continue
 
-        ep_obj.eps_aired_in_season = ep_count.get(helpers.try_int(result['season']), 0)
-        ep_obj.eps_aired_in_scene_season = ep_count_scene.get(
-            helpers.try_int(result['scene_season']), 0) if result['scene_season'] else ep_obj.eps_aired_in_season
+        show_obj.unwanted_sxe.get(season, set()).discard(episode)
+        if None is ep_obj:
+            ep_obj = show_obj.get_episode(season, episode)
+        ep_obj.wanted_quality = wanted_quality
+
         if make_dict:
             wanted.setdefault(ep_obj.scene_season if ep_obj.show_obj.is_scene else ep_obj.season, []).append(ep_obj)
         else:
@@ -812,7 +820,8 @@ def cache_torrent_file(
     cache_file = os.path.join(sickgear.CACHE_DIR or helpers.get_system_temp_dir(),
                               f'{helpers.sanitize_filename(search_result.name)}.torrent')
 
-    if not helpers.download_file(
+    # via the provider, it takes the tunnel route where the site is blocked
+    if not search_result.provider.download_file(
             search_result.url, cache_file, session=search_result.provider.session, failure_monitor=False):
         return
 

@@ -16,7 +16,6 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-
 # noinspection PyCompatibility
 from concurrent.futures import ThreadPoolExecutor
 # noinspection PyCompatibility,PyProtectedMember,PyUnresolvedReferences

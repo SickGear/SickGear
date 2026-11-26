@@ -20,23 +20,21 @@ import re
 import stat
 import threading
 
+from six import string_types
+
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import common, db, failed_history, helpers, history, logger, notifiers, show_name_helpers
-
 from .anime import push_anidb_mylist
 from .indexers.indexer_config import TVINFO_TVDB
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
-
 from _23 import decode_str
-from six import string_types
 from sg_helpers import long_path, cmdline_runner
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Optional, Tuple, Union
+    from typing import Any, AnyStr, List, Optional, Tuple, Union
 
 
 class PostProcessor(object):
@@ -52,7 +50,8 @@ class PostProcessor(object):
     IGNORED_FILESTRINGS = ['/.AppleDouble/', '.DS_Store']
 
     def __init__(self, file_path, nzb_name=None, process_method=None, force_replace=None,
-                 use_trash=None, webhandler=None, show_obj=None):
+                 use_trash=None, webhandler=None, show_obj=None, client=None, client_uid=None, puid=None):
+        # type: (str, str, str, bool, bool, Any, TVShow, int, Union[int, str], str) -> None
         """
         Creates a new post processor with the given file path and optionally an NZB name.
 
@@ -95,6 +94,12 @@ class PostProcessor(object):
         self.process_method = process_method if process_method else sickgear.PROCESS_METHOD
 
         self.anime_version = None  # anime equivalent of is_proper
+
+        self.client = client  # type: Optional[int]
+
+        self.client_uid = client_uid  # type: Union[int, str]
+
+        self.puid = puid  # type: Optional[str]
 
         self.anidbEpisode = None
 
@@ -999,6 +1004,12 @@ class PostProcessor(object):
                     self._log(f'Found release name {self.release_name}', logger.DEBUG)
 
                 cur_ep_obj.release_name = self.release_name or ''
+                v_c = None
+                if self.release_name:
+                    v_c = common.VideoCodec.get_videocodec_from_name(self.release_name)
+                if v_c in (None, common.VideoCodec.VC_UNKNOWN):
+                    v_c = common.VideoCodec.get_file_video_codec(self.file_path)
+                cur_ep_obj.video_codec = common.VideoCodec.combine_vcs(0, v_c)
 
                 any_qualities, best_qualities = common.Quality.split_quality(cur_ep_obj.show_obj.quality)
                 cur_status, cur_quality = common.Quality.split_composite_status(cur_ep_obj.status)
@@ -1114,11 +1125,7 @@ class PostProcessor(object):
         # if the show directory doesn't exist then make it if allowed
         if not os.path.isdir(ep_obj.show_obj.location) and sickgear.CREATE_MISSING_SHOW_DIRS:
             self._log('Show directory does not exist, creating it', logger.DEBUG)
-            try:
-                os.mkdir(ep_obj.show_obj.location)
-                # do the library update for synoindex
-                notifiers.NotifierFactory().get('SYNOINDEX').addFolder(ep_obj.show_obj.location)
-            except (OSError, IOError):
+            if not helpers.make_path(ep_obj.show_obj.location, syno=True):
                 raise exceptions_helper.PostProcessingFailed(f'Unable to create show directory:'
                                                              f' {ep_obj.show_obj.location}')
 
@@ -1230,7 +1237,8 @@ class PostProcessor(object):
 
         # log it to history
         anime_version = (-1, self.anime_version)[ep_obj.show_obj.is_anime and None is not self.anime_version]
-        history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version)
+        history.log_download(ep_obj, self.file_path, new_ep_quality, self.release_group, anime_version,
+                             client=self.client, client_uid=self.client_uid, puid=self.puid)
 
         # send notifications
         notifiers.notify_download(ep_obj)

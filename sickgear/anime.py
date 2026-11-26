@@ -15,13 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with Sick Beard.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# adba is only for anime
+__lazy_modules__ = ['adba', 'adba.aniDBresponses']
+
 import os
 
 import adba
 from adba.aniDBresponses import LoginFirstResponse
-from exceptions_helper import ex
 
 import sickgear
+from exceptions_helper import ex
 from . import db, logger
 from .classes import NZBDataSearchResult, NZBSearchResult, TorrentSearchResult
 from .helpers import get_system_temp_dir, make_path
@@ -52,7 +56,7 @@ class AniGroupList(object):
         self.load()
 
     def load(self):
-        logger.debug(f'Building allow amd block list for {self.tvid_prodid}')
+        logger.debug(f'Building allow and block list for {self.tvid_prodid}')
         self.allowlist = self._load_list('allowlist')
         self.blocklist = self._load_list('blocklist')
 
@@ -201,6 +205,9 @@ def set_up_anidb_connection():
     if not sickgear.ADBA_CONNECTION:
         # anidb_logger = (lambda x: logger.debug('ANIDB: ' + str(x)))
         sickgear.ADBA_CONNECTION = adba.Connection(keepAlive=True)  # , log=anidb_logger)
+        # keep the session file with the AniDB cache files, the default of the library is the folder of sickgear.py
+        if cache_dir := anidb_cache_dir():
+            sickgear.ADBA_CONNECTION.SessionFile = os.path.join(cache_dir, 'session.cfg')
 
     auth = False
     try:

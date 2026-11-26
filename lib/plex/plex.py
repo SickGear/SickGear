@@ -29,7 +29,6 @@ from sickgear import logger
 from sickgear.helpers import get_url, try_int, parse_xml
 
 from _23 import unquote, urlencode
-from six import iteritems
 
 
 class Plex(object):
@@ -388,7 +387,7 @@ class Plex(object):
                             and section.get('title') not in self.ignore_sections:
                         section_key = section.get('key')
 
-                        for (user, token) in iteritems(self.home_user_tokens or {'': None}):
+                        for (user, token) in (self.home_user_tokens or {'': None}).items():
                             self.username = user
 
                             resp_section = self.get_url_pms('/library/sections/%s/%s' % (

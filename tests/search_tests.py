@@ -1,19 +1,20 @@
-import os
 import sys
 import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 warnings.filterwarnings('ignore', module=r'.*connectionpool.*', message='.*certificate verification.*')
 
+import datetime
 import unittest
+from os.path import abspath, dirname, join
 from types import SimpleNamespace
 from unittest import mock
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
-
-from sickgear import properFinder, search
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import sickgear
+from sickgear import common, db, properFinder, search
+from sickgear.tv import TVEpisode, TVShow
 import test_lib as test
 
 sickgear.SYS_ENCODING = 'UTF-8'
@@ -132,6 +133,62 @@ class CanRejectTests(unittest.TestCase):
         self.assertEqual(['predb', 'predb'], self.sites())
 
 
+class WantedEpisodesTests(test.SickbeardTestDBCase):
+    """ a search for wanted episodes makes episode objects for wanted episodes only """
+
+    def setUp(self):
+        super(WantedEpisodesTests, self).setUp()
+        sickgear.WANTEDLIST_CACHE = common.WantedQualities()
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        self.show_obj = TVShow(1, 123456, 'en')
+        self.show_obj.quality = common.Quality.combine_qualities([common.Quality.HDTV], [])
+        self.show_obj.sxe_ep_obj = {}
+        downloaded = common.Quality.composite_status(common.DOWNLOADED, common.Quality.HDTV)
+        airdate = datetime.date.today().toordinal() - 30
+        with db.DBConnection() as sg_db:
+            sg_db.mass_action([[
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, status, airdate, subtitles)'
+                ' VALUES (1, 123456, ?, 1, ?, ?, ?, "")',
+                [1000 + ep_num, ep_num, (downloaded, common.WANTED)[3 == ep_num], airdate]] for ep_num in range(1, 6)])
+
+    def tearDown(self):
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        super(WantedEpisodesTests, self).tearDown()
+
+    def wanted(self):
+        return search.wanted_episodes(self.show_obj, datetime.date.fromordinal(1))
+
+    def test_only_wanted_episode_is_loaded(self):
+        self.assertEqual([(1, 3)], [(_ep.season, _ep.episode) for _ep in self.wanted()])
+        self.assertEqual({1: [3]}, {_s: list(_e) for _s, _e in self.show_obj.sxe_ep_obj.items()})
+        self.assertEqual({1: {1, 2, 4, 5}}, self.show_obj.unwanted_sxe)
+
+    def test_unwanted_episode_without_object_is_refused(self):
+        self.wanted()
+        self.assertFalse(self.show_obj.want_episode(1, 2, common.Quality.HDTV))
+        self.assertTrue(self.show_obj.want_episode(1, 3, common.Quality.HDTV))
+        self.assertEqual({1: [3]}, {_s: list(_e) for _s, _e in self.show_obj.sxe_ep_obj.items()})
+
+    def test_loaded_episode_status_is_used(self):
+        # a loaded episode with a status that is newer than its db row
+        ep_obj = self.show_obj.get_episode(1, 2)
+        ep_obj.status = common.WANTED
+        self.assertEqual([(1, 2), (1, 3)], [(_ep.season, _ep.episode) for _ep in self.wanted()])
+
+    def test_episode_that_becomes_wanted(self):
+        self.wanted()
+        with db.DBConnection() as sg_db:
+            sg_db.action('UPDATE tv_episodes SET status = ? WHERE showid = 123456 AND episode = 4', [common.WANTED])
+        self.assertEqual([(1, 3), (1, 4)], [(_ep.season, _ep.episode) for _ep in self.wanted()])
+        self.assertEqual({1: {1, 2, 5}}, self.show_obj.unwanted_sxe)
+
+
+
 class BestUsableResultTests(unittest.TestCase):
     """ the best result is picked, and a bad torrent drops out so the next best is tried """
 
@@ -171,6 +228,6 @@ class BestUsableResultTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    for cur_case in (ProperTests, CanRejectTests, BestUsableResultTests):
+    for cur_case in (ProperTests, CanRejectTests, WantedEpisodesTests, BestUsableResultTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

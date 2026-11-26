@@ -24,7 +24,6 @@ from . import generic
 from .. import logger
 from ..helpers import sanitize_scene_name
 from bs4_parser import BS4Parser
-
 from _23 import decode_str, html_unescape
 
 

@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import typing
 from collections import OrderedDict
+from collections.abc import Mapping as _Mapping
 from enum import Enum, auto
 from threading import RLock
 
 if typing.TYPE_CHECKING:
     # We can only import Protocol if TYPE_CHECKING because it's a development
     # dependency, and is not available at runtime.
-    from typing import Protocol
-
-    from typing_extensions import Self
+    from typing_extensions import Protocol
 
     class HasGettableStringKeys(Protocol):
         def keys(self) -> typing.Iterator[str]: ...
@@ -18,7 +17,11 @@ if typing.TYPE_CHECKING:
         def __getitem__(self, key: str) -> str: ...
 
 
-__all__ = ["RecentlyUsedContainer", "HTTPHeaderDict"]
+__all__ = [
+    "RecentlyUsedContainer",
+    "HTTPHeaderDict",
+    "GroupedDict",
+]
 
 
 # Key type
@@ -31,7 +34,7 @@ _DT = typing.TypeVar("_DT")
 ValidHTTPHeaderSource = typing.Union[
     "HTTPHeaderDict",
     typing.Mapping[str, str],
-    typing.Iterable[tuple[str, str]],
+    typing.Iterable[typing.Tuple[str, str]],
     "HasGettableStringKeys",
 ]
 
@@ -53,7 +56,7 @@ def ensure_can_construct_http_header_dict(
         # Similarly to Mapping, full runtime checking of the contents of an Iterable is
         # expensive, so for the purposes of typechecking, we assume that any Iterable
         # is the right shape.
-        return typing.cast(typing.Iterable[tuple[str, str]], potential)
+        return typing.cast(typing.Iterable[typing.Tuple[str, str]], potential)
     elif hasattr(potential, "keys") and hasattr(potential, "__getitem__"):
         return typing.cast("HasGettableStringKeys", potential)
     else:
@@ -64,7 +67,9 @@ class RecentlyUsedContainer(typing.Generic[_KT, _VT], typing.MutableMapping[_KT,
     """
     Provides a thread-safe dict-like container which maintains up to
     ``maxsize`` keys while throwing away the least-recently-used keys beyond
-    ``maxsize``.
+    ``maxsize``. Caution: RecentlyUsedContainer is deprecated and scheduled for
+    removal in a next major of urllib3.future. It has been replaced by a more
+    suitable implementation in ``urllib3.util.traffic_police``.
 
     :param maxsize:
         Maximum number of recent elements to retain.
@@ -149,11 +154,11 @@ class RecentlyUsedContainer(typing.Generic[_KT, _VT], typing.MutableMapping[_KT,
                 self.dispose_func(value)
 
     def keys(self) -> set[_KT]:  # type: ignore[override]
-        with self.lock:
-            return set(self._container.keys())
+        with self.lock:  # Defensive: dead code
+            return set(self._container.keys())  # Defensive: dead code
 
 
-class HTTPHeaderDictItemView(set[tuple[str, str]]):
+class HTTPHeaderDictItemView(typing.Set[typing.Tuple[str, str]]):
     """
     HTTPHeaderDict is unusual for a Mapping[str, str] in that it has two modes of
     address.
@@ -239,7 +244,7 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
 
     def __init__(self, headers: ValidHTTPHeaderSource | None = None, **kwargs: str):
         super().__init__()
-        self._container = {}  # 'dict' is insert-ordered
+        self._container = {}  # 'dict' is insert-ordered in Python 3.7+
         if headers is not None:
             if isinstance(headers, HTTPHeaderDict):
                 self._copy_from(headers)
@@ -250,8 +255,6 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
 
     def __setitem__(self, key: str, val: str) -> None:
         # avoid a bytes/str comparison by decoding before httplib
-        if isinstance(key, bytes):
-            key = key.decode("latin-1")
         self._container[key.lower()] = [key, val]
 
     def __getitem__(self, key: str) -> str:
@@ -322,9 +325,6 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
         >>> list(headers.items())
         [('foo', 'bar, baz, quz')]
         """
-        # avoid a bytes/str comparison by decoding before httplib
-        if isinstance(key, bytes):
-            key = key.decode("latin-1")
         key_lower = key.lower()
         new_vals = [key, val]
         # Keep the common case aka no item present as fast as possible
@@ -332,7 +332,6 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
         if new_vals is not vals:
             # if there are values here, then there is at least the initial
             # key/value pair
-            assert len(vals) >= 2
             if combine:
                 vals[-1] = vals[-1] + ", " + val
             else:
@@ -396,24 +395,6 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
             # meets our external interface requirement of `Union[List[str], _DT]`.
             return vals[1:]
 
-    def _prepare_for_method_change(self) -> Self:
-        """
-        Remove content-specific header fields before changing the request
-        method to GET or HEAD according to RFC 9110, Section 15.4.
-        """
-        content_specific_headers = [
-            "Content-Encoding",
-            "Content-Language",
-            "Content-Location",
-            "Content-Type",
-            "Content-Length",
-            "Digest",
-            "Last-Modified",
-        ]
-        for header in content_specific_headers:
-            self.discard(header)
-        return self
-
     # Backwards compatibility for httplib
     getheaders = getlist
     getallmatchingheaders = getlist
@@ -426,26 +407,23 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
         return f"{type(self).__name__}({dict(self.itermerged())})"
 
     def _copy_from(self, other: HTTPHeaderDict) -> None:
-        for key in other:
-            val = other.getlist(key)
-            self._container[key.lower()] = [key, *val]
+        for key, val in other._container.items():
+            self._container[key] = val.copy()
 
-    def copy(self) -> Self:
+    def copy(self) -> HTTPHeaderDict:
         clone = type(self)()
         clone._copy_from(self)
         return clone
 
     def iteritems(self) -> typing.Iterator[tuple[str, str]]:
         """Iterate over all header lines, including duplicate ones."""
-        for key in self:
-            vals = self._container[key.lower()]
+        for vals in self._container.values():
             for val in vals[1:]:
                 yield vals[0], val
 
     def itermerged(self) -> typing.Iterator[tuple[str, str]]:
         """Iterate over all headers, merging duplicate ones together."""
-        for key in self:
-            val = self._container[key.lower()]
+        for val in self._container.values():
             yield val[0], ", ".join(val[1:])
 
     def items(self) -> HTTPHeaderDictItemView:  # type: ignore[override]
@@ -456,31 +434,198 @@ class HTTPHeaderDict(typing.MutableMapping[str, str]):
             return potential_value in self._container[header_name.lower()][1:]
         return False
 
-    def __ior__(self, other: object) -> HTTPHeaderDict:
-        # Supports extending a header dict in-place using operator |=
-        # combining items with add instead of __setitem__
-        maybe_constructable = ensure_can_construct_http_header_dict(other)
-        if maybe_constructable is None:
-            return NotImplemented
-        self.extend(maybe_constructable)
-        return self
 
-    def __or__(self, other: object) -> Self:
-        # Supports merging header dicts using operator |
-        # combining items with add instead of __setitem__
-        maybe_constructable = ensure_can_construct_http_header_dict(other)
-        if maybe_constructable is None:
-            return NotImplemented
-        result = self.copy()
-        result.extend(maybe_constructable)
-        return result
+_GK = typing.TypeVar("_GK", bound=typing.Hashable)
+_GV = typing.TypeVar("_GV")
 
-    def __ror__(self, other: object) -> Self:
-        # Supports merging header dicts using operator | when other is on left side
-        # combining items with add instead of __setitem__
-        maybe_constructable = ensure_can_construct_http_header_dict(other)
-        if maybe_constructable is None:
-            return NotImplemented
-        result = type(self)(maybe_constructable)
-        result.extend(self)
-        return result
+
+class ReverseKeysView(typing.KeysView[_GK]):
+    """A read-only ``KeysView`` over the keys mapped to a single value.
+
+    Returned by :meth:`GroupedDict.keys_for`. Backed by reference to an
+    internal bucket so the view is live (mirrors ``dict.keys()`` semantics):
+    subsequent mutations of the parent :class:`GroupedDict` are reflected on
+    next iteration / membership test.
+    """
+
+    __slots__ = ("_bucket",)
+
+    def __init__(self, bucket: typing.Optional[typing.Set[_GK]]) -> None:
+        # We intentionally do NOT call super().__init__: the parent KeysView
+        # expects a Mapping, but we wrap a raw set bucket instead.
+        self._bucket: typing.Optional[typing.Set[_GK]] = bucket
+
+    def __iter__(self) -> typing.Iterator[_GK]:
+        if self._bucket is None:
+            return iter(())
+        return iter(self._bucket)
+
+    def __len__(self) -> int:
+        if self._bucket is None:
+            return 0
+        return len(self._bucket)
+
+    def __contains__(self, key: object) -> bool:
+        if self._bucket is None:
+            return False
+        return key in self._bucket
+
+    def __repr__(self) -> str:
+        return f"ReverseKeysView({set(self) if self._bucket else set()!r})"
+
+
+class GroupedDict(typing.Dict[_GK, _GV]):
+    """A ``dict`` subclass that maintains a reverse "value to keys" index.
+
+    Optimized for the case where many keys share a small number of distinct
+    values. Reverse lookups via :meth:`keys_for` are O(1) average time and
+    return a live :class:`ReverseKeysView`.
+
+    A ``key_fn`` may be supplied to control how values are hashed for the
+    reverse index. By default, the value itself is used (identity over
+    equality). Pass ``key_fn=id`` to index by object identity instead — this
+    is the right choice when values may override ``__eq__`` / ``__hash__``
+    in ways you don't want to collapse buckets on, or when values are not
+    hashable themselves.
+
+    All standard ``dict`` mutation entry points are overridden to keep the
+    reverse index coherent. Empty buckets are pruned eagerly so that
+    long-lived instances do not accumulate stale entries on value churn.
+    """
+
+    __slots__ = ("_index", "_key_fn")
+
+    def __init__(
+        self,
+        *args: typing.Any,
+        key_fn: typing.Callable[[_GV], typing.Hashable] | None = None,
+        **kwargs: typing.Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self._key_fn: typing.Callable[[_GV], typing.Hashable] = (
+            key_fn if key_fn is not None else lambda x: x
+        )
+        self._index: dict[typing.Hashable, set[_GK]] = {}
+        for k, v in super().items():
+            self._index.setdefault(self._key_fn(v), set()).add(k)
+
+    def __setitem__(self, key: _GK, value: _GV) -> None:
+        old = dict.get(self, key, _Sentinel.not_passed)
+        if old is not _Sentinel.not_passed:
+            old_h = self._key_fn(old)
+            new_h = self._key_fn(value)
+            if old_h == new_h:
+                dict.__setitem__(self, key, value)
+                return
+            bucket = self._index.get(old_h)
+            if bucket is not None:
+                bucket.discard(key)
+                if not bucket:
+                    del self._index[old_h]
+            dict.__setitem__(self, key, value)
+            bucket = self._index.get(new_h)
+            if bucket is None:
+                self._index[new_h] = {key}
+            else:
+                bucket.add(key)
+            return
+        dict.__setitem__(self, key, value)
+        value_h = self._key_fn(value)
+        bucket = self._index.get(value_h)
+        if bucket is None:
+            self._index[value_h] = {key}
+        else:
+            bucket.add(key)
+
+    def __delitem__(self, key: _GK) -> None:
+        old = dict.pop(self, key)
+        old_h = self._key_fn(old)
+        bucket = self._index.get(old_h)
+        if bucket is not None:
+            bucket.discard(key)
+            if not bucket:
+                del self._index[old_h]
+
+    def pop(self, key: _GK, *args: typing.Any) -> typing.Any:
+        if len(args) > 1:
+            raise TypeError(f"pop expected at most 2 arguments, got {1 + len(args)}")
+        if key not in self:
+            if args:
+                return args[0]
+            raise KeyError(key)
+        value = super().pop(key)
+        h = self._key_fn(value)
+        bucket = self._index.get(h)
+        if bucket is not None:
+            bucket.discard(key)
+            if not bucket:
+                del self._index[h]
+        return value
+
+    def popitem(self) -> tuple[_GK, _GV]:
+        key, value = super().popitem()
+        h = self._key_fn(value)
+        bucket = self._index.get(h)
+        if bucket is not None:
+            bucket.discard(key)
+            if not bucket:
+                del self._index[h]
+        return key, value
+
+    def clear(self) -> None:
+        super().clear()
+        self._index.clear()
+
+    def setdefault(self, key: _GK, default: typing.Any = None) -> typing.Any:
+        if key in self:
+            return super().__getitem__(key)
+        # Route through __setitem__ to keep the reverse index coherent.
+        self[key] = default
+        return default
+
+    def update(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        if len(args) > 1:
+            raise TypeError(
+                f"update expected at most 1 positional argument, got {len(args)}"
+            )
+        if args:
+            other = args[0]
+            if isinstance(other, _Mapping):
+                for k in other:
+                    self[k] = other[k]
+            elif hasattr(other, "keys"):
+                # Mapping-like protocol (duck-typed).
+                for k in other.keys():
+                    self[k] = other[k]
+            else:
+                for k, v in other:  # iterable of pairs
+                    self[k] = v
+        for k, v in kwargs.items():
+            self[k] = v  # type: ignore[index]
+
+    def keys_for(self, value: _GV) -> ReverseKeysView[_GK]:
+        """Return a live read-only view over all keys mapped to ``value``.
+
+        Lookup is O(1) average time. The returned :class:`ReverseKeysView`
+        reflects the current bucket contents and updates as the parent
+        :class:`GroupedDict` is mutated. Returns an empty view if no key
+        maps to ``value``.
+        """
+        bucket = self._index.get(self._key_fn(value))
+        return ReverseKeysView(bucket)
+
+    def copy(self) -> GroupedDict[_GK, _GV]:
+        # We pass key_fn through so the copy behaves identically.
+        new: GroupedDict[_GK, _GV] = GroupedDict(self, key_fn=self._key_fn)
+        return new
+
+    def __copy__(self) -> GroupedDict[_GK, _GV]:
+        return self.copy()
+
+    @classmethod
+    def fromkeys(  # type: ignore[override]
+        cls,
+        iterable: typing.Iterable[_GK],
+        value: typing.Any = None,
+    ) -> GroupedDict[_GK, typing.Any]:
+        return cls({k: value for k in iterable})

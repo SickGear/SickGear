@@ -252,6 +252,71 @@
 							</span>
 						</div>
 
+						<div class="field-pair adv">
+							<label for="dns-resolver">
+								<span class="component-title">DNS resolver</span>
+								<span class="component-desc">
+									<input type="text" name="dns_resolver" id="dns-resolver" value="$sickgear.DNS_RESOLVER" class="form-control input-sm input250" autocorrect="off" autocapitalize="off" spellcheck="false"><p>blank to use system DNS</p>
+									<p class="clear-left note">DNS resolver for provider connections, DoH is used where needed to reach a site<br>e.g. doh+cloudflare://, doh+google://, doh+quad9://, dot+cloudflare://, dou://1.1.1.1</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair adv" id="provider-tunnel">
+							<label for="provider-tunnel-on">
+								<span class="component-title">Blocked provider fallback</span>
+								<span class="component-desc">
+#if $sickgear.PROXY_SETTING
+									<input type="checkbox" id="provider-tunnel-on" disabled#echo ('', $html_checked)[$sickgear.PROVIDER_TUNNEL]#>
+									<p>off while a proxy host is set under <a href="$sbRoot/config/general/">General</a></p>
+#else
+									<input type="checkbox" name="provider_tunnel" id="provider-tunnel-on" class="enabler"#echo ('', $html_checked)[$sickgear.PROVIDER_TUNNEL]#>
+									<p>fetch through a tunnel when a provider looks blocked by your ISP</p>
+#end if
+									<p class="clear-left note">used after a fetch fails in the TLS handshake and ECH does not get past the block</p>
+								</span>
+							</label>
+						</div>
+#if not $sickgear.PROXY_SETTING
+	#set $tunnel_sources = [cur_src for cur_src in $sickgear.providers.sorted_sources() if cur_src.is_enabled()]
+	## a provider that looks blocked, or a private tracker the user ticked, is listed, the rest are under show all
+	#set $tunnel_listed = [cur_src.get_id() for cur_src in $tunnel_sources if cur_src.get_id() in $sickgear.PROVIDER_TUNNEL_BLOCKED or (cur_src.tunnel_use() and not cur_src.tunnel_default_on())]
+						<div id="content_provider-tunnel-on" class="adv show_if_provider-tunnel-on">
+							<div class="field-pair" id="provider-tunnel-use">
+								<span class="component-title">Use the fallback for</span>
+								<span class="component-desc">
+									<p class="tunnel-risk"><i class="sgicon-warning" aria-hidden="true"></i><span>a provider sees a VPN address, some private trackers ban an account for that</span></p>
+									<input type="hidden" name="provider_tunnel_shown" value="#echo ' '.join([cur_src.get_id() for cur_src in $tunnel_sources])#">
+	#if $tunnel_sources
+									<div class="tunnel-providers" role="group" aria-label="Use the fallback for">
+		#for $cur_src in $tunnel_sources
+										<label class="tunnel-provider#echo ('', ' tunnel-provider-more')[$cur_src.get_id() not in $tunnel_listed]#">
+											<input type="checkbox" name="provider_tunnel_use" value="$cur_src.get_id()"#echo ('', $html_checked)[$cur_src.tunnel_use()]#>
+											<img src="$sbRoot/images/providers/$cur_src.image_name()" width="16" height="16" alt="">
+											<span class="tunnel-provider-name">$cur_src.name</span>
+			#if $cur_src.get_id() in $sickgear.PROVIDER_TUNNEL_BLOCKED
+											<span class="tunnel-tag tunnel-blocked-tag">looks blocked</span>
+			#end if
+			#if not $cur_src.tunnel_default_on()
+											<span class="tunnel-tag tunnel-private-tag">private, check its rules</span>
+			#end if
+										</label>
+		#end for
+									</div>
+		#if not $tunnel_listed
+									<p class="tunnel-none">no provider looks blocked now</p>
+		#end if
+		#if len($tunnel_listed) < len($tunnel_sources)
+									<button type="button" class="btn-link tunnel-show-all" aria-expanded="false">show #echo len($tunnel_sources) - len($tunnel_listed)# more</button>
+		#end if
+	#else
+									<p>enable a provider on <a href="$sbRoot/config/providers/">Media Providers</a> to list it here</p>
+	#end if
+								</span>
+							</div>
+						</div>
+#end if
+
 						<input type="submit" class="btn config_submitter" value="Save Changes" style="display:block;margin-top:20px">
 
 					</fieldset>
@@ -680,7 +745,6 @@
 	jQuery('#nzb_dir').fileBrowser({ title: 'Select .nzb black hole/watch location' });
 	jQuery('#torrent_dir').fileBrowser({ title: 'Select .torrent black hole/watch location' });
 	jQuery('#torrent_path').fileBrowser({ title: 'Select .torrent download location' });
-	jQuery('#tv_download_dir').fileBrowser({ title: 'Select TV download location' });
 //-->
 </script>
 

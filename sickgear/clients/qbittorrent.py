@@ -17,17 +17,16 @@
 import re
 import time
 
+from requests.exceptions import HTTPError
+from six import string_types
+
+import sickgear
 from .generic import GenericClient
 from .. import logger
 from ..helpers import get_url, try_int
 from ..sgdatetime import SGDatetime
 from json_helper import json_loads
-import sickgear
-
-from requests.exceptions import HTTPError
-
 from _23 import unquote_plus
-from six import string_types
 
 # noinspection PyUnreachableCode
 if False:

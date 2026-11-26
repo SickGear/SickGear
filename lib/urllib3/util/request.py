@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import io
-import sys
 import typing
 from base64 import b64encode
 from enum import Enum
 
 from ..exceptions import UnrewindableBodyError
-from .util import to_bytes
+from .util import to_bytes, iscoroutinefunction
+
+try:
+    from jh2._hazmat import _BytesQueueBuffer as BytesQueueBuffer  # type: ignore[import-untyped]
+except ImportError:
+    from .response import BytesQueueBuffer
 
 if typing.TYPE_CHECKING:
-    from typing import Final
+    from typing_extensions import Final
+
+    from .._typing import _TYPE_BODY_POSITION
 
 # Pass as a value within ``headers`` to skip
 # emitting some HTTP headers that are added automatically.
@@ -18,8 +24,26 @@ if typing.TYPE_CHECKING:
 # ``Host``, and ``User-Agent``.
 SKIP_HEADER = "@@@SKIP_HEADER@@@"
 SKIPPABLE_HEADERS = frozenset(["accept-encoding", "host", "user-agent"])
+NOT_FORWARDABLE_HEADERS = frozenset(
+    [
+        "content-encoding",
+        "content-language",
+        "content-location",
+        "content-type",
+        "content-length",
+        "digest",
+        "last-modified",
+        "transfer-encoding",
+    ]
+)
 
-ACCEPT_ENCODING = "gzip,deflate"
+_ACCEPT_ENCODING: list[str] = []
+try:
+    import zlib as _unused_module_zlib  # noqa: F401
+except ImportError:
+    pass
+else:
+    _ACCEPT_ENCODING += ["gzip", "deflate"]
 try:
     try:
         import brotlicffi as _unused_module_brotli  # type: ignore[import-not-found] # noqa: F401
@@ -28,17 +52,15 @@ try:
 except ImportError:
     pass
 else:
-    ACCEPT_ENCODING += ",br"
-
+    _ACCEPT_ENCODING += ["br"]
 try:
-    if sys.version_info >= (3, 14):
-        from compression import zstd as _unused_module_zstd  # noqa: F401
-    else:
-        from backports import zstd as _unused_module_zstd  # noqa: F401
+    import zstandard as _unused_module_zstd  # noqa: F401
 except ImportError:
     pass
 else:
-    ACCEPT_ENCODING += ",zstd"
+    _ACCEPT_ENCODING += ["zstd"]
+
+ACCEPT_ENCODING = ",".join(_ACCEPT_ENCODING) or "identity"
 
 
 class _TYPE_FAILEDTELL(Enum):
@@ -47,7 +69,6 @@ class _TYPE_FAILEDTELL(Enum):
 
 _FAILEDTELL: Final[_TYPE_FAILEDTELL] = _TYPE_FAILEDTELL.token
 
-_TYPE_BODY_POSITION = typing.Union[int, _TYPE_FAILEDTELL]
 
 # When sending a request with these methods we aren't expecting
 # a body so don't need to set an explicit 'Content-Length: 0'
@@ -64,6 +85,9 @@ def make_headers(
     basic_auth: str | None = None,
     proxy_basic_auth: str | None = None,
     disable_cache: bool | None = None,
+    *,
+    basic_auth_encoding: str = "latin-1",
+    proxy_basic_auth_encoding: str = "latin-1",
 ) -> dict[str, str]:
     """
     Shortcuts for generating request headers.
@@ -73,11 +97,10 @@ def make_headers(
 
     :param accept_encoding:
         Can be a boolean, list, or string.
-        ``True`` translates to 'gzip,deflate'.  If the dependencies for
-        Brotli (either the ``brotli`` or ``brotlicffi`` package) and/or
-        Zstandard (the ``backports.zstd`` package for Python before 3.14)
-        algorithms are installed, then their encodings are
-        included in the string ('br' and 'zstd', respectively).
+        ``True`` advertises every content encoding supported by the runtime.
+        This normally includes 'gzip,deflate', and may include 'br' and
+        'zstd' when their respective dependencies are installed. If none are
+        available, 'identity' is used.
         List will get joined by comma.
         String will be used as provided.
 
@@ -87,11 +110,34 @@ def make_headers(
 
     :param basic_auth:
         Colon-separated username:password string for 'authorization: basic ...'
-        auth header.
+        auth header. Basic authentication transmits Base64-encoded bytes, not
+        Unicode text, so the string is encoded with ``basic_auth_encoding``
+        before Base64 encoding.
+
+        Must contain decoded credentials (not percent-encoded).
+        For URLs parsed with :func:`parse_url`, use :attr:`Url.auth_decoded_joined`
+        to get the properly formatted string.
+
+    :param basic_auth_encoding:
+        Text encoding used to encode ``basic_auth`` before Base64 encoding.
+        Defaults to "latin-1" for backward compatibility. Use "utf-8" only
+        when the peer expects UTF-8 Basic authentication credentials.
 
     :param proxy_basic_auth:
         Colon-separated username:password string for 'proxy-authorization: basic ...'
-        auth header.
+        auth header. Basic authentication transmits Base64-encoded bytes, not
+        Unicode text, so the string is encoded with ``proxy_basic_auth_encoding``
+        before Base64 encoding.
+
+        Must contain decoded credentials (not percent-encoded).
+        For URLs parsed with :func:`parse_url`, use :attr:`Url.auth_decoded_joined`
+        to get the properly formatted string.
+
+    :param proxy_basic_auth_encoding:
+        Text encoding used to encode ``proxy_basic_auth`` before Base64
+        encoding. Defaults to "latin-1" for backward compatibility. Use
+        "utf-8" only when the proxy expects UTF-8 Basic authentication
+        credentials.
 
     :param disable_cache:
         If ``True``, adds 'cache-control: no-cache' header.
@@ -125,18 +171,22 @@ def make_headers(
 
     if basic_auth:
         headers["authorization"] = (
-            f"Basic {b64encode(basic_auth.encode('latin-1')).decode()}"
+            f"Basic {b64encode(basic_auth.encode(basic_auth_encoding)).decode()}"
         )
 
     if proxy_basic_auth:
         headers["proxy-authorization"] = (
-            f"Basic {b64encode(proxy_basic_auth.encode('latin-1')).decode()}"
+            f"Basic {b64encode(proxy_basic_auth.encode(proxy_basic_auth_encoding)).decode()}"
         )
 
     if disable_cache:
         headers["cache-control"] = "no-cache"
 
     return headers
+
+
+def is_async_file(body: typing.Any) -> bool:
+    return iscoroutinefunction(getattr(body, "tell", lambda: None))
 
 
 def set_file_position(
@@ -151,6 +201,25 @@ def set_file_position(
     elif getattr(body, "tell", None) is not None:
         try:
             pos = body.tell()
+        except OSError:
+            # This differentiates from None, allowing us to catch
+            # a failed `tell()` later when trying to rewind the body.
+            pos = _FAILEDTELL
+
+    return pos
+
+
+async def aset_file_position(
+    body: typing.Any, pos: _TYPE_BODY_POSITION | None
+) -> _TYPE_BODY_POSITION | None:
+    """
+    Asynchronous variant for set_file_position when using anyio.AsyncFile for example.
+    """
+    if pos is not None:
+        await arewind_body(body, pos)
+    elif getattr(body, "tell", None) is not None:
+        try:
+            pos = await body.tell()
         except OSError:
             # This differentiates from None, allowing us to catch
             # a failed `tell()` later when trying to rewind the body.
@@ -183,6 +252,33 @@ def rewind_body(body: typing.IO[typing.AnyStr], body_pos: _TYPE_BODY_POSITION) -
             "Unable to record file position for rewinding "
             "request body during a redirect/retry."
         )
+    elif body_seek is None:
+        raise UnrewindableBodyError("body does not implement seek.")
+    else:
+        raise ValueError(
+            f"body_pos must be of type integer, instead it was {type(body_pos)}."
+        )
+
+
+async def arewind_body(body: typing.Any, body_pos: _TYPE_BODY_POSITION) -> None:
+    """
+    Async counterpart of rewind_body.
+    """
+    body_seek = getattr(body, "seek", None)
+    if body_seek is not None and isinstance(body_pos, int):
+        try:
+            await body_seek(body_pos)
+        except OSError as e:
+            raise UnrewindableBodyError(
+                "An error occurred when rewinding request body for redirect/retry."
+            ) from e
+    elif body_pos is _FAILEDTELL:
+        raise UnrewindableBodyError(
+            "Unable to record file position for rewinding "
+            "request body during a redirect/retry."
+        )
+    elif body_seek is None:
+        raise UnrewindableBodyError("body does not implement seek.")
     else:
         raise ValueError(
             f"body_pos must be of type integer, instead it was {type(body_pos)}."
@@ -190,12 +286,16 @@ def rewind_body(body: typing.IO[typing.AnyStr], body_pos: _TYPE_BODY_POSITION) -
 
 
 class ChunksAndContentLength(typing.NamedTuple):
-    chunks: typing.Iterable[bytes] | None
+    chunks: typing.Iterable[bytes] | typing.AsyncIterable[bytes] | None
     content_length: int | None
+    is_string: bool
 
 
 def body_to_chunks(
-    body: typing.Any | None, method: str, blocksize: int
+    body: typing.Any | None,
+    method: str,
+    blocksize: int,
+    force: bool = False,
 ) -> ChunksAndContentLength:
     """Takes the HTTP request method, body, and blocksize and
     transforms them into an iterable of chunks to pass to
@@ -206,7 +306,7 @@ def body_to_chunks(
     for framing instead.
     """
 
-    chunks: typing.Iterable[bytes] | None
+    chunks: typing.Iterable[bytes] | typing.AsyncIterable[bytes] | None
     content_length: int | None
 
     # No body, we need to make a recommendation on 'Content-Length'
@@ -219,27 +319,100 @@ def body_to_chunks(
         else:
             content_length = None
 
+        return ChunksAndContentLength(
+            chunks=chunks,
+            content_length=content_length,
+            is_string=False,
+        )
+
+    def chunk_readable() -> typing.Iterable[bytes]:
+        nonlocal body, blocksize
+        encode = isinstance(body, io.TextIOBase)
+        while True:
+            datablock = body.read(blocksize)  # type: ignore[union-attr]
+            if not datablock:
+                break
+            if encode:
+                datablock = datablock.encode("utf-8")
+            yield datablock
+
+    async def chunk_areadable() -> typing.AsyncIterable[bytes]:
+        nonlocal body, blocksize
+        assert body is not None and hasattr(body, "__aiter__")
+        encode: bool | None = None
+
+        if hasattr(body, "read"):
+            while True:
+                block = await body.read(blocksize)
+
+                if not block:
+                    break
+
+                if encode is None:
+                    encode = isinstance(block, str)
+
+                yield block.encode("utf-8") if encode else block
+        else:
+            # branch for:
+            # async iterable protocol don't support read by blocksize
+            # so we must buffer it. the best we have
+            # at hand is the efficient BytesQueueBuffer.
+            queue = BytesQueueBuffer()
+
+            async for block in body:
+                if encode is None:
+                    encode = isinstance(block, str)
+                if block:
+                    queue.put(block.encode("utf-8") if encode else block)
+                    yield queue.get(blocksize)
+
+            while queue:
+                yield queue.get(blocksize)
+
+    def chunk_iterable(
+        iterable: typing.Iterable[bytes | bytearray | str | memoryview],
+    ) -> typing.Iterable[bytes]:
+        queue = BytesQueueBuffer()
+
+        for block in iterable:
+            if isinstance(block, str):
+                block = block.encode("utf-8")
+            elif isinstance(block, bytearray):
+                block = memoryview(block)
+            if block:
+                queue.put(block)
+                yield queue.get(blocksize)
+
+        while queue:
+            yield queue.get(blocksize)
+
+    def chunk_buffer(view: memoryview) -> typing.Iterable[bytes]:
+        try:
+            byte_view = view.cast("B")
+        except TypeError:
+            byte_view = memoryview(view.tobytes())
+
+        for offset in range(0, byte_view.nbytes, blocksize):
+            yield bytes(byte_view[offset : offset + blocksize])
+
     # Bytes or strings become bytes
-    elif isinstance(body, (str, bytes)):
-        chunks = (to_bytes(body),)
-        content_length = len(chunks[0])
+    if isinstance(body, (str, bytes)):
+        converted = to_bytes(body)
+        content_length = len(converted)
+
+        if force and len(converted) >= blocksize:
+            body = io.BytesIO(converted)
+            chunks = chunk_readable()
+        else:
+            chunks = (converted,)
 
     # File-like object, TODO: use seek() and tell() for length?
-    elif hasattr(body, "read"):
-
-        def chunk_readable() -> typing.Iterable[bytes]:
-            encode = isinstance(body, io.TextIOBase)
-            while True:
-                datablock = body.read(blocksize)
-                if not datablock:
-                    break
-                if encode:
-                    datablock = datablock.encode("utf-8")
-                yield datablock
-
+    elif hasattr(body, "read") and not hasattr(body, "__aiter__"):
         chunks = chunk_readable()
         content_length = None
-
+    elif hasattr(body, "__aiter__"):
+        chunks = chunk_areadable()
+        content_length = None
     # Otherwise we need to start checking via duck-typing.
     else:
         try:
@@ -248,7 +421,8 @@ def body_to_chunks(
         except TypeError:
             try:
                 # Check if the body is an iterable
-                chunks = iter(body)
+                iterable = iter(body)
+                chunks = chunk_iterable(iterable) if force else iterable
                 content_length = None
             except TypeError:
                 raise TypeError(
@@ -257,7 +431,18 @@ def body_to_chunks(
                 ) from None
         else:
             # Since it implements the buffer API can be passed directly to socket.sendall()
-            chunks = (body,)
+            chunks = chunk_buffer(mv) if force and mv.nbytes > blocksize else (body,)
             content_length = mv.nbytes
 
-    return ChunksAndContentLength(chunks=chunks, content_length=content_length)
+    return ChunksAndContentLength(
+        chunks=chunks,
+        content_length=content_length,
+        is_string=isinstance(
+            body,
+            (
+                str,
+                io.StringIO,
+                io.TextIOWrapper,
+            ),
+        ),
+    )

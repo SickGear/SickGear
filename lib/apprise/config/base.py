@@ -37,13 +37,32 @@ from ..logger import logging
 from ..manager_config import ConfigurationManager
 from ..manager_plugins import NotificationManager
 from ..tag import AppriseTag
-from ..url import URLBase
+from ..url import URL_TOKEN_ALIASES, URLBase
 from ..utils.cwe312 import cwe312_url
-from ..utils.parse import GET_SCHEMA_RE, parse_bool, parse_list, parse_urls
+from ..utils.parse import (
+    GET_SCHEMA_RE,
+    QSD_FULL_MODE_KEYS,
+    parse_bool,
+    parse_list,
+    parse_urls,
+)
 from ..utils.time import zoneinfo
 
 # Test whether token is valid or not
 VALID_TOKEN = re.compile(r"(?P<token>[a-z0-9][a-z0-9_]+)", re.I)
+
+# Keys excluded from the YAML-token re-apply that happens after
+# post_process_parse_url_results() inside config_parse_yaml().
+#
+# 'tag'/'tags': assembled as a merged set (YAML tags + global_tags) by the
+# while loop before post_process runs; re-applying the raw YAML string would
+# replace the set with a string.  YAML accepts both spellings ('tag:' and
+# 'tags:'); both are excluded so neither overwrites the assembled set.
+#
+# 'asset': written programmatically from the Python asset parameter at
+# that point in the while loop; VALID_TOKEN does not strip it, so a
+# user-written YAML 'asset:' key would otherwise overwrite the object.
+_YAML_REAPPLY_SKIP = frozenset(("tag", "tags", "asset"))
 
 # Grant access to our Notification Manager Singleton
 N_MGR = NotificationManager()
@@ -326,7 +345,7 @@ class ConfigBase(URLBase):
                 )
 
         if self._cached_servers:
-            self.logger.info(
+            self.logger.debug(
                 f"Loaded {len(self._cached_servers)} entries from"
                 f" {self.url(privacy=asset.secure_logging)}"
             )
@@ -880,6 +899,26 @@ class ConfigBase(URLBase):
         """
         # Create a copy of our dictionary
         tokens = tokens.copy()
+
+        # Apply URL_TOKEN_ALIASES so shorthand keys (e.g. 'pass') are
+        # normalized to the canonical kwarg name ('password') before any
+        # plugin-specific template_args mapping runs.  YAML tokens bypass
+        # parse_url() and its initial post_process_parse_url_results() call
+        # inside url_to_dict(), so the same alias table must be applied here.
+        for alias, canonical in URL_TOKEN_ALIASES.items():
+            if alias in tokens and (
+                canonical not in tokens or tokens[canonical] is None
+            ):
+                # Canonical absent or explicitly null -- promote alias.
+                # A null canonical (e.g. password: with no value) is treated
+                # as "not provided", consistent with how
+                # post_process_parse_url_results() handles None credentials.
+                tokens[canonical] = tokens.pop(alias)
+
+            elif alias in tokens:
+                # canonical key already set to a non-None value -- discard
+                # the alias so the explicit canonical is not overwritten
+                del tokens[alias]
 
         for kw, meta in N_MGR[schema].template_kwargs.items():
             # Determine our prefix:

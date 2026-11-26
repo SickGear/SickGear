@@ -1,3 +1,47 @@
+/**
+ * Open a confirmation dialog. This is the one place that sets what all dialogs share.
+ * Buttons are a green Yes and a red No unless given, Return confirms unless enterConfirm is false, Esc closes, and the
+ * title bar moves the dialog.
+ * @param options of jquery.confirm
+ * @returns the dialog as a jQuery object, or undefined if a dialog is open
+ */
+function confirmDialog(options){
+	// the control that opened the dialog has the focus again when the dialog closes
+	const opener = document.activeElement;
+	$.confirm($.extend({
+		cancel: function(){},
+		confirmButton: 'Yes', confirmButtonClass: 'green',
+		cancelButton: 'No', cancelButtonClass: 'red'
+	}, options));
+
+	const modal$ = $('.confirmation-modal');
+	// jquery.confirm opens nothing while a dialog is open, and that dialog is set up
+	if (modal$.children().hasClass('ui-draggable'))
+		return;
+
+	// Return confirms, unless a focused button, link, or text area handles it, or the dialog sets enterConfirm false.
+	// Esc is handled by the bootstrap modal
+	modal$.on('keydown', function(e){
+		if (13 === e.which && false !== options.enterConfirm && !$(e.target).is('button, a, textarea')) {
+			e.preventDefault();
+			modal$.find('.confirm').click();
+		}
+	});
+	modal$.children().draggable({handle: '.modal-header'}).find('.modal-header').css('cursor', 'move');
+
+	// a screen reader names the dialog by its title, the close button is named, and the page behind is out of reach
+	modal$.attr({'aria-modal': 'true', 'aria-labelledby': 'confirmation-modal-title'})
+		.find('.modal-title').attr('id', 'confirmation-modal-title')
+		.end().find('.modal-header .close').removeAttr('aria-hidden').attr('aria-label', 'Close');
+	modal$.one('hidden.bs.modal', function(){
+		if (opener && document.contains(opener) && opener !== document.body)
+			// the opener was on screen when used, so the page stays where it is
+			opener.focus({preventScroll: true});
+	});
+
+	return modal$;
+}
+
 function bindConfirm(selector, title, text, funcParams){
 
 	selector.on('click', function(e){
@@ -5,17 +49,14 @@ function bindConfirm(selector, title, text, funcParams){
 
 		const href = $(this).attr('href');
 
-		$.confirm({
+		confirmDialog({
 			title		: title,
 			text		: text,
 			dialogClass	: 'modal-dialog' +
 				(/Logout/.test(title) ? ' gold' :
 					/Restart/.test(title) ? ' green' :
 						/(Shutdown|Remove\sShow)/.test(title) ? ' red' : ''),
-			confirm: function(){location.href = href + (/undefined/i.test(funcParams) ? '' : funcParams())},
-			cancel: function(){},
-			confirmButton: 'Yes', confirmButtonClass: 'green',
-			cancelButton: 'No', cancelButtonClass: 'red'
+			confirm: function(){location.href = href + (/undefined/i.test(funcParams) ? '' : funcParams())}
 		});
 	});
 }
@@ -106,7 +147,7 @@ $(document).ready(function () {
 					});
 			};
 
-		$.confirm({
+		confirmDialog({
 			title: (`${action} ${0 < mFiles ? 'media' : 'records'}` +
 				`<span style="float:right;font-size:12px">(<a class="highlight-text contrast-text" href="/config/general/">"Send to trash" options</a>)</span>`),
 			text: (0 < mFiles
@@ -119,10 +160,8 @@ $(document).ready(function () {
 			+ `Remove <span class="footerhighlight">${delArr.length}</span> history record${(1 === delArr.length ? '' : 's')}</span>`
 			+ `<span class="red-text" style="display:block;margin-top:20px">Are you sure ?</span>`,
 			dialogClass: 'modal-dialog red',
-			confirmButton: 'Yes',
-			confirmButtonClass: 'green', confirm: onConfirm,
-			cancelButton: 'No' + (0 < mFiles ? ', abort ' + ($.SickGear.history.isTrashit ? 'trash' : 'permanent delete') : ''),
-			cancelButtonClass: 'red', cancel: function(){}
+			confirm: onConfirm,
+			cancelButton: 'No' + (0 < mFiles ? ', abort ' + ($.SickGear.history.isTrashit ? 'trash' : 'permanent delete') : '')
 		});
 	});
 

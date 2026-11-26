@@ -22,6 +22,7 @@ import re
 import time
 import threading
 
+from six import string_types, text_type
 try:
     import regex
     # noinspection PyUnresolvedReferences
@@ -29,16 +30,14 @@ try:
 except ImportError:
     regex = None
 
+import sickgear
 from . import regexes
 from exceptions_helper import ex
-import sickgear
 from .. import common, db, helpers, logger, scene_exceptions, scene_numbering
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from ..classes import OrderedDefaultdict
-
 from .._legacy_classes import LegacyParseResult
 from _23 import decode_str, list_range
-from six import string_types, text_type
 
 # noinspection PyUnreachableCode
 if False:
@@ -429,7 +428,18 @@ class NameParser(object):
                         new_episode_numbers.extend(e)
                         new_season_numbers.append(s)
 
-                elif best_result.season_number and len(best_result.episode_numbers) and not self.testing:
+                    if not new_episode_numbers:
+                        # no episode has that absolute number, e.g. it is the year in `Show.2016.s01e02.Name.SD.TV`,
+                        # so use the best match that has a season and an episode number
+                        alt_result = max([_m for _m in matches if _m.season_number and _m.episode_numbers],
+                                         key=lambda x: x.score, default=None)
+                        if alt_result:
+                            alt_result.show_obj, alt_result.quality = show_obj, best_result.quality
+                            alt_result.ab_episode_numbers = []
+                            best_result = alt_result
+                            new_season_numbers, new_absolute_numbers = [], []
+
+                if not new_episode_numbers and best_result.season_number and len(best_result.episode_numbers)                         and not self.testing:
                     for epNo in best_result.episode_numbers:
                         s = best_result.season_number
                         e = epNo
@@ -563,13 +573,14 @@ class NameParser(object):
 
         return number
 
-    def parse(self, name, cache_result=True, release_group=None):
-        # type: (AnyStr, bool, AnyStr) -> ParseResult
+    def parse(self, name, cache_result=True, release_group=None, log_result=True):
+        # type: (AnyStr, bool, AnyStr, bool) -> ParseResult
         """
 
         :param name:
         :param cache_result:
         :param release_group: Name to use if anime and no group, otherwise pick_best_result will fail
+        :param log_result: False for no debug line of the result, e.g. for each media file of a show refresh
         :return:
         """
         name = self._unicodify(name)
@@ -654,7 +665,8 @@ class NameParser(object):
                 and any('anime' in wr for wr in final_result.which_regex) == bool(final_result.show_obj.is_anime):
             name_parser_cache.add(name, final_result)
 
-        logger.debug(f'Parsed {name} into {final_result}')
+        if log_result:
+            logger.debug(f'Parsed {name} into {final_result}')
         return final_result
 
 

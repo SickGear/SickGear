@@ -15,10 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-# noinspection PyProtectedMember
-from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
-from mimetypes import MimeTypes
-from urllib.parse import urljoin, quote as url_quote
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles, rarfile, with cryptography, is only for rar files
+__lazy_modules__ = ['subliminal', 'rarfile.rarfile']
 
 import base64
 import copy
@@ -34,14 +33,11 @@ import threading
 import time
 import traceback
 import zipfile
-
-from exceptions_helper import ex, MultipleShowObjectsException
-import exceptions_helper
-from json_helper import json_dumps, json_loads, json_dump, json_load, is_orjson, JSONEncoder
-import sg_helpers
-from sg_helpers import copy_file, remove_file, scantree, is_virtualenv, strip_html_tags
-
-from sg_futures import SgThreadPoolExecutor
+# noinspection PyProtectedMember
+from datetime import date as dt_date, datetime, time as dt_time, timedelta, timezone
+from functools import cmp_to_key
+from mimetypes import MimeTypes
+from urllib.parse import urljoin, quote as url_quote
 try:
     from multiprocessing import cpu_count
 except ImportError:
@@ -49,13 +45,44 @@ except ImportError:
     def cpu_count():
         return None
 
+import subliminal
+import dateutil.parser
+import rarfile.rarfile as rarfile
+# noinspection PyPackageRequirements
+from Cheetah.Template import Template
+from unidecode import unidecode
+from tornado import gen, iostream
+from tornado.escape import utf8
+from tornado.web import RequestHandler, StaticFileHandler, authenticated
+from tornado.concurrent import run_on_executor
+from tornado.ioloop import IOLoop
+# import requests
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+from niquests.utils import create_resolver
+from cfscrape import CloudflareScraper
+from dateutil import tz
+from dateutil.relativedelta import relativedelta
+from six import binary_type, integer_types, moves, string_types
+try:
+    from thefuzz import fuzz
+except ImportError as e:
+    from fuzzywuzzy import fuzz
+
+import exceptions_helper
+import sg_helpers
 import sickgear
+from exceptions_helper import ex, MultipleShowObjectsException
+from json_helper import json_dumps, json_loads, json_dump, json_load, is_orjson, JSONEncoder
+from sg_helpers import copy_file, remove_file, scantree, is_virtualenv, strip_html_tags
+from sg_futures import SgThreadPoolExecutor
 from . import classes, clients, config, db, helpers, history, image_cache, logger, name_cache, naming, \
     network_timezones, notifiers, nzbget, processTV, sab, scene_exceptions, search_queue, subtitles, ui
 from .anime import AniGroupList, pull_anidb_groups, short_group_names
 from .browser import folders_at_path
 from .common import ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, UNAIRED, UNKNOWN, WANTED, \
-    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, qualityPresetStrings, statusStrings
+    SD, HD720p, HD1080p, UHD2160p, Overview, Quality, VideoCodec, qualityPresetStrings, statusStrings, \
+    DOWNLOAD_CLIENTS
 from .helpers import (get_media_stats, has_image_ext, is_sickgear_dir, is_sickgear_images_cache_dir, real_path,
                       remove_article, remove_file_perm, starify)
 from .indexermapper import MapStatus, map_indexers_to_show, save_mapping
@@ -67,51 +94,21 @@ from .scene_numbering import get_scene_absolute_numbering_for_show, get_scene_nu
     get_xem_absolute_numbering_for_show, get_xem_numbering_for_show, set_scene_numbering_helper
 from .scheduler import Scheduler
 from .search_backlog import FORCED_BACKLOG
-from .sgdatetime import SGDatetime
+from .sgdatetime import SGDatetime, Stopwatch
 from .show_name_helpers import abbr_showname
-
 from .show_updater import clean_ignore_require_words
 from .tv import TVidProdid, Person as TVPerson, Character as TVCharacter, TVSWITCH_NORMAL, tvswitch_names, \
     TVSWITCH_EP_DELETED, tvswitch_ep_names, usable_id
-
 from bs4_parser import BS4Parser
-# noinspection PyPackageRequirements
-from Cheetah.Template import Template
-from unidecode import unidecode
-import dateutil.parser
-
-from tornado import gen, iostream
-from tornado.escape import utf8
-from tornado.web import RequestHandler, StaticFileHandler, authenticated
-from tornado.concurrent import run_on_executor
-from tornado.ioloop import IOLoop
-
-# from lib import requests
-from lib.urllib3.util.retry import Retry
-from lib.requests.adapters import HTTPAdapter
-from lib.iso639 import Lang
-
-from lib import subliminal
-from lib.cfscrape import CloudflareScraper
-from lib.dateutil import tz, zoneinfo
-from lib.dateutil.relativedelta import relativedelta
-try:
-    from lib.thefuzz import fuzz
-except ImportError as e:
-    from lib.fuzzywuzzy import fuzz
-from lib.api_trakt.exceptions import TraktException, TraktAuthException
-from lib.api_imdb.imdb_exceptions import IMDbException
-from lib.tvinfo_base import TVInfoEpisode, RoleTypes
-from lib.tvinfo_base.base import tv_src_names
-from lib.tvinfo_base.exceptions import *
-
-import lib.rarfile.rarfile as rarfile
-
+from api_trakt.exceptions import TraktException, TraktAuthException
+from api_imdb.imdb_exceptions import IMDbException
+from tvinfo_base import TVInfoEpisode, RoleTypes
+from tvinfo_base.base import ShowContainer, tv_src_names
+from tvinfo_base.exceptions import *
 from _23 import decode_bytes, decode_str, getargspec, \
     map_consume, map_none, quote_plus, unquote_plus, urlparse
-from lib.sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country
-from six import binary_type, integer_types, moves, string_types
-from lib.tvinfo_base import TVInfoShow
+from sg_lang_codes import alpha2_to_alpha3, alpha3_to_alpha2, lang_to_country, language_to_alpha2
+from tvinfo_base import TVInfoShow
 
 if is_orjson:
     def orjson_default(obj):
@@ -144,7 +141,7 @@ if False:
     from typing import Any, AnyStr, Callable, Dict, List, Optional, Set, Tuple, Union
     from sickgear.providers.generic import TorrentProvider
     # prevent pyc TVInfoBase resolution by typing the derived used class to TVInfoAPI instantiation
-    from lib.tvinfo_base import TVInfoBase, TVInfoCharacter, TVInfoPerson
+    from tvinfo_base import TVInfoBase, TVInfoCharacter, TVInfoPerson
     # from api_imdb.imdb_api import IMDbIndexer
     from api_tmdb.tmdb_api import TmdbIndexer
     from api_trakt.indexerapiinterface import TraktIndexer
@@ -172,6 +169,16 @@ def get_class_methods(class_to_check, required_baseclass):
                     and not is_private_call(f)) and callable(f):
                 m_l.add(m)
     return m_l
+
+
+def release_template(template):
+    """ break the reference cycles of a template and of the templates that it includes, e.g. inc_top.tmpl,
+    which share its search list and its filter """
+    for cur_t in getattr(template, '_CHEETAH__cheetahIncludes', {}).values():
+        release_template(cur_t)
+    # by the class, a page can have a page value of the same name, e.g. `shutdown` of the restart page
+    if isinstance(template, Template):
+        Template.shutdown(template)
 
 
 # noinspection PyAbstractClass
@@ -231,6 +238,17 @@ class PageTemplate(Template):
             self.tvinfo_switch_running = sickgear.show_queue_scheduler.action.is_switch_running()
 
         super(PageTemplate, self).__init__(*args, **kwargs)
+
+        # a template object is in its own search list and filter, so only a full garbage collection frees it
+        # with all its page data, e.g. the lines of the log page; each page is made once, so break the cycle then
+        respond = self.respond
+
+        def respond_and_release():
+            try:
+                return respond()
+            finally:
+                release_template(self)
+        self.respond = respond_and_release
 
     def compile(self, *args, **kwargs):
         if not os.path.exists(os.path.join(sickgear.CACHE_DIR, 'cheetah')):
@@ -585,7 +603,7 @@ class CalendarHandler(BaseHandler):
         # Limit dates
         past_date = (dt_date.today() + timedelta(weeks=-52)).toordinal()
         future_date = (dt_date.today() + timedelta(weeks=52)).toordinal()
-        utc = tz.gettz('GMT', zoneinfo_priority=True)
+        utc = tz.gettz('GMT')
 
         # Get all the shows that are not paused and are currently on air
         with db.DBConnection() as sg_db:
@@ -1078,9 +1096,6 @@ class LogfileHandler(BaseHandler):
             self.set_header('Content-Description', 'Logfile Download')
             self.set_header('Content-Disposition', 'attachment; filename=sickgear.log')
             # self.set_header('Content-Length', os.path.getsize(logfile_name))
-            auths = sickgear.GenericProvider.dedupe_auths(True)
-            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
-            replacements = dict([(_a, starify(_a)) for _a in auths])
             data_to_write = ''
             with io.open(logfile_name, 'rt', encoding='utf8') as logfile:
                 while 1:
@@ -1092,11 +1107,7 @@ class LogfileHandler(BaseHandler):
                     for l_n, cur_line in enumerate(data_lines, 1):
                         # noinspection HttpUrlsUsage
                         if 'https://' in cur_line or 'http://' in cur_line:
-                            for cur_change in rxc_auths.finditer(cur_line):
-                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
-                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
-                                                       cur_line[cur_change.end():])
-                            cur_line = helpers.starify_url_keys(cur_line)
+                            cur_line = logger.RedactingFilter.mask_text(cur_line)
                         data_to_write += cur_line
                         if 10000 < len(data_to_write) or l_n == line_count:
                             try:
@@ -1457,20 +1468,8 @@ class MainHandler(WebHandler):
         except (BaseException, Exception):
             t.version = ''
 
-        current_file = zoneinfo.ZONEFILENAME
-        t.tz_fallback = False
-        t.tz_version = None
-        try:
-            if None is not current_file:
-                current_file = os.path.basename(current_file)
-                zonefile = real_path(os.path.join(sickgear.ZONEINFO_DIR, current_file))
-                if not os.path.isfile(zonefile):
-                    t.tz_fallback = True
-                    zonefile = os.path.join(os.path.dirname(zoneinfo.__file__), current_file)
-                if os.path.isfile(zonefile):
-                    t.tz_version = zoneinfo.ZoneInfoFile(zoneinfo.getzoneinfofile_stream()).metadata['tzversion']
-        except (BaseException, Exception):
-            pass
+        zonefile, t.tz_fallback = network_timezones.zonefile()
+        t.tz_version = network_timezones.zoneinfo_version(zonefile)
 
         t.backup_db_path = sickgear.BACKUP_DB_MAX_COUNT and \
             (sickgear.BACKUP_DB_PATH or os.path.join(sickgear.DATA_DIR, 'backup')) or 'Disabled'
@@ -2304,6 +2303,26 @@ class Home(MainHandler):
             self.redirect('/home/')
 
     # noinspection PyUnusedLocal
+    @private_call
+    @staticmethod
+    def snatched_names(sg_db, show_obj, season=None):
+        # type: (db.DBConnection, TVShow, Optional[int]) -> Dict[Tuple[int, int], AnyStr]
+        """
+        return the release name of the newest snatch of each episode of a show, or of one of its seasons
+
+        :param sg_db: database connection
+        :param show_obj: show object
+        :param season: season number, or None for all seasons
+        """
+        return {(cur_result['season'], cur_result['episode']): cur_result['resource'] for cur_result in sg_db.select(
+            'SELECT season, episode, resource'
+            ' FROM history'
+            ' WHERE indexer = ? AND showid = ?'
+            ' AND action IN (%s)' % ','.join(['%s' % x for x in Quality.SNATCHED_ANY])
+            + ('', ' AND season = ?')[None is not season]
+            + ' ORDER BY date',
+            [show_obj.tvid, show_obj.prodid] + ([], [season])[None is not season])}
+
     def season_render(self, tvid_prodid=None, season=None, **kwargs):
 
         response = {'success': False}
@@ -2331,6 +2350,7 @@ class Home(MainHandler):
                                       ' ORDER BY episode DESC',
                                       [show_obj.tvid, show_obj.prodid,
                                        season])
+            t.snatched_names = self.snatched_names(sg_db, show_obj, season)
         t.episodes = sql_result
 
         ep_cats = {}
@@ -2547,6 +2567,7 @@ class Home(MainHandler):
                 if status_overview:
                     ep_cats['%sx%s' % (row['season'], row['episode'])] = status_overview
             t.ep_cats = ep_cats
+            t.snatched_names = self.snatched_names(sg_db, show_obj)
 
             for row in sg_db.select('SELECT season, count(*) AS cnt, status'
                                     ' FROM tv_episodes'
@@ -2776,19 +2797,33 @@ class Home(MainHandler):
                 TVidProdid(tvid_prodid).list + [int(season), int(episode)])
         return 'Episode not found.' if not sql_result else (sql_result[0]['description'] or '')[:250:]
 
-    @staticmethod
-    def media_stats(tvid_prodid=None):
+    # media stats of all shows read from their folders, kept so that a page of all shows does not read every folder
+    # shortcut: a file added or removed in a show folder shows at the next read, after 30 minutes or by the button
+    media_stats_cache = {'read': 0, 'shows': {}, 'took': ''}  # type: Dict[AnyStr, Any]
 
+    @staticmethod
+    def media_stats(tvid_prodid=None, refresh=None):
+        """
+        :param tvid_prodid: one show, or all shows when None
+        :param refresh: read the folders of all shows even when the kept stats are recent
+        :return: json of stats by show, and for all shows an item "_read" that says when and how long the read took
+        """
+
+        cache = Home.media_stats_cache
         if None is tvid_prodid:
+            age = time.time() - cache['read']
+            if not helpers.try_int(refresh) and 1800 > age and cache['shows']:
+                return json_dumps(dict(cache['shows'], _read=dict(
+                    took=cache['took'], ago=Stopwatch.duration_text(age), shows=len(cache['shows']))))
             shows = sickgear.showList
         else:
             shows = [helpers.find_show_by_id(tvid_prodid)]
 
+        watch = Stopwatch()
         response = {}
         for cur_show_obj in shows:
             if cur_show_obj and cur_show_obj.path:
-                loc_size = helpers.get_size(cur_show_obj.path)
-                num_files, smallest, largest, average_size = get_media_stats(cur_show_obj.path)
+                num_files, smallest, largest, average_size, loc_size = get_media_stats(cur_show_obj.path)
                 response[cur_show_obj.tvid_prodid] = {'message': 'No media files'} if not num_files else \
                     {
                         'nFiles': num_files,
@@ -2800,6 +2835,9 @@ class Home(MainHandler):
                 response[cur_show_obj.tvid_prodid].update({
                     'path': cur_show_obj.path, 'bSize': loc_size, 'hSize': helpers.human(loc_size)})
 
+        if None is tvid_prodid:
+            cache.update(read=time.time(), shows=response, took=watch.text())
+            response = dict(response, _read=dict(took=cache['took'], ago='', shows=len(response)))
         return json_dumps(response)
 
     @staticmethod
@@ -3757,6 +3795,18 @@ class Home(MainHandler):
                 ep_loc = ep_loc[len(show_loc) + 1:]
             ep_data.update(dict(fileinfo='<strong>file</strong> %s<br><strong>size</strong> %s' % (
                 ep_loc, helpers.human(ep_type.file_size))))
+        # video codec label, so that the ui can keep it when it writes the status of a finished search
+        # as display show, a status without a quality has no label, e.g. Wanted after a failed snatch
+        if isinstance(ep_type, sickgear.tv.TVEpisode) and None is not ep_type.video_codec \
+                and Quality.NONE != ep_quality:
+            v_c = VideoCodec.get_file_vc(ep_type.video_codec) or VideoCodec.get_snatch_vc(ep_type.video_codec)
+            release_name = ep_type.release_name
+            if not release_name:
+                with db.DBConnection() as sg_db:
+                    release_name = Home.snatched_names(sg_db, show_item, ep_type.season).get(
+                        (ep_type.season, ep_type.episode))
+            ep_data.update(dict(videocodec=VideoCodec.get_name(v_c, release_name),
+                                videocodec_class=VideoCodec.get_html_class(v_c)))
 
         return ep_data, (show_item.tvid, show_item.prodid, ep_type.season, ep_type.episode)
 
@@ -4121,7 +4171,7 @@ class HomeProcessMedia(Home):
 
     def process_files(self, dir_name=None, nzb_name=None, quiet=None, process_method=None, force=None,
                       force_replace=None, failed='0', process_type='auto', stream='0', dupekey=None, is_basedir='1',
-                      client=None, **kwargs):
+                      client=None, nzbid=None, puid=None, **kwargs):
 
         if 'test' in kwargs and kwargs['test'] in ['True', True, 1, '1']:
             return 'Connection success!'
@@ -4132,23 +4182,29 @@ class HomeProcessMedia(Home):
             show_id_regex = re.compile(r'^SickGear-([A-Za-z]*)(\d+)-')
             tvid = 0
             show_obj = None
-            nzbget_call = isinstance(client, string_types) and 'nzbget' == client
-            nzbget_dupekey = nzbget_call and isinstance(dupekey, string_types) and \
-                None is not show_id_regex.search(dupekey)
-            if nzbget_dupekey:
-                m = show_id_regex.match(dupekey)
-                istr = m.group(1)
-                for i in sickgear.TVInfoAPI().sources:
-                    if istr == sickgear.TVInfoAPI(i).config.get('dupekey'):
-                        tvid = i
-                        break
-                show_obj = helpers.find_show_by_id({tvid: int(m.group(2))}, no_mapped_ids=True)
+            client_id = DOWNLOAD_CLIENTS.IDS.get(client, None)
+            if (nzbget_call := DOWNLOAD_CLIENTS.NZBGET == client_id):
+                if (nzbget_dupekey := isinstance(dupekey, string_types) and None is not show_id_regex.search(dupekey)):
+                    m = show_id_regex.match(dupekey)
+                    istr = m.group(1)
+                    for i in sickgear.TVInfoAPI().sources:
+                        if istr == sickgear.TVInfoAPI(i).config.get('dupekey'):
+                            tvid = i
+                            break
+                    show_obj = helpers.find_show_by_id({tvid: int(m.group(2))}, no_mapped_ids=True)
+
+                if sickgear.NZBGET_SCRIPT_VERSION != kwargs.get('pp_version', '0'):
+                    logger.error(f'Calling SickGear-NG.py script {kwargs.get("pp_version", "0")} is not current version'
+                                 f' {sickgear.NZBGET_SCRIPT_VERSION}, please update.')
 
             skip_failure_processing = nzbget_call and not nzbget_dupekey
 
-            if nzbget_call and sickgear.NZBGET_SCRIPT_VERSION != kwargs.get('pp_version', '0'):
-                logger.error(f'Calling SickGear-NG.py script {kwargs.get("pp_version", "0")} is not current version'
-                             f' {sickgear.NZBGET_SCRIPT_VERSION}, please update.')
+            if not show_obj and client_id in DOWNLOAD_CLIENTS.TRUSTED_CLIENT_IDS and nzbid:
+                show_obj, client_puid = history.find_show_puid_by_client_uid(client_id, nzbid)
+                puid = client_puid or puid
+
+            if not show_obj and puid:
+                show_obj = history.find_show_by_puidstr(puid)
 
             if sickgear.NZBGET_SKIP_PM and nzbget_call and nzbget_dupekey and nzb_name and show_obj:
                 processTV.process_minimal(nzb_name, show_obj,
@@ -4179,7 +4235,8 @@ class HomeProcessMedia(Home):
                                                failed='0' != failed,
                                                webhandler=None if '0' == stream else self.send_message,
                                                show_obj=show_obj, is_basedir=is_basedir in ('on', '1'),
-                                               skip_failure_processing=skip_failure_processing, client=client)
+                                               skip_failure_processing=skip_failure_processing, client=client_id,
+                                               client_uid=nzbid, puid=puid)
 
                 if '0' == stream:
                     regexp = re.compile(r'(?i)<br[\s/]+>', flags=re.UNICODE)
@@ -4466,15 +4523,9 @@ class AddShows(Home):
             return alpha2_to_alpha3.get(country_code, country_code)
 
         def _lang_cc(lang_name):
-            cc = ''
-            if lang_name:
-                try:
-                    cc = Lang(lang_name).pt1 or ''
-                    if cc:
-                        cc = lang_to_country(cc.lower())
-                except(BaseException, Exception):
-                    pass
-            return cc
+            # the two letter code of a language. The page asks for the flag of this code, and the flag file handler
+            # gives the flag of the country of the language. So this must not be a country code, see _country_cc
+            return language_to_alpha2.get(lang_name, '')
 
         # noinspection PyUnboundLocalVariable
         map_consume(final_results.extend,
@@ -4998,7 +5049,7 @@ class AddShows(Home):
                 items, end_cursor, total, list_info = t.get_watchlist(kwargs['acc_id'], **kwargs)
             elif 'person' == api_method:
                 items = []
-                p_item = t.get_person_tvshow_filmography(get_ep_list=True, **kwargs)  # type: TVInfoPerson
+                p_item = t.get_person_tvshow_filmography(get_ep_list=sickgear.USE_IMDB_INFO, **kwargs)  # type: TVInfoPerson
                 if p_item:
                     p_ref = f'{TVINFO_IMDB}:{p_item.id}'
                     dup = {}  # type: Dict[int, TVInfoShow]
@@ -5051,6 +5102,7 @@ class AddShows(Home):
         oldest, newest, oldest_dt, newest_dt, dedupe = None, None, 9999999, 0, []
         use_networks = False
         all_classes = set()
+        ch_ep_dict = {}
         for cur_show_info in items:  # type: TVInfoShow
             if cur_show_info.id in dedupe or not cur_show_info.seriesname:
                 continue
@@ -5097,7 +5149,7 @@ class AddShows(Home):
                     ids=cur_show_info.ids.__dict__,
                     images=images,
                     network=network_name,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     rating=0 < (cur_show_info.rating or 0) and
                            ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
                     title=(cur_show_info.seriesname or '').strip(),
@@ -5110,7 +5162,24 @@ class AddShows(Home):
                 ))
                 if p_ref:
                     p_chars = self._make_char_person_list(cur_show_info)
+                    if p_chars:
+                        ch_ep_dict[f'{cur_show_info.id}'] = {
+                            ch.name: ch.episode_list for r_t in cur_show_info.cast or []
+                            for ch in cur_show_info.cast[r_t] if ch.name}
+
+                        # convert release_date as per user settings var "date_presets"
+                        for show_id, ep_list in ch_ep_dict[f'{cur_show_info.id}'].items():
+                            for episode in ep_list:
+                                if rd := episode.get('releaseDate'):
+                                    try:
+                                        episode['releaseDate'] = SGDatetime.sbfdate(
+                                            datetime(rd['year'], rd['month'], rd['day']))
+                                    except (BaseException, Exception):
+                                        episode['releaseDate'] = ''
+
                     filtered[-1].update(dict(
+                        ep_base_link="https://www.imdb.com/title/{ep_id}",
+                        ep_list=ch_ep_dict.get(f'{cur_show_info.id}', {}),
                         p_name=p_item.name,
                         p_ref=p_ref,
                         p_chars=p_chars,
@@ -5627,10 +5696,8 @@ class AddShows(Home):
         lang_list = {c for c in cur_show_info.spoken_languages
                      or (cur_show_info.language and [cur_show_info.language]) or []}
         if lang_list and any(len(l) > 3 for l in lang_list):
-            try:
-                lang_list = {Lang(l).pt1 for l in lang_list}
-            except (BaseException, Exception):
-                pass
+            # a name that has no two letter code stays as it is
+            lang_list = {language_to_alpha2.get(l, l) for l in lang_list}
         languages = {f'tag-language-{replace_regex.sub("_", c).upper()}' for c in lang_list}
         if not languages:
             languages = {f'tag-language-UNKNOWN'}
@@ -5783,7 +5850,7 @@ class AddShows(Home):
                             ).lower(),
                     ids=cur_show_info.ids.__dict__,
                     images=images,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     title=cur_show_info.seriesname,
                     language=language,
                     language_img=sickgear.MEMCACHE_FLAG_IMAGES.get(language, False),
@@ -6014,7 +6081,7 @@ class AddShows(Home):
                     ids=cur_show_info.ids.__dict__,
                     images=images,
                     network=network_name,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     rating=0 < (cur_show_info.rating or 0) and
                            ('%.2f' % (cur_show_info.rating * 10)).replace('.00', '') or 0,
                     title=(cur_show_info.seriesname or '').strip(),
@@ -6444,7 +6511,7 @@ class AddShows(Home):
                             ).lower(),
                     ids=ids,
                     images=images,
-                    overview=self.clean_overview(cur_show_info),
+                    overview=self.clean_overview(cur_show_info, (250, None)[bool(p_ref)]),
                     overview_ajax=(0, 1)[overview_ajax],
                     title=cur_show_info.seriesname,
                     language=language,
@@ -6508,9 +6575,13 @@ class AddShows(Home):
 
     @private_call
     @staticmethod
-    def clean_overview(info=None):
-        # type (AnyStr, TVInfoShow) -> AnyStr
+    def clean_overview(info=None, limit=250):
+        # type (AnyStr, TVInfoShow, Optional[int]) -> AnyStr
         text = info if isinstance(info, str) else info.overview
+        if text and None is limit:
+            # the detail of a person card has room for all of it
+            result = helpers.xhtml_escape(re.sub(r'[\r\n]+', ' ', text)).strip('*').strip()
+            return re.sub(r'([!?.])(?=\w)', r'\1 ', result)
         if text:
             result = helpers.xhtml_escape(re.sub(r'[\r\n]+', ' ', text[:250:])).strip('*').strip()
             result = re.sub(r'([!?.])(?=\w)', r'\1 ', result)
@@ -6928,6 +6999,7 @@ class AddShows(Home):
         t.browse_type = browse_type
         t.browse_title = browse_title if ('person' != kwargs.get('mode') or not shows) \
             else f'{shows[0].get("p_name", "")} (Person) on {browse_type}'
+        t.ep_base_link = (shows and shows[0].get("ep_base_link", "")) or ''
         t.p_ref = (0 < len(shows) and shows[0].get('p_ref')) or None
         t.p_link = (0 < len(shows) and shows[0].get('p_link')) or None
         t.saved_showfilter = sickgear.BROWSELIST_MRU.get(browse_type, {}).get('showfilter', '')
@@ -7063,7 +7135,9 @@ class AddShows(Home):
                      wanted_begin=None, wanted_latest=None, tag=None,
                      pause=None, prune=None, default_status=None, scene=None, subs=None, flatten_folders=None,
                      anime=None, allowlist=None, blocklist=None,
-                     return_to=None, cancel_form=None, rename_suggest=None, **kwargs):
+                     return_to=None, cancel_form=None, rename_suggest=None,
+                     rls_ignore_words=None, rls_require_words=None, rls_global_exclude_ignore=None,
+                     rls_global_exclude_require=None, **kwargs):
         """
         Receive tvdb id, dir, and other options and create a show from them. If extra show dirs are
         provided then it forwards back to new_show, if not it goes to /home.
@@ -7183,7 +7257,10 @@ class AddShows(Home):
             wanted_begin=wanted_begin, wanted_latest=wanted_latest, tag=tag,
             paused=pause, prune=prune, default_status=int(default_status), scene=scene, subtitles=subs,
             flatten_folders=flatten_folders, anime=anime, allowlist=allowlist, blocklist=blocklist,
-            show_name=show_name, new_show=new_show, lang=tvinfo_lang
+            show_name=show_name, new_show=new_show, lang=tvinfo_lang,
+            rls_ignore_words=rls_ignore_words, rls_require_words=rls_require_words,
+            rls_global_exclude_ignore=rls_global_exclude_ignore,
+            rls_global_exclude_require=rls_global_exclude_require
         )
         # ui.notifications.message('Show added', 'Adding the specified show into ' + show_dir)
 
@@ -7315,16 +7392,42 @@ class Manage(MainHandler):
         t.has_any_sports = False
         t.has_any_anime = False
         t.has_any_flat_folders = False
-        t.shows = []
-        t.shows_no_loc = []
-        for cur_show_obj in sorted(sickgear.showList, key=lambda _x: _x.name.lower()):
+        # the size of a show from its media files in the database, reading every show folder took seconds, the folder
+        # size is used when the folders have been read in the last 30 minutes, or when the page button reads them
+        cache = Home.media_stats_cache
+        # with the number of media files, the smallest, largest and average size, for the size type column of the page
+        if cache['shows'] and 1800 > time.time() - cache['read']:
+            t.sizes = {_k: _v['bSize'] for _k, _v in cache['shows'].items()}
+            t.stats = {_k: (_v.get('nFiles', 0), _v.get('bSmallest', 0), _v.get('bLargest', 0), _v.get('bAverageSize', 0))
+                       for _k, _v in cache['shows'].items()}
+            t.sizes_from = 'folder'
+        else:
+            with db.DBConnection() as sg_db:
+                # a file of more than one episode is on each of its episodes, so count each file once
+                sql_result = sg_db.select(
+                    """
+                    SELECT indexer, showid, SUM(file_size) AS size, COUNT(*) AS files,
+                     MIN(file_size) AS smallest, MAX(file_size) AS largest
+                    FROM (SELECT DISTINCT indexer, showid, location, file_size
+                     FROM tv_episodes
+                     WHERE location != '' AND file_size > 0)
+                    GROUP BY indexer, showid
+                    """)
+            t.sizes = {f'{_r["indexer"]}:{_r["showid"]}': _r['size'] for _r in sql_result}
+            t.stats = {f'{_r["indexer"]}:{_r["showid"]}': (_r['files'], _r['smallest'], _r['largest'],
+                                                            int(_r['size'] / _r['files']))
+                       for _r in sql_result}
+            t.sizes_from = 'database'
+        # in the order the table script sorts the names, shows with no folder last, so the rows do not move when it starts
+        def sort_name(show_obj):
+            name = getattr(show_obj, 'unique_name', show_obj.name)
+            return ('0_', '1_')[not show_obj.path] + (remove_article(name), name)[sickgear.SORT_ARTICLE].lower()
+
+        t.shows = sorted(sickgear.showList, key=lambda _so: cmp_to_key(helpers.natural_cmp)(sort_name(_so)))
+        for cur_show_obj in t.shows:
             t.has_any_sports |= bool(cur_show_obj.sports)
             t.has_any_anime |= bool(cur_show_obj.anime)
             t.has_any_flat_folders |= bool(cur_show_obj.flatten_folders)
-            if not cur_show_obj.path:
-                t.shows_no_loc += [cur_show_obj]
-            else:
-                t.shows += [cur_show_obj]
 
         return t.respond()
 
@@ -8056,13 +8159,21 @@ class Manage(MainHandler):
     def bulk_change(self, to_update='', to_refresh='', to_rename='',
                     to_subtitle='', to_delete='', to_remove='', **kwargs):
 
-        to_change = dict({_tvid_prodid: helpers.find_show_by_id(_tvid_prodid)
-                          for _tvid_prodid in
-                          next(iter([_x.split('|') for _x in (to_update, to_refresh, to_rename, to_subtitle,
-                                                              to_delete, to_remove) if _x]), '')})
+        # a change is a form post with its token, a link or an image cannot remove a show
+        if 'POST' != self.request.method:
+            return self.redirect('/manage/bulk/')
+
+        # each action is a set of show ids, all the sets are read, and an id matches whole, not as part of another id
+        to_update, to_refresh, to_rename, to_subtitle, to_delete, to_remove = [
+            set(filter(None, _x.split('|')))
+            for _x in (to_update, to_refresh, to_rename, to_subtitle, to_delete, to_remove)]
+        to_change = {_tvid_prodid: helpers.find_show_by_id(_tvid_prodid) for _tvid_prodid in
+                     to_update | to_refresh | to_rename | to_subtitle | to_delete | to_remove}
 
         update, refresh, rename, subtitle, errors = [], [], [], [], []
         for cur_tvid_prodid, cur_show_obj in to_change.items():
+            if not cur_show_obj:
+                continue
 
             if cur_tvid_prodid in to_delete:
                 cur_show_obj.delete_show(True)
@@ -8074,24 +8185,24 @@ class Manage(MainHandler):
                 if cur_tvid_prodid in to_update:
                     try:
                         sickgear.show_queue_scheduler.action.update_show(cur_show_obj, True, True)
-                        update.append(cur_show_obj.name)
+                        update.append(helpers.xhtml_escape(cur_show_obj.name))
                     except exceptions_helper.CantUpdateException as e:
-                        errors.append('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e)))
+                        errors.append(helpers.xhtml_escape('Unable to update show %s: %s' % (cur_show_obj.unique_name, ex(e))))
 
                 elif cur_tvid_prodid in to_refresh:
                     try:
                         sickgear.show_queue_scheduler.action.refresh_show(cur_show_obj)
-                        refresh.append(cur_show_obj.name)
+                        refresh.append(helpers.xhtml_escape(cur_show_obj.name))
                     except exceptions_helper.CantRefreshException as e:
-                        errors.append('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e)))
+                        errors.append(helpers.xhtml_escape('Unable to refresh show %s: %s' % (cur_show_obj.unique_name, ex(e))))
 
                 if cur_tvid_prodid in to_rename:
                     sickgear.show_queue_scheduler.action.rename_show_episodes(cur_show_obj)
-                    rename.append(cur_show_obj.name)
+                    rename.append(helpers.xhtml_escape(cur_show_obj.name))
 
                 if sickgear.USE_SUBTITLES and cur_tvid_prodid in to_subtitle:
                     sickgear.show_queue_scheduler.action.download_subtitles(cur_show_obj)
-                    subtitle.append(cur_show_obj.name)
+                    subtitle.append(helpers.xhtml_escape(cur_show_obj.name))
 
         if len(errors):
             ui.notifications.error('Errors encountered', '<br>\n'.join(errors))
@@ -8869,7 +8980,7 @@ class History(MainHandler):
         if sickgear.USE_PLEX and hosts:
             logger.debug('Updating Plex watched episode states')
 
-            from lib.plex import Plex
+            from plex import Plex
 
             plex = Plex(dict(username=sickgear.PLEX_USERNAME, password=sickgear.PLEX_PASSWORD,
                              section_filter_path=sickgear.ROOT_DIRS.split('|')[1:] +
@@ -9227,7 +9338,7 @@ class ConfigGeneral(Config):
             result['result'] = 'Failed: key doesn\'t exist'
         else:
             sickgear.API_KEYS = [ak for ak in sickgear.API_KEYS if ak[0] and api_key != ak[1]]
-            logger.debug(f'Revoked [{app_name}] apikey [{api_key}]')
+            logger.debug(f'Revoked [{app_name}] apikey')
             result.update(dict(result='Success: apikey removed', removed=True))
             sickgear.save_config()
             ui.notifications.message('Configuration Saved', os.path.join(sickgear.CONFIG_FILE))
@@ -9237,7 +9348,7 @@ class ConfigGeneral(Config):
     def save_general(self, launch_browser=None, update_shows_on_start=None, show_update_hour=None,
                      trash_remove_show=None, trash_rotate_logs=None,
                      log_dir=None, web_log=None,
-                     indexer_default=None, indexer_timeout=None,
+                     indexer_default=None, indexer_timeout=None, tvinfo_show_cache_limit=None,
                      show_dirs_with_dots=None,
                      update_notify=None, update_auto=None, update_interval=None, notify_on_update=None,
                      update_packages_notify=None, update_packages_auto=None, update_packages_menu=None,
@@ -9282,6 +9393,9 @@ class ConfigGeneral(Config):
                 sickgear.TVINFO_DEFAULT = TVINFO_TVDB
         if indexer_timeout:
             sickgear.TVINFO_TIMEOUT = config.to_int(indexer_timeout)
+        if tvinfo_show_cache_limit:
+            sickgear.TVINFO_SHOW_CACHE_LIMIT = config.minimax(tvinfo_show_cache_limit, 10, 1, 1000)
+            ShowContainer.max_entries = sickgear.TVINFO_SHOW_CACHE_LIMIT
         sickgear.SHOW_DIRS_WITH_DOTS = config.checkbox_to_value(show_dirs_with_dots)
 
         # Updates
@@ -9444,6 +9558,38 @@ class ConfigSearch(Config):
             pass
         return t.respond()
 
+    # noinspection PyMethodMayBeStatic
+    def tunnel_notice_close(self):
+        """
+        close the top notice of the blocked provider fallback until a restart, for each provider it named, the third
+        close for a provider hides it for good
+        """
+        closed_now = sickgear.MEMCACHE.setdefault('provider_tunnel_notice_closed', set())
+        for cur_item in sickgear.providers.tunnel_notice_items():
+            pid = cur_item[0]
+            closed_now.add(pid)
+            sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED[pid] = min(3, sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED.get(pid, 0) + 1)
+        sickgear.save_config()
+        return json_dumps(dict(closed=sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED))
+
+    # noinspection PyMethodMayBeStatic
+    def tunnel_use(self, pid=None):
+        """
+        turn on the blocked provider fallback for one provider from the top notice, only for a provider that uses it
+        by default, a provider that may ban an account used from a VPN address is ticked by the user on the setting
+        """
+        provider = next((cur_p for cur_p in sickgear.providers.sorted_sources() if pid == cur_p.get_id()), None)
+        if not provider or not provider.tunnel_default_on() or sickgear.PROXY_SETTING:
+            return json_dumps(dict(used=False))
+        left_out = set(sickgear.PROVIDER_TUNNEL_EXCLUDE)
+        if not sickgear.PROVIDER_TUNNEL:
+            # another provider that looks blocked keeps its own choice, rather than use the tunnel with this click
+            left_out |= set(sickgear.PROVIDER_TUNNEL_BLOCKED)
+        sickgear.PROVIDER_TUNNEL = True
+        sickgear.PROVIDER_TUNNEL_EXCLUDE = sorted(left_out - {pid})
+        sickgear.save_config()
+        return json_dumps(dict(used=True))
+
     def save_search(self, nzb_dir=None, torrent_dir=None,
                     recentsearch_interval=None, backlog_period=None, backlog_limited_period=None, backlog_nofull=None,
                     recentsearch_frequency=None, backlog_frequency=None, backlog_days=None,
@@ -9451,6 +9597,7 @@ class ConfigSearch(Config):
                     usenet_retention=None, ignore_words=None, require_words=None,
                     download_propers=None, propers_webdl_onegrp=None,
                     search_unaired=None, unaired_recent_search_only=None, flaresolverr_host=None,
+                    dns_resolver=None, provider_tunnel=None, provider_tunnel_shown=None, provider_tunnel_use=None,
                     allow_high_priority=None,
                     sab_username=None, sab_password=None, sab_apikey=None, sab_category=None, sab_host=None,
                     nzbget_username=None, nzbget_password=None, nzbget_category=None, nzbget_host=None,
@@ -9512,6 +9659,24 @@ class ConfigSearch(Config):
 
         sickgear.FLARESOLVERR_HOST = config.clean_url(flaresolverr_host)
         sg_helpers.FLARESOLVERR_HOST = sickgear.FLARESOLVERR_HOST
+
+        dns_resolver = (dns_resolver or '').strip()
+        if dns_resolver != (sickgear.DNS_RESOLVER or ''):
+            try:
+                create_resolver(dns_resolver or None).close()
+            except (BaseException, Exception) as e:
+                results += ['DNS resolver "%s" rejected (%s), setting unchanged.' % (dns_resolver, ex(e))]
+            else:
+                sickgear.DNS_RESOLVER = dns_resolver
+                sg_helpers.DNS_RESOLVER = dns_resolver
+                sickgear.providers.apply_dns_resolver(dns_resolver)
+
+        if None is not provider_tunnel_shown:  # the form leaves the setting out while a user proxy is set
+            sickgear.PROVIDER_TUNNEL = bool(config.checkbox_to_value(provider_tunnel))
+            sickgear.PROVIDER_TUNNEL_USE, sickgear.PROVIDER_TUNNEL_EXCLUDE = config.provider_tunnel_choices(
+                sickgear.PROVIDER_TUNNEL_USE, sickgear.PROVIDER_TUNNEL_EXCLUDE, provider_tunnel_shown,
+                provider_tunnel_use,
+                [cur_p.get_id() for cur_p in sickgear.providers.sorted_sources() if cur_p.tunnel_default_on()])
 
         sickgear.ALLOW_HIGH_PRIORITY = config.checkbox_to_value(allow_high_priority)
 
@@ -10007,7 +10172,7 @@ class ConfigProviders(Config):
 
         # the login settings of a provider, a setting not saved yet (None) is the same as an empty one
         login_of = (lambda p: [getattr(p, cur_a, None) or '' for cur_a in (
-            'username', 'password', 'api_key', 'passkey', 'digest', 'hash')])
+            'username', 'uid', 'password', 'api_key', 'passkey', 'digest', 'hash')])
 
         def login_changed(p, was):
             if was != login_of(p):
@@ -10036,6 +10201,8 @@ class ConfigProviders(Config):
             for attr in filter(lambda a: hasattr(torrent_src, a), [
                 'username', 'uid', '_seed_ratio', 'scene_or_contain'
             ]):
+                if 'uid' == attr and src_id_prefix + attr not in kwargs:
+                    continue  # the page has no uid field for a provider with a username, e.g. a uid set by its login
                 setattr(torrent_src, attr, str(kwargs.get(src_id_prefix + attr.replace('_seed_', ''), '')).strip())
 
             for attr in filter(lambda a: hasattr(torrent_src, a), [
@@ -10482,12 +10649,90 @@ class EventLogs(MainHandler):
     def download_log(self):
         self.redirect('/logfile/sickgear.log')
 
-    def view_log(self, min_level=logger.MESSAGE, max_lines=500):
+    @staticmethod
+    def mark_runs(lines):
+        # type: (List[AnyStr]) -> List[AnyStr]
+        """
+        mark each start of SickGear in log lines that are newest first, so a restart stands out from the lines of a run:
+        a divider that says restart or shutdown and how long it was down, and a band on the lines of the shutdown
+
+        :param lines: log lines, newest first, html escaped
+        :return: the lines with the marks
+        """
+        rxc_line = re.compile(r'^(\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2})\s*[A-Z]+\s*(\S+)\s+:{2}\s*(.*)')
+        # a masked program name in an older log line reads e.g. "Sick****"
+        rxc_start = re.compile(r'Starting Sick\S* on ')
+        rxc_ev_type = re.compile(r'Shutdown ev_type:(\w+)')
+        result = []
+        run = None
+
+        def end_run():
+            if run['stopped']:
+                label = '%s, down %s' % (run['kind'] or 'shutdown',
+                                         Stopwatch.duration_text((run['start'] - run['first']).total_seconds()))
+            else:
+                # a start with no shutdown before it, e.g. the process ended or the computer lost power
+                label = 'start, no shutdown logged'
+                for _n, _line in run['band']:
+                    result[_n] = _line
+                if run['band']:
+                    result[run['divider']], run['divider'] = '', run['at_start']
+            result[run['divider']] = '<span class="log-run"><span>%s</span></span>' % label
+
+        for cur_line in lines:
+            match = rxc_line.match(cur_line)
+            if not match:
+                result.append(cur_line)
+                continue
+            when, thread, msg = match.groups()
+            when = datetime.strptime(re.sub(r'\s+', ' ', when), '%Y-%m-%d %H:%M:%S')
+            is_start = rxc_start.match(msg)
+            if run and is_start:
+                end_run()
+                run = None
+            if is_start:
+                result.append('<span class="log-start">%s</span>' % cur_line.rstrip('\r\n'))
+                run = dict(start=when, first=when, divider=len(result), at_start=len(result), kind=None, stopped=False,
+                           band=[])
+                result.append('')
+                continue
+            is_trigger = msg.startswith('Trigger event ')
+            if run and run['stopped'] and 'EVENT-QUEUE' != thread and not is_trigger:
+                end_run()
+                run = None
+            if not run or ('EVENT-QUEUE' != thread and not is_trigger):
+                result.append(cur_line)
+                continue
+            # a line of the shutdown, the event queue does the shutdown and logs it, a web page or job asks for it
+            if not run['band']:
+                # the divider goes between the processes, a line that the new process logs before its start line,
+                # e.g. a port from the command line, stays with the new run
+                result[run['divider']], run['divider'] = '', len(result)
+                result.append('')
+            run['band'].append((len(result), cur_line))
+            result.append('<span class="log-stop">%s</span>' % cur_line.rstrip('\r\n'))
+            run['first'] = when
+            if msg.startswith('Exiting threads'):
+                run['stopped'] = True
+            ev_type = rxc_ev_type.match(msg)
+            if ev_type:
+                run['kind'] = ev_type.group(1).lower()
+            if is_trigger:
+                run['kind'] = msg.split()[-1].lower()
+                end_run()
+                run = None
+        if run:
+            end_run()
+        return result
+
+    def view_log(self, min_level=logger.MESSAGE, max_lines=1000):
 
         t = PageTemplate(web_handler=self, file='viewlogs.tmpl')
         t.submenu = self.error_logs_menu
 
         min_level = int(min_level)
+        # a value given in the url is a string
+        max_lines = helpers.try_int(max_lines, 1000)
 
         regex = re.compile(r'^\d{4}-\d{2}-\d{2}\s*\d{2}:\d{2}:\d{2}\s*([A-Z]+)\s*(\S+)\s+:{2}\s*(.*\r?\n)$')
 
@@ -10497,9 +10742,6 @@ class EventLogs(MainHandler):
         repeated = None
         num_lines = 0
         if os.path.isfile(logger.sb_log_instance.log_file_path):
-            auths = sickgear.GenericProvider.dedupe_auths(True)
-            rxc_auths = re.compile('(?i)%s' % '|'.join([(re.escape(_a)) for _a in auths]))
-            replacements = dict([(_a, starify(_a)) for _a in auths])
             for cur_line in logger.sb_log_instance.reverse_readline(logger.sb_log_instance.log_file_path):
 
                 cur_line = helpers.xhtml_escape(decode_str(cur_line, errors='replace'), False)
@@ -10537,16 +10779,19 @@ class EventLogs(MainHandler):
 
                         # noinspection HttpUrlsUsage
                         if 'https://' in cur_line or 'http://' in cur_line:
-                            for cur_change in rxc_auths.finditer(cur_line):
-                                cur_line = '%s%s%s' % (cur_line[:cur_change.start()],
-                                                       replacements[cur_line[cur_change.start():cur_change.end()]],
-                                                       cur_line[cur_change.end():])
-                            cur_line = helpers.starify_url_keys(cur_line)
+                            cur_line = logger.RedactingFilter.mask_text(cur_line)
 
+                        # the output of a command is one line in the file, show its lines as they were before
+                        joined = None
+                        if logger.JOINED_LINES in cur_line and ':: git output: ' in cur_line:
+                            cur_line, *joined = cur_line.rstrip('\r\n').split(logger.JOINED_LINES)
+                            cur_line += '\n'
                         final_data.append(cur_line)
-                        if 'Starting SickGear' in cur_line:
-                            final_data[-1].replace(' Starting SickGear',
-                                                   ' <span class="prelight2">Starting SickGear</span>')
+                        if joined:
+                            final_data += (['<code><span class="prelight">']
+                                           + ['<span class="prelight-num">%02s)</span> %s<br>' % (n + 1, x)
+                                              for n, x in enumerate(joined)]
+                                           + ['</span></code><br>'])
                         if any(normal_data):
                             final_data += ['<code><span class="prelight">'] + \
                                           ['<span class="prelight-num">%02s)</span> %s' % (n + 1, x)
@@ -10560,7 +10805,7 @@ class EventLogs(MainHandler):
                 if num_lines >= max_lines:
                     break
 
-        result = ''.join(final_data)
+        result = ''.join(self.mark_runs(final_data))
 
         t.logLines = result
         t.min_level = min_level

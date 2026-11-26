@@ -23,23 +23,34 @@ import sys
 import tarfile
 import time
 import traceback
-from . import gh_api as github
-
-from exceptions_helper import ex
-
-import sickgear
-from . import logger, notifiers, ui
-from .scheduler import (Scheduler, Job)
-from .piper import check_pip_outdated
-from sg_helpers import cmdline_runner, get_url, tar_check_sanity
 
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
 from six import string_types
 
+import sickgear
+from . import gh_api as github
+from exceptions_helper import ex
+from . import logger, notifiers, ui
+from .scheduler import (Scheduler, Job)
+from .piper import check_pip_outdated
+from sg_helpers import cmdline_runner, get_url, tar_check_sanity
+
 # noinspection PyUnreachableCode
 if False:
-    from typing import Tuple
+    from typing import AnyStr, Optional, Tuple
+
+
+def log_output(output):
+    # type: (Optional[AnyStr]) -> AnyStr
+    """
+    the output of a command as one log line, a list of all remote branches had a log line for each branch, which hid the
+    lines before a restart on the log page, the log page shows the joined lines as lines again
+
+    :param output: output of a command
+    :return: the output lines joined by logger.JOINED_LINES
+    """
+    return logger.JOINED_LINES.join(_l.rstrip() for _l in (output or '').splitlines() if _l.strip())
 
 
 class PackagesUpdater(Job):
@@ -343,7 +354,7 @@ class GitUpdateManager(UpdateManager):
 
         return self._run_git(['version'], git_path)
 
-    def _run_git(self, arg_list, git_path=None, repeat=False):
+    def _run_git(self, arg_list, git_path=None, repeat=False, fail_ok=False):
 
         output = err = None
         exit_status = 1
@@ -360,7 +371,7 @@ class GitUpdateManager(UpdateManager):
         try:
             logger.debug(f'Executing {cmd} with your shell in {sickgear.PROG_DIR}')
             output, err, exit_status = cmdline_runner([git_path] + arg_list, env={'LANG': 'en_US.UTF-8'})
-            logger.debug(f'git output: {output}')
+            logger.debug(f'git output: {log_output(output)}')
 
         except OSError:
             logger.log(f'Failed command: {cmd}')
@@ -374,7 +385,8 @@ class GitUpdateManager(UpdateManager):
             self.unsafe = False
 
         elif 1 == exit_status:
-            logger.error(f'Failed: {cmd} returned: {output}')
+            # a caller that expects a fail, and says why, has it logged only as debug
+            (logger.error, logger.debug)[fail_ok](f'Failed: {cmd} returned: {output}')
 
         elif 128 == exit_status or 'fatal:' in output or err:
             if 'unsafe repository' not in output and 'fatal:' in output:
@@ -455,7 +467,7 @@ class GitUpdateManager(UpdateManager):
         if not self._cur_pr_number:
 
             # get the latest commit_hash from remote
-            output, _, exit_status = self._run_git(['rev-parse', '--verify', '--quiet', '@{upstream}'])
+            output, _, exit_status = self._run_git(['rev-parse', '--verify', '--quiet', '@{upstream}'], fail_ok=True)
 
             if 0 == exit_status and output:
                 cur_commit_hash = output.strip()
@@ -467,6 +479,10 @@ class GitUpdateManager(UpdateManager):
                 self._newest_commit_hash = cur_commit_hash
                 self._old_commit_hash = cur_commit_hash
                 self._old_branch = self._find_installed_branch()
+            elif 1 == exit_status:
+                # a local branch, one with no upstream, has nothing to update from
+                logger.warning('The checked out branch has no upstream branch, cannot check for update')
+                return
             else:
                 logger.debug("git didn't return newest commit hash")
                 return

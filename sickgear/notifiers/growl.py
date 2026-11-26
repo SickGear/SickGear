@@ -14,14 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# apprise is 43 modules, and only this notifier uses it
+__lazy_modules__ = ['apprise.plugins.gntp']
+
 import re
 
+from apprise.plugins.gntp import notifier as growl_notifier
+from six import string_types
+
+import sickgear
 from .generic import Notifier, notify_strings
 from exceptions_helper import ex
-from lib.apprise.plugins.gntp import notifier as growl_notifier
-import sickgear
-
-from six import string_types
 
 
 class GrowlNotifier(Notifier):

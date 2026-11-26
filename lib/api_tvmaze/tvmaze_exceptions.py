@@ -8,7 +8,7 @@ __all__ = ['TvMazeException', 'TvMazeError', 'TvMazeUserabort', 'TvMazeShownotfo
            'TvMazeSeasonnotfound', 'TvMazeEpisodenotfound', 'TvMazeAttributenotfound', 'TvMazeTokenexpired',
            'TvMazePersonNotFound']
 
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 
 
 class TvMazeException(BaseTVinfoException):

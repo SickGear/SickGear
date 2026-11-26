@@ -18,8 +18,9 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from .generic import Notifier
+
 import sickgear
+from .generic import Notifier
 
 
 class DiscordNotifier(Notifier):

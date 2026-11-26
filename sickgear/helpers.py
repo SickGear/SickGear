@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from itertools import cycle
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles
+__lazy_modules__ = ['subliminal']
+
 import datetime
 import hashlib
 import os
@@ -25,28 +28,27 @@ import socket
 import time
 import uuid
 import sys
+from itertools import cycle
 from pathlib import Path
-
-import sickgear
-from . import db, logger, notifiers
-from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
-    ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
-from .sgdatetime import SGDatetime
-from lib.tvinfo_base.exceptions import *
-from exceptions_helper import ex, MultipleShowObjectsException
+from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
 
 import dateutil.parser
 import requests
 import requests.exceptions
 import subliminal
 from lxml_etree import etree, is_lxml
-from base64 import decodebytes as b64decodebytes, encodebytes as b64encodebytes
-
-from _23 import decode_bytes, decode_str, scandir
 from six import string_types, text_type
 # noinspection PyUnresolvedReferences
 from six.moves import zip
 
+import sickgear
+from . import db, logger, notifiers
+from .common import cpu_presets, mediaExtensions, Overview, Quality, statusStrings, subtitleExtensions, \
+    ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED_ANY, SUBTITLED, UNAIRED, UNKNOWN, WANTED
+from .sgdatetime import SGDatetime
+from tvinfo_base.exceptions import *
+from exceptions_helper import ex, MultipleShowObjectsException
+from _23 import decode_bytes, decode_str, scandir
 # the following are imported from elsewhere,
 # therefore, they intentionally don't resolve and are unused in this particular file.
 # noinspection PyUnresolvedReferences
@@ -638,7 +640,7 @@ def create_https_certificates(ssl_cert, ssl_key):
     """
 
     try:
-        from lib.certgen import generate_key, generate_local_cert
+        from certgen import generate_key, generate_local_cert
     except (BaseException, Exception):
         return False
 
@@ -1139,25 +1141,36 @@ def get_size(start_path='.'):
 
 
 def get_media_stats(start_path='.'):
-    # type: (AnyStr) -> Tuple[int, int, int, int]
+    # type: (AnyStr) -> Tuple[int, int, int, int, int]
     """
     return recognised media stats for a folder as...
 
-    number of media files, smallest size in bytes, largest size in bytes, average size in bytes
+    number of media files, smallest size in bytes, largest size in bytes, average size in bytes,
+    and the size in bytes of all files in the folder, read in the same walk of the folder
 
     :param start_path: path to scan
     """
     if os.path.isdir(start_path):
-        sizes = sorted(map(lambda y: y.stat(follow_symlinks=False).st_size,
-                           filter(lambda x: has_media_ext(x.name), scantree(start_path))))
+        total, sizes = 0, []
+        try:
+            # files only, a folder entry has a size of its own on some file systems, e.g. 4096 bytes on Linux
+            for cur_entry in scantree(start_path, filter_kind=False):
+                size = cur_entry.stat(follow_symlinks=False).st_size
+                total += size
+                if has_media_ext(cur_entry.name):
+                    sizes.append(size)
+        except OSError:
+            pass
         if sizes:
-            return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes))
+            sizes.sort()
+            return len(sizes), sizes[0], sizes[-1], int(sum(sizes) / len(sizes)), total
+        return 0, 0, 0, 0, total
 
     elif os.path.isfile(start_path):
         size = os.path.getsize(start_path)
-        return 1, size, size, size
+        return 1, size, size, size, size
 
-    return 0, 0, 0, 0
+    return 0, 0, 0, 0, 0
 
 
 def remove_article(text=''):
@@ -1170,6 +1183,61 @@ def remove_article(text=''):
     :rtype: AnyStr
     """
     return re.sub(r'(?i)^(?:A(?!\s+to)n?|The)\s(\w)', r'\1', text)
+
+
+_js_float = re.compile(r'[+-]?(?:Infinity|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)', re.ASCII)
+_ts_hex = re.compile(r'^0x[0-9a-f]+$', re.I | re.ASCII)
+_ts_chunk = re.compile(r'(^([+\-]?(?:\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)?$|^0x[0-9a-f]+$|\d+)', re.I | re.ASCII)
+_ts_chunk_ends = re.compile(r'(^\\0|\\0$)')
+
+
+def _js_number(text):
+    # the Number() of JavaScript, None for NaN
+    text = text.strip()
+    if not text:
+        return 0
+    if _ts_hex.search(text):
+        return int(text, 16)
+    return float(text) if _js_float.fullmatch(text) else None
+
+
+def _ts_chunk_value(chunk):
+    # a chunk that is not a number stays text, a missing chunk or a number that does not parse is 0
+    if None is chunk:
+        return 0
+    if None is _js_number(chunk):
+        return chunk
+    number = _js_float.match(chunk.lstrip())
+    return number and float(number.group()) or 0
+
+
+def natural_cmp(a, b):
+    """
+    compare two texts as the natural sort of the tablesorter script does, so a page can send rows in the order the
+    script sorts them, and they do not move when it starts
+
+    :param a: text
+    :type a: AnyStr
+    :param b: text
+    :type b: AnyStr
+    :return: -1, 0 or 1 as a sorts before, the same as, or after b
+    :rtype: int
+    """
+    if a == b:
+        return 0
+    if _ts_hex.search(b):
+        x, y = _ts_hex.search(a), int(b, 16)
+        if x and int(x.group(), 16) != y:
+            return (1, -1)[int(x.group(), 16) < y]
+    chunks_a, chunks_b = [_ts_chunk_ends.sub('', _ts_chunk.sub(lambda _m: '\\0%s\\0' % (_m.group(1) or ''), _t),
+                                             count=1).split('\\0') for _t in (a, b)]
+    for index in range(max(len(chunks_a), len(chunks_b))):
+        x, y = [_ts_chunk_value(_c[index] if index < len(_c) else None) for _c in (chunks_a, chunks_b)]
+        if isinstance(x, str) != isinstance(y, str):
+            return (-1, 1)[isinstance(x, str)]
+        if x != y:
+            return (1, -1)[x < y]
+    return 0
 
 
 def re_valid_hostname(with_allowed=True):

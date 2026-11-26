@@ -18,16 +18,16 @@ import datetime
 import os.path
 import re
 
+import sickgear
 from .. import db, common, logger
 from ..name_parser.parser import NameParser, InvalidNameException, InvalidShowException
-import sickgear
 
 # noinspection PyUnreachableCode
 if False:
     from _23 import DirEntry
 
 MIN_DB_VERSION = 9  # oldest db version we support migrating from
-MAX_DB_VERSION = 20016
+MAX_DB_VERSION = 20018
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -1990,7 +1990,7 @@ class ChangeShowData(db.SchemaUpgrade):
 # 20015 -> 20016
 class ChangeTmdbID(db.SchemaUpgrade):
     def execute(self):
-        from lib.tvinfo_base import TVINFO_TMDB, TVINFO_TMDB_OLD, TVINFO_TVDB, TVINFO_TVMAZE
+        from tvinfo_base import TVINFO_TMDB, TVINFO_TMDB_OLD, TVINFO_TVDB, TVINFO_TVMAZE
         from sg_helpers import move_file, scantree
         from ..image_cache import ImageCache, cache_img_src
         import re
@@ -2096,3 +2096,32 @@ class ChangeTmdbID(db.SchemaUpgrade):
 
         return self.set_db_version(20016)
 
+
+# 20016 -> 20017
+class AddHistoryDownloadIdentity(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database(self.connection, 'sickbeard.db', self.call_check_db_version())
+
+        self.upgrade_log('Add puid and client columns to history')
+        if not self.has_column('history', 'puid'):
+            self.add_column('history', 'puid', 'TEXT', default=None)
+
+        if not self.has_column('history', 'client'):
+            self.add_column('history', 'client', 'INTEGER', default=None)
+
+        if not self.has_column('history', 'client_uid'):
+            self.add_column('history', 'client_uid', 'TEXT', default=None)
+
+        return self.set_db_version(20017)
+
+
+# 20017 -> 20018
+class AddEpisodeVideoCodec(db.SchemaUpgrade):
+    def execute(self):
+        db.backup_database(self.connection, 'sickbeard.db', self.call_check_db_version())
+
+        self.upgrade_log('Add video_codec column to tv_episodes')
+        if not self.has_column('tv_episodes', 'video_codec'):
+            self.add_column('tv_episodes', 'video_codec', 'INTEGER', default=None)
+
+        return self.set_db_version(20018)

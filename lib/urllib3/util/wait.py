@@ -92,7 +92,7 @@ def _have_working_poll() -> bool:
         return True
 
 
-def wait_for_socket(
+def wait_for_socket(  # noqa: F811
     sock: socket.socket,
     read: bool = False,
     write: bool = False,

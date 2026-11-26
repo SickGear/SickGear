@@ -43,6 +43,12 @@ VIDEO_CODEC_NAME = {
     2: "Sorensen H.263",
     3: "Screen video",
     4: "On2 VP6",
+    5: "On2 VP6 with alpha channel",
+    6: "Screen video version 2",
+    7: "AVC",
+    8: "Real H.263",
+    9: "MPEG-4 Visual",
+    12: "HEVC",
 }
 
 FRAME_TYPE = {
@@ -81,8 +87,15 @@ def parseAudio(parent, size):
 
 
 def parseVideo(parent, size):
-    yield Enum(Bits(parent, "frame_type", 4, "Frame type"), FRAME_TYPE)
-    yield Enum(Bits(parent, "codec", 4, "Video codec"), VIDEO_CODEC_NAME)
+    # enhanced FLV: with this bit set, the codec is a fourcc after the first byte, e.g. hvc1, av01, vp09
+    yield Bit(parent, "is_ex_header", "Enhanced header")
+    yield Enum(Bits(parent, "frame_type", 3, "Frame type"), FRAME_TYPE)
+    if parent["is_ex_header"].value and 5 <= size:
+        yield Bits(parent, "packet_type", 4, "Packet type")
+        yield String(parent, "fourcc", 4, "Video codec", charset="ASCII")
+        size -= 4
+    else:
+        yield Enum(Bits(parent, "codec", 4, "Video codec"), VIDEO_CODEC_NAME)
     if 1 < size:
         yield RawBytes(parent, "data", size - 1)
 

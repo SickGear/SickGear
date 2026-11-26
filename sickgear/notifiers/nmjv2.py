@@ -19,13 +19,13 @@
 import time
 from xml.dom.minidom import parseString
 
-from .generic import BaseNotifier
-import sickgear
-from exceptions_helper import ex
-
-from _23 import etree, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
+
+import sickgear
+from .generic import BaseNotifier
+from exceptions_helper import ex
+from _23 import etree, urlencode
 
 
 class NMJv2Notifier(BaseNotifier):

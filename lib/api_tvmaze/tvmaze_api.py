@@ -14,24 +14,23 @@ from requests.adapters import HTTPAdapter
 # noinspection PyProtectedMember
 from tornado._locale_data import LOCALE_NAMES
 from urllib3.util.retry import Retry
+from dateutil.parser import parser
+# noinspection PyProtectedMember
+from dateutil.tz.tz import _datetime_to_timestamp
+from pytvmaze import tvmaze
+from six import integer_types, string_types
 
 from sg_helpers import clean_data, enforce_type, get_url, try_int
-from lib.dateutil.parser import parser
-# noinspection PyProtectedMember
-from lib.dateutil.tz.tz import _datetime_to_timestamp
-from lib.exceptions_helper import ConnectionSkipException, ex
-from lib.pytvmaze import tvmaze
+from exceptions_helper import ConnectionSkipException, ex
 from .tvmaze_exceptions import *
-from lib.tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
+from tvinfo_base import TVInfoBase, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoCharacter, Crew, \
     crew_type_names, TVInfoPerson, RoleTypes, TVInfoShow, TVInfoEpisode, TVInfoIDs, TVInfoNetwork, TVInfoSeason, \
     PersonGenders, TVINFO_TVMAZE, TVINFO_TVDB, TVINFO_IMDB, TVINFO_CAST_LIMIT
-
-from six import integer_types, iteritems, string_types
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional
-    from lib.pytvmaze.tvmaze import Episode as TVMazeEpisode, Show as TVMazeShow
+    from pytvmaze.tvmaze import Episode as TVMazeEpisode, Show as TVMazeShow
 
 log = logging.getLogger('tvmaze.api')
 log.addHandler(logging.NullHandler())
@@ -149,7 +148,7 @@ class TvMaze(TVInfoBase):
             language = s.language and clean_data(s.language.lower())
             language_country_code = None
             if language:
-                for cur_locale in iteritems(LOCALE_NAMES):
+                for cur_locale in LOCALE_NAMES.items():
                     if language in cur_locale[1]['name_en'].lower():
                         language_country_code = cur_locale[0].split('_')[1].lower()
                         break
@@ -177,7 +176,7 @@ class TvMaze(TVInfoBase):
 
         results = []
         if ids:
-            for t, p in iteritems(ids):
+            for t, p in ids.items():
                 if t in self.supported_id_searches:
                     cache_id_key = 's-id-%s-%s' % (t, ids[t])
                     is_none, shows = self._get_cache_entry(cache_id_key)
@@ -294,7 +293,7 @@ class TvMaze(TVInfoBase):
                 not img_ar or img_ar_type == img_type or
                 img_type not in (TVInfoImageType.banner, TVInfoImageType.poster, TVInfoImageType.fanart)]
             img_src = {}
-            for cur_res, cur_img_url in iteritems(cur_img.resolutions):
+            for cur_res, cur_img_url in cur_img.resolutions.items():
                 img_size = img_size_map.get(cur_res)
                 if img_size:
                     img_src[img_size] = cur_img_url.get('url')
@@ -362,7 +361,7 @@ class TvMaze(TVInfoBase):
 
             if show_data.seasons:
                 networks = {}
-                for _, cur_season in iteritems(show_data.seasons):
+                for _, cur_season in show_data.seasons.items():
                     ti_season = None
                     if cur_season.season_number not in ti_show:
                         if all(_e.is_special() for _e in cur_season.episodes or []):
@@ -370,7 +369,7 @@ class TvMaze(TVInfoBase):
                         else:
                             log.error('error episodes have no numbers')
                     ti_season = ti_season or ti_show[cur_season.season_number]  # type: TVInfoSeason
-                    for k, v in iteritems(season_map):
+                    for k, v in season_map.items():
                         if k not in ('network', ) and k in season_map:
                             setattr(ti_season, k, clean_data(getattr(cur_season, v, None)) or empty_se.get(v))
                     if cur_season.network:
@@ -388,7 +387,7 @@ class TvMaze(TVInfoBase):
                 ti_show.season_images_loaded = True
                 seen = set()
                 ti_show.networks = [seen.add(r[1].name) or r[1]
-                                    for r in sorted(iteritems(networks), key=lambda a: a[0], reverse=True)
+                                    for r in sorted(networks.items(), key=lambda a: a[0], reverse=True)
                                     if r[1].name not in seen]
 
             ti_show.ep_loaded = True
@@ -397,7 +396,7 @@ class TvMaze(TVInfoBase):
 
     def get_updated_shows(self):
         # type: (...) -> Dict[integer_types, integer_types]
-        return {sid: v.seconds_since_epoch for sid, v in iteritems(tvmaze.show_updates().updates)}
+        return {sid: v.seconds_since_epoch for sid, v in tvmaze.show_updates().updates.items()}
 
     @staticmethod
     def _clean_character_name(name):
@@ -557,7 +556,7 @@ class TvMaze(TVInfoBase):
                 else:
                     _s_o = TVInfoShow()
                 show_dict = _s_o.__dict__
-                for k, v in iteritems(show_dict):
+                for k, v in show_dict.items():
                     if k not in ('cast', 'crew', 'images', 'aliases', 'rating', 'network') and k in show_map:
                         show_dict[k] = getattr(_s_d, show_map.get(k, k), clean_data(show_dict[k]))
                 _s_o.aliases = [clean_data(a.name) for a in _s_d.akas]
@@ -640,7 +639,7 @@ class TvMaze(TVInfoBase):
                                                     ))
 
                         if character_person_ids:
-                            for cur_ch, cur_p_ids in iteritems(character_person_ids):
+                            for cur_ch, cur_p_ids in character_person_ids.items():
                                 if cur_p_ids:
                                     char = next((mc for mc in _s_o.cast[RoleTypes.ActorMain] if mc.id == cur_ch),
                                                 None)  # type: Optional[TVInfoCharacter]

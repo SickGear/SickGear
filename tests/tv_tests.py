@@ -16,21 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import shutil
 import unittest
 import test_lib as test
-from random import randint
-
 import datetime
 import copy
+from random import randint
+from unittest import mock
+
 import sickgear
-from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
 from exceptions_helper import MultipleShowObjectsException
-from sickgear.helpers import find_show_by_id
 from sickgear import db, indexermapper
+from sickgear.helpers import find_show_by_id
 from sickgear.indexers.indexer_api import TVInfoAPI
 from sickgear.indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TVDB, TVINFO_TVMAZE, TVINFO_TVRAGE
 from sickgear.scene_exceptions import ReleaseMap
-from lib.tvinfo_base import TVInfoEpisode
+from sickgear.tv import TVEpisode, TVShow, TVidProdid, prodid_bitshift
+from tvinfo_base import TVInfoEpisode, TVInfoSeason, TVInfoShow
 
 # noinspection PyUnreachableCode
 if False:
@@ -188,6 +191,84 @@ class TVEpisodeLoadTests(test.SickbeardTestDBCase):
             self.assertFalse(load(cur_network).dirty, msg=f'show network "{cur_network}"')
 
 
+class TVEpisodeLoadDiskTests(test.SickbeardTestDBCase):
+    """ episodes that load from the db get their file size from one list of the folder, not from a call for each """
+
+    def setUp(self):
+        super(TVEpisodeLoadDiskTests, self).setUp()
+        sickgear.showList = []
+        sickgear.showDict = {}
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        self.ep_dir = os.path.join(test.TESTDIR, 'disk check')
+        os.makedirs(self.ep_dir, exist_ok=True)
+        # episode 1 and 2 have a file, with a size that is not the size in the db, the file of episode 3 is gone
+        for cur_ep_num in (1, 2):
+            self.make_file(cur_ep_num)
+        for cur_ep_num in (1, 2, 3):
+            self.add_row(cur_ep_num)
+        self.show_obj = TVShow(1, 123456, 'en')
+
+    def tearDown(self):
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        shutil.rmtree(self.ep_dir, ignore_errors=True)
+        super(TVEpisodeLoadDiskTests, self).tearDown()
+
+    def ep_file(self, ep_num):
+        return os.path.join(self.ep_dir, f'disk check 1x0{ep_num}.mkv')
+
+    def make_file(self, ep_num):
+        with open(self.ep_file(ep_num), 'wb') as fh:
+            fh.write(b'12345' * ep_num)
+
+    def add_row(self, ep_num):
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.action(
+                'INSERT INTO tv_episodes'
+                ' (indexer, showid, indexerid, season, episode, status, airdate, subtitles, location, file_size)'
+                ' VALUES (1, 123456, ?, 1, ?, ?, 1, "", ?, 700)',
+                [1000 + ep_num, ep_num, sickgear.common.SKIPPED, self.ep_file(ep_num)])
+
+    def test_sizes_come_from_one_folder_list(self):
+        with mock.patch('os.scandir', wraps=os.scandir) as scandir:
+            with mock.patch('os.path.getsize', wraps=os.path.getsize) as getsize:
+                sizes = [self.show_obj.get_episode(1, _ep_num).file_size for _ep_num in (1, 2, 3)]
+        self.assertEqual([5, 10, 0], sizes)
+        self.assertEqual(1, scandir.call_count)
+        getsize.assert_not_called()
+
+    def test_loaded_episode_is_not_changed(self):
+        ep_obj = self.show_obj.get_episode(1, 1)
+        self.assertEqual(os.path.normpath(self.ep_file(1)), ep_obj.location)
+        self.assertFalse(ep_obj.dirty)
+
+    def test_file_that_is_new_since_the_list(self):
+        self.show_obj.get_episode(1, 1)
+        self.make_file(4)
+        self.add_row(4)
+        self.assertEqual(20, self.show_obj.get_episode(1, 4).file_size)
+
+    def test_folder_is_listed_again_after_30_seconds(self):
+        self.show_obj.get_episode(1, 1)
+        self.show_obj._ep_dir_time -= 31
+        with mock.patch('os.scandir', wraps=os.scandir) as scandir:
+            self.show_obj.get_episode(1, 2)
+        self.assertEqual(1, scandir.call_count)
+
+    def test_folder_that_is_gone(self):
+        shutil.rmtree(self.ep_dir)
+        self.assertEqual(0, self.show_obj.get_episode(1, 1).file_size)
+
+    def test_location_setter_reads_the_size(self):
+        ep_obj = self.show_obj.get_episode(1, 3)
+        ep_obj.location = self.ep_file(1)
+        self.assertEqual(5, ep_obj.file_size)
+
+
 class TVTests(test.SickbeardTestDBCase):
 
     def setUp(self):
@@ -209,6 +290,258 @@ class TVTests(test.SickbeardTestDBCase):
         show_obj.save_to_db()
         sickgear.showList = [show_obj]
         sickgear.showDict = {show_obj.sid_int: show_obj}
+
+
+class TVLoadEpisodesTests(test.SickbeardTestDBCase):
+    """ a show update loads each episode once from the DB and once from TV info """
+
+    def setUp(self):
+        super(TVLoadEpisodesTests, self).setUp()
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        self.loaders = {}
+        self.calls = []
+        for cur_name in ('load_from_db', 'load_from_tvinfo'):
+            self.loaders[cur_name] = getattr(TVEpisode, cur_name)
+            setattr(TVEpisode, cur_name, self.counted(cur_name))
+
+        self.show_obj = TVShow(TVINFO_TVDB, 123456, 'en')
+        self.show_obj.sxe_ep_obj = {}
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.mass_action([[
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, name, status, airdate,'
+                ' subtitles) VALUES (?, 123456, ?, 1, ?, ?, ?, ?, "")',
+                [TVINFO_TVDB, 1000 + ep_num, ep_num, f'Old name {ep_num}', sickgear.common.SKIPPED,
+                 datetime.date(2020, 1, ep_num).toordinal()]] for ep_num in (1, 2)])
+
+        self.tvinfo_show = TVInfoShow()
+        self.tvinfo_show.id = 123456
+        self.tvinfo_show[1] = TVInfoSeason(show=self.tvinfo_show, number=1)
+        for ep_num in (1, 2, 3):
+            ep_info = TVInfoEpisode(season=self.tvinfo_show[1], show=self.tvinfo_show)
+            ep_info.id = 1000 + ep_num
+            ep_info.episodename = f'New name {ep_num}'
+            ep_info.firstaired = f'2020-01-0{ep_num}'
+            self.tvinfo_show[1][ep_num] = ep_info
+
+    def tearDown(self):
+        for cur_name, cur_loader in self.loaders.items():
+            setattr(TVEpisode, cur_name, cur_loader)
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        super(TVLoadEpisodesTests, self).tearDown()
+
+    def counted(self, name):
+        loader = self.loaders[name]
+
+        def count(ep_obj, *args, **kwargs):
+            self.calls.append((name, ep_obj.season, ep_obj.episode))
+            return loader(ep_obj, *args, **kwargs)
+        return count
+
+    def names(self):
+        return {_ep_num: _ep_obj.name for _ep_num, _ep_obj in self.show_obj.sxe_ep_obj[1].items()}
+
+    def test_load_episodes_from_tvinfo_loads_each_episode_once(self):
+        self.show_obj.load_episodes_from_tvinfo(tvinfo_data=self.tvinfo_show)
+
+        self.assertEqual({1: 'New name 1', 2: 'New name 2', 3: 'New name 3'}, self.names())
+        for cur_call in [(_name, 1, _ep_num) for _name in self.loaders for _ep_num in (1, 2, 3)]:
+            self.assertEqual(1, self.calls.count(cur_call), cur_call)
+        # each episode loads from its own db row, the status of episode 2 is not the default
+        self.assertEqual(sickgear.common.SKIPPED, self.show_obj.sxe_ep_obj[1][2].status)
+
+    def test_load_episodes_from_tvinfo_updates_a_loaded_episode(self):
+        ep_obj = self.show_obj.get_episode(1, 2)
+        self.assertEqual('Old name 2', ep_obj.name)
+        self.show_obj.load_episodes_from_tvinfo(tvinfo_data=self.tvinfo_show)
+        self.assertIs(ep_obj, self.show_obj.sxe_ep_obj[1][2])
+        self.assertEqual('New name 2', ep_obj.name)
+
+
+class TVEndEpisodeTests(test.SickbeardTestDBCase):
+    """ the first or latest aired episode of a show is found without a load of every episode """
+
+    def setUp(self):
+        super(TVEndEpisodeTests, self).setUp()
+        self.show_obj = TVShow(TVINFO_TVDB, 123456, 'en')
+        self.show_obj.sxe_ep_obj = {}
+        # season, episode, airdate. 1x1 has no airdate, 1x2 and 1x3 share the first one, 2x1 and 2x2 share the last one
+        episodes = [(0, 1, (2019, 1, 1)), (1, 1, None), (1, 2, (2020, 1, 1)), (1, 3, (2020, 1, 1)),
+                    (2, 1, (2021, 1, 1)), (2, 2, (2021, 1, 1)), (0, 2, (2022, 1, 1))]
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.mass_action([[
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, airdate)'
+                ' VALUES (?, 123456, ?, ?, ?, ?)',
+                [TVINFO_TVDB, 100 * season + episode, season, episode,
+                 (airdate and datetime.date(*airdate).toordinal()) or 1]] for season, episode, airdate in episodes])
+
+    def check(self, expected, ep_obj):
+        self.assertEqual(expected, (ep_obj.season, ep_obj.episode))
+        self.assertEqual(1, sum(len(_eps) for _eps in self.show_obj.sxe_ep_obj.values()))
+
+    def test_first_aired_episode(self):
+        self.check((0, 1), self.show_obj.first_aired_episode)
+
+    def test_first_aired_regular_episode(self):
+        self.check((1, 2), self.show_obj.first_aired_regular_episode)
+
+    def test_latest_aired_episode(self):
+        self.check((0, 2), self.show_obj.latest_aired_episode)
+
+    def test_latest_aired_regular_episode(self):
+        self.check((2, 1), self.show_obj.latest_aired_regular_episode)
+
+    def test_show_without_aired_episode(self):
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.action('UPDATE tv_episodes SET airdate = 1 WHERE showid = 123456')
+        self.assertIsNone(self.show_obj.first_aired_regular_episode)
+
+
+class TVReleaseEpisodesTests(test.SickbeardTestDBCase):
+    """ episode objects are released from memory without a loss of data, and without two objects for an episode """
+
+    def setUp(self):
+        super(TVReleaseEpisodesTests, self).setUp()
+        # load episodes from the db, the test lib replaces the loader with one that does nothing
+        self.fake_specify_episode = TVEpisode.specify_episode
+        TVEpisode.specify_episode = test.org_specify_episode
+        self.release_map_xem = sickgear.scene_exceptions.MEMCACHE.get('release_map_xem', {})
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = {}
+        sickgear.WANTEDLIST_CACHE = sickgear.common.WantedQualities()
+        self.show_obj = TVShow(TVINFO_TVDB, 123456, 'en')
+        self.show_obj.sxe_ep_obj = {}
+        with sickgear.db.DBConnection() as sg_db:
+            sg_db.mass_action([[
+                'INSERT INTO tv_episodes (indexer, showid, indexerid, season, episode, name, status, airdate,'
+                ' subtitles) VALUES (?, 123456, ?, 1, ?, ?, ?, ?, "")',
+                [TVINFO_TVDB, 1000 + ep_num, ep_num, f'Name {ep_num}', sickgear.common.SKIPPED,
+                 datetime.date(2020, 1, ep_num).toordinal()]] for ep_num in range(1, 6)])
+        for ep_num in range(1, 6):
+            self.show_obj.get_episode(1, ep_num)
+
+    def tearDown(self):
+        TVEpisode.specify_episode = self.fake_specify_episode
+        sickgear.scene_exceptions.MEMCACHE['release_map_xem'] = self.release_map_xem
+        super(TVReleaseEpisodesTests, self).tearDown()
+
+    def loaded(self):
+        return sorted(self.show_obj.sxe_ep_obj[1])
+
+    def test_release(self):
+        self.assertEqual(5, self.show_obj.release_episodes())
+        self.assertEqual([], self.loaded())
+        self.assertEqual('Name 3', self.show_obj.get_episode(1, 3).name)
+        self.assertEqual([3], self.loaded())
+
+    def test_episode_with_unsaved_change_wanted_or_multi_is_kept(self):
+        self.show_obj.sxe_ep_obj[1][1].name = 'Changed'
+        self.show_obj.sxe_ep_obj[1][2].wanted_quality = [sickgear.common.Quality.HDTV]
+        self.show_obj.sxe_ep_obj[1][3].related_ep_obj = [self.show_obj.sxe_ep_obj[1][4]]
+        self.assertEqual(2, self.show_obj.release_episodes())
+        self.assertEqual([1, 2, 3], self.loaded())
+        # episode 4 is in use as a part of multi-episode 3, it is taken back and is not made again
+        self.assertIs(self.show_obj.sxe_ep_obj[1][3].related_ep_obj[0], self.show_obj.get_episode(1, 4))
+
+    def test_episode_in_use_is_taken_back(self):
+        ep_obj = self.show_obj.sxe_ep_obj[1][5]
+        self.show_obj.release_episodes()
+        self.assertIsNone(self.show_obj.get_episode(1, 4, no_create=True))
+        self.assertIs(ep_obj, self.show_obj.get_episode(1, 5, no_create=True))
+        self.assertEqual([5], self.loaded())
+
+    def test_released_episode_is_refused_as_before_release(self):
+        before = self.show_obj.want_episode(1, 2, sickgear.common.Quality.HDTV)
+        self.show_obj.release_episodes()
+        self.assertEqual(before, self.show_obj.want_episode(1, 2, sickgear.common.Quality.HDTV))
+        self.assertEqual([], self.loaded())
+
+
+class TVCacheResultTests(test.SickbeardTestDBCase):
+
+    def test_multi_ep_cache_result(self):
+        from sickgear import classes, tvcache
+        from sickgear.common import Quality
+
+        show_obj = TVShow(1, 1, 'en')
+        show_obj.name = 'show name'
+        show_obj.want_episode = lambda *args, **kwargs: True
+        sickgear.showList = [show_obj]
+        sickgear.showDict = {show_obj.sid_int: show_obj}
+        show_obj.sxe_ep_obj[1] = {_n: TVEpisode(show_obj, 1, _n) for _n in (2, 3)}
+
+        class Provider(object):
+            name = 'provider'
+            anime_only = False
+
+            @staticmethod
+            def get_id():
+                return 'provider'
+
+            @staticmethod
+            def get_result(ep_obj_list, url):
+                result = classes.NZBSearchResult(ep_obj_list)
+                result.url = url
+                return result
+
+        cache = tvcache.TVCache(Provider())
+        with cache.get_db() as sg_db:
+            sg_db.action(
+                'INSERT INTO provider_cache (provider, name, season, episodes, indexerid, url, time, quality,'
+                ' release_group, version, indexer, size, uid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                ['provider', 'Show.Name.S01E02E03.720p.HDTV.x264-GRP', 1, '|2|3|', 1, 'http://host/nzb', 0,
+                 Quality.HDTV, 'GRP', -1, 1, 1234, 'guid-1'])
+
+        ep_obj = show_obj.sxe_ep_obj[1][2]
+        ep_obj.wanted_quality = [Quality.HDTV]
+        results = cache.search_cache(ep_obj)
+        self.assertEqual(1, len(results))
+        self.assertEqual([2, 3], results[0].episode_numbers)
+        self.assertEqual([2, 3], [_ep.episode for _ep in results[0].ep_obj_list])
+        self.assertEqual((1, 1234, 'guid-1'), (results[0].season, results[0].size, results[0].puid))
+
+
+class TVAiredInSeasonTests(test.SickbeardTestDBCase):
+
+    def test_aired_in_season(self):
+        from sickgear.search import get_aired_in_season
+
+        show_obj = TVShow(1, 1, 'en')
+        yesterday = datetime.date.today().toordinal() - 1
+        with test.db.DBConnection() as sg_db:
+            for cur_ep_num in (1, 2, 3):
+                sg_db.action('INSERT INTO tv_episodes (indexer, showid, season, episode, airdate, status)'
+                             ' VALUES (1, 1, 1, ?, ?, 5)', [cur_ep_num, yesterday])
+
+        ep_obj = TVEpisode(show_obj, 1, 1)
+        self.assertEqual(0, ep_obj.eps_aired_in_season)
+
+        self.assertIsNone(get_aired_in_season(show_obj))
+        self.assertEqual({1: 3}, show_obj.aired_in_season)
+        self.assertEqual(3, ep_obj.eps_aired_in_season)
+        self.assertEqual(3, ep_obj.eps_aired_in_scene_season)
+
+        # counts are kept for one day unless reset or sql is requested
+        with test.db.DBConnection() as sg_db:
+            sg_db.action('INSERT INTO tv_episodes (indexer, showid, season, episode, airdate, status)'
+                         ' VALUES (1, 1, 1, 4, ?, 5)', [yesterday])
+        get_aired_in_season(show_obj)
+        self.assertEqual(3, ep_obj.eps_aired_in_season)
+        self.assertEqual(4, len(get_aired_in_season(show_obj, return_sql=True)))
+        self.assertEqual(4, ep_obj.eps_aired_in_season)
+
+        # scene seasons are counted on their own
+        show_obj = TVShow(1, 2, 'en')
+        with test.db.DBConnection() as sg_db:
+            for cur_ep_num in (1, 2):
+                sg_db.action('INSERT INTO tv_episodes (indexer, showid, season, episode, scene_season, airdate, status)'
+                             ' VALUES (1, 2, 1, ?, 2, ?, 5)', [cur_ep_num, yesterday])
+        get_aired_in_season(show_obj)
+        self.assertEqual({1: 2}, show_obj.aired_in_season)
+        self.assertEqual({2: 2}, show_obj.aired_in_scene_season)
 
 
 class TVFormatPatternTests(test.SickbeardTestDBCase):
@@ -379,7 +712,25 @@ if '__main__' == __name__:
     suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeLoadTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVEpisodeLoadDiskTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVReleaseEpisodesTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVEndEpisodeTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVLoadEpisodesTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVCacheResultTests)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+    print('######################################################################')
+    suite = unittest.TestLoader().loadTestsFromTestCase(TVAiredInSeasonTests)
     unittest.TextTestRunner(verbosity=2).run(suite)
     print('######################################################################')
     suite = unittest.TestLoader().loadTestsFromTestCase(TVFormatPatternTests)

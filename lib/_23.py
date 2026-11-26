@@ -15,6 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
+# noinspection PyUnresolvedReferences, PyPep8Naming
+import xml.etree.ElementTree as etree
 from base64 import encodebytes as b64encodebytes
 from collections import deque
 # noinspection PyUnresolvedReferences
@@ -29,15 +32,9 @@ from os import scandir, DirEntry
 # noinspection PyUnresolvedReferences
 from subprocess import Popen
 from sys import version_info
-
-import datetime
-# noinspection PyUnresolvedReferences, PyPep8Naming
-import xml.etree.ElementTree as etree
-
 # noinspection PyUnresolvedReferences
 # from six.moves.urllib.parse import quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus, \
 #     urlencode, urlsplit, urlunparse, urlunsplit
-
 from urllib.parse import (quote, quote_plus, unquote as six_unquote, unquote_plus as six_unquote_plus,
                           urlencode, urlsplit, urlunparse, urlunsplit)
 

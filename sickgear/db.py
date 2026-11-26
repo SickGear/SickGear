@@ -22,14 +22,11 @@ import sqlite3
 import threading
 import time
 
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import logger, sgdatetime
 from .sgdatetime import SGDatetime
-
 from sg_helpers import make_path, compress_file, remove_file_perm, scantree
-
 from _23 import scandir
 
 # noinspection PyUnreachableCode
@@ -464,7 +461,7 @@ def _restore_database(filename, version):
 
 def _process_upgrade(connection, upgrade_class):
     instance = upgrade_class(connection)
-    logger.debug(f'Checking {_pretty_name(upgrade_class.__name__)} database upgrade')
+    logger.debug(f'Checking "{_pretty_name(upgrade_class.__name__)}" database upgrade')
     if not instance.test():
         connection.is_upgrading = True
         connection.upgrade_log(f'{getattr(upgrade_class, "pretty_name", None) or _pretty_name(upgrade_class.__name__)}')
@@ -641,6 +638,10 @@ class SchemaUpgrade(object):
             tbl_name = re.findall(r'(?i)CREATE.*?TABLE.*?\s([^\s(]+)\s*\(', query)
             if tbl_name and self.has_table(tbl_name[0]):
                 continue
+            # a column can exist, e.g. in a db of a test branch that added it in an earlier step
+            column = re.findall(r'(?i)ALTER\s+TABLE\s+\[?([^\s\]]+)\]?\s+ADD\s+(?:COLUMN\s+)?\[?([^\s\]]+)', query)
+            if column and self.has_column(*column[0]):
+                continue
             self.connection.action(query)
 
     def finish(self, tbl_dropped=False):
@@ -722,6 +723,8 @@ def migration_code(sg_db):
         20013: sickgear.mainDB.AddHistoryHideColumn,
         20014: sickgear.mainDB.ChangeShowData,
         20015: sickgear.mainDB.ChangeTmdbID,
+        20016: sickgear.mainDB.AddHistoryDownloadIdentity,
+        20017: sickgear.mainDB.AddEpisodeVideoCodec,
         # 20002: sickgear.mainDB.AddCoolSickGearFeature3,
     }
 

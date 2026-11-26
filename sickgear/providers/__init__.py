@@ -17,14 +17,17 @@
 import importlib
 import sys
 
+from cfscrape import CloudflareScraper
+
+import sg_ech
+import sickgear
 from . import generic, newznab
 from .newznab import NewznabConstants
 from .. import logger
-import sickgear
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, List, Union
+    from typing import AnyStr, List, Tuple, Union
     from .generic import GenericProvider, NZBProvider, TorrentProvider
 
 # noinspection PyUnresolvedReferences
@@ -51,6 +54,22 @@ for module in __all__:
     except ImportError as e:
         if 'custom' != module[0:6]:
             raise e
+
+
+def apply_dns_resolver(resolver, close=True):
+    # type: (AnyStr, bool) -> None
+    """
+    rebuild provider sessions with a DNS resolver, needed as sessions are built at import before config is read
+
+    :param resolver: niquests resolver url, e.g. doh+cloudflare:// or '' for system DNS
+    :param close: close the old sessions, False while other threads may still have requests running on them
+    """
+    for cur_provider in sorted_sources():
+        new_session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(resolver))
+        # keep logins
+        new_session.cookies.update(cur_provider.session.cookies)
+        close and cur_provider.session.close()
+        cur_provider.session = new_session
 
 
 def sorted_sources():
@@ -84,6 +103,21 @@ def sorted_sources():
             new_list.append(provider_dict[curModule])
 
     return new_list
+
+
+def tunnel_notice_items():
+    # type: (...) -> List[Tuple[AnyStr, AnyStr, AnyStr, bool]]
+    """
+    :return: id, name, ECH check outcome, and whether the notice can turn the fallback on for it with one click, of
+     each provider for the top notice, a provider that looks blocked and does not use the fallback now, that the user
+     did not close the notice for this run, or three times
+    """
+    closed_now = sickgear.MEMCACHE.get('provider_tunnel_notice_closed') or set()
+    by_id = {cur_p.get_id(): cur_p for cur_p in sorted_sources()}
+    return [(pid, name, outcome, pid in by_id and by_id[pid].tunnel_default_on())
+            for pid, (name, outcome) in sorted(sickgear.PROVIDER_TUNNEL_BLOCKED.items())
+            if pid not in closed_now and 3 > sickgear.PROVIDER_TUNNEL_NOTICE_CLOSED.get(pid, 0)
+            and not (pid in by_id and by_id[pid]._tunnel_allowed())]
 
 
 def provider_modules():

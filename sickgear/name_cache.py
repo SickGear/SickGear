@@ -14,13 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import defaultdict
 import threading
+from collections import defaultdict
 
 import sickgear
 from . import db
 from .helpers import full_sanitize_scene_name, try_int
-
 from _23 import map_consume
 
 # noinspection PyUnreachableCode

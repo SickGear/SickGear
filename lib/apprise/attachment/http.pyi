@@ -1,5 +1,6 @@
 from ..common import ContentLocation as ContentLocation
 from ..url import PrivacyMode as PrivacyMode
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS
 from .base import AttachBase as AttachBase
 from _typeshed import Incomplete
 

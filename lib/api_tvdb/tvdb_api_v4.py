@@ -11,17 +11,18 @@ import logging
 import os
 import re
 
-from bs4_parser import BS4Parser
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from dateutil.parser import parser
+from six import integer_types, PY3, string_types
 
+from bs4_parser import BS4Parser
 from .tvdb_exceptions import TvdbError, TvdbTokenFailure, TvdbPersonNotFound
 from exceptions_helper import ex
-from lib.dateutil.parser import parser
 # noinspection PyProtectedMember
-from lib.exceptions_helper import ConnectionSkipException
-from lib.tvinfo_base import (
+from exceptions_helper import ConnectionSkipException
+from tvinfo_base import (
     CastList, CrewList, PersonGenders, RoleTypes,
     TVInfoBase, TVInfoCharacter, TVInfoEpisode, TVInfoIDs, TVInfoImage, TVInfoImageSize, TVInfoImageType, TVInfoNetwork,
     TVInfoPerson, TVInfoSeason, TVInfoSeasonTypes, TVInfoShow, TVInfoSocialIDs,
@@ -29,8 +30,6 @@ from lib.tvinfo_base import (
     TVINFO_MID_SEASON_FINALE, TVINFO_SEASON_FINALE, TVINFO_SERIES_FINALE, TVINFO_TIKTOK, TVINFO_TMDB, TVINFO_TVDB,
     TVINFO_TVDB_SLUG, TVINFO_TVMAZE, TVINFO_X, TVINFO_WIKIDATA, TVINFO_WIKIPEDIA, TVINFO_YOUTUBE, TVINFO_CAST_LIMIT)
 from sg_helpers import clean_data, clean_str, enforce_type, get_url, try_date, try_int
-
-from six import integer_types, iteritems, PY3, string_types
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
@@ -153,8 +152,8 @@ retries = Retry(total=3,
                 status_forcelist=[429, 500, 502, 503, 504],
                 allowed_methods=['HEAD', 'GET', 'PUT', 'DELETE', 'OPTIONS', 'TRACE', 'POST'])
 # noinspection HttpUrlsUsage
-s.mount('http://', HTTPAdapter(TimeoutHTTPAdapter(max_retries=retries)))
-s.mount('https://', HTTPAdapter(TimeoutHTTPAdapter(max_retries=retries)))
+s.mount('http://', TimeoutHTTPAdapter(max_retries=retries))
+s.mount('https://', TimeoutHTTPAdapter(max_retries=retries))
 base_request_para = dict(session=s, hooks={'response': _record_hook}, raise_skip_exception=True, auth=TvdbAuth())
 
 
@@ -219,7 +218,7 @@ source_types = {
     29: TVINFO_TMDB,  # collection
 }
 
-people_types_reverse = {_v: _k for _k, _v in iteritems(people_types)}
+people_types_reverse = {_v: _k for _k, _v in people_types.items()}
 
 empty_ep = TVInfoEpisode()
 tz_p = parser()
@@ -630,7 +629,7 @@ class TvdbAPIv4(TVInfoBase):
             ti_show.runtime = show_data.get('averageRuntime')
             ti_show.airs_time = clean_data(show_data.get('airsTime'))
             ti_show.airs_dayofweek = ', '.join([_k.capitalize()
-                                                for _k, _v in iteritems(show_data.get('airsDays')) if _v])
+                                                for _k, _v in show_data.get('airsDays').items() if _v])
             ti_show.genre_list = ('genres' in show_data and show_data['genres']
                                   and [clean_data(_g['name']) for _g in show_data['genres']]) or []
             ti_show.genre = '|'.join(ti_show.genre_list)

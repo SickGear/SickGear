@@ -4,6 +4,7 @@ from ..utils.parse import parse_bool as parse_bool, parse_list as parse_list
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 
+BARK_AESGCM_SUPPORT: bool
 BARK_SOUNDS: Incomplete
 
 class NotifyBarkLevel:
@@ -14,10 +15,14 @@ class NotifyBarkLevel:
     CRITICAL: str
 
 BARK_LEVELS: Incomplete
+BARK_AES_KEY_LENGTHS: Incomplete
+BARK_GCM_IV_RANDOM_BYTES: int
+BARK_GCM_IV_LENGTH: int
 
 class NotifyBark(NotifyBase):
     """A wrapper for Notify Bark Notifications."""
     service_name: str
+    requirements: Incomplete
     service_url: str
     protocol: str
     secure_protocol: str
@@ -36,12 +41,16 @@ class NotifyBark(NotifyBase):
     sound: Incomplete
     volume: Incomplete
     call: Incomplete
+    encryption_key: Incomplete
+    _cipher: Incomplete
     icon: Incomplete
     level: Incomplete
-    def __init__(self, targets=None, include_image: bool = True, sound=None, category=None, group=None, level=None, click=None, badge=None, volume=None, icon=None, call=None, **kwargs) -> None:
+    def __init__(self, targets=None, include_image: bool = True, sound=None, category=None, group=None, level=None, click=None, badge=None, volume=None, icon=None, call=None, encryption_key=None, **kwargs) -> None:
         """Initialize Notify Bark Object."""
     def send(self, body, title: str = '', notify_type=..., **kwargs):
         """Perform Bark Notification."""
+    def _encrypt_payload(self, payload):
+        """Encrypt one Bark parameter object with a fresh AES-GCM IV."""
     @property
     def url_identifier(self):
         """Returns all of the identifiers that make this URL unique from
@@ -57,3 +66,6 @@ class NotifyBark(NotifyBase):
     def parse_url(url):
         """Parses the URL and returns enough arguments that can allow us to re-
         instantiate this object."""
+    @staticmethod
+    def runtime_deps():
+        """Return optional runtime dependency package names."""

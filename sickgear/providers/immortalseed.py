@@ -20,12 +20,12 @@
 import re
 import time
 
+import feedparser
+
 import sickgear
+import exceptions_helper
 from . import generic
 from ..helpers import try_int
-
-import exceptions_helper
-import feedparser
 
 
 class ImmortalSeedProvider(generic.TorrentProvider):

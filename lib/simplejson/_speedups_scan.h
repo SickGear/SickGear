@@ -204,12 +204,17 @@ JSON_SCAN_FN(_parse_object)(PyScannerObject *s, PyObject *pystr,
     /* only loop if the object is non-empty */
     if (idx <= end_idx && JSON_SCAN_READ(idx) != '}') {
         int trailing_delimiter = 0;
+        Py_ssize_t comma_idx = 0;
         while (idx <= end_idx) {
             trailing_delimiter = 0;
 
             /* read key */
             if (JSON_SCAN_READ(idx) != '"') {
-                raise_errmsg(state, ERR_OBJECT_PROPERTY, pystr, idx);
+                /* '}' is still legal where the first key would go. */
+                raise_errmsg(state,
+                             did_parse ? ERR_OBJECT_PROPERTY
+                                       : ERR_OBJECT_PROPERTY_FIRST,
+                             pystr, idx);
                 goto bail;
             }
             key = JSON_SCAN_SCANSTRING_CALL(idx + 1, &next_idx);
@@ -271,6 +276,7 @@ JSON_SCAN_FN(_parse_object)(PyScannerObject *s, PyObject *pystr,
                 raise_errmsg(state, ERR_OBJECT_DELIMITER, pystr, idx);
                 goto bail;
             }
+            comma_idx = idx;
             idx++;
 
             /* skip whitespace after , delimiter */
@@ -279,7 +285,7 @@ JSON_SCAN_FN(_parse_object)(PyScannerObject *s, PyObject *pystr,
 
             /* check for trailing comma before } */
             if (idx <= end_idx && JSON_SCAN_READ(idx) == '}') {
-                raise_errmsg(state, ERR_TRAILING_COMMA_OBJECT, pystr, idx);
+                raise_errmsg(state, ERR_TRAILING_COMMA_OBJECT, pystr, comma_idx);
                 goto bail;
             }
         }
@@ -351,6 +357,7 @@ JSON_SCAN_FN(_parse_array)(PyScannerObject *s, PyObject *pystr,
     /* only loop if the array is non-empty */
     if (idx <= end_idx && JSON_SCAN_READ(idx) != ']') {
         int trailing_delimiter = 0;
+        Py_ssize_t comma_idx = 0;
         while (idx <= end_idx) {
             trailing_delimiter = 0;
             /* read any JSON term and de-tuplefy the (rval, idx) */
@@ -377,6 +384,7 @@ JSON_SCAN_FN(_parse_array)(PyScannerObject *s, PyObject *pystr,
                 raise_errmsg(state, ERR_ARRAY_DELIMITER, pystr, idx);
                 goto bail;
             }
+            comma_idx = idx;
             idx++;
 
             /* skip whitespace after , */
@@ -385,7 +393,7 @@ JSON_SCAN_FN(_parse_array)(PyScannerObject *s, PyObject *pystr,
 
             /* check for trailing comma before ] */
             if (idx <= end_idx && JSON_SCAN_READ(idx) == ']') {
-                raise_errmsg(state, ERR_TRAILING_COMMA_ARRAY, pystr, idx);
+                raise_errmsg(state, ERR_TRAILING_COMMA_ARRAY, pystr, comma_idx);
                 goto bail;
             }
         }

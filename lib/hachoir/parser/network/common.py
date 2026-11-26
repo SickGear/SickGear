@@ -1,6 +1,5 @@
 from hachoir.field import FieldSet, Field, Bits
 from hachoir.core.bits import str2hex
-from hachoir.parser.network.ouid import REGISTERED_OUID
 from hachoir.core.endian import BIG_ENDIAN
 from socket import gethostbyaddr, herror as socket_host_error
 
@@ -73,6 +72,8 @@ class OrganizationallyUniqueIdentifier(Bits):
 
     def createDisplay(self, human=True):
         if human:
+            # this table is 1.2 MB, load it at first use, upstream imports it at the top of the file
+            from hachoir.parser.network.ouid import REGISTERED_OUID
             key = self.value
             if key in REGISTERED_OUID:
                 return REGISTERED_OUID[key]

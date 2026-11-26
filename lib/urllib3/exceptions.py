@@ -2,17 +2,31 @@ from __future__ import annotations
 
 import socket
 import typing
-import warnings
 from email.errors import MessageDefect
-from http.client import IncompleteRead as httplib_IncompleteRead
 
 if typing.TYPE_CHECKING:
+    from ._async.connection import AsyncHTTPConnection
+    from ._async.connectionpool import AsyncConnectionPool
+    from ._async.response import AsyncHTTPResponse
+    from ._typing import _TYPE_REDUCE_RESULT
+    from .backend import ResponsePromise
     from .connection import HTTPConnection
     from .connectionpool import ConnectionPool
     from .response import HTTPResponse
     from .util.retry import Retry
 
 # Base Exceptions
+# Use the stdlib ssl.SSLError as base so we catch both stdlib and non-stdlib
+# (rtls/utls) SSL errors. rtls.SSLError / utls.SSLError both subclass the
+# stdlib ssl.SSLError, so isinstance checks work both ways.
+from .contrib.anytls import stdlib_ssl as _stdlib_ssl
+
+if _stdlib_ssl is not None:
+    BaseSSLError = _stdlib_ssl.SSLError
+else:
+
+    class BaseSSLError(BaseException):  # type: ignore[no-redef]
+        pass
 
 
 class HTTPError(Exception):
@@ -23,32 +37,32 @@ class HTTPWarning(Warning):
     """Base warning used by this module."""
 
 
-_TYPE_REDUCE_RESULT = tuple[typing.Callable[..., object], tuple[object, ...]]
-
-
 class PoolError(HTTPError):
     """Base exception for errors caused within a pool."""
 
-    def __init__(self, pool: ConnectionPool, message: str) -> None:
+    def __init__(
+        self, pool: ConnectionPool | AsyncConnectionPool, message: str
+    ) -> None:
         self.pool = pool
-        self._message = message
         super().__init__(f"{pool}: {message}")
 
     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
         # For pickling purposes.
-        return self.__class__, (None, self._message)
+        return self.__class__, (None, None)
 
 
 class RequestError(PoolError):
     """Base exception for PoolErrors that have associated URLs."""
 
-    def __init__(self, pool: ConnectionPool, url: str | None, message: str) -> None:
+    def __init__(
+        self, pool: ConnectionPool | AsyncConnectionPool, url: str, message: str
+    ) -> None:
         self.url = url
         super().__init__(pool, message)
 
     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
         # For pickling purposes.
-        return self.__class__, (None, self.url, self._message)
+        return self.__class__, (None, self.url, None)
 
 
 class SSLError(HTTPError):
@@ -93,7 +107,10 @@ class MaxRetryError(RequestError):
     """
 
     def __init__(
-        self, pool: ConnectionPool, url: str | None, reason: Exception | None = None
+        self,
+        pool: ConnectionPool | AsyncConnectionPool,
+        url: str,
+        reason: Exception | None = None,
     ) -> None:
         self.reason = reason
 
@@ -101,16 +118,15 @@ class MaxRetryError(RequestError):
 
         super().__init__(pool, url, message)
 
-    def __reduce__(self) -> _TYPE_REDUCE_RESULT:
-        # For pickling purposes.
-        return self.__class__, (None, self.url, self.reason)
-
 
 class HostChangedError(RequestError):
     """Raised when an existing pool gets a request for a foreign host."""
 
     def __init__(
-        self, pool: ConnectionPool, url: str, retries: Retry | int = 3
+        self,
+        pool: ConnectionPool | AsyncConnectionPool,
+        url: str,
+        retries: Retry | int = 3,
     ) -> None:
         message = f"Tried to open a foreign host with url: {url}"
         super().__init__(pool, url, message)
@@ -142,39 +158,40 @@ class ConnectTimeoutError(TimeoutError):
 class NewConnectionError(ConnectTimeoutError, HTTPError):
     """Raised when we fail to establish a new connection. Usually ECONNREFUSED."""
 
-    def __init__(self, conn: HTTPConnection, message: str) -> None:
+    def __init__(
+        self,
+        conn: HTTPConnection
+        | AsyncHTTPConnection
+        | ConnectionPool
+        | AsyncConnectionPool,
+        message: str,
+    ) -> None:
         self.conn = conn
-        self._message = message
         super().__init__(f"{conn}: {message}")
 
     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
         # For pickling purposes.
-        return self.__class__, (None, self._message)
-
-    @property
-    def pool(self) -> HTTPConnection:
-        warnings.warn(
-            "The 'pool' property is deprecated and will be removed "
-            "in urllib3 v3.0. Use 'conn' instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        return self.conn
+        return self.__class__, (None, None)
 
 
 class NameResolutionError(NewConnectionError):
     """Raised when host name resolution fails."""
 
-    def __init__(self, host: str, conn: HTTPConnection, reason: socket.gaierror):
+    def __init__(
+        self,
+        host: str,
+        conn: HTTPConnection
+        | AsyncHTTPConnection
+        | ConnectionPool
+        | AsyncConnectionPool,
+        reason: socket.gaierror,
+    ):
         message = f"Failed to resolve '{host}' ({reason})"
-        self._host = host
-        self._reason = reason
         super().__init__(conn, message)
 
     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
         # For pickling purposes.
-        return self.__class__, (self._host, None, self._reason)
+        return self.__class__, (None, None, None)
 
 
 class EmptyPoolError(PoolError):
@@ -258,7 +275,7 @@ class BodyNotHttplibCompatible(HTTPError):
     """
 
 
-class IncompleteRead(HTTPError, httplib_IncompleteRead):
+class IncompleteRead(ProtocolError):
     """
     Response length doesn't match expected Content-Length
 
@@ -266,25 +283,25 @@ class IncompleteRead(HTTPError, httplib_IncompleteRead):
     for ``partial`` to avoid creating large objects on streamed reads.
     """
 
-    partial: int  # type: ignore[assignment]
-    expected: int
-
-    def __init__(self, partial: int, expected: int) -> None:
+    def __init__(self, partial: int, expected: int | None = None) -> None:
         self.partial = partial
         self.expected = expected
 
     def __repr__(self) -> str:
-        return "IncompleteRead(%i bytes read, %i more expected)" % (
-            self.partial,
-            self.expected,
-        )
+        if self.expected is not None:
+            return f"IncompleteRead({self.partial} bytes read, {self.expected} more expected)"
+        return f"IncompleteRead({self.partial} bytes read)"
+
+    __str__ = object.__str__
 
 
-class InvalidChunkLength(HTTPError, httplib_IncompleteRead):
+class InvalidChunkLength(ProtocolError):
     """Invalid chunk length in a chunked response."""
 
-    def __init__(self, response: HTTPResponse, length: bytes) -> None:
-        self.partial: int = response.tell()  # type: ignore[assignment]
+    def __init__(
+        self, response: HTTPResponse | AsyncHTTPResponse, length: bytes
+    ) -> None:
+        self.partial: int = response.tell()
         self.expected: int | None = response.length_remaining
         self.response = response
         self.length = length
@@ -333,3 +350,26 @@ class HeaderParsingError(HTTPError):
 
 class UnrewindableBodyError(HTTPError):
     """urllib3 encountered an error when trying to rewind a body"""
+
+
+class EarlyResponse(HTTPError):
+    """Stop the upload and collect its response, which may still be pending."""
+
+    def __init__(self, promise: ResponsePromise) -> None:
+        self.promise = promise
+
+
+class ResponseNotReady(HTTPError):
+    """Kept for BC"""
+
+
+class RecoverableError(HTTPError):
+    """This error is never leaked in the upper stack, it serves only an internal purpose."""
+
+
+class MustDowngradeError(RecoverableError):
+    """An error occurred with a protocol and can be circumvented using an older protocol."""
+
+
+class MustRedialError(RecoverableError):
+    """Unused legacy exception. Remove it in a next major."""

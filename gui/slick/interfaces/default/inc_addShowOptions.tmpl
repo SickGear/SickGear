@@ -1,51 +1,64 @@
 #import sickgear
-#from sickgear.common import *
+#import os
 #from sickgear import subtitles
+#from sickgear.common import ARCHIVED, IGNORED, Quality, SD, SKIPPED, WANTED, statusStrings
+#from sickgear.helpers import anon_url
 ##
 #set $checked = ' checked="checked"'
 #set $selected = ' selected="selected"'
 ##
 <% def sg_var(varname, default=False): return getattr(sickgear, varname, default) %>#slurp#
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
+##
+## the episode and quality options, and after them the folder and filter options unless a page shows those
+## in a step of their own, which it says with addshow_options_main_only
+#set $main_only = $getVar('addshow_options_main_only', False)
+##
 		<div class="stepDiv linefix">
 
 			<div style="float:right;margin:-30px 0px 20px 15px;font-size:12px;line-height:27px;">
-				<span class="grey-text">To reuse options below when adding more shows&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled"></span>
-			</div>
-
-			<div class="field-pair alt">
-				<p class="grey-text"><span style="font-weight:800">Edit</span> options anytime from the details view of the show</p>
+				<span class="grey-text">Use these choices for shows you add later&nbsp;<input class="btn btn-inline" type="button" id="saveDefaultsButton" value="Save as defaults" disabled="disabled"></span>
 			</div>
 
 			<div class="field-pair">
-#set $qualities = $Quality.split_quality($sg_var('QUALITY_DEFAULT', SD))
-#set global $any_qualities = $qualities[0]
-#set global $best_qualities = $qualities[1]
-#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+				<p class="grey-text">You can change these later on the show's edit page</p>
 			</div>
 
 #try:
 	#if True == $enable_default_wanted:
-			<div class="field-pair alt">
-				<span class="component-title">From season 1 forward, set</span>
-				<span class="component-desc">
-					<label for="wanted_begin" style="padding-bottom:10px">
+			<div class="field-pair">
+				<label for="wanted_begin">
+					<span class="component-title">Wanted from the first episode</span>
+					<span class="component-desc">
 						<input type="number" name="wanted_begin" id="wanted_begin" value="$sg_str('WANTED_BEGIN_DEFAULT')" class="form-control input-sm input75">
-						<span>episodes as wanted (10 ... 0, and where -1 is whole first season)</span>
-					</label>
-				</span>
-				<span class="component-title">From latest going back, set</span>
-				<span class="component-desc">
-					<label for="wanted_latest">
+						<span>episodes (-1 for all of season 1)</span>
+					</span>
+				</label>
+			</div>
+			<div class="field-pair">
+				<label for="wanted_latest">
+					<span class="component-title">Wanted from the latest episode back</span>
+					<span class="component-desc">
 						<input type="number" name="wanted_latest" id="wanted_latest" value="$sg_str('WANTED_LATEST_DEFAULT')" class="form-control input-sm input75">
-						<span>episodes as wanted (10 ... 0, and where -1 is whole latest season)</span>
-					</label>
-				</span>
+						<span>episodes (-1 for all of the latest season)</span>
+					</span>
+				</label>
 			</div>
 	#end if
 #except (NameError, NotFound):
 	#pass
 #end try
+
+			<div class="field-pair">
+				<label for="prune">
+					<span class="component-title">Keep only the newest</span>
+					<span class="component-desc">
+						<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
+						<p>downloads (blank to keep all)</p>
+						<p id="prune-warn" class="red-text" style="display:none">older downloaded episodes beyond this number will be deleted</p>
+					</span>
+				</label>
+			</div>
 
 			<div class="field-pair #if $sg_str('SHOWLIST_TAGVIEW') != 'custom' then 'hidden' else ''#">
 				<label for="tag">
@@ -56,30 +69,27 @@
 							<option value="$tag"#if $tag == $getattr(sickgear, 'SHOW_TAG_DEFAULT', $getattr(sickgear, 'DEFAULT_SHOW_TAG', None)) then $selected else ''#>$tag</option>
 #end for
 						</select>
-						<span>and display on the show list page under this section</span>
+						<span>listed under this group on the show list</span>
 					</span>
 				</label>
 			</div>
 
-			<div><a id="moreless-options-addshow" href="#" name="More options">More options...</a></div>
+			<div class="field-pair">
+#set $qualities = $Quality.split_quality($sg_var('QUALITY_DEFAULT', SD))
+#set global $any_qualities = $qualities[0]
+#set global $best_qualities = $qualities[1]
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_qualityChooser.tmpl')
+			</div>
+
+			<div><input class="btn btn-yellow" type="button" id="moreless-options-addshow" value="More Gear"></div>
 			<div id="options-addshow" style="display:none">
 
-				<div class="field-pair alt" style="margin-top:10px">
+				<div class="field-pair" style="margin-top:10px">
 					<label for="pause">
 						<span class="component-title">Add paused</span>
 						<span class="component-desc">
 							<input class="cb" type="checkbox" name="pause" id="pause"#if $sg_var('PAUSE_DEFAULT') then $checked else ''#>
-							<p>pause search tasks to allow edits</p>
-						</span>
-					</label>
-				</div>
-
-				<div class="field-pair alt">
-					<label for="prune">
-						<span class="component-title">Keep up to</span>
-						<span class="component-desc">
-							<input type="text" name="prune" id="prune" value="" class="form-control form-control-inline input-sm input75" style="width:50px">
-							<p>most recent downloads (blank for all)</p>
+							<p>add without searching, so you can change settings first</p>
 						</span>
 					</label>
 				</div>
@@ -93,23 +103,13 @@
 								<option value="$curStatus"#if $sg_var('STATUS_DEFAULT', SKIPPED) == $curStatus then $selected else ''#>$statusStrings[$curStatus].replace('SD DVD', 'SD DVD/BR/BD')</option>
 #end for
 							</select>
-							<span>set the initial status of missing episodes</span>
-						</span>
-					</label>
-				</div>
-
-				<div class="field-pair alt" id="scene-maps-found" style="display:none">
-					<label for="scene">
-						<span class="component-title">Scene numbering</span>
-						<span class="component-desc">
-							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''#>
-							<p>if any exists, enable editable episode numbers from TheXEM.info for search and media processing</p>
+							<span>status for episodes that are not on disk</span>
 						</span>
 					</label>
 				</div>
 
 #if $sg_var('USE_SUBTITLES'):
-				<div class="field-pair alt">
+				<div class="field-pair">
 					<label for="subs">
 						<span class="component-title">Subtitles</span>
 						<span class="component-desc">
@@ -120,33 +120,22 @@
 				</div>
 #end if
 
-				<div class="field-pair alt">
-					<label for="flatten_folders">
-						<span class="component-title">Flat folder structure</span>
+				<div class="field-pair" id="scene-maps-found" style="display:none">
+					<label for="scene">
+						<span class="component-title">Scene numbering</span>
 						<span class="component-desc">
-							<input class="cb" type="checkbox" name="flatten_folders" id="flatten_folders"#if $sg_var('FLATTEN_FOLDERS_DEFAULT') then $checked else ''#>
-							<p>do not create sub folders</p>
+							<input type="checkbox" name="scene" id="scene"#if $sg_var('SCENE_DEFAULT') then $checked else ''#>
+							<p>use <a id="scene-xem-link" href="$anon_url('http://thexem.info/')" rel="noreferrer" target="_blank" title="View XEM info in new tab">TheXEM.info</a> episode numbers for search and media processing</p>
 						</span>
 					</label>
 				</div>
 
-#if $enable_anime_options
-				<div class="field-pair alt">
-					<label for="anime">
-						<span class="component-title">Show is anime</span>
-						<span class="component-desc">
-							<input type="checkbox" name="anime" id="anime"#if $sg_var('ANIME_DEFAULT') or $kwargs.get('is_anime') then $checked else ''#>
-							<p>enable if this show is anime and episode releases are named ... <em class="grey-text">Show.265</em> instead of <em class="grey-text">Show.S02E03</em></p>
-						</span>
-					</label>
-				</div>
+#if not $main_only
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowFlatFolders.tmpl')
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowFilters.tmpl')
 #end if
 			</div>
 		</div>
-
-#if $enable_anime_options
-#import sickgear.anime
-#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_anigrouplists.tmpl')
-#else
-		<input type="hidden" name="anime" id="anime" value="0">
+#if not $main_only
+#include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_addShowAnimeGroups.tmpl')
 #end if

@@ -10,6 +10,8 @@
 /** @namespace ep.retrystate */
 /** @namespace ep.statusoverview */
 /** @namespace ep.fileinfo */
+/** @namespace ep.videocodec */
+/** @namespace ep.videocodec_class */
 
 var dev = !1,
 	logInfo = dev ? console.info.bind(window.console) : function() {},
@@ -137,6 +139,10 @@ function uiUpdateComplete(data) {
 						}
 						return status + ' <span class="quality ' + ep.quality + '">' + quality + '</span>';
 					});
+					// keep the video codec label that display show has in its status column
+					if (ep.videocodec && displayShow$.length) {
+						htmlContent += '<span class="videocodec-btn ' + ep.videocodec_class + '">' + ep.videocodec + '</span>';
+					}
 
 					// remove backed vars
 					link$.removeAttr('data-status data-rowclass data-imgclass');

@@ -5,7 +5,6 @@ PUNCTUATION_CHARS: str
 PUNCT_SPLIT_PATTERN: Incomplete
 HTML_ENTITY_LOOKBACK: int
 HTML_ENTITY_LOOKAHEAD: int
-MARKDOWN_CONSTRUCT_LOOKBACK: int
 
 def html_adjust(text: str, window_start: int, split_at: int) -> int:
     """
@@ -17,27 +16,24 @@ def html_adjust(text: str, window_start: int, split_at: int) -> int:
     in the next chunk.
     """
 def markdown_adjust(text: str, window_start: int, split_at: int) -> int:
-    """
-    Adjust the split point to avoid splitting inside simple Markdown
-    link / image constructs like [Text](URL) or ![Alt](URL).
+    """Move a split left when it cuts a Markdown or Chat link.
 
-    This is a best-effort heuristic and does not attempt full Markdown
-    parsing. If the boundary falls between '['/'!' and the closing ')'
-    of a nearby link/image, move the split back to that start.
+    Protected forms are ``[label](url)``, ``![alt](url)``, and
+    ``<url|label>``. The scan looks backward for an opener and at most one
+    window forward for its closer, keeping adjustment work linear.
+
+    Returns the original split or the construct's opening position.
     """
 def smart_split(text: str, limit: int, body_format: NotifyFormat) -> list[str]:
-    """
-    Split `text` into chunks of at most `limit` characters.
+    """Split text within ``limit``, preferring natural boundaries.
 
-    Soft split priority:
-      1. Last newline before `limit` (\\n or \\r)
-      2. Last space or tab before `limit`
-      3. Last punctuation+whitespace (.,!?:; followed by space/tab/newline)
-      4. Hard split at `limit`
+    Priority             Boundary
+    -------------------  ---------------------------------------
+    1                    Newline
+    2                    Space or tab
+    3                    Punctuation followed by whitespace
+    4                    Hard character limit
 
-    `body_format` controls additional safety rules:
-      - NotifyFormat.TEXT: generic splitting only
-      - NotifyFormat.HTML: avoid splitting inside '&...;' entities
-      - NotifyFormat.MARKDOWN: same as HTML, plus a best-effort check to
-        avoid splitting inside [Text](URL) / ![Alt](URL) patterns.
+    HTML avoids splitting entities. Markdown additionally protects common
+    link constructs when they can fit within a chunk.
     """

@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 import socket
+import sys
 import typing
 
-from ..exceptions import LocationParseError
-from .timeout import _DEFAULT_TIMEOUT, _TYPE_TIMEOUT
-
-_TYPE_SOCKET_OPTIONS = list[tuple[int, int, typing.Union[int, bytes]]]
+if sys.platform == "wasi":
+    try:
+        from ..contrib.wasi import socket
+    except ImportError:
+        pass
 
 if typing.TYPE_CHECKING:
-    from .._base_connection import BaseHTTPConnection
+    from .._typing import _TYPE_SOCKET_OPTIONS, _TYPE_TIMEOUT_INTERNAL
+    from ..connection import HTTPConnection
+    from .._async.connection import AsyncHTTPConnection
+    from ..contrib.ssa import AsyncSocket
+
+from .timeout import _DEFAULT_TIMEOUT
 
 
-def is_connection_dropped(conn: BaseHTTPConnection) -> bool:  # Platform-specific
+def is_connection_dropped(
+    conn: HTTPConnection | AsyncHTTPConnection,
+) -> bool:  # Platform-specific
     """
     Returns True if the connection is dropped and should be closed.
     :param conn: :class:`urllib3.connection.HTTPConnection` object.
@@ -20,15 +29,13 @@ def is_connection_dropped(conn: BaseHTTPConnection) -> bool:  # Platform-specifi
     return not conn.is_connected
 
 
-# This function is copied from socket.py in the Python 2.7 standard
-# library test suite. Added to its signature is only `socket_options`.
-# One additional modification is that we avoid binding to IPv6 servers
-# discovered in DNS if the system doesn't have IPv6 functionality.
+# Kept for backward compatibility. Developers rely on it sometime.
 def create_connection(
     address: tuple[str, int],
-    timeout: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
+    timeout: _TYPE_TIMEOUT_INTERNAL = _DEFAULT_TIMEOUT,
     source_address: tuple[str, int] | None = None,
     socket_options: _TYPE_SOCKET_OPTIONS | None = None,
+    socket_kind: socket.SocketKind = socket.SOCK_STREAM,
 ) -> socket.socket:
     """Connect to *address* and return the socket object.
 
@@ -41,63 +48,36 @@ def create_connection(
     for the socket to bind as a source address before making the connection.
     An host of '' or port 0 tells the OS to use the default.
     """
+    from ..contrib.resolver import ResolverDescription
 
-    host, port = address
-    if host.startswith("["):
-        host = host.strip("[]")
-    err = None
-
-    # Using the value from allowed_gai_family() in the context of getaddrinfo lets
-    # us select whether to work with IPv4 DNS records, IPv6 records, or both.
-    # The original create_connection function always returns all records.
-    family = allowed_gai_family()
-
-    try:
-        host.encode("idna")
-    except UnicodeError:
-        raise LocationParseError(f"'{host}', label empty or too long") from None
-
-    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
-        sock = None
-        try:
-            sock = socket.socket(af, socktype, proto)
-
-            # If provided, set socket level options before connecting.
-            _set_socket_options(sock, socket_options)
-
-            if timeout is not _DEFAULT_TIMEOUT:
-                sock.settimeout(timeout)
-            if source_address:
-                sock.bind(source_address)
-            sock.connect(sa)
-            # Break explicitly a reference cycle
-            err = None
-            return sock
-
-        except OSError as _:
-            err = _
-            if sock is not None:
-                sock.close()
-
-    if err is not None:
-        try:
-            raise err
-        finally:
-            # Break explicitly a reference cycle
-            err = None
-    else:
-        raise OSError("getaddrinfo returns an empty list")
+    return (
+        ResolverDescription.from_url("system://")
+        .new()
+        .create_connection(
+            address,
+            timeout=timeout,
+            source_address=source_address,
+            socket_options=socket_options,
+            socket_kind=socket_kind,
+        )
+    )
 
 
 def _set_socket_options(
-    sock: socket.socket, options: _TYPE_SOCKET_OPTIONS | None
+    sock: socket.socket | AsyncSocket, options: _TYPE_SOCKET_OPTIONS | None
 ) -> None:
     if options is None:
         return
 
     for opt in options:
-        sock.setsockopt(*opt)
+        if len(opt) == 3 and sock.type == socket.SOCK_STREAM:
+            sock.setsockopt(*opt)
+        elif len(opt) == 4:
+            protocol: str = opt[3].lower()
+            if protocol == "tcp" and sock.type == socket.SOCK_STREAM:
+                sock.setsockopt(*opt[:3])
+            elif protocol == "udp" and sock.type == socket.SOCK_DGRAM:
+                sock.setsockopt(*opt[:3])
 
 
 def allowed_gai_family() -> socket.AddressFamily:
@@ -111,7 +91,11 @@ def allowed_gai_family() -> socket.AddressFamily:
     return family
 
 
-def _has_ipv6(host: str) -> bool:
+_ORIGINAL_SOCKET = socket.socket
+_with_attr_sock = socket.socket
+
+
+def _has_ipv6() -> bool:
     """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
@@ -123,8 +107,13 @@ def _has_ipv6(host: str) -> bool:
         # https://github.com/urllib3/urllib3/pull/611
         # https://bugs.python.org/issue658327
         try:
-            sock = socket.socket(socket.AF_INET6)
-            sock.bind((host, 0))
+            socket_cls = (
+                socket.socket
+                if _with_attr_sock is _ORIGINAL_SOCKET
+                else _with_attr_sock
+            )
+            sock = socket_cls(socket.AF_INET6)
+            sock.bind(("::1", 0))
             has_ipv6 = True
         except Exception:
             pass
@@ -134,4 +123,4 @@ def _has_ipv6(host: str) -> bool:
     return has_ipv6
 
 
-HAS_IPV6 = _has_ipv6("::1")
+HAS_IPV6 = socket.has_ipv6 if sys.platform == "wasi" else _has_ipv6()

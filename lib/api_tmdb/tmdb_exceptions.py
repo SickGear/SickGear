@@ -8,7 +8,7 @@ __all__ = ['TmdbException', 'TmdbError', 'TmdbUserabort', 'TmdbShownotfound',
            'TmdbSeasonnotfound', 'TmdbEpisodenotfound', 'TmdbAttributenotfound', 'TmdbTokenexpired',
            'TmdbPersonNotFound']
 
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 
 
 class TmdbException(BaseTVinfoException):

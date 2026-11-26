@@ -1,4 +1,167 @@
-﻿### 3.36.22 (2026-11-26 22:45:00 UTC)
+﻿### 3.37.0 (2026-11-26 23:00:00 UTC)
+
+* Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
+* Update browser_ua from user-agents 2.1.38 (a78437e) to v2.1.246 (53a8923)
+* Update CacheControl 0.14.3 (116113c) to 0.15.0 (2123e7b)
+* Update dateutil 2.9.0.post0 (0353b78) to 4.0.0 (a78cbd8)
+* Update idna library 3.18 (f39ea90) to 3.20 (d55e65e)
+* Update hachoir 3.3.0 (b1c8b57) to 3.4.0 (3880742)
+* Update PNotify library 3.0.0 (175af26) to 3.2.1 (56d7a34)
+* Update SimpleJSON 4.0.0 (1608c05) to 4.3.0 (d88746d)
+* Update soupsieve 2.9.2 (78661a6) to 4.1.3 (3587fb1)
+* Update Tornado Web Server 6.5.8 (a55abe3) to 6.6.1 (fb0e3df)
+* Update tzlocal 2.1b1 (dd79171) to 5.4.5 (ab833e7)
+* Update urllib3 2.7.0 (9a950b9) to 2.8.0 (b1d30ab)
+* Change replace py2 compatible iterkeys, itervalues, iteritems with faster py3 compatible calls to keys, values, items
+* Change output warning instead of error when Github fails to return alt.rar file
+* Change LimeTorrents, TBP, and TokyoToshokan to use proxy_browser for their requests
+* Change load SickGear zoneinfo via the dateutil tz search path instead of the deprecated dateutil.zoneinfo module
+* Change add log filter to mask known passwords, api keys, and tokens in console and log file output
+* Change create missing show directory with make_path during post-processing
+* Change provider cache and search results to carry size, uid, and episode data
+* Change add TV info, size, and uid columns to the provider cache page
+* Change keep aired episodes per season counts on the show object
+* Add download identity tracking for snatches, media process, and failed downloads
+* Update NZBGet Process Media extension, SickGear-NG 2.8 to 2.9
+* Add video codec tracking for episodes
+* Add video codec label and release name tooltip to episode rows on display show
+* Change video codec names to standard names, e.g. H/X264 to H.264
+* Change video codec label on display show to the x264, x265, or x266 form when the release name has that form
+* Change video codec label of a snatched episode on display show to use the snatched release name
+* Fix video codec label on display show is removed when an episode search finishes
+* Fix video codec of an episode is set to unknown when a snatch fails
+* Add ignore and require word options to add show
+* Change abort the pending info language request on edit show submit
+* Fix database upgrade fails when a column that it adds exists
+* Change confirmation dialogs to confirm on Return and to move by their title bar
+* Change add show steps to set folder and release filters in step 2, and to choose episodes and quality in step 3
+* Change "Keep up to" on add show to warn that it deletes older downloaded episodes, and to not be saved as a default
+* Fix view log page fails when the number of lines to show is given in its url
+* Fix a field turns light in the dark theme when the browser fills it, e.g. from a picked earlier search
+* Change the folder browser dialog to confirm on Return as the confirmation dialogs do
+* Change "Keep up to" on edit show and mass edit to "Keep only the newest" with the warning of add show
+* Change wording of the episode and quality options on add show to be shorter and clearer, with a wider label column
+* Change wording of the folder and release filter options on add show and edit show to be shorter and clearer, with a wider label column on add show
+* Add a link to the show at TheXEM.info to the scene numbering option on add show
+* Change "More options..." on add show to the "More Gear" and "Less Gear" button of the config pages
+* Fix "Save as defaults" on add show stays ready to save after an option is changed back to its saved value
+* Change wording of step 1 of add show, the show search, to be shorter and clearer
+* Fix the folder in the summary of add show has a doubled separator when the parent folder ends with one
+* Change the add show options template to separate files for the folder, filter and fansub group options, instead of parts chosen by a variable
+* Change the tests to run from any folder, e.g. one at a time in an IDE
+* Remove pytz 2024.2/2024b (3944f75), tzlocal now uses zoneinfo
+* Fix bundled modules loaded twice under two names, e.g. a TV info source did not handle a skipped connection
+* Change load hachoir and the growl, subtitle, rar, and AniDB libraries at first use on Python 3.15+, not at every start
+* Change group imports in PEP 8 order: Python standard library, then bundled libraries, then SickGear code
+* Change templates to import only the names they use from sickgear.common, instead of every name
+* Change recent and backlog search to load wanted episodes only, instead of every episode of every show
+* Change show update to load each episode once from the DB and once from TV info, instead of twice from each
+* Change find the first or latest aired episode of a show with one DB query, instead of loading every episode
+* Change log one line per show when its episodes load or update, instead of up to thirteen lines per episode
+* Change log one line per show when a refresh checks its media files, instead of up to seven lines per file
+* Change log no line per media file for the file name parse of a show refresh
+* Change keep the AniDB session file in the cache folder instead of the sickgear.py folder
+* Change episode load from the DB to list a season folder once, instead of two disk checks per episode file
+* Change the XEM refresh check to read its DB table once a day per show, instead of a few times per episode load
+* Change replace the iso639 library with a table of language names and codes, to save 7.7 MB of memory
+* Change release episode objects from memory when a show task ends, e.g. update, refresh, rename, or add show
+* Change load only the hachoir parsers that are used (video, image, torrent), to save 5.5 MB of memory
+* Change read the picture size of ts, m2ts, mpg, and vob files from their video data, to determine their quality
+* Change read the picture size of H.266, MPEG-4, and AV1 video in ts and m2ts, and of rm, rmvb, and wtv files
+* Change read an mkv file only up to its track list to determine quality and video codec, instead of every cluster
+* Change read a media file once for both its quality and video codec
+* Fix file of an anime show is ignored where its name has the show year, a season and episode, and HD or SD quality
+* Change keep fetched TV info of the newest 10 shows in memory instead of every show fetched in 15 minutes
+* Add option "Keep TV info in memory of" a number of shows fetched last, to Config/General/Misc, default 10
+* Change free the page data of a web page when it is made, instead of at a later full garbage collection
+* Change person cards of browse shows to show roles, episode counts and episode links at IMDb in the card, not a popup
+* Change fetch the episode list of the roles of a person only when Use IMDb info is on, at Config/General/Interface
+* Change add the title Credits at IMDb to the link of a person at IMDb on browse shows
+* Add a log line at the end of the daily show update, with its time and the number of shows updated and refreshed
+* Add a log line at the end of an update or refresh of one show, with its time
+* Change log how long the post-processing of a file takes, in its line "Successfully processed <file> in N seconds"
+* Change log one line at startup with shows loaded by status and with no IMDb info, not a line for each show
+* Change log a warning at startup for each show that its TV info source has not found
+* Fix a show with no IMDb info is saved at shutdown with no change
+* Change log the folder of a show only when it changes, not for each show at startup
+* Change log one line at shutdown with the number of shows saved, not a line for each show with no change
+* Change mark each start on the log page by a divider with restart or shutdown and time down, and shade the shutdown
+* Fix popups are not shown when the browser does not allow desktop notifications, they now show on the page
+* Change bulk change page to show sizes from the database, with a button to read the show folders for their size
+* Fix a change of theme changes the height of table rows, light theme checkboxes and search boxes now match dark
+* Change the yes and no marks of the bulk change page to a check for yes and a quiet dash for no, not red crosses
+* Change log the output of a git command as one line in the log file, the log page shows its lines as before
+* Change the log page to show the newest 1000 lines of the log file, not 500
+* Change reuse a session's kept alive connection for web requests, instead of a new connection per request
+* Change web requests with no session, e.g. to TV info sources, to share kept alive connections
+* Change close a kept alive connection that is idle for over 30 seconds, instead of a request on it that can hang
+* Change TorrentLeech to use torrentleech.org
+* Add h11 0.16.0 (1c5b075)
+* Add jh2 5.0.15 (3b08a9e)
+* Change replace urllib3 2.8.0 (b1d30ab) with urllib3.future 2.25.907 (c2e56e1)
+* Add Charset Normalizer 3.5.3 (0b45fe2)
+* Add wassima 2.1.5 (4052aa7)
+* Add niquests 3.21.3 (3ebbc84)
+* Change use niquests in place of requests for all HTTP activity
+* Remove Requests library 2.34.2 (6e83187), replaced by niquests
+* Add DNS resolver setting to Config/Search/Search Tasks, e.g. doh+cloudflare:// for provider connections
+* Add route a provider through DNS over HTTPS when the ISP blocks its name and the site has ECH, log why when it cannot
+* Change bulk change page to tint the row and the column of the cell under the pointer, as on the history page
+* Change bulk change page to tick the Edit checkbox of a row with a click anywhere on the row, shift for a range
+* Change the Subtitle column of the bulk change page to a dash where search is off, and fix its tick all box and Submit
+* Change bulk change page to sort the Edit and action columns by their boxes, ticked first, then those that can be ticked
+* Change the size type column of the bulk change page to switch the sizes on the page, not read every show folder
+* Fix the size type column of the bulk change page cannot be clicked once its header sticks under the menu bar
+* Fix a tick all box of the bulk change page flips each row, it now ticks or clears all and shows when part ticked
+* Change the bulk change header for the keyboard, a focus ring, a size type menu, names on its boxes and filters
+* Change the bulk change header, Delete and Remove say what they do, sort fill covers slanted labels, clearer filters
+* Change the bulk change header filter boxes to show their edge and focus, and a hover fill on sortable columns
+* Change the bulk change table to keep its columns and rows in place while the page loads
+* Change the bulk change page to send its rows in the order the table sorts them, so show names do not move on load
+* Fix sort by show name on the bulk change page to leave out A, An and The when the sort with articles setting is off
+* Change the bulk change page to send its rows with their alternate colours, not only once the table script runs
+* Change pages to load the fonts of the first view with the style sheets, so the menu under the top bar does not move
+* Change the bulk change table to keep its column widths while a filter leaves few or no rows
+* Change the bulk change table to say when a filter matches no show, with a button to clear it, and a clear in each box
+* Change the bulk change header to mark the sorted column by a label tag and a larger arrow, not a fill, clearer hover
+* Change the bulk change header tick all boxes to stand upright under their slanted labels, as the Edit box does
+* Change the bulk change header to set the action columns apart by a 3:1 line, add a skip link and / key to the filters
+* Fix tick all and shift range on the bulk change page tick rows a filter hides, they now act on the shown rows only
+* Change the bulk change filters, yes or no menus on Scene, Anime, Paused and others, a hint on the name filter
+* Change the bulk change page to one Remove column, the Submit dialog asks whether to keep or delete the show files
+* Change the bulk change no match row to name each filter in use, with a button that clears just that one
+* Change the bulk change page to name each box in a row for a screen reader, by its action and the show
+* Change the bulk change filters to mark those in use, add Clear filters by the count, menus as boxes, Yes before No
+* Change the bulk change header to set Show Name on the line of the other labels, boxes and size menu
+* Change bulk change Submit to list the shows of each action first, send a form post, and its handler to refuse a link
+* Change the bulk change header to dot a filtered column label, a red tag on sorted Remove, a footer count of 5:1
+* Change the bulk change header to set the size menu on the line of the boxes, and Remove 71 pixels wide, not 82
+* Change the bulk change action columns to one block, a darker header, tinted cells, the cell as target
+* Fix bulk change Submit to act on every list of shows, match whole show ids, and escape show names
+* Change pages to show the keyboard focus, a ring in the theme text colour, and keep it clear of the bulk change bars
+* Change dialogs to be named by their title, name the close button, and give the focus back to the opening control
+* Change pages to set their language to English, so a screen reader reads them in English
+* Change the bulk change page to add a skip link past the rows of shows to Submit
+* Change quality badges, dimmed articles, grey text and dark theme buttons to text of 4.5:1 or more
+* Change the bulk change page to read its sort values only after a tick or size change, and drop 900 tips
+* Change the bulk change page to keep its footer button names with counts, no repeated ids, the header height in CSS
+* Change the bulk change page to name its table, TV info and missing folder icons, and pages to mark their main area
+* Change the bulk change page to read folder sizes from the title line, which says what the sizes count
+* Change the bulk change slanted labels and sort arrows to centre in their column, and the action columns to one width
+* Change the update check of a branch with no upstream to log a warning, not an error
+* Change the Emby setting warning to log once, not at each watched state check, until the setting changes
+* Fix backlog warns no provider has backlog searching when a torrent provider has scheduled backlog off
+* Change log a FlareSolverr that is not running or fails as one line, at most each 10 minutes, with no traceback
+* Fix a script that fetches a page with SickGear helpers stops with an error when the fetch fails
+* Fix a script error on Config/Search from a folder browser set up for a field that is not on that page
+* Add a tunnel route for a provider that is blocked and has no ECH route, with checked certificates at each step
+* Add Blocked provider fallback setting, off by default, with a choice per provider and a top notice
+* Fix a provider uid learnt at login is emptied by a save of the providers page, when the page has no uid field for it
+* Fix a typo in the debug log line of building an anime allow and block list
+* Add a debug log line when a provider logs in to its site
+
+
+### 3.36.22 (2026-11-26 22:45:00 UTC)
 
 * Fix a provider logs in to its site again before each fetch, its login check cleared the login it had made
 * Fix a view of the providers page logs in to a provider site, only to show a link or a token check in a tip

@@ -51,7 +51,8 @@ class NotifyEmail(NotifyBase):
     pgp: Incomplete
     pgp_key: Incomplete
     pgp_privkey: Incomplete
-    def __init__(self, smtp_host=None, from_addr=None, secure_mode=None, targets=None, cc=None, bcc=None, reply_to=None, headers=None, pgp_mode=None, pgp_key=None, pgp_privkey=None, use_wkd: bool = False, **kwargs) -> None:
+    inline: Incomplete
+    def __init__(self, smtp_host=None, from_addr=None, secure_mode=None, targets=None, cc=None, bcc=None, reply_to=None, headers=None, pgp_mode=None, pgp_key=None, pgp_privkey=None, use_wkd: bool = False, inline=None, **kwargs) -> None:
         """
         Initialize Email Object
 
@@ -97,7 +98,7 @@ class NotifyEmail(NotifyBase):
         like SUBJ_EXCESS_QP flag on Rspamd
         """
     @staticmethod
-    def prepare_emails(subject, body, from_addr, to, cc: set | None = None, bcc: set | None = None, reply_to: set | None = None, smtp_host=None, notify_format=..., attach=None, headers: dict | None = None, names=None, pgp=None, pgp_mode=..., tzinfo=None):
+    def prepare_emails(subject, body, from_addr, to, cc: set | None = None, bcc: set | None = None, reply_to: set | None = None, smtp_host=None, notify_format=..., attach=None, headers: dict | None = None, names=None, pgp=None, pgp_mode=..., inline: bool = False, tzinfo=None):
         """
         Generator for emails
             from_addr: must be in format: (from_name, from_addr)

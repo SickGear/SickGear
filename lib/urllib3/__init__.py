@@ -1,5 +1,5 @@
 """
-Python HTTP library with thread-safe connection pooling, file post support, user friendly, and more
+Python HTTP library with thread-safe connection pooling, file post support, user-friendly, and more
 """
 
 from __future__ import annotations
@@ -10,40 +10,32 @@ import sys
 import typing
 import warnings
 from logging import NullHandler
+from os import environ
+
+if sys.platform == "wasi":
+    # we have to eager import it, otherwise p1
+    # socket fallback will crash.
+    import encodings.idna as _idna  # noqa: F401
 
 from . import exceptions
-from ._base_connection import _TYPE_BODY
+from ._async.connectionpool import AsyncHTTPConnectionPool, AsyncHTTPSConnectionPool
+from ._async.connectionpool import connection_from_url as async_connection_from_url
+from ._async.poolmanager import AsyncPoolManager, AsyncProxyManager
+from ._async.poolmanager import proxy_from_url as async_proxy_from_url
+from ._async.response import AsyncHTTPResponse
 from ._collections import HTTPHeaderDict
+from ._typing import _TYPE_BODY, _TYPE_FIELDS
 from ._version import __version__
+from .backend import ConnectionInfo, HttpVersion, ResponsePromise
 from .connectionpool import HTTPConnectionPool, HTTPSConnectionPool, connection_from_url
-from .filepost import _TYPE_FIELDS, encode_multipart_formdata
+from .contrib.resolver import ResolverDescription
+from .contrib.resolver._async import AsyncResolverDescription
+from .filepost import encode_multipart_formdata
 from .poolmanager import PoolManager, ProxyManager, proxy_from_url
 from .response import BaseHTTPResponse, HTTPResponse
 from .util.request import make_headers
 from .util.retry import Retry
 from .util.timeout import Timeout
-
-# Ensure that Python is compiled with OpenSSL 1.1.1+
-# If the 'ssl' module isn't available at all that's
-# fine, we only care if the module is available.
-try:
-    import ssl
-except ImportError:
-    pass
-else:
-    if not ssl.OPENSSL_VERSION.startswith("OpenSSL "):  # Defensive:
-        warnings.warn(
-            "urllib3 v2 only supports OpenSSL 1.1.1+, currently "
-            f"the 'ssl' module is compiled with {ssl.OPENSSL_VERSION!r}. "
-            "See: https://github.com/urllib3/urllib3/issues/3020",
-            exceptions.NotOpenSSLWarning,
-        )
-    elif ssl.OPENSSL_VERSION_INFO < (1, 1, 1):  # Defensive:
-        raise ImportError(
-            "urllib3 v2 only supports OpenSSL 1.1.1+, currently "
-            f"the 'ssl' module is compiled with {ssl.OPENSSL_VERSION!r}. "
-            "See: https://github.com/urllib3/urllib3/issues/2168"
-        )
 
 __author__ = "Andrey Petrov (andrey.petrov@shazow.net)"
 __license__ = "MIT"
@@ -66,6 +58,18 @@ __all__ = (
     "proxy_from_url",
     "request",
     "BaseHTTPResponse",
+    "HttpVersion",
+    "ConnectionInfo",
+    "ResponsePromise",
+    "ResolverDescription",
+    "AsyncHTTPResponse",
+    "AsyncResolverDescription",
+    "AsyncHTTPConnectionPool",
+    "AsyncHTTPSConnectionPool",
+    "AsyncPoolManager",
+    "AsyncProxyManager",
+    "async_proxy_from_url",
+    "async_connection_from_url",
 )
 
 logging.getLogger(__name__).addHandler(NullHandler())
@@ -94,6 +98,17 @@ def add_stderr_logger(
 # ... Clean up.
 del NullHandler
 
+
+if (
+    environ.get("SSLKEYLOGFILE", None) is not None
+    or environ.get("QUICLOGDIR", None) is not None
+):
+    warnings.warn(  # Defensive: security warning only. not feature.
+        "urllib3.future detected that development/debug environment variable are set. "
+        "If you are unaware of it please audit your environment. "
+        "Variables 'SSLKEYLOGFILE' and 'QUICLOGDIR' can only be set in a non-production environment.",
+        exceptions.SecurityWarning,
+    )
 
 # All warning filters *must* be appended unless you're really certain that they
 # shouldn't be: otherwise, it's very hard for users to use most Python
@@ -127,67 +142,12 @@ def request(
     retries: Retry | bool | int | None = None,
     timeout: Timeout | float | int | None = 3,
     json: typing.Any | None = None,
-) -> BaseHTTPResponse:
+) -> HTTPResponse:
     """
     A convenience, top-level request method. It uses a module-global ``PoolManager`` instance.
     Therefore, its side effects could be shared across dependencies relying on it.
     To avoid side effects create a new ``PoolManager`` instance and use it instead.
-    The method does not accept low-level ``**urlopen_kw`` keyword arguments.
-
-    :param method:
-        HTTP request method (such as GET, POST, PUT, etc.)
-
-    :param url:
-        The URL to perform the request on.
-
-    :param body:
-        Data to send in the request body, either :class:`str`, :class:`bytes`,
-        an iterable of :class:`str`/:class:`bytes`, or a file-like object.
-
-    :param fields:
-        Data to encode and send in the request body.
-
-    :param headers:
-        Dictionary of custom headers to send, such as User-Agent,
-        If-None-Match, etc.
-
-    :param bool preload_content:
-        If True, the response's body will be preloaded into memory.
-
-    :param bool decode_content:
-        If True, will attempt to decode the body based on the
-        'content-encoding' header.
-
-    :param redirect:
-        If True, automatically handle redirects (status codes 301, 302,
-        303, 307, 308). Each redirect counts as a retry. Disabling retries
-        will disable redirect, too.
-
-    :param retries:
-        Configure the number of retries to allow before raising a
-        :class:`~urllib3.exceptions.MaxRetryError` exception.
-
-        If ``None`` (default) will retry 3 times, see ``Retry.DEFAULT``. Pass a
-        :class:`~urllib3.util.retry.Retry` object for fine-grained control
-        over different types of retries.
-        Pass an integer number to retry connection errors that many times,
-        but no other types of errors. Pass zero to never retry.
-
-        If ``False``, then retries are disabled and any exception is raised
-        immediately. Also, instead of raising a MaxRetryError on redirects,
-        the redirect response will be returned.
-
-    :type retries: :class:`~urllib3.util.retry.Retry`, False, or an int.
-
-    :param timeout:
-        If specified, overrides the default timeout for this one
-        request. It may be a float (in seconds) or an instance of
-        :class:`urllib3.util.Timeout`.
-
-    :param json:
-        Data to encode and send as JSON with UTF-encoded in the request body.
-        The ``"Content-Type"`` header will be set to ``"application/json"``
-        unless specified otherwise.
+    The method does not accept low-level ``**urlopen_kw``.
     """
 
     return _DEFAULT_POOL.request(
@@ -203,9 +163,3 @@ def request(
         timeout=timeout,
         json=json,
     )
-
-
-if sys.platform == "emscripten":
-    from .contrib.emscripten import inject_into_urllib3  # noqa: 401
-
-    inject_into_urllib3()

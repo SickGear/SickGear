@@ -1,9 +1,11 @@
 from ..apprise_attachment import AppriseAttachment as AppriseAttachment
 from ..common import NotifyFormat as NotifyFormat, NotifyImageSize as NotifyImageSize, NotifyType as NotifyType
+from ..conversion import build_backtick_run_index as build_backtick_run_index, commonmark_emphasis_run as commonmark_emphasis_run, commonmark_escape_link_url as commonmark_escape_link_url, commonmark_force_close_spans as commonmark_force_close_spans, commonmark_scan_angle_dest as commonmark_scan_angle_dest, find_unescaped_run as find_unescaped_run
 from ..utils.parse import is_email as is_email, parse_bool as parse_bool, parse_list as parse_list, validate_regex as validate_regex
 from ..utils.templates import TemplateType as TemplateType, apply_template as apply_template
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
+from collections.abc import Generator
 
 SLACK_HTTP_ERROR_MAP: Incomplete
 CHANNEL_LIST_DELIM: Incomplete
@@ -45,6 +47,21 @@ class NotifySlack(NotifyBase):
     _re_channel_support: Incomplete
     _re_user_id_support: Incomplete
     _re_url_support: Incomplete
+    @classmethod
+    def _commonmark_to_slack(cls, body):
+        """Translate CommonMark to Slack ``mrkdwn``.
+
+        CommonMark          Slack mrkdwn
+        ------------------  -----------------
+        **bold**            *bold*
+        *italic*            _italic_
+        `code`              `code`
+        [label](<url>)      <url|label>
+        &, <, >             HTML entities
+
+        Slack retains supported backslash escapes and uses its native anchor
+        syntax for labeled links.
+        """
     mode: Incomplete
     access_token: Incomplete
     token_a: Incomplete
@@ -63,13 +80,14 @@ class NotifySlack(NotifyBase):
     def __init__(self, access_token=None, token_a=None, token_b=None, token_c=None, targets=None, include_image=None, include_footer=None, include_timestamp=None, use_blocks=None, mode=None, template=None, tokens=None, workflow_path=None, **kwargs) -> None:
         """Initialize Slack Object."""
     def gen_payload(self, body, title: str = '', notify_type=..., **kwargs):
-        """Generate our payload from an external Block Kit JSON template.
+        """Return a validated Block Kit attachment, or ``False``."""
+    def _build_send_calls(self, body=None, title=None, body_format=None, **kwargs) -> Generator[Incomplete, Incomplete]:
+        """Split HTML-derived CommonMark before Slack conversion.
 
-        Returns the validated attachment content dict (which must contain
-        a non-empty 'blocks' list with typed entries) to be placed into
-        the Slack attachments array.  Returns False on any failure.
+        Markdown-aware splitting protects links; ``send()`` then converts each
+        chunk to independently valid ``mrkdwn``.
         """
-    def send(self, body, title: str = '', notify_type=..., attach=None, **kwargs):
+    def send(self, body, title: str = '', notify_type=..., attach=None, body_format=None, **kwargs):
         """Perform Slack Notification."""
     def lookup_userid(self, email):
         """Takes an email address and attempts to resolve/acquire it's user id

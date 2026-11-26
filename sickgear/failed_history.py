@@ -15,21 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
-from sqlite3 import Cursor
 import datetime
 import re
+from sqlite3 import Cursor
 
 from . import db, logger
-from .common import FAILED, WANTED, Quality, statusStrings
+from .common import DOWNLOAD_CLIENTS, FAILED, WANTED, Quality, statusStrings, VideoCodec
 from .history import dateFormat
 from exceptions_helper import EpisodeNotFoundException, ex
-
 from _23 import unquote
 
 # noinspection PyUnresolvedReferences
 # noinspection PyUnreachableCode
 if False:
     from typing import AnyStr, List, Optional, Tuple, Union
+    from .tv import TVEpisode
+    from .classes import NZBSearchResult, NZBDataSearchResult, TorrentSearchResult, Proper
 
 
 def db_cmd(sql, params, select=True):
@@ -72,11 +73,10 @@ def db_action(sql, params=None):
 
 
 def prepare_failed_name(release):
+    # type: (str) -> str
     """Standardizes release name for failed DB
     :param release: release name
-    :type release: AnyStr
     :return: standardized release name
-    :rtype: AnyStr
     """
 
     fixed = unquote(release)
@@ -88,18 +88,24 @@ def prepare_failed_name(release):
     return fixed
 
 
-def add_failed(release):
+def add_failed(release, puid=None, client=None, client_uid=None):
+    # type: (str, str, int, str) -> None
     """
 
     :param release: release name
-    :type release: AnyStr
+    :param puid: puid
+    :param client: client id
+    :param client_uid: client uid
     """
     size = -1
     provider = ''
 
     release = prepare_failed_name(release)
 
-    sql_result = db_select('SELECT * FROM history t WHERE t.release=?', [release])
+    if puid:
+        sql_result = db_select('SELECT * FROM history t WHERE t.puid=?', [puid])
+    else:
+        sql_result = db_select('SELECT * FROM history t WHERE t.release=?', [release])
 
     if not any(sql_result):
         logger.warning('Release not found in failed.db snatch history')
@@ -126,39 +132,43 @@ def add_failed(release):
         size = sql_result[0]['size']
         provider = sql_result[0]['provider']
 
-    if not has_failed(release, size, provider):
-        db_action('INSERT INTO failed (`release`, `size`, `provider`) VALUES (?, ?, ?)', [release, size, provider])
+    if not has_failed(release, size, provider, puid=puid):
+        db_action('INSERT INTO failed (`release`, `size`, `provider`, `puid`, `client`, `client_uid`)'
+                  ' VALUES (?, ?, ?, ?, ?, ?)', [release, size, provider, puid, client, client_uid])
 
-    remove_snatched(release, size, provider)
+    remove_snatched(release, size, provider, puid=puid)
 
 
-def add_snatched(search_result):
+def add_snatched(search_result, client=None, client_uid=None):
+    # type: (Union[NZBSearchResult, NZBDataSearchResult, TorrentSearchResult, Proper], int, Union[int, str]) -> None
     """
     :param search_result: SearchResult object
-    :type search_result: sickgear.classes.SearchResult
+    :param client: client id from common
+    :param client_uid: client uid
     """
-
     log_date = datetime.datetime.now().strftime(dateFormat)
 
     provider = 'unknown'
     if None is not search_result.provider:
         provider = search_result.provider.name
 
+    client_uid = (None, client_uid)[isinstance(client_uid, (str, int))]
+
     for ep_obj in search_result.ep_obj_list:
         db_action(
             'INSERT INTO history (`date`, `size`, `release`, `provider`, `showid`, `season`, `episode`, `old_status`, '
-            '`indexer`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            '`indexer`, `client`, `client_uid`, `puid`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
             [log_date, search_result.size, prepare_failed_name(search_result.name), provider,
              search_result.ep_obj_list[0].show_obj.prodid, ep_obj.season, ep_obj.episode, ep_obj.status,
-             search_result.ep_obj_list[0].show_obj.tvid])
+             search_result.ep_obj_list[0].show_obj.tvid, client, client_uid, search_result.puid_str])
 
 
 def set_episode_failed(ep_obj):
+    # type: (TVEpisode) -> None
     """
     set episode object to failed
 
     :param ep_obj: episode object
-    :type ep_obj: sickgear.tv.TVEpisode
     """
     try:
         with ep_obj.lock:
@@ -171,29 +181,32 @@ def set_episode_failed(ep_obj):
 
 
 def remove_failed(release):
+    # type: (str) -> None
     """
 
     :param release: release name
-    :type release: AnyStr
     """
     db_action(f'DELETE FROM history WHERE `release`=?', [prepare_failed_name(release)])
 
 
-def remove_snatched(release, size, provider):
+def remove_snatched(release, size, provider, puid=None):
+    # type: (str, int, str, str) -> None
     """
 
     :param release: release name
-    :type release: AnyStr
     :param size: release size
-    :type size: int or long
     :param provider: provider name
-    :type provider: AnyStr
+    :param puid: puid
     """
-    db_action(f'DELETE FROM history WHERE `release`=? AND `size`=? AND `provider`=?',
-              [prepare_failed_name(release), size, provider])
+    if puid:
+        db_action('DELETE FROM history WHERE puid=?', [puid])
+    else:
+        db_action(f'DELETE FROM history WHERE `release`=? AND `size`=? AND `provider`=?',
+                  [prepare_failed_name(release), size, provider])
 
 
-def has_failed(release, size, provider='%'):
+def has_failed(release=None, size=None, provider='%', puid=None, client=None, client_uid=None):
+    # type: (str, int, str, str, int, str) -> bool
     """
     Returns True if a release has previously failed.
 
@@ -201,25 +214,43 @@ def has_failed(release, size, provider='%'):
     with that specific provider. Otherwise, return True if the release
     is found with any provider.
 
+    Note: only uses 1 condition in priority of non empty/None parameters:
+    1. puid
+    2. client/client_uid
+    3. release/size
+
+    Note 2:
+    only clients that provide real unique ids are checked:
+    * sabnzbd
+
     :param release: release name
-    :type release: AnyStr
     :param size: size of release
-    :type size: int or long
     :param provider: provider name
-    :type provider: AnyStr
+    :param puid: puid
+    :param client: client id
+    :param client_uid: client uid
     :return: has failed
-    :rtype: bool
     """
-    return any(db_select('SELECT * FROM failed t WHERE t.release=? AND t.size=? AND t.provider LIKE ?',
-                         [prepare_failed_name(release), size, provider]))
+    if puid:
+        return any(db_select('SELECT * FROM failed t WHERE t.puid=? LIMIT 1', [puid]))
+
+    elif client and client in DOWNLOAD_CLIENTS.TRUSTED_CLIENT_IDS and client_uid:
+        return any(db_select('SELECT * FROM failed t WHERE t.client=? AND t.client_uid=? LIMIT 1',
+                             [client, client_uid]))
+
+    elif release and size:
+        return any(db_select('SELECT * FROM failed t WHERE t.release=? AND t.size=? AND t.provider LIKE ? LIMIT 1',
+                             [prepare_failed_name(release), size, provider]))
+
+    return False
 
 
 def revert_episode(ep_obj):
+    # type: (TVEpisode) -> None
     """
     Restore the episodes of a failed download to their original state
 
     :param ep_obj: episode object
-    :type ep_obj: sickgear.tv.TVEpisode
     """
     sql_result = db_select(
         'SELECT * FROM history t WHERE t.indexer=? AND t.showid=? AND t.season=?',
@@ -243,6 +274,8 @@ def revert_episode(ep_obj):
                 logger.warning('Episode not found in failed.db history. Setting it to WANTED')
 
             ep_obj.status = status_revert
+            # no snatched and no file codec is no codec, not codec unknown
+            ep_obj.video_codec = VideoCodec.set_snatched_vc(ep_obj._video_codec, None) or None
             ep_obj.save_to_db()
 
     except EpisodeNotFoundException as e:
@@ -250,11 +283,10 @@ def revert_episode(ep_obj):
 
 
 def find_old_status(ep_obj):
+    # type: (TVEpisode) -> Optional[int]
     """
     :param ep_obj: episode object
-    :type ep_obj: sickgear.tv.TVEpisode
     :return: Old status if failed history item found
-    :rtype: None or int
     """
     # Search for release in snatch history
     results = db_select(
@@ -265,13 +297,11 @@ def find_old_status(ep_obj):
 
 
 def find_release(ep_obj):
+    # type: (TVEpisode) -> Tuple[str, str]
     """
     Find releases in history by show ID and season.
     Return None for release if multiple found or no release found.
     :param ep_obj: episode object
-    :type ep_obj: sickgear.tv.TVEpisode
-    :return:
-    :rtype: Tuple[AnyStr, AnyStr] or Tuple[AnyStr, AnyStr]
     """
     # Clear old snatches for this release if any exist
     from_where = ' FROM history WHERE indexer=%s AND showid=%s AND season=%s AND episode=%s' % \

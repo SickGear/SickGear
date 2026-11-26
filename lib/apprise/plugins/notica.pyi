@@ -1,6 +1,6 @@
 from ..common import NotifyType as NotifyType
 from ..url import PrivacyMode as PrivacyMode
-from ..utils.parse import validate_regex as validate_regex
+from ..utils.parse import URL_PATH_SAFE_CHARS as URL_PATH_SAFE_CHARS, validate_regex as validate_regex
 from .base import NotifyBase as NotifyBase
 from _typeshed import Incomplete
 

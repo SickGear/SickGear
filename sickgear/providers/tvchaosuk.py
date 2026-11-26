@@ -20,14 +20,14 @@ import re
 import time
 import traceback
 
+from dateutil.parser import parse
+
 from . import generic
 from .. import logger
 from ..config import naming_ep_type
 from ..helpers import anon_url, try_int
 from browser_ua import get_ua
 from bs4_parser import BS4Parser
-from dateutil.parser import parse
-
 from _23 import unquote_plus
 
 

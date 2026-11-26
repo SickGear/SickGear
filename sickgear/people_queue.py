@@ -18,7 +18,6 @@ import traceback
 
 # noinspection PyPep8Naming
 from exceptions_helper import ex
-
 from . import db, generic_queue, logger, helpers, ui
 
 # noinspection PyUnreachableCode
@@ -26,7 +25,7 @@ if False:
     from six import integer_types
     from typing import AnyStr, Dict, List, Optional
     from .tv import TVShow
-    from lib.tvinfo_base import CastList
+    from tvinfo_base import CastList
 
 
 class PeopleQueue(generic_queue.GenericQueue):

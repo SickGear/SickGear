@@ -23,7 +23,7 @@ from ..utils import to_unicode
 from ..videos import Episode, Movie
 from hashlib import md5, sha256
 import logging
-import lib.xmlrpclib_to as xmlrpclib
+import xmlrpclib_to as xmlrpclib
 
 
 logger = logging.getLogger("subliminal")

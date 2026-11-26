@@ -19,7 +19,7 @@ from collections import OrderedDict
 from .. import db
 
 MIN_DB_VERSION = 1
-MAX_DB_VERSION = 7
+MAX_DB_VERSION = 9
 TEST_BASE_VERSION = None  # the base production db version, only needed for TEST db versions (>=100000)
 
 
@@ -92,7 +92,17 @@ class InitialSchema(db.SchemaUpgrade):
                 ' uid NUMERIC NOT NULL)',
                 'CREATE UNIQUE INDEX idx_show_queue_uid ON show_queue(uid)',
                 'CREATE UNIQUE INDEX idx_show_queue ON show_queue(tvid, prodid, action_id)'
-            ])
+            ]),
+            ('provider_cache_size_uid', [
+                'ALTER TABLE [provider_cache] ADD [size] INTEGER DEFAULT -1',
+                'ALTER TABLE [provider_cache] ADD [uid] TEXT'
+            ]),
+            ('save_queue_words', [
+                'ALTER TABLE [show_queue] ADD [rls_ignore_words] TEXT',
+                'ALTER TABLE [show_queue] ADD [rls_require_words] TEXT',
+                'ALTER TABLE [show_queue] ADD [rls_global_exclude_ignore] TEXT',
+                'ALTER TABLE [show_queue] ADD [rls_global_exclude_require] TEXT'
+            ]),
         ])
 
     def test(self):
@@ -162,4 +172,22 @@ class AddSaveQueues(AddGenericFailureHandling):
 
     def execute(self):
         self.do_query(self.queries['save_queues'])
+        self.finish()
+
+
+class AddProviderCacheSizeUid(AddSaveQueues):
+    def test(self):
+        return 7 < self.call_check_db_version()
+
+    def execute(self):
+        self.do_query(self.queries['provider_cache_size_uid'])
+        self.finish()
+
+
+class AddReqIngLoad(AddProviderCacheSizeUid):
+    def test(self):
+        return 8 < self.call_check_db_version()
+
+    def execute(self):
+        self.do_query(self.queries['save_queue_words'])
         self.finish()

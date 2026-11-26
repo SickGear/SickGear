@@ -9,7 +9,7 @@
 <% def sg_str(varname, default=''): return getattr(sickgear, varname, default) %>#slurp#
 #slurp
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta name="robots" content="noindex, nofollow, noarchive, nocache, noodp, noydir, noimageindex, nosnippet">
@@ -43,6 +43,10 @@
 	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
 	<meta name="theme-color" content="#echo '#%s' % ('333', '15528F')['dark' == $sg_str('THEME_NAME', 'dark')]#">
 
+	## fonts of the first view load with the style sheets, so text and icons are drawn at their size and do not move
+	<link rel="preload" href="$sbRoot/css/fonts/OpenSans-Regular-webfont.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="$sbRoot/css/fonts/OpenSans-Semibold-webfont.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="$sbRoot/css/fonts/sgicons.woff?v4" as="font" type="font/woff" crossorigin>
 	<link rel="stylesheet" href="$sbRoot/css/lib/bootstrap.min.css?v=$sbPID">
 	<link rel="stylesheet" href="$sbRoot/css/lib/bootstrap-theme.min.css?v=$sbPID">
 	<link rel="stylesheet" href="$sbRoot/css/browser.css?v=$sbPID">
@@ -96,7 +100,7 @@
 	<script src="$sbRoot/js/inc_top.js?v=$sbPID"></script>
 	<script src="$sbRoot/js/lib/jquery.scrolltopcontrol-1.1.js"></script>
 	<script src="$sbRoot/js/browser.js"></script>
-	<script src="$sbRoot/js/ajaxNotifications.js"></script>
+	<script src="$sbRoot/js/ajaxNotifications.js?v=$sbPID"></script>
 	<script src="$sbRoot/js/confirmations.js?v=$sbPID"></script>
 </head>
 #set $tab = 4
@@ -420,6 +424,31 @@
 	</div>
 #end if
 ##
+#set $tunnel_items = $sickgear.providers.tunnel_notice_items()
+#if $tunnel_items
+	#set $tunnel_names = ', '.join([cur_item[1] for cur_item in $tunnel_items])
+	<div class="alert alert-warning topbar-notification" role="alert" id="provider-tunnel-notice">
+		<i class="sgicon-warning tunnel-notice-icon" aria-hidden="true"></i>
+		<div class="tunnel-notice-text">
+			<p><strong>$tunnel_names #echo ('looks', 'look')[1 < len($tunnel_items)]# blocked by your ISP</strong>, a fetch failed in the TLS handshake</p>
+	#for $cur_pid, $cur_name, $cur_outcome, $cur_one_click in $tunnel_items
+		#if $sickgear.sg_ech.ECH_OFF == $cur_outcome
+			<p>$cur_name is on Cloudflare with ECH off, its owner can turn ECH on, then SickGear gets past the block with DNS over HTTPS</p>
+		#elif $sickgear.sg_ech.NO_BACKEND == $cur_outcome
+			<p>$cur_name has ECH on, install rtls (pip install rtls) so that SickGear can use it</p>
+		#end if
+		#if $cur_one_click
+			<p class="tunnel-notice-action"><button type="button" class="btn btn-sm tunnel-notice-use" data-pid="$cur_pid" data-name="$cur_name">Use the tunnel for $cur_name</button></p>
+		#else
+			<p>$cur_name is a private tracker, check that its rules allow a VPN address, then turn the fallback on for it under <a href="$sbRoot/config/search/#provider-tunnel">Blocked provider fallback</a></p>
+		#end if
+	#end for
+			<p class="tunnel-notice-note">with the tunnel, a provider sees a VPN address</p>
+		</div>
+		<button type="button" class="tunnel-notice-close" aria-label="Close" title="Close" onclick="this.closest('.alert').remove(); fetch('$sbRoot/config/search/tunnel-notice-close')"><i class="glyphicon glyphicon-remove" aria-hidden="true"></i></button>
+	</div>
+#end if
+##
 #if $sickgear.MEMCACHE.get('DEPRECATE_SB_RUNNER')
 	<div class="alert" style="background-color:#a00; margin-top:35px; padding:5px 5px 1px 5px">
 		<p>Since Jan 2019, installations like this one have displayed a
@@ -451,4 +480,4 @@
 #end try
 #set $page_class = ('', ' class="%s"' % '_'.join($items).lower().replace(' ', '-').replace('_', '-'))[0 < len($items)]
 	<div id="contentWrapper">
-		<div id="content"$page_class>
+		<div id="content" role="main"$page_class>

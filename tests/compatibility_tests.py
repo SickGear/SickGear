@@ -1,21 +1,21 @@
 import unittest
-
 import subprocess
 import os
+from os.path import abspath, dirname, join
 
 
 class CompatibilityTests(unittest.TestCase):
 
     def test_except(self):
-        path = os.path.abspath('..')
+        path = abspath(join(dirname(__file__), '..'))
         pyfiles = []
         for rootdir in ['sickgear', 'tests']:
-            for dirpath, subdirs, files in os.walk(os.path.join(path, rootdir)):
+            for dirpath, subdirs, files in os.walk(join(path, rootdir)):
                 for x in files:
                     if x.endswith('.py'):
-                        pyfiles.append(os.path.join(dirpath, x))
+                        pyfiles.append(join(dirpath, x))
 
-        pyfiles.append(os.path.join(path, 'sickgear.py'))
+        pyfiles.append(join(path, 'sickgear.py'))
 
         output = subprocess.Popen('2to3'
                                   ' -f except'
@@ -29,5 +29,5 @@ class CompatibilityTests(unittest.TestCase):
 
 
 if '__main__' == __name__:
-    suite = unittest.TestLoader().loadTestsFromTestCase(QualityTests)
+    suite = unittest.TestLoader().loadTestsFromTestCase(CompatibilityTests)
     unittest.TextTestRunner(verbosity=2).run(suite)

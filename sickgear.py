@@ -60,12 +60,6 @@ except (BaseException, Exception):
     pass
 
 try:
-    import _cleaner
-    from sickgear import piper
-except (BaseException, Exception):
-    pass
-
-try:
     import Cheetah
 except (BaseException, Exception):
     print('The Python module CT3 (Cheetah) is required')
@@ -79,6 +73,12 @@ except (BaseException, Exception):
     print('python sickgear.py')
     sys.exit(1)
 
+try:
+    import _cleaner
+    from sickgear import piper
+except (BaseException, Exception):
+    pass
+
 # Compatibility fixes for Windows
 if is_win:
     codecs.register(lambda name: codecs.lookup('utf-8') if name == 'cp65001' else None)
@@ -87,16 +87,18 @@ if is_win:
 from multiprocessing import freeze_support
 
 from configobj import ConfigObj
+from six import integer_types
+
+import sickgear
 # noinspection PyPep8Naming
 from encodingKludge import SYS_ENCODING
 from exceptions_helper import ex
-import sickgear
+from sg_helpers import maybe_plural
 from sickgear import db, logger, name_cache, network_timezones
 from sickgear.event_queue import Events
+from sickgear.sgdatetime import Stopwatch
 from sickgear.tv import TVShow
 from sickgear.webserveInit import WebServer
-
-from six import integer_types
 
 throwaway = datetime.datetime.strptime('20110101', '%Y%m%d')
 rollback_loaded = None
@@ -705,6 +707,8 @@ class SickGear(object):
         """
 
         logger.log('Loading initial show list')
+        watch = Stopwatch()
+        statuses, paused, not_found, no_imdb = {}, 0, 0, 0
 
         with db.DBConnection(row_type='dict') as sg_db:
             sql_result = sg_db.select(
@@ -747,9 +751,32 @@ class SickGear(object):
                     sickgear.showList.append(show_obj)
                     sickgear.showDict[show_obj.sid_int] = show_obj
                     _ = show_obj.ids
+                    status = (show_obj.status or 'no status').lower()
+                    # the words of the TV info sources for a show that airs or has ended, any other word is shown as is
+                    status = {'running': 'continuing', 'returning series': 'continuing', 'new series': 'continuing',
+                              'upcoming': 'continuing', 'in development': 'continuing',
+                              'canceled': 'ended', 'cancelled': 'ended'}.get(status, status)
+                    statuses[status] = statuses.get(status, 0) + 1
+                    paused += int(bool(show_obj.paused))
+                    no_imdb += int(sickgear.USE_IMDB_INFO and not show_obj.imdb_info)
+                    fail_count = cur_result['tsnf_fail_count'] or 0
+                    if 0 < fail_count:
+                        not_found += 1
+                        last_found = show_obj.last_found_on_indexer
+                        logger.warning(
+                            f'{sickgear.TVInfoAPI(tv_id).name} has not found show {show_obj.name}'
+                            f' {fail_count} time{maybe_plural(fail_count)}, last found '
+                            + (datetime.date.fromordinal(last_found).isoformat(), 'never')[1 > last_found])
                 except (BaseException, Exception) as err:
                     logger.error(f'There was an error creating the show in {cur_result["location"]}: {ex(err)}')
         sickgear.webserve.Home.make_showlist_unique_names()
+
+        loaded = len(sickgear.showList)
+        logger.log(f'Loaded {loaded} show{maybe_plural(loaded)} in {watch.text()}' + ('', ': ' + ', '.join(
+            [f'{_n} {_s}' for _s, _n in sorted(statuses.items(), key=lambda _i: (-_i[1], _i[0]))]
+            + ([], [f'{paused} paused'])[0 < paused]
+            + ([], [f'{not_found} not found at their info source'])[0 < not_found]
+            + ([], [f'{no_imdb} with no IMDb info until their next show update'])[0 < no_imdb]))[0 < loaded])
 
     @staticmethod
     def restore(src_dir, dst_dir):

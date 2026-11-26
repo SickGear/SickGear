@@ -16,14 +16,17 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
+from os.path import abspath, dirname, join
 from unittest import mock
 
-import test_lib as test
+# noinspection PyUnusedImports
+import test_lib as test  # sets the paths to sickgear and lib, used by the imports below
 
 from tornado.web import StaticFileHandler
+
 from sickgear.webserve import BaseStaticFileHandler
 
-root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gui', 'slick'))
+root = abspath(join(dirname(__file__), '..', 'gui', 'slick'))
 
 
 def resolve(url_path):

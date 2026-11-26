@@ -40,10 +40,13 @@ sys.path.insert(1, os.path.join(sg_path, 'lib'))
 sys.path.insert(1, sg_path)
 
 try:
-    import requests
+    import niquests as requests
 except ImportError:
-    print('You must install python requests library')
-    sys.exit(1)
+    try:
+        import requests
+    except ImportError:
+        print('You must install python niquests or requests library')
+        sys.exit(1)
 
 try:  # Try importing Python 3 modules
     import configparser
@@ -56,7 +59,7 @@ except ImportError:  # On error, exit
 
 
 # noinspection DuplicatedCode
-def process_files(dir_to_process, org_nzb_name=None, status=None):
+def process_files(dir_to_process, org_nzb_name=None, status=None, client=None, nzbid=None, puid=None):
     # Default values
     host = 'localhost'
     port = '8081'
@@ -118,6 +121,15 @@ def process_files(dir_to_process, org_nzb_name=None, status=None):
 
     if None is not status:
         params['failed'] = status
+
+    if None is not client:
+        params['client'] = client
+
+    if None is not nzbid:
+        params['nzbid'] = nzbid
+
+    if None is not puid:
+        params['puid'] = puid
 
     login_url = f'{url}/login'
     url = f'{url}/home/process-media/files'

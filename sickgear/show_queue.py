@@ -18,31 +18,30 @@ import datetime
 import os
 import traceback
 
-from lib.dateutil.parser import parser
-from lib.tvinfo_base.exceptions import *
+from dateutil.parser import parser
+from six import integer_types
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from tvinfo_base.exceptions import *
+from exceptions_helper import ex
 from . import logger, ui, db, generic_queue, name_cache
 from .anime import AniGroupList
 from .common import SKIPPED, WANTED, UNAIRED, Quality, statusStrings
-from .helpers import should_delete_episode, find_show_by_id
+from .helpers import should_delete_episode, find_show_by_id, split_word_str
 from .indexermapper import clean_show_name, map_indexers_to_show
 from .indexers.indexer_config import TVINFO_TVDB, TVINFO_TVRAGE
 from .name_parser.parser import NameParser
+from .sgdatetime import Stopwatch
 from .tv import TVidProdid, TVShow, TVSWITCH_DUPLICATE_SHOW, TVSWITCH_EP_DELETED, TVSWITCH_ID_CONFLICT, \
     TVSWITCH_NO_NEW_ID, TVSWITCH_NORMAL, TVSWITCH_NOT_FOUND_ERROR, TVSWITCH_SAME_ID, TVSWITCH_SOURCE_NOT_FOUND_ERROR, \
     TVSWITCH_VERIFY_ERROR
-
-from six import integer_types
-from sg_helpers import try_int
+from sg_helpers import maybe_plural, try_int
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Tuple, Union
-    from lib.tvinfo_base import TVInfoShow
+    from tvinfo_base import TVInfoShow
     from .tv import TVEpisode
 
 # Define special priority of tv source switch tasks, higher than anything else except newly added shows
@@ -63,15 +62,31 @@ class ShowQueue(generic_queue.GenericQueue):
         generic_queue.GenericQueue.__init__(self, cache_db_tables=['show_queue'], main_db_tables=['tv_src_switch'])
         self.queue_name = 'SHOWQUEUE'
         self.daily_update_running = False
+        self.daily_update_watch = None  # type: Optional[Stopwatch]
+        self.daily_update_done = {}  # type: Dict[int, int]
         with db.DBConnection() as sg_db:
             if not sg_db.has_flag('kodi_nfo_uid'):
                 self.add_event(DAILY_SHOW_UPDATE_FINISHED_EVENT, sickgear.metadata.kodi.set_nfo_uid_updated)
+
+    def start_daily_update(self):
+        # the start, and a new count of the shows that the daily update has updated and refreshed
+        self.daily_update_watch = Stopwatch()
+        self.daily_update_done = {}
+
+    def count_daily_update(self, action_id):
+        # type: (int) -> None
+        self.daily_update_done[action_id] = 1 + self.daily_update_done.get(action_id, 0)
 
     def check_events(self):
         if self.daily_update_running and \
                 not (self.is_show_update_running() or sickgear.update_show_scheduler.is_running_job):
             self.execute_events(DAILY_SHOW_UPDATE_FINISHED_EVENT)
             self.daily_update_running = False
+            # an update of a show queues its refresh, so this is when the last of them has ended
+            updated = self.daily_update_done.get(ShowQueueActions.UPDATE, 0)
+            refreshed = self.daily_update_done.get(ShowQueueActions.REFRESH, 0)
+            logger.log(f'Daily show update finished in {(self.daily_update_watch or Stopwatch()).text()}:'
+                       f' {updated} show{maybe_plural(updated)} updated, {refreshed} refreshed')
 
     def load_queue(self):
         try:
@@ -122,7 +137,12 @@ class ShowQueue(generic_queue.GenericQueue):
                         flatten_folders=bool_none(cur_row['flatten_folders']), anime=bool_none(cur_row['anime']),
                         blocklist=cur_row['blocklist'], allowlist=cur_row['allowlist'],
                         show_name=cur_row['show_name'], new_show=bool(cur_row['new_show']),
-                        lang=cur_row['lang'], uid=cur_row['uid'], add_to_db=False)
+                        lang=cur_row['lang'], uid=cur_row['uid'], add_to_db=False,
+                        rls_ignore_words=cur_row['rls_ignore_words'], rls_require_words=cur_row['rls_require_words'],
+                        rls_global_exclude_ignore=list(
+                            filter(None, (cur_row['rls_global_exclude_ignore'] or '').split(','))),
+                        rls_global_exclude_require=list(
+                            filter(None, (cur_row['rls_global_exclude_require'] or '').split(','))))
 
         except (BaseException, Exception) as e:
             logger.error(f'Exception loading queue {self.__class__.__name__}: {ex(e)}')
@@ -202,13 +222,16 @@ class ShowQueue(generic_queue.GenericQueue):
                 subtitles, anime, scene, paused,
                 blocklist, allowlist, wanted_begin, wanted_latest,
                 prune, tag, new_show, show_name, upgrade_once,
-                action_id, uid) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                action_id, uid, rls_ignore_words, rls_require_words,
+                rls_global_exclude_ignore, rls_global_exclude_require)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, [item.tvid, item.prodid, item.priority, int(item.scheduled_update),
                       item.showDir, item.default_status, item.quality, try_int(item.flatten_folders, None), item.lang,
                       item.subtitles, try_int(item.anime, None), try_int(item.scene, None), try_int(item.paused, None),
                       item.blocklist, item.allowlist, item.default_wanted_begin, item.default_wanted_latest,
                       item.prune, item.tag, int(item.new_show), item.show_name, int(item.upgrade_once),
-                      item.action_id, item.uid]
+                      item.action_id, item.uid, item.rls_ignore_words, item.rls_require_words,
+                      ','.join(item.rls_global_exclude_ignore or []), ','.join(item.rls_global_exclude_require or [])]
             ]]
         return []
 
@@ -651,7 +674,9 @@ class ShowQueue(generic_queue.GenericQueue):
                  quality=None, upgrade_once=False, wanted_begin=None, wanted_latest=None, tag=None,
                  paused=None, prune=None, default_status=None, scene=None, subtitles=None,
                  flatten_folders=None, anime=None, blocklist=None, allowlist=None,
-                 show_name=None, new_show=False, lang='en', uid=None, add_to_db=True):
+                 show_name=None, new_show=False, lang='en', uid=None, add_to_db=True,
+                 rls_ignore_words=None, rls_require_words=None, rls_global_exclude_ignore=None,
+                 rls_global_exclude_require=None):
         """
 
         :param tvid: tvid
@@ -701,7 +726,10 @@ class ShowQueue(generic_queue.GenericQueue):
         queue_item_obj = QueueItemAdd(tvid, prodid, show_dir, default_status, quality, flatten_folders, lang,
                                       subtitles, anime, scene, paused, blocklist, allowlist,
                                       wanted_begin, wanted_latest, prune, tag,
-                                      new_show=new_show, show_name=show_name, upgrade_once=upgrade_once, uid=uid)
+                                      new_show=new_show, show_name=show_name, upgrade_once=upgrade_once, uid=uid,
+                                      rls_ignore_words=rls_ignore_words, rls_require_words=rls_require_words,
+                                      rls_global_exclude_ignore=rls_global_exclude_ignore,
+                                      rls_global_exclude_require=rls_global_exclude_require)
 
         self.add_item(queue_item_obj, add_to_db=add_to_db)
 
@@ -755,6 +783,11 @@ class ShowQueueItem(generic_queue.QueueItem):
         generic_queue.QueueItem.__init__(self, ShowQueueActions.names[action_id], action_id, uid=uid)
         self.show_obj = show_obj  # type: sickgear.tv.TVShow
         self.scheduled_update = scheduled_update  # type: bool
+        self.watch = None  # type: Optional[Stopwatch]
+
+    def run(self):
+        self.watch = Stopwatch()
+        super(ShowQueueItem, self).run()
 
     def is_in_queue(self):
         """
@@ -774,6 +807,23 @@ class ShowQueueItem(generic_queue.QueueItem):
     def _is_loading(self):
         return False
 
+    def finish(self):
+        if self.scheduled_update:
+            sickgear.show_queue_scheduler.action.count_daily_update(self.action_id)
+        elif self.show_obj and self.watch and self.action_id in (
+                ShowQueueActions.REFRESH, ShowQueueActions.UPDATE, ShowQueueActions.FORCEUPDATE,
+                ShowQueueActions.WEBFORCEUPDATE):
+            # the daily update logs its end once, an update or refresh of one show logs its own end; an update queues
+            # the refresh of its show, so the end of the refresh is the end of an update of a show
+            task = ('update', 'refresh')[ShowQueueActions.REFRESH == self.action_id]
+            logger.log(f'Finished {task} of {self.show_obj.unique_name} in {self.watch.text()}')
+        # a show task loads every episode of its show, release the episode objects that are no longer used
+        if self.show_obj:
+            released = self.show_obj.release_episodes()
+            if released:
+                logger.debug(f'Released {released} episode objects of [{self.show_obj.name}] from memory')
+        super(ShowQueueItem, self).finish()
+
     def __str__(self):
         return f'<{self.__class__.__name__} ({self.show_obj and self.show_obj.name})>'
 
@@ -788,7 +838,9 @@ class ShowQueueItem(generic_queue.QueueItem):
 class QueueItemAdd(ShowQueueItem):
     def __init__(self, tvid, prodid, show_dir, default_status, quality, flatten_folders, lang, subtitles, anime,
                  scene, paused, blocklist, allowlist, default_wanted_begin, default_wanted_latest, prune, tag,
-                 scheduled_update=False, new_show=False, show_name=None, upgrade_once=False, uid=None):
+                 scheduled_update=False, new_show=False, show_name=None, upgrade_once=False, uid=None,
+                 rls_ignore_words=None, rls_require_words=None, rls_global_exclude_ignore=None,
+                 rls_global_exclude_require=None):
         """
 
         :param tvid: tvid
@@ -856,6 +908,10 @@ class QueueItemAdd(ShowQueueItem):
         self.subtitles = subtitles
         self.tag = tag
         self.upgrade_once = upgrade_once
+        self.rls_ignore_words = rls_ignore_words
+        self.rls_require_words = rls_require_words
+        self.rls_global_exclude_ignore = rls_global_exclude_ignore
+        self.rls_global_exclude_require = rls_global_exclude_require
 
         # this will initialize self.show_obj to None
         ShowQueueItem.__init__(self, ShowQueueActions.ADD, self.show_obj, scheduled_update, uid=uid)
@@ -1027,6 +1083,23 @@ class QueueItemAdd(ShowQueueItem):
             self.show_obj.flatten_folders = self.flatten_folders if None is not self.flatten_folders \
                 else sickgear.FLATTEN_FOLDERS_DEFAULT
             self.show_obj.anime = self.anime if None is not self.anime else sickgear.ANIME_DEFAULT
+            self.show_obj.rls_ignore_words, self.show_obj.rls_ignore_words_regex = split_word_str(
+                self.rls_ignore_words)
+            self.show_obj.rls_require_words, self.show_obj.rls_require_words_regex = split_word_str(
+                self.rls_require_words)
+
+            if isinstance(self.rls_global_exclude_ignore, list):
+                self.show_obj.rls_global_exclude_ignore = set(r for r in self.rls_global_exclude_ignore if '.*' != r)
+            elif isinstance(self.rls_global_exclude_ignore, str) and '.*' != self.rls_global_exclude_ignore:
+                self.show_obj.rls_global_exclude_ignore = {self.rls_global_exclude_ignore}
+            else:
+                self.show_obj.rls_global_exclude_ignore = set()
+            if isinstance(self.rls_global_exclude_require, list):
+                self.show_obj.rls_global_exclude_require = set(r for r in self.rls_global_exclude_require if '.*' != r)
+            elif isinstance(self.rls_global_exclude_require, str) and '.*' != self.rls_global_exclude_require:
+                self.show_obj.rls_global_exclude_require = {self.rls_global_exclude_require}
+            else:
+                self.show_obj.rls_global_exclude_require = set()
 
             if self.show_obj.anime:
                 self.show_obj.release_groups = AniGroupList(self.show_obj.tvid,
@@ -1380,6 +1453,8 @@ class QueueItemUpdate(ShowQueueItem):
         logger.log(f'Beginning update of {self.show_obj.unique_name}')
 
         logger.debug(f'Retrieving show info from {sickgear.TVInfoAPI(self.show_obj.tvid).name}')
+        # reset episode per season counts
+        self.show_obj.aired_in_season_update_time = datetime.datetime(2000, 1, 1)
         try:
             result = self.show_obj.load_from_tvinfo(cache=not self.force, tvinfo_data=self.tvinfo_data,
                                                     scheduled_update=self.scheduled_update, switch=self.switch)
@@ -1429,7 +1504,6 @@ class QueueItemUpdate(ShowQueueItem):
             # for each ep we found on TVDB delete it from the DB list
             for cur_season in tvinfo_ep_list:
                 for cur_episode in tvinfo_ep_list[cur_season]:
-                    logger.debug(f'Removing {cur_season}x{cur_episode} from the DB list')
                     if cur_season in db_ep_obj_list and cur_episode in db_ep_obj_list[cur_season]:
                         del db_ep_obj_list[cur_season][cur_episode]
 

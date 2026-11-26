@@ -5,22 +5,22 @@ warnings.filterwarnings('ignore', module=r'.*dateutil.*', message='.*Unicode.*')
 warnings.filterwarnings('ignore', module=r'.*', message=r'.*Python 2\.6.*')
 
 import datetime
-import os.path
 import random
 import sys
 import test_lib as test
 import unittest
+from os.path import abspath, dirname, isfile, join
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 from lxml_etree import etree
-from lib.dateutil import parser
+from dateutil import parser
+
+import sickgear
 from sickgear.indexers.indexer_config import *
 from sickgear.network_timezones import SG_TIMEZONE
 from sickgear.providers import newznab
-
-import sickgear
 
 sickgear.SYS_ENCODING = 'UTF-8'
 
@@ -185,7 +185,7 @@ caps_test_cases = [
 class FakeNewznabProvider(newznab.NewznabProvider):
 
     def __init__(self, *args, **kwargs):
-        self.FILEDIR = os.path.join(test.TESTDIR, 'newznab_data')
+        self.FILEDIR = join(test.TESTDIR, 'newznab_data')
         self._data_files_dict = ({}, kwargs['data_files_dict'])[isinstance(kwargs.get('data_files_dict'), dict)]
         if 'data_files_dict' in kwargs:
             del kwargs['data_files_dict']
@@ -193,8 +193,8 @@ class FakeNewznabProvider(newznab.NewznabProvider):
 
     def _read_data(self, filename):
         try:
-            f = os.path.join(self.FILEDIR, filename)
-            if os.path.isfile(f):
+            f = join(self.FILEDIR, filename)
+            if isfile(f):
                 with open(f, 'rb') as d:
                     return d.read()
         except (BaseException, Exception):
@@ -366,4 +366,4 @@ if '__main__' == __name__:
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(FakeProviderTests)
-    unittest.TextTestRunner(verbosity=2).run(FakeNewznabProvider)
+    unittest.TextTestRunner(verbosity=2).run(suite)

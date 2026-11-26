@@ -15,10 +15,10 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 import os
 
+import sickgear
 from .indexer_config import init_config, tvinfo_config
 from sg_helpers import proxy_setting
-import sickgear
-from lib.tvinfo_base import TVInfoBase
+from tvinfo_base import TVInfoBase
 
 # noinspection PyUnreachableCode
 if False:

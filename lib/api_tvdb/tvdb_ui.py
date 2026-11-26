@@ -47,8 +47,9 @@ __version__ = "1.9"
 import logging
 import warnings
 
-from .tvdb_exceptions import TvdbUserabort
 from six import moves
+
+from .tvdb_exceptions import TvdbUserabort
 
 
 def log():

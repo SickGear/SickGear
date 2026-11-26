@@ -19,9 +19,8 @@ import os
 import traceback
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, logger, network_timezones, properFinder, ui
 from .scheduler import Job
 from .config import backup_config, backup_btn_status
@@ -154,6 +153,7 @@ class ShowUpdater(Job):
                     logger.error(traceback.format_exc())
 
             logger.log('Doing full update on all shows')
+            sickgear.show_queue_scheduler.action.start_daily_update()
 
             # clean out cache directory, remove everything > 12 hours old
             try:

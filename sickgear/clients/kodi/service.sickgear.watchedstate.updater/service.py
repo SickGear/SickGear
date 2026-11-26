@@ -16,22 +16,21 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
-try:
-    import json as json
-except (BaseException, Exception):
-    import simplejson as json
-from os import path
 import socket
-# noinspection PyUnresolvedReferences,PyProtectedMember
-from ssl import _create_unverified_context
 import sys
 import time
 import traceback
-
+from os import path
+# noinspection PyUnresolvedReferences,PyProtectedMember
+from ssl import _create_unverified_context
 # noinspection PyCompatibility,PyUnresolvedReferences
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import (Request, urlopen)
+try:
+    import json as json
+except (BaseException, Exception):
+    import simplejson as json
 
 # these are Kodi specific libs, so block the error reports in pycharm
 import xbmc

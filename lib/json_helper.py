@@ -17,8 +17,9 @@
 from sys import version_info
 from gzip import GzipFile
 
-from _23 import decode_str
 from requests.utils import guess_json_utf
+
+from _23 import decode_str
 
 
 # noinspection PyUnreachableCode

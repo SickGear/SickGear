@@ -1,22 +1,26 @@
 from __future__ import annotations
 
-import io
 import socket
-import ssl
+import sys
 import typing
 
+from ..contrib.anytls import ssl
+from ..contrib.anytls import (
+    stdlib_ssl as _stdlib_ssl,
+)  # Always import stdlib ssl for exception compatibility
+
+from .._constant import DEFAULT_BLOCKSIZE
 from ..exceptions import ProxySchemeUnsupported
 
 if typing.TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Literal
 
-    from .ssl_ import _TYPE_PEER_CERT_RET, _TYPE_PEER_CERT_RET_DICT
+    from .._typing import _TYPE_PEER_CERT_RET, _TYPE_PEER_CERT_RET_DICT
 
 
+_SelfT = typing.TypeVar("_SelfT", bound="SSLTransport")
 _WriteBuffer = typing.Union[bytearray, memoryview]
 _ReturnValue = typing.TypeVar("_ReturnValue")
-
-SSL_BLOCKSIZE = 16384
 
 
 class SSLTransport:
@@ -56,20 +60,39 @@ class SSLTransport:
         """
         Create an SSLTransport around socket using the provided ssl_context.
         """
-        self.incoming = ssl.MemoryBIO()
-        self.outgoing = ssl.MemoryBIO()
-
         self.suppress_ragged_eofs = suppress_ragged_eofs
         self.socket = socket
 
-        self.sslobj = ssl_context.wrap_bio(
-            self.incoming, self.outgoing, server_hostname=server_hostname
-        )
+        # Determine the correct MemoryBIO to use.  When a non-stdlib backend
+        # (rtls/utls) is the default ``ssl`` but the caller passes a stdlib
+        # SSLContext (or vice-versa), wrap_bio() will reject a foreign
+        # MemoryBIO with a TypeError. Try the default ``ssl`` first, then
+        # fall back to ``_stdlib_ssl``.
+        _bio_factories: list[type[ssl.MemoryBIO]] = [ssl.MemoryBIO]
+        if _stdlib_ssl is not None:
+            _bio_factories.append(_stdlib_ssl.MemoryBIO)
+        _bio_factories = list(dict.fromkeys(_bio_factories))
+        for _MemoryBIO in _bio_factories:
+            self.incoming: ssl.MemoryBIO = _MemoryBIO()
+            self.outgoing: ssl.MemoryBIO = _MemoryBIO()
+            try:
+                self.sslobj: ssl.SSLObject = ssl_context.wrap_bio(
+                    self.incoming, self.outgoing, server_hostname=server_hostname
+                )
+                self._ssl_module = ssl if _MemoryBIO is ssl.MemoryBIO else _stdlib_ssl
+                break
+            except TypeError:
+                continue
+        else:
+            raise TypeError(
+                "SSLTransport could not find a compatible MemoryBIO for "
+                f"the provided ssl_context ({type(ssl_context)})"
+            )
 
         # Perform initial handshake.
         self._ssl_io_loop(self.sslobj.do_handshake)
 
-    def __enter__(self) -> Self:
+    def __enter__(self: _SelfT) -> _SelfT:
         return self
 
     def __exit__(self, *_: typing.Any) -> None:
@@ -77,6 +100,10 @@ class SSLTransport:
 
     def fileno(self) -> int:
         return self.socket.fileno()
+
+    @property
+    def type(self) -> socket.SocketKind:
+        return self.socket.type
 
     def read(self, len: int = 1024, buffer: typing.Any | None = None) -> int | bytes:
         return self._wrap_ssl_read(len, buffer)
@@ -113,58 +140,6 @@ class SSLTransport:
             raise ValueError("non-zero flags not allowed in calls to send")
         return self._ssl_io_loop(self.sslobj.write, data)
 
-    def makefile(
-        self,
-        mode: str,
-        buffering: int | None = None,
-        *,
-        encoding: str | None = None,
-        errors: str | None = None,
-        newline: str | None = None,
-    ) -> typing.BinaryIO | typing.TextIO | socket.SocketIO:
-        """
-        Python's httpclient uses makefile and buffered io when reading HTTP
-        messages and we need to support it.
-
-        This is unfortunately a copy and paste of socket.py makefile with small
-        changes to point to the socket directly.
-        """
-        if not set(mode) <= {"r", "w", "b"}:
-            raise ValueError(f"invalid mode {mode!r} (only r, w, b allowed)")
-
-        writing = "w" in mode
-        reading = "r" in mode or not writing
-        assert reading or writing
-        binary = "b" in mode
-        rawmode = ""
-        if reading:
-            rawmode += "r"
-        if writing:
-            rawmode += "w"
-        raw = socket.SocketIO(self, rawmode)  # type: ignore[arg-type]
-        self.socket._io_refs += 1  # type: ignore[attr-defined]
-        if buffering is None:
-            buffering = -1
-        if buffering < 0:
-            buffering = io.DEFAULT_BUFFER_SIZE
-        if buffering == 0:
-            if not binary:
-                raise ValueError("unbuffered streams must be binary")
-            return raw
-        buffer: typing.BinaryIO
-        if reading and writing:
-            buffer = io.BufferedRWPair(raw, raw, buffering)  # type: ignore[assignment]
-        elif reading:
-            buffer = io.BufferedReader(raw, buffering)
-        else:
-            assert writing
-            buffer = io.BufferedWriter(raw, buffering)
-        if binary:
-            return buffer
-        text = io.TextIOWrapper(buffer, encoding, errors, newline)
-        text.mode = mode  # type: ignore[misc]
-        return text
-
     def unwrap(self) -> None:
         self._ssl_io_loop(self.sslobj.unwrap)
 
@@ -173,11 +148,11 @@ class SSLTransport:
 
     @typing.overload
     def getpeercert(
-        self, binary_form: typing.Literal[False] = ...
+        self, binary_form: Literal[False] = ...
     ) -> _TYPE_PEER_CERT_RET_DICT | None: ...
 
     @typing.overload
-    def getpeercert(self, binary_form: typing.Literal[True]) -> bytes | None: ...
+    def getpeercert(self, binary_form: Literal[True]) -> bytes | None: ...
 
     def getpeercert(self, binary_form: bool = False) -> _TYPE_PEER_CERT_RET:
         return self.sslobj.getpeercert(binary_form)  # type: ignore[return-value]
@@ -188,8 +163,15 @@ class SSLTransport:
     def cipher(self) -> tuple[str, str, int] | None:
         return self.sslobj.cipher()
 
+    @property
+    def context(self) -> ssl.SSLContext:
+        return self.sslobj.context
+
     def selected_alpn_protocol(self) -> str | None:
         return self.sslobj.selected_alpn_protocol()
+
+    def selected_npn_protocol(self) -> str | None:
+        return self.sslobj.selected_npn_protocol()
 
     def shared_ciphers(self) -> list[tuple[str, str, int]] | None:
         return self.sslobj.shared_ciphers()
@@ -203,14 +185,37 @@ class SSLTransport:
     def gettimeout(self) -> float | None:
         return self.socket.gettimeout()
 
-    def _decref_socketios(self) -> None:
+    if sys.platform == "win32":
+
+        def ioctl(
+            self, control: int, option: int | tuple[int, int, int] | bool
+        ) -> None:
+            return self.socket.ioctl(control, option)
+
+    def setsockopt(self, __level: int, __optname: int, __value: int | bytes) -> None:
+        self.socket.setsockopt(__level, __optname, __value)
+
+    @typing.overload
+    def getsockopt(self, __level: int, __optname: int) -> int: ...
+
+    @typing.overload
+    def getsockopt(self, __level: int, __optname: int, buflen: int) -> bytes: ...
+
+    def getsockopt(
+        self, __level: int, __optname: int, buflen: int | None = None
+    ) -> int | bytes:
+        if buflen is None:
+            return self.socket.getsockopt(__level, __optname)
+        return self.socket.getsockopt(__level, __optname, buflen)
+
+    def _decref_socketios(self) -> None:  # Defensive: SocketIO compatibility.
         self.socket._decref_socketios()  # type: ignore[attr-defined]
 
     def _wrap_ssl_read(self, len: int, buffer: bytearray | None = None) -> int | bytes:
         try:
             return self._ssl_io_loop(self.sslobj.read, len, buffer)
-        except ssl.SSLError as e:
-            if e.errno == ssl.SSL_ERROR_EOF and self.suppress_ragged_eofs:
+        except _stdlib_ssl.SSLError as e:
+            if e.errno == _stdlib_ssl.SSL_ERROR_EOF and self.suppress_ragged_eofs:
                 return 0  # eof, return 0.
             else:
                 raise
@@ -243,7 +248,9 @@ class SSLTransport:
         ret = None
 
         while should_loop:
-            errno = None
+            ssl_module = self._ssl_module
+            assert ssl_module is not None
+            want_read: bool | None = None
             try:
                 if arg1 is None and arg2 is None:
                     ret = func()
@@ -251,19 +258,18 @@ class SSLTransport:
                     ret = func(arg1)
                 else:
                     ret = func(arg1, arg2)
-            except ssl.SSLError as e:
-                if e.errno not in (ssl.SSL_ERROR_WANT_READ, ssl.SSL_ERROR_WANT_WRITE):
-                    # WANT_READ, and WANT_WRITE are expected, others are not.
-                    raise e
-                errno = e.errno
+            except ssl_module.SSLWantReadError:
+                want_read = True
+            except ssl_module.SSLWantWriteError:
+                want_read = False  # Defensive: MemoryBIO output grows on demand; retain for alternate TLS backends.
 
             buf = self.outgoing.read()
             self.socket.sendall(buf)
 
-            if errno is None:
+            if want_read is None:
                 should_loop = False
-            elif errno == ssl.SSL_ERROR_WANT_READ:
-                buf = self.socket.recv(SSL_BLOCKSIZE)
+            elif want_read:
+                buf = self.socket.recv(DEFAULT_BLOCKSIZE)
                 if buf:
                     self.incoming.write(buf)
                 else:

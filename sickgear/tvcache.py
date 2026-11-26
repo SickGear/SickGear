@@ -19,7 +19,6 @@ import itertools
 import time
 
 from exceptions_helper import AuthException, ex, MultipleShowObjectsException
-
 from . import db, helpers, logger, show_name_helpers
 from .classes import SearchResult
 from .common import Quality
@@ -249,7 +248,9 @@ class TVCache(object):
                         name,  # type: AnyStr
                         url,  # type: AnyStr
                         parse_result=None,  # type: ParseResult
-                        tvid_prodid=None  # type: Union[AnyStr, None]
+                        tvid_prodid=None,  # type: Union[AnyStr, None]
+                        size=None,  # type: Optional[int]
+                        uid=None  # type: Optional[str]
                         ):  # type: (...) -> Union[List[AnyStr, List[Any]], None]
         """
 
@@ -317,12 +318,12 @@ class TVCache(object):
                 ' (provider, name, season, episodes,'
                 ' indexerid,'
                 ' url, time, quality, release_group, version,'
-                ' indexer)'
-                ' VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                ' indexer, size, uid)'
+                ' VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 [self.providerID, name, season_number, episode_text,
                  parse_result.show_obj.prodid,
                  url, cur_timestamp, quality, release_group, version,
-                 parse_result.show_obj.tvid]]
+                 parse_result.show_obj.tvid, size, uid]]
 
     def search_cache(self,
                      episode,  # type: TVEpisode
@@ -411,37 +412,42 @@ class TVCache(object):
             season = int(cur_result['season'])
             if -1 == season:
                 continue
-            ep_obj_list = cur_result['episodes'].split('|')[1]
-            if not ep_obj_list:
+            ep_nbs = [int(_c) for _c in cur_result['episodes'].split('|') or [] if len(_c)]
+            if not ep_nbs:
                 continue
-            ep_obj_list = int(ep_obj_list)
 
             quality = int(cur_result['quality'])
             release_group = cur_result['release_group']
             version = cur_result['version']
 
             # if the show says we want that episode then add it to the list
-            if not show_obj.want_episode(season, ep_obj_list, quality, manual_search):
+            if not all(show_obj.want_episode(season, _en, quality, manual_search) for _en in ep_nbs):
                 logger.debug(f'Skipping {cur_result["name"]}'
                              f' because we don"t want an episode that\'s {Quality.qualityStrings[quality]}')
                 continue
 
-            ep_obj = show_obj.get_episode(season, ep_obj_list)
+            ep_obj_list = [show_obj.get_episode(season, _en) for _en in ep_nbs]
 
             # build a result object
             title = cur_result['name']
             url = cur_result['url']
+            size = cur_result['size']
+            uid = cur_result['uid']
 
             logger.log(f'Found result {title} at {url}')
 
-            result = self.provider.get_result([ep_obj], url)
+            result = self.provider.get_result(ep_obj_list, url)  # type: SearchResult
             if None is result:
                 continue
+            result.episode_numbers = ep_nbs
+            result.season = season
             result.show_obj = show_obj
             result.name = title
             result.quality = quality
             result.release_group = release_group
             result.version = version
+            result.size = size
+            result.puid = uid
             result.content = None
             np = NameParser(False, show_obj=show_obj)
             try:
@@ -457,7 +463,7 @@ class TVCache(object):
                                                                             check_is_repack=True)
 
             # add it to the list
-            if ep_obj not in needed_eps:
+            if (ep_obj := ep_obj_list[0]) not in needed_eps:
                 needed_eps[ep_obj] = [result]
             else:
                 needed_eps[ep_obj].append(result)

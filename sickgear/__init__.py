@@ -13,9 +13,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
-from collections import OrderedDict
-from threading import Lock
-
 import copy
 import datetime
 import io
@@ -25,14 +22,20 @@ import signal
 import socket
 import time
 import webbrowser
-
 # apparently py2exe won't build these unless they're imported somewhere
 import os.path
 import sys
 import threading
 import uuid
 import zlib
+from collections import OrderedDict
+from threading import Lock
 
+from configobj import ConfigObj
+from six import string_types
+
+import sg_ech
+import sg_helpers
 from . import classes, db, helpers, image_cache, indexermapper, logger, metadata, naming, people_queue, providers, \
     scene_exceptions, scene_numbering, scheduler, search_backlog, search_propers, search_queue, search_recent, \
     show_queue, show_updater, subtitles, version_checker, watchedstate_queue
@@ -48,20 +51,16 @@ from .providers.newznab import NewznabConstants
 from .tv import TVidProdid
 from .watchedstate import EmbyWatchedStateUpdater, PlexWatchedStateUpdater
 from .webserve import History
-
 # noinspection PyProtectedMember
 from browser_ua import get_ua
-from configobj import ConfigObj
 from api_trakt import TraktAPI
-
 from _23 import b64encodestring, decode_bytes, scandir
 from sg_helpers import remove_file_perm
-from six import string_types
-import sg_helpers
+from tvinfo_base.base import ShowContainer
 
 # noinspection PyUnreachableCode
 if False:
-    from typing import AnyStr, Dict, List, Optional
+    from typing import AnyStr, Dict, List, Optional, Tuple
     from adba import Connection
     from .event_queue import Events
     from .tv import TVShow
@@ -217,6 +216,7 @@ RESULTS_SORTBY = None
 
 TVINFO_DEFAULT = 0
 TVINFO_TIMEOUT = 20
+TVINFO_SHOW_CACHE_LIMIT = 10
 QUALITY_DEFAULT = SD
 WANTED_BEGIN_DEFAULT = 0
 WANTED_LATEST_DEFAULT = 0
@@ -283,6 +283,13 @@ MAX_WATCHEDSTATE_INTERVAL = 60
 SEARCH_UNAIRED = False
 UNAIRED_RECENT_SEARCH_ONLY = True
 FLARESOLVERR_HOST = None
+DNS_RESOLVER = None
+PROVIDER_TUNNEL = False
+# provider ids whose fallback choice differs from their default, see GenericProvider.tunnel_default_on
+PROVIDER_TUNNEL_USE = []  # type: List[AnyStr]
+PROVIDER_TUNNEL_EXCLUDE = []  # type: List[AnyStr]
+PROVIDER_TUNNEL_NOTICE_CLOSED = {}  # type: Dict[AnyStr, int]
+PROVIDER_TUNNEL_BLOCKED = {}  # type: Dict[AnyStr, Tuple[AnyStr, AnyStr]]
 
 ADD_SHOWS_WO_DIR = False
 ADD_SHOWS_METALANG = 'en'
@@ -657,6 +664,7 @@ def init_stage_1(console_logging):
     # Gen Config/Misc
     global LAUNCH_BROWSER, UPDATE_SHOWS_ON_START, SHOW_UPDATE_HOUR, \
         TRASH_REMOVE_SHOW, TRASH_ROTATE_LOGS, ACTUAL_LOG_DIR, LOG_DIR, TVINFO_TIMEOUT, ROOT_DIRS, \
+        TVINFO_SHOW_CACHE_LIMIT, \
         UPDATE_NOTIFY, UPDATE_AUTO, UPDATE_INTERVAL, NOTIFY_ON_UPDATE,\
         UPDATE_PACKAGES_NOTIFY, UPDATE_PACKAGES_AUTO, UPDATE_PACKAGES_MENU, UPDATE_PACKAGES_INTERVAL
     # Gen Config/Interface
@@ -673,7 +681,8 @@ def init_stage_1(console_logging):
     global DOWNLOAD_PROPERS, PROPERS_WEBDL_ONEGRP, WEBDL_TYPES, RECENTSEARCH_INTERVAL, \
         BACKLOG_LIMITED_PERIOD, BACKLOG_NOFULL, BACKLOG_PERIOD, USENET_RETENTION, IGNORE_WORDS, REQUIRE_WORDS, \
         IGNORE_WORDS, IGNORE_WORDS_REGEX, REQUIRE_WORDS, REQUIRE_WORDS_REGEX, \
-        ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, FLARESOLVERR_HOST
+        ALLOW_HIGH_PRIORITY, SEARCH_UNAIRED, UNAIRED_RECENT_SEARCH_ONLY, FLARESOLVERR_HOST, DNS_RESOLVER, \
+        PROVIDER_TUNNEL, PROVIDER_TUNNEL_USE, PROVIDER_TUNNEL_EXCLUDE, PROVIDER_TUNNEL_NOTICE_CLOSED
     # Search Settings/NZB search
     global USE_NZBS, NZB_METHOD, NZB_DIR, SAB_HOST, SAB_USERNAME, SAB_PASSWORD, SAB_APIKEY, SAB_CATEGORY, \
         NZBGET_USE_HTTPS, NZBGET_HOST, NZBGET_USERNAME, NZBGET_PASSWORD, NZBGET_CATEGORY, NZBGET_PRIORITY, \
@@ -914,6 +923,8 @@ def init_stage_1(console_logging):
     if TVINFO_DEFAULT and not TVInfoAPI(TVINFO_DEFAULT).config['active']:
         TVINFO_DEFAULT = TVINFO_TVDB
     TVINFO_TIMEOUT = check_setting_int(CFG, 'General', 'indexer_timeout', 20)
+    TVINFO_SHOW_CACHE_LIMIT = minimax(check_setting_int(CFG, 'General', 'tvinfo_show_cache_limit', 10), 10, 1, 1000)
+    ShowContainer.max_entries = TVINFO_SHOW_CACHE_LIMIT
 
     PAUSE_DEFAULT = bool(check_setting_int(CFG, 'General', 'pause default', 0))
     SCENE_DEFAULT = bool(check_setting_int(CFG, 'General', 'scene_default', 0))
@@ -978,6 +989,15 @@ def init_stage_1(console_logging):
     UNAIRED_RECENT_SEARCH_ONLY = bool(check_setting_int(CFG, 'General', 'unaired_recent_search_only', 1))
     FLARESOLVERR_HOST = check_setting_str(CFG, 'General', 'flaresolverr_host', '')
     sg_helpers.FLARESOLVERR_HOST = FLARESOLVERR_HOST
+    DNS_RESOLVER = check_setting_str(CFG, 'General', 'dns_resolver', '')
+    sg_helpers.DNS_RESOLVER = DNS_RESOLVER
+    PROVIDER_TUNNEL = bool(check_setting_int(CFG, 'General', 'provider_tunnel', 0))
+    PROVIDER_TUNNEL_USE = check_setting_str(CFG, 'General', 'provider_tunnel_use', '').split()
+    PROVIDER_TUNNEL_EXCLUDE = check_setting_str(CFG, 'General', 'provider_tunnel_exclude', '').split()
+    PROVIDER_TUNNEL_NOTICE_CLOSED = {
+        k: helpers.try_int(v) for k, _, v in [
+            cur_kv.partition(':') for cur_kv in
+            check_setting_str(CFG, 'General', 'provider_tunnel_notice_closed', '').split()] if k and v}
 
     NZB_DIR = check_setting_str(CFG, 'Blackhole', 'nzb_dir', '')
     TORRENT_DIR = check_setting_str(CFG, 'Blackhole', 'torrent_dir', '')
@@ -1332,6 +1352,10 @@ def init_stage_1(console_logging):
 
     torrentrss_data = check_setting_str(CFG, 'TorrentRss', 'torrentrss_data', '')
     torrent_rss_providers = providers.torrent_rss_source_list(torrentrss_data)
+    # rebuild provider sessions when a domain blocked by name at the ISP is routed via DoH for ECH
+    sg_ech.on_route_change = lambda: providers.apply_dns_resolver(DNS_RESOLVER, close=False)
+    if DNS_RESOLVER:
+        providers.apply_dns_resolver(DNS_RESOLVER)
 
     # dynamically load provider settings
     for torrent_prov in [curProvider for curProvider in providers.sorted_sources()
@@ -1677,6 +1701,7 @@ def init_stage_2():
     config_events = ConfigEvents(_save_config)
     config_events.start()
 
+    logger.RedactingFilter.reset()
     __INITIALIZED__ = True
     return True
 
@@ -1829,8 +1854,10 @@ def save_all():
 
         # write all shows
         logger.log('Saving all shows to the database')
-        for show_obj in showList:  # type: tv.TVShow
-            show_obj.save_to_db()
+        saved = sum(bool(show_obj.save_to_db()) for show_obj in showList)  # type: int
+        # one line, not a line for each show with no change, which hid the lines before a restart
+        logger.log(f'Saved {saved} of {len(showList)} show{sg_helpers.maybe_plural(len(showList))} to the database,'
+                   f' the others have no change')
 
     # save config
     logger.log('Saving config file to disk')
@@ -1848,6 +1875,7 @@ def save_config(force=False):
     if not CONFIG_LOADED:
         return
 
+    logger.RedactingFilter.reset()
     # use queue if it's available, otherwise, call save_config directly
     hasattr(config_events, 'put') and config_events.put(force) or _save_config(force)
 
@@ -1916,6 +1944,7 @@ def _save_config(force=False, **kwargs):
     new_config['General']['results_sortby'] = str(RESULTS_SORTBY)
     new_config['General']['indexer_default'] = int(TVINFO_DEFAULT)
     new_config['General']['indexer_timeout'] = int(TVINFO_TIMEOUT)
+    new_config['General']['tvinfo_show_cache_limit'] = int(TVINFO_SHOW_CACHE_LIMIT)
     new_config['General']['quality_default'] = int(QUALITY_DEFAULT)
     new_config['General']['wanted_begin_default'] = int(WANTED_BEGIN_DEFAULT)
     new_config['General']['wanted_latest_default'] = int(WANTED_LATEST_DEFAULT)
@@ -1971,6 +2000,12 @@ def _save_config(force=False, **kwargs):
     new_config['General']['search_unaired'] = int(SEARCH_UNAIRED)
     new_config['General']['unaired_recent_search_only'] = int(UNAIRED_RECENT_SEARCH_ONLY)
     new_config['General']['flaresolverr_host'] = FLARESOLVERR_HOST
+    new_config['General']['dns_resolver'] = DNS_RESOLVER
+    new_config['General']['provider_tunnel'] = int(PROVIDER_TUNNEL)
+    new_config['General']['provider_tunnel_use'] = ' '.join(PROVIDER_TUNNEL_USE)
+    new_config['General']['provider_tunnel_exclude'] = ' '.join(PROVIDER_TUNNEL_EXCLUDE)
+    new_config['General']['provider_tunnel_notice_closed'] = ' '.join(
+        '%s:%s' % (k, v) for k, v in sorted(PROVIDER_TUNNEL_NOTICE_CLOSED.items()))
 
     new_config['General']['cache_dir'] = ACTUAL_CACHE_DIR if ACTUAL_CACHE_DIR else 'cache'
     sg_helpers.CACHE_DIR = CACHE_DIR

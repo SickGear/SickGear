@@ -1,22 +1,25 @@
-import os.path
+import os
+import re
 import shutil
 import stat
+import subprocess
 import sys
 import tempfile
 import threading
 import unittest
+from functools import cmp_to_key
+from os.path import abspath, dirname, join
 from unittest import mock
 
-sys.path.insert(1, os.path.abspath('..'))
-sys.path.insert(1, os.path.abspath('../lib'))
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
+sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 import adba
-from sickgear import helpers
+
+import sickgear
+from sickgear import anime, helpers
 from sickgear.common import ARCHIVED, SNATCHED, SNATCHED_BEST, SNATCHED_PROPER, \
     DOWNLOADED, SKIPPED, IGNORED, UNAIRED, UNKNOWN, WANTED, Quality
-
-
-sys.path.insert(1, os.path.abspath('..'))
 
 
 class HelpersTests(unittest.TestCase):
@@ -85,15 +88,27 @@ class HelpersTests(unittest.TestCase):
             self.assertEqual(t['result'], helpers.encrypt(*t['param']))
 
 
+class LanguageCodeTests(unittest.TestCase):
+    def test_language_to_alpha2(self):
+        # the table was made from, and replaces, the iso639 package: a name or three letter code to a two letter code
+        from sg_lang_codes import language_to_alpha2
+        for cur_value, cur_code in (('English', 'en'), ('eng', 'en'), ('en', 'en'), ('Castilian', 'es'),
+                                    ('Norwegian Bokm\u00e5l', 'nb'), ('chi', 'zh'), ('zho', 'zh'), ('Punjabi', 'pa')):
+            self.assertEqual(cur_code, language_to_alpha2.get(cur_value))
+        # a language with no two letter code, a name that is not a reference name, and a wrong case, are not in it
+        for cur_value in ('Filipino', 'fil', 'Greek', 'english'):
+            self.assertNotIn(cur_value, language_to_alpha2)
+
+
 class FlagCodeTests(unittest.TestCase):
-    flags_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gui', 'slick', 'images', 'flags'))
+    flags_dir = abspath(join(dirname(__file__), '..', 'gui', 'slick', 'images', 'flags'))
 
     def flag_of(self, name, lang_path=True):
         """ the name of the flag file that the flag file handler of webserve sends for a requested name """
         from os.path import basename, splitext
         from sickgear.webserve import BaseStaticFileHandler
 
-        path = os.path.join(*([self.flags_dir] + ['svg', 'lang'] * lang_path + [f'{name}.png']))
+        path = join(*([self.flags_dir] + ['svg', 'lang'] * lang_path + [f'{name}.png']))
         return splitext(basename(BaseStaticFileHandler.flag_file_path(path)))[0]
 
     def test_country_code_for_the_language_flag_path(self):
@@ -107,7 +122,7 @@ class FlagCodeTests(unittest.TestCase):
         # the three letter code of every country gives the flag of that country, in lower, upper and mixed case
         checked = 0
         for cur_alpha2, cur_alpha3 in alpha2_to_alpha3.items():
-            if isfile(os.path.join(self.flags_dir, 'svg', f'{cur_alpha2}.svg')):
+            if isfile(join(self.flags_dir, 'svg', f'{cur_alpha2}.svg')):
                 checked += 1
                 for cur_code in (cur_alpha3, cur_alpha3.upper(), cur_alpha3.title()):
                     self.assertEqual(cur_alpha2, self.flag_of(cur_code), msg=cur_code)
@@ -129,8 +144,48 @@ class FlagCodeTests(unittest.TestCase):
     def test_other_paths_are_not_changed(self):
         from sickgear.webserve import BaseStaticFileHandler
 
-        path = os.path.join(os.path.dirname(self.flags_dir), 'network', 'KOR.png')
+        path = join(dirname(self.flags_dir), 'network', 'KOR.png')
         self.assertEqual(path, BaseStaticFileHandler.flag_file_path(path))
+
+
+class MediaStatsTests(unittest.TestCase):
+    """ one walk of a show folder gives the media stats and the size of all its files """
+
+    def setUp(self):
+        self.tmp_dir = tempfile.mkdtemp()
+        for name, size in (('Season 1/a.mkv', 100), ('Season 1/b.mkv', 300), ('Season 1/b.nfo', 7), ('poster.jpg', 50)):
+            path = join(self.tmp_dir, name)
+            os.makedirs(dirname(path), exist_ok=True)
+            with open(path, 'wb') as fh:
+                fh.write(b'x' * size)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+    def test_folder(self):
+        self.assertEqual((2, 100, 300, 200, 457), helpers.get_media_stats(self.tmp_dir))
+
+    def test_no_media(self):
+        os.remove(join(self.tmp_dir, 'Season 1', 'a.mkv'))
+        os.remove(join(self.tmp_dir, 'Season 1', 'b.mkv'))
+        self.assertEqual((0, 0, 0, 0, 57), helpers.get_media_stats(self.tmp_dir))
+
+    def test_missing_folder(self):
+        self.assertEqual((0, 0, 0, 0, 0), helpers.get_media_stats(join(self.tmp_dir, 'gone')))
+
+
+class NaturalCmpTests(unittest.TestCase):
+    """ names sort as the natural sort of the tablesorter script, numbers by value, and text after numbers """
+
+    def test_order(self):
+        names = ['24: legacy', 'abc 10', '11.22.63', "'til death", '9-1-1', 'abc 2', '24', '$#*! my dad says', '8 out',
+                 '90210', 'abc', '8 simple rules', '']
+        self.assertEqual(['', '8 out', '8 simple rules', '9-1-1', '11.22.63', '24', '24: legacy', '90210',
+                          '$#*! my dad says', "'til death", 'abc', 'abc 2', 'abc 10'],
+                         sorted(names, key=cmp_to_key(helpers.natural_cmp)))
+
+    def test_same(self):
+        self.assertEqual(0, helpers.natural_cmp('abc', 'abc'))
 
 
 class TouchFileTests(unittest.TestCase):
@@ -138,7 +193,7 @@ class TouchFileTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp()
-        self.file = os.path.join(self.tmp_dir, 'Show.s01e01.avi')
+        self.file = join(self.tmp_dir, 'Show.s01e01.avi')
         open(self.file, 'w').close()
 
     def tearDown(self):
@@ -219,6 +274,101 @@ class AniDBLockTests(unittest.TestCase):
         self.assertTrue(self.lock_is_free())
 
 
+class LibImportTests(unittest.TestCase):
+    # a module that is imported as both `lib.x` and `x` is two modules, each with its own classes and state,
+    # e.g. `except x.SomeError` does not handle a raised `lib.x.SomeError`.
+    # the rule is one name for each bundled module: `x`, never `lib.x`
+
+    def test_lib_modules_are_loaded_once(self):
+        from sickgear import webapi, webserve
+        self.assertTrue(webapi and webserve)
+        self.assertEqual([], sorted(_name for _name in list(sys.modules) if _name.startswith('lib.')))
+
+    def test_no_import_has_a_lib_prefix(self):
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        is_lib_import = re.compile(r"""^\s*#?\s*(from\s+lib[.\s]|import\s+lib\b)|__import__\(f?['"]lib\.""", re.M)
+        try:
+            # the files of the repo only, else a local file that is not in the repo fails the test
+            names = subprocess.run(['git', 'ls-files', '-z', '--', '*.py', '*.tmpl'], cwd=base,
+                                   capture_output=True, check=True).stdout.decode('utf-8').split('\0')
+        except (OSError, subprocess.CalledProcessError):
+            names = []
+            for cur_dir, dir_names, file_names in os.walk(base):
+                dir_names[:] = [_d for _d in dir_names if not _d.startswith('.') and '__pycache__' != _d]
+                names += [os.path.relpath(os.path.join(cur_dir, _n), base) for _n in file_names
+                          if _n.endswith(('.py', '.tmpl'))]
+        found = []
+        for cur_name in filter(None, names):
+            cur_file = os.path.join(base, cur_name)
+            if os.path.isfile(cur_file):
+                with open(cur_file, encoding='utf-8', errors='replace') as fh:
+                    if is_lib_import.search(fh.read()):
+                        found.append(os.path.normpath(cur_name))
+        self.assertEqual([], sorted(found))
+
+
+class LazyImportTests(unittest.TestCase):
+    @unittest.skipIf((3, 15) > sys.version_info[:2], 'lazy imports need Python 3.15 or newer')
+    def test_start_does_not_load_optional_packages(self):
+        # a name in a `__lazy_modules__` list must be the module name of its import statement, or it has no effect.
+        # A new process, because other tests in this one can have used these modules
+        root = abspath(join(dirname(__file__), '..'))
+        code = ('import sys; sys.path.insert(1, %r); sys.path.insert(1, %r); '
+                'import sickgear; from sickgear import anime, helpers, processTV, scene_exceptions, subtitles, tv, '
+                'webapi, webserve; '
+                # templates use this star import
+                "exec('from sickgear.common import *', {}); "
+                "print(sorted({_m.replace('lib.', '').split('.')[0] for _m in sys.modules} & {'hachoir', 'apprise', "
+                "'subliminal', 'guessit', 'enzyme', 'rarfile', 'cryptography', 'adba'}))"
+                ) % (root, join(root, 'lib'))
+        result = subprocess.run([sys.executable, '-W', 'ignore', '-c', code], capture_output=True, text=True)
+        self.assertEqual('[]', result.stdout.strip(), msg=result.stderr[-2000:])
+
+
+class AniDBSessionFileTests(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_session_file_is_in_cache_folder(self):
+        with mock.patch.multiple(sickgear, USE_ANIDB=True, ANIDB_USERNAME='user', ANIDB_PASSWORD='pw',
+                                 ADBA_CONNECTION=None, CACHE_DIR=self.temp_dir):
+            with mock.patch.object(adba, 'Connection'):
+                anime.set_up_anidb_connection()
+                self.assertEqual(os.path.join(self.temp_dir, 'anidb', 'session.cfg'),
+                                 sickgear.ADBA_CONNECTION.SessionFile)
+
+    def test_logout_with_no_session_file(self):
+        # no __init__, it opens a network socket
+        conn = adba.Connection.__new__(adba.Connection)
+        conn.SessionFile = os.path.join(self.temp_dir, 'session.cfg')
+        conn.handle = mock.Mock()
+        self.assertIsNone(conn.logout())
+        conn.handle.assert_not_called()
+
+
+class HachoirParserTests(unittest.TestCase):
+    def test_only_used_parsers_are_loaded(self):
+        # lib/hachoir is trimmed to the parsers that SickGear uses, an update of the lib must keep that
+        from hachoir.parser import HachoirParserList, guessParser
+        from hachoir.stream import StringInputStream
+
+        tags = [cur_parser.getParserTags() for cur_parser in HachoirParserList.getInstance()]
+        self.assertEqual({'audio', 'container', 'image', 'misc', 'video'}, {cur_tag['category'] for cur_tag in tags})
+        ids = {cur_tag['id'] for cur_tag in tags}
+        self.assertEqual({'torrent'}, {cur_tag['id'] for cur_tag in tags if 'misc' == cur_tag['category']})
+        self.assertEqual(set(), {'asf', 'bmp', 'flv', 'gif', 'jpeg', 'matroska', 'mov', 'mpeg_ts', 'mpeg_video',
+                                 'ogg', 'png', 'real_media', 'riff'} - ids)
+        self.assertNotIn('hachoir.parser.network.ouid', sys.modules)
+
+        torrent = b'd8:announce15:http://x.test/a4:infod6:lengthi5e4:name1:a12:piece lengthi16384e6:pieces0:ee'
+        self.assertEqual('application/x-bittorrent', guessParser(StringInputStream(torrent)).mime_type)
+        self.assertIsNone(guessParser(StringInputStream(b'PK' + bytes([3, 4] + [0] * 64))))
+
+
 class LogKeyMaskTests(unittest.TestCase):
     """ a key that a provider gets from its site is masked where the log is shown """
 
@@ -244,7 +394,8 @@ class LogKeyMaskTests(unittest.TestCase):
             self.assertIn(cur_key, masked)
 
 
+
 if '__main__' == __name__:
-    for cur_case in (HelpersTests, FlagCodeTests, TouchFileTests, AniDBLockTests, LogKeyMaskTests):
+    for cur_case in (HelpersTests, FlagCodeTests, MediaStatsTests, TouchFileTests, AniDBLockTests, AniDBSessionFileTests, LibImportTests, LazyImportTests, LanguageCodeTests, HachoirParserTests, LogKeyMaskTests):
         suite = unittest.TestLoader().loadTestsFromTestCase(cur_case)
         unittest.TextTestRunner(verbosity=2).run(suite)

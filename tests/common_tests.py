@@ -2,12 +2,14 @@ import unittest
 import warnings
 warnings.filterwarnings('ignore', module=r'.*fuz.*', message='.*Sequence.*')
 
+import os
 import sys
-import os.path
-sys.path.insert(1, os.path.abspath('..'))
+import tempfile
+from os.path import abspath, dirname, join
+sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 
 from sickgear import common
-from sickgear.common import Quality, WantedQualities
+from sickgear.common import Quality, WantedQualities, VideoCodec
 from sickgear.name_parser.parser import NameParser
 
 
@@ -201,12 +203,60 @@ class QualityTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             # a transport stream of null packets has a parser and gives no metadata
-            filename = os.path.join(temp_dir, 'test.ts')
+            filename = join(temp_dir, 'test.ts')
             with open(filename, 'wb') as fh:
                 fh.write((bytes([0x47, 0x1F, 0xFF, 0x10]) + bytes([0xFF]) * 184) * 8)
             self.assertEqual(Quality.UNKNOWN, Quality.file_quality(filename))
             self.assertEqual([], [cur_obj for cur_obj in gc.get_objects() if isinstance(cur_obj, io.BufferedReader)
                                   and not cur_obj.closed and filename == cur_obj.name])
+
+    def test_file_read_stops_at_first_cluster(self):
+        import tempfile
+
+        def element(ident, payload):
+            # an EBML element: id, size as a number of variable length, data
+            length = next(_n for _n in range(1, 9) if len(payload) < (1 << 7 * _n) - 1)
+            return bytes.fromhex(ident) + (1 << 7 * length | len(payload)).to_bytes(length, 'big') + payload
+
+        # an mkv file with a 1920 x 1080 H.264 track and 20 clusters
+        tracks = element('1654AE6B', element('AE', b''.join([
+            element('D7', bytes([1])), element('83', bytes([1])), element('86', b'V_MPEG4/ISO/AVC'),
+            element('E0', element('B0', (1920).to_bytes(2, 'big')) + element('BA', (1080).to_bytes(2, 'big')))])))
+        cluster = element('1F43B675', element('E7', bytes([0])) + element('A3', bytes([0x81, 0, 0, 0x80]) + bytes(60)))
+        mkv = element('1A45DFA3', element('4282', b'matroska')) + element('18538067', b''.join([
+            element('1549A966', element('2AD7B1', bytes([0x0F, 0x42, 0x40]))), tracks, 20 * cluster]))
+
+        parsers = []
+        org_create = common.createParser
+        common.createParser = lambda *args, **kwargs: parsers.append(org_create(*args, **kwargs)) or parsers[-1]
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                filename = join(temp_dir, 'test.mkv')
+                with open(filename, 'wb') as fh:
+                    fh.write(mkv)
+                self.assertEqual(Quality.FULLHDTV, Quality.file_quality(filename))
+                self.assertEqual(VideoCodec.VC_264, VideoCodec.get_file_video_codec(filename))
+                # the codec comes from the read for the quality, the file is parsed once
+                self.assertEqual(1, len(parsers))
+                # a file that is changed is read again
+                with open(filename, 'ab') as fh:
+                    fh.write(cluster)
+                self.assertEqual(VideoCodec.VC_264, VideoCodec.get_file_video_codec(filename))
+                # also a file rewritten with the same size and the same modify time, e.g. within one tick of the clock
+                stamp = os.stat(filename).st_mtime_ns
+                with open(filename, 'wb') as fh:
+                    fh.write(mkv.replace((1920).to_bytes(2, 'big'), (1280).to_bytes(2, 'big'), 1)
+                             .replace((1080).to_bytes(2, 'big'), (720).to_bytes(2, 'big'), 1) + cluster)
+                os.utime(filename, ns=(stamp, stamp))
+                self.assertEqual(Quality.HDTV, Quality.file_quality(filename))
+        finally:
+            common.createParser = org_create
+
+        self.assertEqual(3, len(parsers))
+        for cur_parser in parsers:
+            # the track list comes before the clusters, and a read of each cluster is a seek and a read in the file
+            # so only the header, the tracks and the first cluster are read, not the 20 clusters
+            self.assertLess(cur_parser['Segment[0]'].current_length, 8)
 
     def test_reverse_parsing(self):
         self.check_quality_names(common.Quality.SDTV, ['Test Show - S01E02 - SD TV - GROUP'])
@@ -3129,7 +3179,282 @@ class QualityTests(unittest.TestCase):
         for q, l in quality_tests.items():
             self.check_sceneQuality([((v, False), q) for v in l])
 
+    def test_get_videocodec(self):
+        vc_tests = {
+            ('Test.Show.S01E02.WEB.h264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.x264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.h265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.x265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.VP9-GROUP', VideoCodec.VC_VP9),
+            ('Test.Show.S01E02.WEB.AV1-GROUP', VideoCodec.VC_AV1),
+            ('Test.Show.S01E02.WEB.AV2-GROUP', VideoCodec.VC_AV2),
+            ('Test.Show.S01E02.WEB.VVC-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.h266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.x266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.h.266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.WEB.x.266-GROUP', VideoCodec.VC_VVC),
+            ('Test.Show.S01E02.DVDRiP.XViD-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.DVDRiP.DiVX-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1.MPEG2-GROUP', VideoCodec.VC_MPEG2),
+            ('Test.Show.S01E02.WEB.h.264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.x.264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.h.265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.x.265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB_h264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB_x264-GROUP', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB_h265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB_x265-GROUP', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB_VP9-GROUP', VideoCodec.VC_VP9),
+            ('Test.Show.S01E02.WEB_AV1-GROUP', VideoCodec.VC_AV1),
+            ('Test.Show.S01E02.DVDRiP_XViD-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.DVDRiP_DiVX-GROUP', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1_MPEG2-GROUP', VideoCodec.VC_MPEG2),
+            ('Test.Show.S01E02.WEB.h264', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.x264', VideoCodec.VC_264),
+            ('Test.Show.S01E02.WEB.h265', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.x265', VideoCodec.VC_265),
+            ('Test.Show.S01E02.WEB.VP9', VideoCodec.VC_VP9),
+            ('Test.Show.S01E02.WEB.AV1', VideoCodec.VC_AV1),
+            ('Test.Show.S01E02.DVDRiP.XViD', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.DVDRiP.DiVX', VideoCodec.VC_DivXvid),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1.MPEG2', VideoCodec.VC_MPEG2),
+            ('Test.Show.S01E02.720p.HDTV.DD5.1-GROUP', VideoCodec.VC_UNKNOWN),
+            ('Test.Show.S05E17.2021.1080p.Netflix.WEB-DL.AVC.DDP.5.1-GROUP', VideoCodec.VC_264),
+        }
+        for cur_test, cur_res in vc_tests:
+            self.assertEqual(cur_res, VideoCodec.get_videocodec_from_name(cur_test),
+                             msg=f'{cur_test} not parsed as {VideoCodec.videocodec_names[cur_res]}')
+
+    def test_vc_get_name(self):
+        for cur_vc, cur_name, cur_res in [
+            (VideoCodec.VC_264, 'Test.Show.S01E02.WEB.x264-GROUP', 'x264'),
+            (VideoCodec.VC_264, 'Test.Show.S01E02.WEB.H.264-GROUP', 'H.264'),
+            (VideoCodec.VC_265, 'Test Show S01E02 WEB X 265-GROUP', 'x265'),
+            (VideoCodec.VC_VVC, 'Test.Show.S01E02.WEB.x266-GROUP', 'x266'),
+            (VideoCodec.VC_265, 'Test.Show.S01E02.WEB.x264-GROUP', 'H.265'),
+            (VideoCodec.VC_264, None, 'H.264'),
+            (VideoCodec.VC_VP9, 'Test.Show.S01E02.WEB.x264-GROUP', 'VP9'),
+        ]:
+            self.assertEqual(cur_res, VideoCodec.get_name(cur_vc, cur_name), msg=f'{cur_vc} with {cur_name}')
+
+    def test_vc_combos(self):
+        vc_combo_tests = [
+            (None, (None, None)),
+            (0, (None, VideoCodec.VC_UNKNOWN)),
+            (VideoCodec.VC_AV2 * 100, (VideoCodec.VC_AV2, None)),
+            (0, (VideoCodec.VC_UNKNOWN, VideoCodec.VC_UNKNOWN)),
+            (0 * 100 + VideoCodec.VC_AV1, (VideoCodec.VC_UNKNOWN, VideoCodec.VC_AV1)),
+            (VideoCodec.VC_264 * 100 + VideoCodec.VC_AV1, (VideoCodec.VC_264, VideoCodec.VC_AV1)),
+            (VideoCodec.VC_264 * 100 + VideoCodec.VC_MPEG1, (VideoCodec.VC_264, VideoCodec.VC_MPEG1)),
+            (VideoCodec.VC_265 * 100 + VideoCodec.VC_UNKNOWN, (VideoCodec.VC_265, VideoCodec.VC_UNKNOWN)),
+        ]
+        for res, vc_vals in vc_combo_tests:
+            c_vc = VideoCodec.combine_vcs(vc_vals[0], vc_vals[1])
+            e_vc = [c_vc]
+            if None is res:
+                e_vc.append(None)
+            self.assertTrue(res in e_vc, msg=f'combine videocodec incorrect: {res} != {c_vc} for {vc_vals}')
+            s_vc, f_vc = VideoCodec.split_vc(c_vc)
+            e_vc = (vc_vals[0] or 0, vc_vals[1] or 0)
+            if None is res:
+                e_vc = (0, 0)
+            self.assertEqual((s_vc, f_vc), e_vc,
+                             msg=f'split videocodec incorrect: {(s_vc, f_vc)} != {vars()} for {vc_vals}')
+            f_vc = VideoCodec.get_file_vc(c_vc)
+            e_vc = 0 if None is vc_vals[1] else vc_vals[1]
+            self.assertEqual(f_vc, e_vc, msg=f'file_vc wrong for: {f_vc} expected: {e_vc}')
+            s_vc = VideoCodec.get_snatch_vc(c_vc)
+            e_vc = 0 if None is vc_vals[0] else vc_vals[0]
+            self.assertEqual(s_vc, e_vc, msg=f'snatch_vc wrong for: {s_vc} expected: {e_vc}')
+
+        add_vc_tests = [
+            ((None, VideoCodec.VC_265), VideoCodec.VC_AV1),
+            ((None, VideoCodec.VC_265), VideoCodec.VC_UNKNOWN),
+            ((None, VideoCodec.VC_UNKNOWN), VideoCodec.VC_AV1),
+            ((VideoCodec.VC_265, VideoCodec.VC_MPEG1), VideoCodec.VC_AV2),
+            ((None, None), VideoCodec.VC_VVC),
+        ]
+        for base_vc, add_vc in add_vc_tests:
+            _b = VideoCodec.combine_vcs(*base_vc)
+            _n = VideoCodec.set_snatched_vc(_b, add_vc)
+            _e = VideoCodec.combine_vcs(add_vc, base_vc[1])
+            self.assertEqual(_n, _e, msg=f'add_snatched_vc wrong: {_n} expected: {_e}')
+            _n = VideoCodec.set_file_vc(_b, add_vc)
+            _e = VideoCodec.combine_vcs(base_vc[0], add_vc)
+            self.assertEqual(_n, _e, msg=f'add_file_vc wrong: {_n} expected: {_e}')
+
     # TODO: fix these anime test cases at travis
+    def test_file_video_codec_tables(self):
+        from hachoir.parser.container.mp4 import mp4_codecs, mp4_fourcc
+        from hachoir.parser.video.mpeg_ts import TS_Elementary_stream_types, TS_Video_stream_types
+
+        def codec_of(text):
+            return next((cur_vc for cur_vc, cur_regex in VideoCodec.compiled_vc_ident_regex.items()
+                         if cur_regex.search(text)), VideoCodec.VC_UNKNOWN)
+
+        for cur_name, cur_vc in [
+            ('avc1', VideoCodec.VC_264), ('dvav', VideoCodec.VC_264), ('dva1', VideoCodec.VC_264),
+            ('hvc1', VideoCodec.VC_265), ('hev1', VideoCodec.VC_265),
+            # layered HEVC
+            ('lhv1', VideoCodec.VC_265), ('lhe1', VideoCodec.VC_265),
+            # Dolby Vision with HEVC
+            ('dvhe', VideoCodec.VC_265), ('dvh1', VideoCodec.VC_265),
+            ('av01', VideoCodec.VC_AV1), ('av02', VideoCodec.VC_AV2), ('vp09', VideoCodec.VC_VP9),
+            # the sample entry names of the AOMedia draft "AV2 Codec ISO Media File Format Binding"
+            ('av2E', VideoCodec.VC_AV2), ('av2e', VideoCodec.VC_AV2),
+            ('vvc1', VideoCodec.VC_VVC), ('vvi1', VideoCodec.VC_VVC),
+        ]:
+            self.assertEqual(cur_vc, codec_of(mp4_fourcc[cur_name]), msg=cur_name)
+
+        # every key is a stream type, a key like `0x22 - 0x23` is a subtraction
+        self.assertEqual([], [cur_type for cur_type in TS_Elementary_stream_types if not 0 <= cur_type <= 0xFF])
+        self.assertEqual(set(), TS_Video_stream_types - set(TS_Elementary_stream_types))
+        # MHEG, DSM CC and auxiliary data are not video
+        self.assertEqual(set(), {0x07, 0x08, 0x09} & TS_Video_stream_types)
+        for cur_type, cur_vc in [(0x01, VideoCodec.VC_MPEG1), (0x02, VideoCodec.VC_MPEG2), (0x1B, VideoCodec.VC_264),
+                                 (0x24, VideoCodec.VC_265), (0x33, VideoCodec.VC_VVC)]:
+            self.assertIn(cur_type, TS_Video_stream_types)
+            self.assertEqual(cur_vc, codec_of(TS_Elementary_stream_types[cur_type]), msg=hex(cur_type))
+
+        for cur_text, cur_vc in [('VC-1', VideoCodec.VC_VC1), ('"WVC1"', VideoCodec.VC_VC1),
+                                 # MPEG-5 EVC is not VC-1
+                                 ('evc1', VideoCodec.VC_UNKNOWN), ('V_MPEG4/ISO/AVC', VideoCodec.VC_264),
+                                 # MPEG-4 part 2 as mkv, mp4, ts and avi name it
+                                 ('V_MPEG4/ISO/ASP', VideoCodec.VC_DivXvid), ('V_MPEG4/ISO/SP', VideoCodec.VC_DivXvid),
+                                 (mp4_fourcc['mp4v'], VideoCodec.VC_DivXvid), (mp4_codecs[0x20], VideoCodec.VC_DivXvid),
+                                 (TS_Elementary_stream_types[0x10], VideoCodec.VC_DivXvid),
+                                 ('"FMP4" (fourcc:"FMP4")', VideoCodec.VC_DivXvid),
+                                 ('DivX v5 (fourcc:"DX50")', VideoCodec.VC_DivXvid),
+                                 ('V_MPEG4/MS/V3', VideoCodec.VC_UNKNOWN),
+                                 # written with a zero for the O by some muxers
+                                 ('V_MPEG4/IS0/ASP', VideoCodec.VC_DivXvid), ('V_MPEG4/IS0/AVC', VideoCodec.VC_264),
+                                 # Avid 1:1 is not AV1
+                                 ('"AV1X" (fourcc:"AV1X")', VideoCodec.VC_UNKNOWN),
+                                 ('"AV01" (fourcc:"AV01")', VideoCodec.VC_AV1), ('V_AV1', VideoCodec.VC_AV1),
+                                 # the object type of an mp4v entry
+                                 (mp4_codecs[0x61], VideoCodec.VC_MPEG2), (mp4_codecs[0x6a], VideoCodec.VC_MPEG1),
+                                 # VC-1 as mkv, ts and asf name it
+                                 ('V_MS/VFW/FOURCC (WVC1)', VideoCodec.VC_VC1), ('V_VC1', VideoCodec.VC_VC1),
+                                 ('V_MS/VFW/FOURCC (WMV2)', VideoCodec.VC_UNKNOWN),
+                                 (TS_Elementary_stream_types[0xEA], VideoCodec.VC_VC1),
+                                 ('Windows Media Video V9', VideoCodec.VC_VC1),
+                                 ('Windows Media Video V8', VideoCodec.VC_UNKNOWN),
+                                 # ATI VCR 1.0 is not VC-1
+                                 ('ATI VCR 1.0 (fourcc:"VCR1")', VideoCodec.VC_UNKNOWN),
+                                 ('V_MS/VFW/FOURCC (VCR1)', VideoCodec.VC_UNKNOWN),
+                                 ('Microsoft MPEG-4 (M4S2) (fourcc:"M4S2")', VideoCodec.VC_DivXvid),
+                                 ('"mpg1" (fourcc:"mpg1")', VideoCodec.VC_MPEG1),
+                                 ('"mpg2" (fourcc:"mpg2")', VideoCodec.VC_MPEG2),
+                                 (mp4_fourcc['m1v '], VideoCodec.VC_MPEG1),
+                                 (mp4_fourcc['m2v1'], VideoCodec.VC_MPEG2),
+                                 (mp4_fourcc['xdv2'], VideoCodec.VC_MPEG2)]:
+            self.assertEqual(cur_vc, codec_of(cur_text), msg=cur_text)
+
+    @staticmethod
+    def _ts_packet(pid, table_id, data):
+        # one transport stream packet that holds one table section, the 4 bytes of CRC are not checked by the parser
+        section = bytes([0, 1, 0xC1, 0, 0]) + data + bytes([0x1B, 0xE1, 0x02, 0xF0])
+        packet = bytes([0x47, 0x40 | pid >> 8, pid & 0xFF, 0x10, 0, table_id, 0xB0, len(section)]) + section
+        return packet + bytes([0xFF]) * (188 - len(packet))
+
+    def test_file_video_codec_ts(self):
+        def program(number, pid):
+            return bytes([number >> 8, number & 0xFF, 0xE0 | pid >> 8, pid & 0xFF])
+
+        def stream(stream_type, pid, descriptors=bytes()):
+            return bytes([stream_type, 0xE0 | pid >> 8, pid & 0xFF, 0xF0, len(descriptors)]) + descriptors
+
+        # the first program of the table is number 0, it gives the PID of the network table and not of a program map
+        pat = self._ts_packet(0, 0, program(0, 0x10) + program(1, 0x1000))
+        null = (bytes([0x47, 0x1F, 0xFF, 0x10]) + bytes([0xFF]) * 184) * 8
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for cur_video, cur_vc in [
+                # one H.266 video stream and one AAC audio stream
+                # the CRC of the packet reads as a H.264 stream when it is taken as a third stream
+                (stream(0x33, 0x100), VideoCodec.VC_VVC),
+                # a private stream with a registration descriptor (tag 5) that names AV1, after another descriptor
+                (stream(0x06, 0x100, bytes([0x0A, 1, 0, 5, 4]) + b'AV01'), VideoCodec.VC_AV1),
+                # a private stream with no descriptor is not video
+                (stream(0x06, 0x100), None),
+            ]:
+                filename = os.path.join(temp_dir, 'test.ts')
+                with open(filename, 'wb') as fh:
+                    fh.write(pat + self._ts_packet(0x1000, 2, bytes([0xE1, 0, 0xF0, 0]) + cur_video
+                                                   + stream(0x0F, 0x101)) + null)
+                self.assertEqual(cur_vc, VideoCodec.get_file_video_codec(filename), msg=f'{cur_video}')
+
+    def test_file_video_codec_flv(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for cur_video, cur_vc in [
+                # codec 7 in the low four bits of the first byte
+                (bytes([0x17, 0, 0, 0, 0]), VideoCodec.VC_264),
+                # enhanced FLV: the high bit of the first byte is set, then the fourcc follows
+                (bytes([0x90]) + b'hvc1' + bytes([1]), VideoCodec.VC_265),
+                (bytes([0x90]) + b'av01' + bytes([1]), VideoCodec.VC_AV1),
+                (bytes([0x12, 0]), VideoCodec.VC_UNKNOWN),
+            ]:
+                filename = os.path.join(temp_dir, 'test.flv')
+                with open(filename, 'wb') as fh:
+                    fh.write(b'FLV' + bytes([1, 1, 0, 0, 0, 9, 0, 0, 0, 0, 9, 0, 0, len(cur_video), 0, 0, 0, 0, 0, 0, 0])
+                             + cur_video + bytes([0, 0, 0, 11 + len(cur_video)]))
+                self.assertEqual(cur_vc, VideoCodec.get_file_video_codec(filename), msg=f'{cur_video}')
+
+    def test_file_video_codec_mpeg(self):
+        from hachoir.metadata.video import MPEGMetadata
+        from hachoir.stream import StringInputStream
+
+        pack = bytes([0, 0, 1, 0xBA]) + bytes(8) + bytes([0, 0, 1, 0xE0, 0, 0])
+        # 720 x 576, aspect ratio code 2, frame rate code 3, marker bit
+        sequence = bytes([0, 0, 1, 0xB3, 0x2D, 0x02, 0x40, 0x23, 0, 0, 0x20, 0])
+        for cur_data, cur_text in [
+            # a sequence header with an extension after it is MPEG-2 video, also in a pack of version 1
+            (pack + sequence + bytes([0, 0, 1, 0xB5]) + bytes(8), 'MPEG-2 video'),
+            # a sequence header and then the start of a group of pictures is MPEG-1 video
+            (pack + sequence + bytes([0, 0, 1, 0xB8]) + bytes(8), 'MPEG-1 video'),
+            # no sequence header
+            (pack + bytes(64), None),
+            # the start code of a sequence header with fields that are not valid, as MPEG-4 video has it
+            (pack + bytes([0, 0, 1, 0xB3]) + bytes(8) + bytes([0, 0, 1, 0xB5]) + bytes(8), None),
+        ]:
+            parser = type('FakeParser', (), {'stream': StringInputStream(cur_data)})
+            self.assertEqual(cur_text, MPEGMetadata.videoVersion(parser), msg=cur_text)
+
+    def test_file_video_codec_without_codec(self):
+        closed = []
+
+        class FakeParser(object):
+            class stream(object):
+                class _input(object):
+                    close = staticmethod(lambda: closed.append(1))
+
+        org_create, org_extract = common.createParser, common.extractMetadata
+        common.createParser = lambda *args, **kwargs: FakeParser()
+        try:
+            for cur_data, cur_vc in [
+                # no metadata
+                (None, None),
+                ({}, None),
+                # no video stream
+                ({'Common': {'Duration': '1 sec'}, 'Audio stream #1': {'Compression': 'A_AAC'}}, None),
+                # a video stream with no codec name
+                ({'Video stream #1': {'Image width': '1280 pixels'}}, None),
+                # the ogg extractor names its group "Video"
+                ({'Video': {'Compression': 'Theora'}}, VideoCodec.VC_UNKNOWN),
+                ({'Video stream': {'Compression': 7}}, VideoCodec.VC_UNKNOWN),
+                ({'Audio stream #1': {'Compression': 'A_AAC'},
+                  'Video stream #1': {'Compression': 'V_MPEGH/ISO/HEVC'}}, VideoCodec.VC_265),
+            ]:
+                common.extractMetadata = lambda *args, **kwargs: None if None is cur_data else type(
+                    'FakeMetadata', (), {'exportDictionary': staticmethod(lambda: cur_data)})()
+                closed.clear()
+                # each case reads the same file, so the metadata of the case before must not be used
+                common._last_file_metadata = (None, None)
+                self.assertEqual(cur_vc, VideoCodec.get_file_video_codec(__file__), msg=f'{cur_data}')
+                # the file is closed in every case
+                self.assertEqual([1], closed, msg=f'{cur_data}')
+        finally:
+            common.createParser, common.extractMetadata = org_create, org_extract
+
     def test_get_proper_level_anime(self):
         # release_name, expected level
         self.check_proper_level([

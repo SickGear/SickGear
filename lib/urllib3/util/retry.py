@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import email
 import logging
 import random
@@ -16,15 +17,16 @@ from ..exceptions import (
     ProtocolError,
     ProxyError,
     ReadTimeoutError,
+    RecoverableError,
     ResponseError,
 )
 from .util import reraise
 
 if typing.TYPE_CHECKING:
-    from typing_extensions import Self
-
+    from .._async.connectionpool import AsyncConnectionPool
+    from .._async.response import AsyncHTTPResponse
     from ..connectionpool import ConnectionPool
-    from ..response import BaseHTTPResponse
+    from ..response import HTTPResponse
 
 log = logging.getLogger(__name__)
 
@@ -157,14 +159,6 @@ class Retry:
 
         By default, backoff is disabled (factor set to 0).
 
-    :param float backoff_max:
-        The maximum backoff time (in seconds) between retry attempts.
-        This value caps the computed backoff from `backoff_factor`.
-
-    :param float backoff_jitter:
-        Random jitter amount (in seconds) added to the computed backoff.
-        Jitter is sampled uniformly from `0` to `backoff_jitter`.
-
     :param bool raise_on_redirect: Whether, if the number of redirects is
         exhausted, to raise a MaxRetryError, or to return a response with a
         response code in the 3xx range.
@@ -191,6 +185,14 @@ class Retry:
         Retry-After headers. Defaults to :attr:`Retry.DEFAULT_RETRY_AFTER_MAX`.
         Any Retry-After headers larger than this value will be limited to this
         value.
+
+    :param bool cache_response_body:
+        Cache response bodies before retry-delay hooks run, even when
+        ``preload_content=False``. Defaults to ``False`` in both sync and async.
+        Enabling this loads the entire body into memory, with decompression
+        controlled by the response's ``decode_content`` setting. Body read and
+        decoding errors propagate. Override :meth:`get_retry_after` for sync
+        responses or :meth:`async_get_retry_after` for async responses.
     """
 
     #: Default methods to be used for ``allowed_methods``
@@ -237,6 +239,8 @@ class Retry:
         ] = DEFAULT_REMOVE_HEADERS_ON_REDIRECT,
         backoff_jitter: float = 0.0,
         retry_after_max: int = DEFAULT_RETRY_AFTER_MAX,
+        *,
+        cache_response_body: bool = False,
     ) -> None:
         self.total = total
         self.connect = connect
@@ -253,7 +257,6 @@ class Retry:
         self.allowed_methods = allowed_methods
         self.backoff_factor = backoff_factor
         self.backoff_max = backoff_max
-        self.retry_after_max = retry_after_max
         self.raise_on_redirect = raise_on_redirect
         self.raise_on_status = raise_on_status
         self.history = history or ()
@@ -262,8 +265,10 @@ class Retry:
             h.lower() for h in remove_headers_on_redirect
         )
         self.backoff_jitter = backoff_jitter
+        self.retry_after_max = retry_after_max
+        self.cache_response_body = cache_response_body
 
-    def new(self, **kw: typing.Any) -> Self:
+    def new(self, **kw: typing.Any) -> Retry:
         params = dict(
             total=self.total,
             connect=self.connect,
@@ -275,15 +280,18 @@ class Retry:
             status_forcelist=self.status_forcelist,
             backoff_factor=self.backoff_factor,
             backoff_max=self.backoff_max,
-            retry_after_max=self.retry_after_max,
             raise_on_redirect=self.raise_on_redirect,
             raise_on_status=self.raise_on_status,
             history=self.history,
             remove_headers_on_redirect=self.remove_headers_on_redirect,
             respect_retry_after_header=self.respect_retry_after_header,
             backoff_jitter=self.backoff_jitter,
+            retry_after_max=self.retry_after_max,
         )
 
+        # Keep the default constructor arguments compatible with older subclasses.
+        if self.cache_response_body:
+            params["cache_response_body"] = True
         params.update(kw)
         return type(self)(**params)  # type: ignore[arg-type]
 
@@ -335,7 +343,10 @@ class Retry:
             if retry_date_tuple is None:
                 raise InvalidHeader(f"Invalid Retry-After header: {retry_after}")
 
-            retry_date = email.utils.mktime_tz(retry_date_tuple)
+            try:
+                retry_date = email.utils.mktime_tz(retry_date_tuple)
+            except (ValueError, OverflowError):
+                raise InvalidHeader(f"Invalid Retry-After header: {retry_after}")
             seconds = retry_date - time.time()
 
         seconds = max(seconds, 0)
@@ -346,7 +357,7 @@ class Retry:
 
         return seconds
 
-    def get_retry_after(self, response: BaseHTTPResponse) -> float | None:
+    def get_retry_after(self, response: HTTPResponse) -> float | None:
         """Get the value of Retry-After in seconds."""
 
         retry_after = response.headers.get("Retry-After")
@@ -356,7 +367,7 @@ class Retry:
 
         return self.parse_retry_after(retry_after)
 
-    def sleep_for_retry(self, response: BaseHTTPResponse) -> bool:
+    def sleep_for_retry(self, response: HTTPResponse) -> bool:
         retry_after = self.get_retry_after(response)
         if retry_after:
             time.sleep(retry_after)
@@ -370,7 +381,7 @@ class Retry:
             return
         time.sleep(backoff)
 
-    def sleep(self, response: BaseHTTPResponse | None = None) -> None:
+    def sleep(self, response: HTTPResponse | None = None) -> None:
         """Sleep between retry attempts.
 
         This method will respect a server's ``Retry-After`` response header
@@ -385,6 +396,36 @@ class Retry:
                 return
 
         self._sleep_backoff()
+
+    async def async_get_retry_after(self, response: AsyncHTTPResponse) -> float | None:
+        """Async retry-delay hook; defaults to the existing synchronous hook.
+
+        With ``cache_response_body=True``, overrides can inspect ``await
+        response.data`` or ``await response.json()`` after the body is cached.
+        """
+        return self.get_retry_after(response)
+
+    async def async_sleep_for_retry(self, response: AsyncHTTPResponse) -> bool:
+        retry_after = await self.async_get_retry_after(response)
+        if retry_after:
+            await asyncio.sleep(retry_after)
+            return True
+
+        return False
+
+    async def _async_sleep_backoff(self) -> None:
+        backoff = self.get_backoff_time()
+        if backoff <= 0:
+            return
+        await asyncio.sleep(backoff)
+
+    async def async_sleep(self, response: AsyncHTTPResponse | None = None) -> None:
+        if self.respect_retry_after_header and response:
+            slept = await self.async_sleep_for_retry(response)
+            if slept:
+                return
+
+        await self._async_sleep_backoff()
 
     def _is_connection_error(self, err: Exception) -> bool:
         """Errors when we're fairly sure that the server did not receive the
@@ -453,27 +494,28 @@ class Retry:
         self,
         method: str | None = None,
         url: str | None = None,
-        response: BaseHTTPResponse | None = None,
+        response: HTTPResponse | AsyncHTTPResponse | None = None,
         error: Exception | None = None,
-        _pool: ConnectionPool | None = None,
+        _pool: ConnectionPool | AsyncConnectionPool | None = None,
         _stacktrace: TracebackType | None = None,
-    ) -> Self:
+    ) -> Retry:
         """Return a new Retry object with incremented retry counters.
 
         :param response: A response object, or None, if the server did not
             return a response.
-        :type response: :class:`~urllib3.response.BaseHTTPResponse`
+        :type response: :class:`~urllib3.response.HTTPResponse`
         :param Exception error: An error encountered during the request, or
             None if the response was received successfully.
 
         :return: A new ``Retry`` object.
         """
         if self.total is False and error:
-            # Disabled, indicate to re-raise the error.
-            raise reraise(type(error), error, _stacktrace)
+            if not isinstance(error, RecoverableError):
+                # Disabled, indicate to re-raise the error.
+                raise reraise(type(error), error, _stacktrace)
 
         total = self.total
-        if total is not None:
+        if total is not None and isinstance(error, RecoverableError) is False:
             total -= 1
 
         connect = self.connect
@@ -538,7 +580,7 @@ class Retry:
             history=history,
         )
 
-        if new_retry.is_exhausted():
+        if isinstance(error, RecoverableError) is False and new_retry.is_exhausted():
             reason = error or ResponseError(cause)
             raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
 

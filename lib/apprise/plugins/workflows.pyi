@@ -12,6 +12,8 @@ class APIVersion:
     WORKFLOW: str
     POWER_AUTOMATE: str
 
+WORKFLOWS_MENTION_RE: Incomplete
+
 class NotifyWorkflows(NotifyBase):
     """A wrapper for Microsoft Workflows (MS Teams) Notifications."""
     service_name: str
@@ -31,11 +33,12 @@ class NotifyWorkflows(NotifyBase):
     signature: Incomplete
     include_image: Incomplete
     power_automate: Incomplete
+    routing_id: Incomplete
     wrap: Incomplete
     template: Incomplete
     api_version: Incomplete
     tokens: Incomplete
-    def __init__(self, workflow, signature, include_image=None, power_automate=None, version=None, template=None, tokens=None, wrap=None, **kwargs) -> None:
+    def __init__(self, workflow, signature, include_image=None, power_automate=None, routing_id=None, version=None, template=None, tokens=None, wrap=None, **kwargs) -> None:
         """Initialize Microsoft Workflows Object."""
     def gen_payload(self, body, title: str = '', notify_type=..., **kwargs):
         """This function generates our payload whether it be the generic one

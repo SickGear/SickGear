@@ -23,7 +23,6 @@ import sys
 import threading
 import time
 import zipfile
-
 from logging.handlers import TimedRotatingFileHandler
 
 import sickgear
@@ -37,7 +36,7 @@ if False:
 
 try:
     # noinspection PyUnresolvedReferences
-    from lib.send2trash import send2trash
+    from send2trash import send2trash
 except ImportError:
     pass
 
@@ -49,12 +48,72 @@ DEBUG = logging.DEBUG
 DB = 5
 
 reverseNames = {'ERROR': ERROR, 'WARNING': WARNING, 'INFO': MESSAGE, 'DEBUG': DEBUG, 'DB': DB}
+# joins the lines of a command output in one log line, the log page shows them as lines again
+JOINED_LINES = ' \\n '
 
 
 # suppress output with this handler
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+
+
+class RedactingFilter(logging.Filter):
+    """Mask known auth secrets (from GenericProvider.dedupe_auths) in every record before it reaches a handler."""
+    _rxc = None
+    _expires = 0  # class level so reset() invalidates every handler's filter at once
+
+    @classmethod
+    def reset(cls):
+        """Call after config load/save so new or changed secrets are masked immediately."""
+        cls._expires = 0
+
+    @classmethod
+    def _refresh(cls):
+        if time.time() < cls._expires:
+            return
+        # a log line made while the secrets are read must not read them again, it uses the last pattern
+        cls._expires = time.time() + 5
+        try:
+            # the program name is in every start line and file path, so a login or key that is the name, or a part of it,
+            # would mask the name everywhere and show the pattern of the secret, and hiding it hides nothing
+            auths = [_a for _a in sickgear.GenericProvider.dedupe_auths(True) if _a and _a.lower() not in 'sickgear']
+        except (BaseException, Exception):
+            auths = []
+        # retry soon while nothing is loaded yet, otherwise rely on reset() plus a 60s safety net
+        cls._expires = time.time() + (5, 60)[bool(auths)]
+        cls._rxc = auths and re.compile('(?i)%s' % '|'.join(
+            [re.escape(_a) for _a in sorted(auths, key=len, reverse=True)])) or None
+
+    @classmethod
+    def _mask(cls, text):
+        if cls._rxc:
+            text = cls._rxc.sub(lambda m: sickgear.helpers.starify(m.group(0)), text)
+        # the value of a key in an address is masked whatever its source, e.g. a passkey in a link from a site page
+        return sickgear.helpers.starify_url_keys(text)
+
+    @classmethod
+    def mask_text(cls, text):
+        """Mask secrets in text destined for somewhere other than a log handler (UI error list, exit message)."""
+        cls._refresh()
+        if isinstance(text, str):
+            return cls._mask(text)
+        return text
+
+    def filter(self, record):
+        self._refresh()
+        try:
+            record.msg, record.args = self._mask(record.getMessage()), ()
+        except (BaseException, Exception):
+            pass
+        if record.exc_info and not record.exc_text:
+            # pre-render so Formatter uses the masked text instead of the raw exc_info
+            record.exc_text = logging.Formatter().formatException(record.exc_info)
+        if record.exc_text:
+            record.exc_text = self._mask(record.exc_text)
+        if record.stack_info:
+            record.stack_info = self._mask(record.stack_info)
+        return True
 
 
 class SBRotatingLogHandler(object):
@@ -126,6 +185,7 @@ class SBRotatingLogHandler(object):
             h_console = logging.StreamHandler()
             if None is not h_console.stream:
                 h_console.setLevel((logging.INFO, logging.DEBUG)[sickgear.DEBUG])
+                h_console.addFilter(RedactingFilter())
                 h_console.setFormatter(DispatchingFormatter(self._formatters(), logging.Formatter('%(message)s'), ))
                 self.h_console = h_console
 
@@ -138,6 +198,7 @@ class SBRotatingLogHandler(object):
 
         h_file = TimedCompressedRotatingFileHandler(self.log_file_path, logger=self)
         h_file.setLevel(reverseNames[sickgear.FILE_LOGGING_PRESET])
+        h_file.addFilter(RedactingFilter())
         h_file.setFormatter(DispatchingFormatter(self._formatters(False), logging.Formatter('%(message)s'), ))
         self.h_file = h_file
 
@@ -194,6 +255,7 @@ class SBRotatingLogHandler(object):
         """
         mem_key = 'logger'
         for to_log in log_list:
+            to_log = RedactingFilter.mask_text(to_log)  # mask here too, out_line also feeds ErrorViewer below
             log_id = md5_for_text(to_log)
             now = SGDatetime.timestamp_near()
             expired = now > sickgear.MEMCACHE.get(mem_key, {}).get(log_id, 0)
@@ -237,7 +299,7 @@ class SBRotatingLogHandler(object):
         log(error_msg, ERROR)
 
         if not self.console_logging:
-            sys.exit(error_msg.encode(sickgear.SYS_ENCODING, 'xmlcharrefreplace'))
+            sys.exit(RedactingFilter.mask_text(error_msg).encode(sickgear.SYS_ENCODING, 'xmlcharrefreplace'))
         else:
             sys.exit(1)
 

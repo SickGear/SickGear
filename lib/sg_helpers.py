@@ -4,6 +4,7 @@
 import ast
 import codecs
 import datetime
+import functools
 import getpass
 import hashlib
 import io
@@ -21,26 +22,27 @@ import threading
 import time
 import traceback
 import unicodedata
-
 from io import StringIO
 from html.parser import HTMLParser
 
+import requests
+from cachecontrol import CacheControl, CacheControlAdapter, caches
+from dateutil.parser import parser
+# from tmdbsimple.configuration import Configuration
+# from tmdbsimple.genres import Genres
+from cfscrape import CloudflareScraper, FlareSolverrError
+from send2trash import send2trash
+from six import integer_types, moves, PY2, string_types, text_type
+from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+
+import sg_ech
+import sg_tunnel
 from exceptions_helper import ex, ConnectionSkipException
 from json_helper import json_loads
-from cachecontrol import CacheControl, caches
-from lib.dateutil.parser import parser
-# from lib.tmdbsimple.configuration import Configuration
-# from lib.tmdbsimple.genres import Genres
-from cfscrape import CloudflareScraper
-from send2trash import send2trash
-
 # noinspection PyPep8Naming
 from encodingKludge import SYS_ENCODING
-import requests
-
 from _23 import decode_bytes, html_unescape, list_range, \
     Popen, scandir, urlparse, urlsplit, urlunparse
-from six import integer_types, iteritems, iterkeys, itervalues, moves, PY2, string_types, text_type
 
 ACCEPT_ENCODING = "gzip,deflate"
 try:
@@ -129,10 +131,12 @@ USER_AGENT = ''
 CACHE_DIR = None
 DATA_DIR = None
 PROXY_SETTING = None
+DNS_RESOLVER = None
 TRASH_REMOVE_SHOW = False
 REMOVE_FILENAME_CHARS = None
 MEMCACHE = {}
 FLARESOLVERR_HOST = None
+_flaresolverr_logged = {}  # type: Dict[AnyStr, float]
 
 # noinspection PyRedeclaration
 db = None
@@ -475,7 +479,7 @@ class ConnectionFailList(object):
             if ConnectionFailTypes.names[e.fail_type] not in fail_dict.get(date_time, {}):
                 default = {'date': str(fail_date), 'date_time': date_time,
                            'timestamp': try_int(_totimestamp(e.fail_time)), 'multirow': False}
-                for et in itervalues(ConnectionFailTypes.names):
+                for et in ConnectionFailTypes.names.values():
                     default[et] = b_d.copy()
                 fail_dict.setdefault(date_time, default)[ConnectionFailTypes.names[e.fail_type]]['count'] = 1
             else:
@@ -488,28 +492,28 @@ class ConnectionFailList(object):
                     fail_dict[date_time][ConnectionFailTypes.names[e.fail_type]].setdefault('code', {})[e.code] = 1
 
         row_count = {}
-        for (k, v) in iteritems(fail_dict):
+        for (k, v) in fail_dict.items():
             row_count.setdefault(v.get('date'), 0)
             if v.get('date') in row_count:
                 row_count[v.get('date')] += 1
-        for (k, v) in iteritems(fail_dict):
+        for (k, v) in fail_dict.items():
             if 1 < row_count.get(v.get('date')):
                 fail_dict[k]['multirow'] = True
 
-        fail_list = sorted([fail_dict[k] for k in iterkeys(fail_dict)], key=lambda y: y.get('date_time'), reverse=True)
+        fail_list = sorted([fail_dict[k] for k in fail_dict.keys()], key=lambda y: y.get('date_time'), reverse=True)
 
         totals = {}
         for fail_date in set([fail.get('date') for fail in fail_list]):
             daytotals = {}
-            for et in itervalues(ConnectionFailTypes.names):
+            for et in ConnectionFailTypes.names.values():
                 daytotals.update({et: sum([x.get(et).get('count') for x in fail_list if fail_date == x.get('date')])})
             totals.update({fail_date: daytotals})
-        for (fail_date, total) in iteritems(totals):
+        for (fail_date, total) in totals.items():
             for i, item in enumerate(fail_list):
                 if fail_date == item.get('date'):
                     if item.get('multirow'):
                         fail_list[i:i] = [item.copy()]
-                        for et in itervalues(ConnectionFailTypes.names):
+                        for et in ConnectionFailTypes.names.values():
                             fail_list[i][et] = {'count': total[et]}
                             if et == ConnectionFailTypes.names[ConnectionFailTypes.http]:
                                 fail_list[i][et]['code'] = {}
@@ -530,7 +534,7 @@ class ConnectionFailList(object):
             self.save_list()
 
     def _load_fail_values(self):
-        if None is not DATA_DIR:
+        if None is not DATA_DIR and None is not db:
             with db.DBConnection('cache.db') as sg_db:
                 if sg_db.has_table('connection_fails_count'):
                     r = sg_db.select('SELECT * FROM connection_fails_count WHERE domain_url = ?', [self.url])
@@ -552,13 +556,14 @@ class ConnectionFailList(object):
                     self._last_fail_type = self.last_fail
 
     def _save_fail_value(self, field, value):
-        with db.DBConnection('cache.db') as sg_db:
-            if sg_db.has_table('connection_fails_count'):
-                r = sg_db.action(f'UPDATE connection_fails_count SET {field} = ? WHERE domain_url = ?',
-                                 [value, self.url])
-                if 0 == r.rowcount:
-                    sg_db.action(f'REPLACE INTO connection_fails_count (domain_url, {field}) VALUES (?,?)',
-                                 [self.url, value])
+        if None is not db:
+            with db.DBConnection('cache.db') as sg_db:
+                if sg_db.has_table('connection_fails_count'):
+                    r = sg_db.action(f'UPDATE connection_fails_count SET {field} = ? WHERE domain_url = ?',
+                                     [value, self.url])
+                    if 0 == r.rowcount:
+                        sg_db.action(f'REPLACE INTO connection_fails_count (domain_url, {field}) VALUES (?,?)',
+                                     [self.url, value])
 
     def save_list(self):
         if self.dirty:
@@ -691,7 +696,7 @@ def clean_data(data):
     if isinstance(data, set):
         return set(clean_data(d) for d in data)
     if isinstance(data, dict):
-        return {k: clean_data(v) for k, v in iteritems(data)}
+        return {k: clean_data(v) for k, v in data.items()}
     if isinstance(data, string_types):
         return unicodedata.normalize('NFKD', re.sub(r' {2,}', ' ', html_unescape(data).strip().replace('&amp;', '&')))
     return data
@@ -772,6 +777,87 @@ def proxy_setting(setting, request_url, force=False):
     return (False, proxy_address)[request_url_match], True
 
 
+# seconds a kept alive connection may be idle and still be used again
+KEEP_ALIVE_IDLE = 30
+
+
+class _IdleLimitPoolMixin(object):
+    """
+    close a pooled connection that is idle longer than KEEP_ALIVE_IDLE, instead of a request on it.
+    A router or firewall can drop an idle connection with no sign, then a request on it waits for its full timeout
+    """
+    def _get_conn(self, timeout=None, **kwargs):
+        conn = super()._get_conn(timeout, **kwargs)
+        idle_since = getattr(conn, 'sg_idle_since', None)
+        # a multiplexed connection is handed out while a request is still on it, close only one that is idle
+        if None is not idle_since and getattr(conn, 'is_idle', True) \
+                and KEEP_ALIVE_IDLE < time.monotonic() - idle_since:
+            conn.close()  # the pool connects it again, as it does for a dropped connection
+        return conn
+
+    def _put_conn(self, conn):
+        if conn:
+            conn.sg_idle_since = time.monotonic()
+        super()._put_conn(conn)
+
+
+class _IdleLimitHTTPPool(_IdleLimitPoolMixin, HTTPConnectionPool):
+    pass
+
+
+class _IdleLimitHTTPSPool(_IdleLimitPoolMixin, HTTPSConnectionPool):
+    pass
+
+
+_idle_limit_pools = {'http': _IdleLimitHTTPPool, 'https': _IdleLimitHTTPSPool}
+
+
+class _IdleLimitAdapterMixin(object):
+    """ an adapter with pools that apply KEEP_ALIVE_IDLE """
+    def init_poolmanager(self, *args, **kwargs):
+        super().init_poolmanager(*args, **kwargs)
+        self.poolmanager.pool_classes_by_scheme = _idle_limit_pools
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        # a tunnel proxy gets its own CA and name check, never the session verify setting, which may be off
+        proxy_kwargs.update(sg_tunnel.adapter_kwargs(proxy))
+        manager = super().proxy_manager_for(proxy, **proxy_kwargs)
+        # shortcut: a socks proxy keeps its own pools with no idle limit, add socks pools if a socks user has a hang
+        if not proxy.lower().startswith('socks'):
+            manager.pool_classes_by_scheme = _idle_limit_pools
+        return manager
+
+
+class IdleLimitHTTPAdapter(_IdleLimitAdapterMixin, requests.adapters.HTTPAdapter):
+    pass
+
+
+class IdleLimitCacheControlAdapter(_IdleLimitAdapterMixin, CacheControlAdapter):
+    pass
+
+
+# adapters, each with its pool of connections, for requests that are made with no session of the caller.
+# A new session is made for each of those requests, and a pool that lives and ends with that session
+# opens a new connection, with a new TLS handshake, for every request
+_shared_adapters = {}  # type: Dict[Tuple[Optional[AnyStr], Optional[AnyStr]], requests.adapters.HTTPAdapter]
+_shared_adapters_lock = threading.Lock()
+
+
+def _shared_adapter(cache_dir, resolver=None):
+    # type: (Optional[AnyStr], Optional[AnyStr]) -> requests.adapters.HTTPAdapter
+    """
+    :param cache_dir: folder of the response cache, or None for an adapter that does not cache
+    :param resolver: url of the DNS resolver, or None for the DNS of the system
+    :return: the adapter that all requests with no session of the caller share
+    """
+    with _shared_adapters_lock:
+        key = (cache_dir, tuple(resolver) if isinstance(resolver, list) else resolver)
+        if key not in _shared_adapters:
+            _shared_adapters[key] = IdleLimitHTTPAdapter(resolver=resolver) if None is cache_dir \
+                else IdleLimitCacheControlAdapter(cache=caches.FileCache(cache_dir), resolver=resolver)
+        return _shared_adapters[key]
+
+
 def get_url(url,  # type: AnyStr
             post_data=None,  # type: Optional
             params=None,  # type: Optional
@@ -792,6 +878,7 @@ def get_url(url,  # type: AnyStr
             exclude_no_data=True,  # type: bool
             use_method=None,  # type: Optional[AnyStr]
             return_response=False,  # type: bool
+            ech_retry=False,  # type: bool
             **kwargs):
     # type: (...) -> Optional[Union[AnyStr, bool, bytes, Dict, Tuple[Union[Dict, List], requests.Session], requests.Response]]
     """
@@ -826,6 +913,8 @@ def get_url(url,  # type: AnyStr
     :param exclude_no_data: exclude no data as failure
     :param use_method: force any supported method by Session(): get, put, post, delete
     :param return_response: return response object
+    :param ech_retry: the caller fetches again when a failed TLS handshake is routed via DoH for ECH, so that failure is
+     logged as debug and not counted, the fetch again logs and counts its own
     :param kwargs: keyword params to passthru to Requests
     :return: None or data fetched from address
     """
@@ -849,13 +938,15 @@ def get_url(url,  # type: AnyStr
 
     # reuse or instantiate request session
     resp_sess = kwargs.pop('resp_sess', None)
+    use_shared_adapter = False
     if None is session:
         if (kwargs.get('url_solver') or '').strip():
-            session = CloudflareScraper.create_scraper()
+            session = CloudflareScraper.create_scraper(resolver=sg_ech.session_resolver(DNS_RESOLVER))
         else:
             # in case of an empty argument
             kwargs.pop('url_solver', None)
-            session = requests.Session()
+            session = requests.Session(resolver=sg_ech.session_resolver(DNS_RESOLVER))
+            use_shared_adapter = True
         session.headers.update({'User-Agent': USER_AGENT})
 
     proxy_browser = kwargs.get('proxy_browser')
@@ -874,11 +965,21 @@ def get_url(url,  # type: AnyStr
         # session streaming
         session.stream = True
 
-    if not kwargs.pop('nocache', False):
-        cache_dir = CACHE_DIR or get_system_temp_dir()
-        session = CacheControl(sess=session, cache=caches.FileCache(os.path.join(cache_dir, 'sessions')))
+    cache_dir = None if kwargs.pop('nocache', False) else os.path.join(CACHE_DIR or get_system_temp_dir(), 'sessions')
+    if use_shared_adapter:
+        # the session is new, but its connections are kept for the next request to the same site
+        for cur_prefix in ('https://', 'http://'):
+            session.mount(cur_prefix, _shared_adapter(cache_dir, sg_ech.session_resolver(DNS_RESOLVER)))
+    # mount the cache adapter once per session, a new adapter for each request drops the connection that is kept alive
+    elif cache_dir and not isinstance(session.adapters.get('https://'), CacheControlAdapter):
+        # keep the session resolver, CacheControl mounts a new adapter that would otherwise use system DNS
+        session = CacheControl(sess=session, cache=caches.FileCache(cache_dir),
+                               adapter_class=functools.partial(IdleLimitCacheControlAdapter, resolver=session.resolver))
 
     provider = kwargs.pop('provider', None)
+    tunnel_proxy = kwargs.pop('tunnel_proxy', None)
+    # the caller fetches again via the tunnel after a connection error, and logs the kept message if that fails
+    defer_connect_log = kwargs.pop('defer_connect_log', False)
 
     # handle legacy uses of `json` param
     if kwargs.get('json'):
@@ -899,6 +1000,8 @@ def get_url(url,  # type: AnyStr
 
     # session ssl verify
     session.verify = bool(re.search(r'(//|[.@])(github\.(com|io)|githubusercontent\.com|gitlab\.com)/', url))
+    if tunnel_proxy:
+        session.verify = True  # the tunnel must not be able to read or alter the site traffic, check the site cert
 
     # don't trust os environments (auth, proxies, ...)
     session.trust_env = False
@@ -911,7 +1014,13 @@ def get_url(url,  # type: AnyStr
         url = urlunparse(parsed)
 
         # session proxies
-        if PROXY_SETTING:
+        if tunnel_proxy:
+            # only the idle limit adapters apply the tunnel proxy check, mount one where a session has none
+            if not isinstance(session.adapters.get('https://'), _IdleLimitAdapterMixin):
+                for cur_prefix in ('https://', 'http://'):
+                    session.mount(cur_prefix, IdleLimitHTTPAdapter(resolver=getattr(session, 'resolver', None)))
+            session.proxies = {'http': tunnel_proxy, 'https': tunnel_proxy}
+        elif PROXY_SETTING:
             (proxy_address, pac_found) = proxy_setting(PROXY_SETTING, url)
             msg = '%sproxy for url: %s' % (('', 'PAC parsed ')[pac_found], url)
             if None is proxy_address:
@@ -920,6 +1029,8 @@ def get_url(url,  # type: AnyStr
             elif proxy_address:
                 logger.debug(f'Using {msg}')
                 session.proxies = {'http': proxy_address, 'https': proxy_address}
+        elif sg_tunnel.is_tunnel((session.proxies or {}).get('https')):
+            session.proxies = {}  # a persistent session goes direct again when the caller gives no tunnel
 
         if None is not use_method:
 
@@ -936,9 +1047,10 @@ def get_url(url,  # type: AnyStr
             if post_json:
                 kwargs.setdefault('json', post_json)
 
-            method = session.post
+            # niquests post() has no **kwargs, so route via request() where CloudflareScraper pops url_solver
+            method = functools.partial(session.request, 'POST')
         else:
-            method = session.get
+            method = functools.partial(session.request, 'GET')
 
         for r in range(0, 5):
             response = method(url, timeout=timeout, **kwargs)
@@ -960,10 +1072,10 @@ def get_url(url,  # type: AnyStr
             if encoding:
                 response.encoding = encoding
             elif not response.encoding or 'charset' not in response.headers.get('Content-Type', ''):
-                response.encoding = response.apparent_encoding
+                response.encoding = None  # niquests guesses via charset_normalizer when None
 
         # noinspection PyProtectedMember
-        if provider and provider._has_signature(response.text):
+        if provider and not proxy_browser and provider._has_signature(response.text):
             result = getattr(response, response_attr)
         else:
             if raise_status_code:
@@ -992,9 +1104,18 @@ def get_url(url,  # type: AnyStr
             logger.warning(f'HTTP error {e.errno} while loading URL{_maybe_request_url(e)}')
     except requests.exceptions.ConnectionError as e:
         raised = e
+        # an ISP may block the site by the server name in the TLS handshake, ECH via DoH can get past that,
+        # check the host the request failed on, a redirect may have moved it from the host of url
+        failed_url = getattr(getattr(e, 'request', None), 'url', None) or url
+        if failed_url.startswith('https://') and sg_ech.is_ssl_error(e):
+            # the outcome tells a caller what ECH can do about a block, e.g. the site has ECH off
+            e.sg_ech_outcome = sg_ech.check_ssl_failure(failed_url, DNS_RESOLVER)
+            e.sg_ech_routed = sg_ech.ROUTED == e.sg_ech_outcome
+        retried = ech_retry and getattr(e, 'sg_ech_routed', False)
+        e.sg_connect_msg = f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}'
         if 'mute_connect_err' not in mute:
-            logger.warning(f'Connection error msg:{ex(e)} while loading URL{_maybe_request_url(e)}')
-        if failure_monitor:
+            (logger.warning, logger.debug)[retried or defer_connect_log](e.sg_connect_msg)
+        if failure_monitor and not retried:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection)
     except requests.exceptions.ReadTimeout as e:
         raised = e
@@ -1008,6 +1129,15 @@ def get_url(url,  # type: AnyStr
             logger.warning(f'Connection timed out msg:{ex(e)} while loading URL {_maybe_request_url(e, url)}')
         if failure_monitor:
             connection_fail_params = dict(fail_type=ConnectionFailTypes.connection_timeout)
+    except FlareSolverrError as e:
+        raised = e
+        # one line, at most each 10 minutes per message, a traceback of the solver call adds nothing to the message
+        now = time.time()
+        (logger.debug, logger.warning)[_flaresolverr_logged.get(ex(e), 0) < now - 600](f'{ex(e)}, for URL {url}')
+        _flaresolverr_logged[ex(e)] = now
+        if failure_monitor:
+            connection_fail_params = dict(fail_type=ConnectionFailTypes.other)
+            log_failure_url = True
     except (BaseException, Exception) as e:
         raised = e
         logger.warning(('Exception caught while loading URL {0}\r\nDetail... %s\r\n{1}' % ex(e),
@@ -1044,6 +1174,11 @@ def get_url(url,  # type: AnyStr
                 data_json = json_loads(requests_response=response)
                 if proxy_browser:
                     result = ({}, data_json.get('solution', {}).get('response', {}))[isinstance(data_json, dict)]
+                    if parse_json and isinstance(result, str):
+                        # a browser renders a text document (e.g. a JSON api response) inside <pre>
+                        result = json_loads(html_unescape(
+                            re.sub(r'(?is)^.*?<pre[^>]*>(.*?)</pre>.*$', r'\1', result)))
+                        result = ({}, result)[isinstance(result, (dict, list))]
                 else:
                     result = ({}, data_json)[isinstance(data_json, (dict, list))]
                 if resp_sess:
@@ -1320,21 +1455,23 @@ def touch_file(name, atime=None, dir_name=None):
     return False
 
 
-def make_path(name, syno=False):
-    # type: (AnyStr, bool) -> bool
+def make_path(name, syno=False, quiet=False):
+    # type: (AnyStr, bool, bool) -> bool
     """
     Create an entire directory path and
     assign each subdir the parent permission
 
     :param name: directory to create
     :param syno: whether to trigger a syno library update for path
+    :param quiet: whether to skip the debug log of each folder created
     :return: success or dir exists
     """
     if not os.path.isdir(name):
         # Windows, create all missing folders
         if os.name in ('nt', 'ce'):
             try:
-                logger.debug(f"Path {name} doesn't exist, creating it")
+                if not quiet:
+                    logger.debug(f"Path {name} doesn't exist, creating it")
                 os.makedirs(name)
             except (OSError, IOError) as e:
                 logger.error(f'Failed creating {name} : {ex(e)}')
@@ -1354,7 +1491,8 @@ def make_path(name, syno=False):
                     continue
 
                 try:
-                    logger.debug(f"Path {sofar} doesn't exist, creating it")
+                    if not quiet:
+                        logger.debug(f"Path {sofar} doesn't exist, creating it")
                     os.mkdir(sofar)
                     # use normpath to remove end separator, otherwise checks permissions against itself
                     chmod_as_parent(os.path.normpath(sofar))

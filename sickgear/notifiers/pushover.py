@@ -20,12 +20,12 @@
 import socket
 import time
 
-from .generic import Notifier
-import sickgear
-
-from _23 import decode_bytes, decode_str, urlencode
 # noinspection PyUnresolvedReferences
 from six.moves import urllib
+
+import sickgear
+from .generic import Notifier
+from _23 import decode_bytes, decode_str, urlencode
 
 API_URL = 'https://api.pushover.net/1/messages.json'
 DEVICE_URL = 'https://api.pushover.net/1/users/validate.json'

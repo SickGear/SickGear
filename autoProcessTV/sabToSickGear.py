@@ -18,6 +18,7 @@
 
 
 from __future__ import print_function
+import os
 import sys
 
 try:
@@ -31,6 +32,8 @@ if 2 > len(sys.argv):
     print('No folder supplied - is this being called from SABnzbd?')
     sys.exit(1)
 
+sab_nzo_id = os.environ.get('SAB_NZO_ID', None)
+
 # SABnzbd user script parameters - see: https://sabnzbd.org/wiki/scripts/post-processing-scripts
 autoProcessTV.process_files(
     # 1  The final directory of the job (full path)
@@ -38,5 +41,6 @@ autoProcessTV.process_files(
     # 2  The original name of the NZB file
     None if 3 >= len(sys.argv) else sys.argv[2],
     # 7  Status of processing. 0 = OK, 1 = Failed verification, 2 = Failed unpack, 3 = 1+2, -1 = Failed post processing
-    None if 8 >= len(sys.argv) else sys.argv[7]
+    None if 8 >= len(sys.argv) else sys.argv[7],
+    client='sabnzbd', nzbid=sab_nzo_id
 )

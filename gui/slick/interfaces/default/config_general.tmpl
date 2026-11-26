@@ -5,7 +5,7 @@
 #import sickgear
 #from sickgear import config,  metadata
 #from sickgear.metadata.generic import GenericMetadata
-#from sickgear.common import *
+#from sickgear.common import cpu_presets
 #from sickgear.db import db_supports_backup
 #from sickgear.helpers import anon_url, maybe_plural
 #from sickgear.logger import reverseNames as file_logging_presets
@@ -139,6 +139,16 @@
 								<span class="component-desc">
 									<input type="text" name="indexer_timeout" id="indexer_timeout" value="$sg_var('TVINFO_TIMEOUT', 20)" class="form-control input-sm input75" autocorrect="off" autocapitalize="off" spellcheck="false">
 									<p>seconds of inactivity when finding new shows (default:10)</p>
+								</span>
+							</label>
+						</div>
+
+						<div class="field-pair adv">
+							<label for="tvinfo_show_cache_limit">
+								<span class="component-title">Keep TV info in memory of</span>
+								<span class="component-desc">
+									<input type="text" name="tvinfo_show_cache_limit" id="tvinfo_show_cache_limit" value="$sg_var('TVINFO_SHOW_CACHE_LIMIT', 10)" class="form-control input-sm input75" autocorrect="off" autocapitalize="off" spellcheck="false">
+									<p>shows fetched last, about 1 MB each (default:10)</p>
 								</span>
 							</label>
 						</div>

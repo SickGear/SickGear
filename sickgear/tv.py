@@ -14,35 +14,47 @@
 # You should have received a copy of the GNU General Public License
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
+# modules that load at first use on Python 3.15+ (PEP 810), on an older Python this list has no effect.
+# subliminal, with guessit and enzyme, is only for subtitles
+__lazy_modules__ = ['subliminal']
+
 import random
 import weakref
-from collections import Counter, OrderedDict
-from functools import reduce
-from itertools import chain
-from weakref import ReferenceType
-
 import datetime
 import glob
 import inspect
 import os.path
 import re
-import requests
 import stat
 import threading
+import time
 import traceback
+from collections import Counter, OrderedDict
+from functools import reduce
+from itertools import chain
+from weakref import ReferenceType
 
+import imdbpie
+import requests
+import subliminal
 from imdbpie import ImdbAPIError
 from lxml_etree import etree
+from dateutil import tz
+from dateutil.parser import parser as du_parser
+from six import integer_types, moves, string_types
+try:
+    from thefuzz import fuzz
+except ImportError as e:
+    from fuzzywuzzy import fuzz
 
 import exceptions_helper
-from exceptions_helper import ex
-
 import sickgear
+from exceptions_helper import ex
 from . import db, helpers, history, image_cache, indexermapper, logger, \
     name_cache, network_timezones, notifiers, postProcessor, subtitles
 from .anime import AniGroupList
 from .classes import WeakList
-from .common import Quality, statusStrings, \
+from .common import Quality, VideoCodec, statusStrings, \
     ARCHIVED, DOWNLOADED, FAILED, IGNORED, SKIPPED, SNATCHED, SNATCHED_ANY, SNATCHED_PROPER, UNAIRED, UNKNOWN, WANTED, \
     NAMING_DUPLICATE, NAMING_EXTEND, NAMING_LIMITED_EXTEND, NAMING_LIMITED_EXTEND_E_PREFIXED, NAMING_SEPARATED_REPEAT
 from .generic_queue import QueuePriorities
@@ -52,26 +64,16 @@ from .indexers.indexer_config import TVINFO_IMDB, TVINFO_TMDB, TVINFO_TRAKT, TVI
 from .name_parser.parser import InvalidNameException, InvalidShowException, NameParser
 from .sgdatetime import SGDatetime
 from .tv_base import TVEpisodeBase, TVShowBase
-
-from lib import imdbpie, subliminal
-from lib.dateutil import tz
-from lib.dateutil.parser import parser as du_parser
-try:
-    from lib.thefuzz import fuzz
-except ImportError as e:
-    from lib.fuzzywuzzy import fuzz
-from lib.tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
+from tvinfo_base import RoleTypes, TVINFO_FACEBOOK, TVINFO_INSTAGRAM, TVINFO_SLUG, TVINFO_X, \
     TVINFO_WIKIPEDIA, TVINFO_TIKTOK, TVINFO_FANSITE, TVINFO_YOUTUBE, TVINFO_REDDIT, TVINFO_LINKEDIN, TVINFO_WIKIDATA
-from lib.tvinfo_base.exceptions import *
+from tvinfo_base.exceptions import *
 from sg_helpers import calc_age, int_to_time, remove_file_perm, time_to_int
-
-from six import integer_types, moves, string_types
 
 # noinspection PyUnreachableCode
 if False:
     from typing import Any, AnyStr, Dict, List, Optional, Set, Text, Tuple, Union
     from sqlite3 import Row
-    from lib.tvinfo_base import CastList, TVInfoCharacter, TVInfoPerson, \
+    from tvinfo_base import CastList, TVInfoCharacter, TVInfoPerson, \
         TVInfoEpisode, TVInfoShow
 
 coreid_warnings = False
@@ -1368,17 +1370,33 @@ class TVShow(TVShowBase):
         # noinspection PyTypeChecker
         self.release_groups = None  # type: AniGroupList
         self.sxe_ep_obj = {}  # type: Dict
+        # numbers of episodes that a search found are not wanted, and that have no episode object
+        self.unwanted_sxe = {}  # type: Dict[int, Set[int]]
+        # episode objects that were released from memory, each one stays here for as long as other code uses it
+        self._released_ep_obj = weakref.WeakValueDictionary()  # type: weakref.WeakValueDictionary
+        # file sizes of episode folders, and the time that the first of these folders was listed
+        self._ep_dir_sizes = {}  # type: Dict[AnyStr, Dict[AnyStr, int]]
+        self._ep_dir_time = 0  # type: float
+        self.aired_in_season = {}  # type: Dict
+        self.aired_in_scene_season = {}  # type: Dict
+        self.aired_in_season_update_time = datetime.datetime(2000, 1, 1)  # type: datetime.datetime
 
         self.load_from_db(show_result=show_result, imdb_info_result=imdb_info_result)
 
     def _get_end_episode(self, last=False, exclude_specials=False):
         # type: (bool, bool) -> Optional[TVEpisode]
-        eps = self.get_all_episodes()
-        if eps:
-            ed = datetime.date(1900, 1, 1)
-            return next(iter(sorted(
-                (_ep for _ep in eps if _ep.airdate > ed and (not exclude_specials or _ep.season != 0)),
-                key=lambda a: a.airdate, reverse=last)), None)
+        # find the episode in the db, then load that one episode instead of every episode of the show
+        with db.DBConnection() as sg_db:
+            sql_result = sg_db.select(
+                f"""
+                SELECT season, episode
+                FROM tv_episodes
+                WHERE indexer = ? AND showid = ? AND airdate > ?{('', ' AND season != 0')[exclude_specials]}
+                ORDER BY airdate {('ASC', 'DESC')[last]}, season ASC, episode ASC
+                LIMIT 1
+                """, [self.tvid, self.prodid, datetime.date(1900, 1, 1).toordinal()])
+        if sql_result:
+            return self.get_episode(int(sql_result[0]['season']), int(sql_result[0]['episode']))
 
     @property
     def first_aired_episode(self):
@@ -1663,7 +1681,9 @@ class TVShow(TVShowBase):
 
     def _set_location(self, new_location):
         # type: (AnyStr) -> None
-        logger.debug(f'Setter sets location to {new_location}')
+        if self._location and new_location != self._location:
+            # not when a show loads at startup or is added, a line for each show hid the lines before a restart
+            logger.debug(f'Setter sets location to {new_location}')
         # Don't validate dir if user wants to add shows without creating a dir
         if sickgear.ADD_SHOWS_WO_DIR or os.path.isdir(new_location):
             self.dirty_setter('_location')(self, new_location)
@@ -1673,6 +1693,28 @@ class TVShow(TVShowBase):
             raise exceptions_helper.NoNFOException('Invalid folder for the show!')
 
     location = property(_get_location, _set_location)
+
+    def release_episodes(self):
+        # type: (...) -> int
+        """
+        Release episode objects from memory, an episode loads from the DB again when it is next needed.
+
+        An episode is kept when it has a change that is not saved, is wanted by a search, or is a multi-episode.
+        A released episode that other code still uses is given back by get_episode.
+
+        :return: number of released episode objects
+        """
+        released = 0
+        for cur_season, cur_eps in list(self.sxe_ep_obj.items()):
+            for cur_episode, cur_ep_obj in list(cur_eps.items()):
+                if None is cur_ep_obj or cur_ep_obj.dirty or cur_ep_obj.wanted_quality or cur_ep_obj.related_ep_obj:
+                    continue
+                self._released_ep_obj[(cur_season, cur_episode)] = cur_ep_obj
+                # a loaded episode that has no wanted quality is refused by want_episode, keep that for its number
+                self.unwanted_sxe.setdefault(cur_season, set()).add(cur_episode)
+                del cur_eps[cur_episode]
+                released += 1
+        return released
 
     # delete references to anything that's not in the internal lists
     def flush_episodes(self):
@@ -1748,6 +1790,42 @@ class TVShow(TVShowBase):
 
         return ep_obj_list
 
+    def ep_file_size(self, location):
+        # type: (AnyStr) -> int
+        """
+        Return the size of an episode file, or 0 if there is no file.
+
+        The files of a folder are listed once and that list is used for 30 seconds. When the episodes of a show
+        load, that is one disk call for a season folder, in place of two disk calls for each episode file in it.
+
+        :param location: path of an episode file
+        """
+        if not location:
+            return 0
+
+        now = time.time()
+        if 30 < now - self._ep_dir_time:
+            self._ep_dir_sizes, self._ep_dir_time = {}, now
+
+        folder, name = os.path.split(location)
+        sizes = self._ep_dir_sizes.get(folder)
+        if None is sizes:
+            sizes = {}
+            try:
+                with os.scandir(folder) as entries:
+                    for cur_entry in entries:
+                        if cur_entry.is_file():
+                            sizes[os.path.normcase(cur_entry.name)] = cur_entry.stat().st_size
+            except OSError:
+                pass
+            self._ep_dir_sizes[folder] = sizes
+
+        size = sizes.get(os.path.normcase(name))
+        if None is size:
+            # not in the list, this can be a file that is new since the folder was listed, so ask the disk
+            size = os.path.getsize(location) if os.path.isfile(location) else 0
+        return size
+
     def get_episode(self,
                     season=None,  # type: Optional[int]
                     episode=None,  # type: Optional[int]
@@ -1797,6 +1875,12 @@ class TVShow(TVShowBase):
             self.sxe_ep_obj[season] = {}
 
         if episode not in self.sxe_ep_obj[season] or None is self.sxe_ep_obj[season][episode]:
+            # take back a released episode that other code still uses, so that an episode never has two objects
+            ep_obj = self._released_ep_obj.pop((season, episode), None)
+            if None is not ep_obj:
+                self.sxe_ep_obj[season][episode] = ep_obj
+                return ep_obj
+
             if no_create:
                 return
 
@@ -2125,7 +2209,6 @@ class TVShow(TVShowBase):
         for cur_row in sql_result:
             if (cur_row['season'], cur_row['episode']) in processed:
                 continue
-            logger.debug(f'{self.tvid_prodid}: Retrieving/creating episode {cur_row["season"]}x{cur_row["episode"]}')
             ep_obj = self.get_episode(cur_row['season'], cur_row['episode'], ep_result=[cur_row])
             if not ep_obj.related_ep_obj:
                 processed += [(cur_row['season'], cur_row['episode'])]
@@ -2179,7 +2262,6 @@ class TVShow(TVShowBase):
             parse_result = None
             ep_obj = None
 
-            logger.debug(f'{self.tvid_prodid}: Creating episode from {cur_media_file}')
             try:
                 ep_obj = self.ep_obj_from_file(os.path.join(self._location, cur_media_file))
             except (exceptions_helper.ShowNotFoundException, exceptions_helper.EpisodeNotFoundException) as e:
@@ -2198,7 +2280,7 @@ class TVShow(TVShowBase):
             try:
                 parse_result = None
                 np = NameParser(False, show_obj=self)
-                parse_result = np.parse(ep_file_name)
+                parse_result = np.parse(ep_file_name, log_result=False)
             except (InvalidNameException, InvalidShowException):
                 pass
 
@@ -2222,6 +2304,8 @@ class TVShow(TVShowBase):
         if sql_l:
             with db.DBConnection() as sg_db:
                 sg_db.mass_action(sql_l)
+
+        logger.debug(f'{self.tvid_prodid}: Checked {len(file_list)} media files of [{self._name}]')
 
     def load_episodes_from_db(self, update=False):
         # type: (bool) -> Dict[int, Dict[int, TVEpisode]]
@@ -2269,6 +2353,8 @@ class TVShow(TVShowBase):
                 WHERE indexer == ? AND indexer_id = ?
                 """, [self.tvid, self.prodid])
 
+        logger.debug(f'{self.tvid_prodid}: Loading {len(sql_result)} episodes for [{self._name}] from the DB')
+
         cached_seasons = {}
         sql_l = []
         for cur_row in sql_result:
@@ -2289,9 +2375,9 @@ class TVShow(TVShowBase):
             if season not in scanned_eps:
                 scanned_eps[season] = {}
 
-            logger.debug(f'Loading episode {season}x{episode} for [{self.name}] from the DB')
-
             try:
+                # an episode object that is made here is loaded from this row, only an existing object needs a reload
+                is_new = None is self.get_episode(season, episode, no_create=True)
                 ep_obj = self.get_episode(season, episode, ep_result=[cur_row])  # type: TVEpisode
 
                 # if we found out that the ep is no longer on TVDB then delete it from our database too
@@ -2299,8 +2385,24 @@ class TVShow(TVShowBase):
                     sql_l.extend(ep_obj.delete_episode(return_sql=True))
                 else:
 
-                    ep_obj.load_from_db(season, episode, show_result=[cur_row], scene_result=scene_sql_result)
+                    if not is_new:
+                        ep_obj.load_from_db(season, episode, show_result=[cur_row], scene_result=scene_sql_result)
                     ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=cached_show)
+                    # in case media processing is set to untouched for removed episodes
+                    if (non_quality_status := 100 > ep_obj._status and None is not ep_obj._video_codec) or (
+                            None is ep_obj._video_codec and ep_obj._release_name):
+                        ep_changed = False
+                        # status with no quality can't have a video codec
+                        if non_quality_status:
+                            ep_obj.video_codec = None
+                            ep_obj.release_name = ''
+                            ep_changed = True
+                        elif ep_obj._release_name:
+                            ep_changed = True
+                            ep_obj.video_codec = VideoCodec.get_videocodec_from_name(ep_obj._release_name)
+                        if ep_changed and (ep_sql := ep_obj.get_sql()):
+                            sql_l.append(ep_sql)
+
                 scanned_eps[season][episode] = True
             except exceptions_helper.EpisodeDeletedException:
                 logger.debug(f'Tried loading an episode that should have been deleted from the DB [{self._name}],'
@@ -2370,34 +2472,34 @@ class TVShow(TVShowBase):
                 FROM tv_episodes 
                 WHERE indexer = ? AND showid = ?
                 """, [self.tvid, self.prodid])
+        # an episode object loads from the first row that it is given, so give it the row of its own number
+        ep_rows = {(_r['season'], _r['episode']): [_r] for _r in sql_result}
         sql_l = []
+        no_absolute_number = 0
         for cur_season in show_obj:
             scanned_eps[cur_season] = {}
             for cur_episode in show_obj[cur_season]:
                 # need some examples of wtf episode 0 means to decide if we want it or not
                 if 0 == cur_episode:
                     continue
+                no_absolute_number += getattr(show_obj[cur_season][cur_episode], 'absolute_number', None) in (None, '')
                 try:
-                    ep_obj = self.get_episode(cur_season, cur_episode, ep_result=sql_result)  # type: TVEpisode
+                    ep_obj = self.get_episode(cur_season, cur_episode,
+                                              ep_result=ep_rows.get((cur_season, cur_episode)))  # type: TVEpisode
                 except exceptions_helper.EpisodeNotFoundException:
                     logger.log(f'{self.tvid_prodid}: {sickgear.TVInfoAPI(self.tvid).name}'
                                f' object for {cur_season}x{cur_episode} from [{self._name}] is incomplete,'
                                f' skipping this episode')
                     continue
-                else:
+
+                with ep_obj.lock:
                     try:
-                        ep_obj.load_from_tvinfo(tvapi=t, update=update, cached_show=show_obj, switch=switch,
-                                                old_tvid=old_tvid, old_prodid=old_prodid, switch_list=sql_l)
+                        ep_obj.load_from_tvinfo(cur_season, cur_episode, tvapi=t, update=update,
+                                                cached_show=show_obj, switch=switch, old_tvid=old_tvid,
+                                                old_prodid=old_prodid, switch_list=sql_l)
                     except exceptions_helper.EpisodeDeletedException:
                         logger.log(f'The episode from [{self._name}] was deleted, skipping the rest of the load')
                         continue
-
-                with ep_obj.lock:
-                    logger.debug(f'{self.tvid_prodid}: Loading info from {sickgear.TVInfoAPI(self.tvid).name}'
-                                 f' for episode {cur_season}x{cur_episode} from [{self._name}]')
-                    ep_obj.load_from_tvinfo(cur_season, cur_episode, tvapi=t, update=update, cached_show=show_obj,
-                                            switch=switch, old_tvid=old_tvid, old_prodid=old_prodid,
-                                            switch_list=sql_l)
 
                     result = ep_obj.get_sql()
                     if None is not result:
@@ -2408,6 +2510,10 @@ class TVShow(TVShowBase):
         if sql_l:
             with db.DBConnection() as sg_db:
                 sg_db.mass_action(sql_l)
+
+        if no_absolute_number:
+            logger.debug(f'{self.tvid_prodid}: {no_absolute_number} episodes of [{self._name}]'
+                         f' have no absolute number on {sickgear.TVInfoAPI(self.tvid).name}')
 
         # Done updating save last update date
         self.last_update_indexer = datetime.date.today().toordinal()
@@ -2420,8 +2526,10 @@ class TVShow(TVShowBase):
         season_posters_result = season_banners_result = season_all_poster_result = season_all_banner_result = False
 
         for cur_provider in sickgear.metadata_provider_dict.values():
-            # FIXME: Needs to not show this message if the option is not enabled?
-            logger.debug(f'Running metadata routines for {cur_provider.name}')
+            if any([cur_provider.fanart, cur_provider.poster, cur_provider.banner,
+                    cur_provider.season_posters, cur_provider.season_banners,
+                    cur_provider.season_all_poster, cur_provider.season_all_banner]):
+                logger.debug(f'Running metadata routines for {cur_provider.name}')
 
             try:
                 fanart_result = cur_provider.create_fanart(self) or fanart_result
@@ -2473,11 +2581,9 @@ class TVShow(TVShowBase):
             logger.log(f'{self.tvid_prodid}: Not a real file... {path}')
             return None
 
-        logger.debug(f'{self.tvid_prodid}: Creating episode object from {path}')
-
         try:
             my_parser = NameParser(show_obj=self)
-            parse_result = my_parser.parse(path)
+            parse_result = my_parser.parse(path, log_result=False)
         except InvalidNameException:
             logger.debug(f'Unable to parse the filename {path} into a valid episode')
             return None
@@ -2498,8 +2604,6 @@ class TVShow(TVShowBase):
         sql_l = []
         for cur_ep_num in episode_numbers:
             cur_ep_num = int(cur_ep_num)
-
-            logger.debug(f'{self.tvid_prodid}: {path} parsed to {self._name} {season_number}x{cur_ep_num}')
 
             check_quality_again = False
             same_file = False
@@ -2546,6 +2650,13 @@ class TVShow(TVShowBase):
             # if it's a new file then
             if not same_file:
                 ep_obj.release_name = ''
+                ep_obj.video_codec = VideoCodec.set_file_vc(ep_obj._video_codec, None)
+            if (_vc := VideoCodec.get_file_vc(ep_obj._video_codec)) in (None, VideoCodec.VC_UNKNOWN):
+                if ep_obj.release_name:
+                    _vc = VideoCodec.get_videocodec_from_name(ep_obj.release_name)
+                if _vc in (None, VideoCodec.VC_UNKNOWN):
+                    _vc = VideoCodec.get_file_video_codec(path)
+                ep_obj.video_codec = VideoCodec.set_file_vc(ep_obj._video_codec, _vc)
 
             # if user replaces a file, attempt to recheck the quality unless it's know to be the same file
             if check_quality_again and not same_file:
@@ -2610,6 +2721,7 @@ class TVShow(TVShowBase):
                     sql_l.append(result)
 
         if sql_l:
+            logger.debug(f'{self.tvid_prodid}: Saving {len(sql_l)} changed episode(s) of file {path}')
             with db.DBConnection() as sg_db:
                 sg_db.mass_action(sql_l)
 
@@ -2715,9 +2827,6 @@ class TVShow(TVShowBase):
 
         self.release_groups = self._anime and AniGroupList(self.tvid, self.prodid, self.tvid_prodid) or None
 
-        logger.log('Loaded.. {: <9} {: <8} {}'.format(
-            sickgear.TVInfoAPI(self.tvid).config.get('name') + ',', f'{self.prodid},', self.name))
-
         # Get IMDb_info from database
         if not imdb_info_result or \
                 self.tvid != imdb_info_result['indexer'] or self.prodid != imdb_info_result['indexer_id']:
@@ -2740,7 +2849,9 @@ class TVShow(TVShowBase):
             if 'is_mini_series' in self._imdb_info:
                 self._imdb_info['is_mini_series'] = bool(self._imdb_info['is_mini_series'])
         elif sickgear.USE_IMDB_INFO:
-            logger.debug(f'{self.tvid_prodid}: The next show update will attempt to find IMDb info for [{self.name}]')
+            # counted in the startup line of shows loaded, the next show update will attempt to find IMDb info
+            # loaded as stored, so nothing to save, the show update that finds IMDb info saves the show
+            self.dirty = False
             return
 
         self.dirty = False
@@ -2748,7 +2859,7 @@ class TVShow(TVShowBase):
 
     def _get_tz_info(self):
         if self.internal_timezone:
-            return tz.gettz(self.internal_timezone, zoneinfo_priority=True)
+            return tz.gettz(self.internal_timezone)
         elif self.internal_network:
             return network_timezones.get_network_timezone(self.internal_network)
 
@@ -3458,6 +3569,7 @@ class TVShow(TVShowBase):
                         ep_obj.hasnfo = False
                         ep_obj.hastbn = False
                         ep_obj.release_name = ''
+                        ep_obj.video_codec = None
 
                         result = ep_obj.get_sql()
                         if None is not result:
@@ -3466,6 +3578,23 @@ class TVShow(TVShowBase):
                 # the file exists, set its modify file stamp
                 if sickgear.AIRDATE_EPISODES:
                     ep_obj.airdate_modify_stamp()
+
+            # check for missing video codec data with release name set
+            if (non_quality_status := None is not ep_obj._video_codec and 100 > ep_obj._status) or (
+                    None is ep_obj._video_codec and ep_obj._release_name):
+                ep_changed = False
+                if non_quality_status:
+                    ep_obj.video_codec = None
+                    ep_obj.release_name = ''
+                    ep_changed = True
+                elif ep_obj._release_name:
+                    f_vc = VideoCodec.get_videocodec_from_name(ep_obj._release_name)
+                    ep_changed = True
+                    if f_vc in (None, VideoCodec.VC_UNKNOWN) and os.path.isfile(ep_obj.location):
+                        f_vc = VideoCodec.get_file_video_codec(ep_obj.location)
+                    ep_obj.video_codec = VideoCodec.set_file_vc(ep_obj._video_codec, f_vc)
+                if ep_changed and (result := ep_obj.get_sql()):
+                    sql_l.append(result)
 
         if deleted:
             logger.log(f'{self.tvid_prodid}: {("Permanently deleted", "Trashed")[sickgear.TRASH_REMOVE_SHOW]}'
@@ -3572,6 +3701,8 @@ class TVShow(TVShowBase):
                 pass
             self._cast_list = None
             self.sxe_ep_obj = {}
+            self.unwanted_sxe = {}
+            self._released_ep_obj.clear()
             self.ids[old_tvid]['status'] = MapStatus.NONE
             self.ids[self.tvid]['status'] = MapStatus.SOURCE
             self.ids[self.tvid]['id'] = self.prodid
@@ -3617,14 +3748,14 @@ class TVShow(TVShowBase):
                     logger.error(f'Unable to update this show. {ex(e)}')
 
     def save_to_db(self, force_save=False):
-        # type: (bool) -> None
+        # type: (bool) -> bool
         """
 
         :param force_save:
+        :return: True when the show is saved, False when it has no change to save
         """
         if not self.dirty and not force_save:
-            logger.debug(f'{self.tvid_prodid}: Not saving show to db - record is not dirty')
-            return
+            return False
 
         logger.debug(f'{self.tvid_prodid}: Saving show info to database')
 
@@ -3676,6 +3807,7 @@ class TVShow(TVShowBase):
                 new_value_dict = self._imdb_info
 
                 sg_db.upsert('imdb_info', new_value_dict, control_value_dict)
+        return True
 
     def __ne__(self, o):
         # type: (TVShow) -> bool
@@ -3728,6 +3860,10 @@ class TVShow(TVShowBase):
         if not multi_ep:
             try:
                 wq = getattr(self.sxe_ep_obj.get(season, {}).get(episode, {}), 'wanted_quality', None)
+                if None is wq and episode in self.unwanted_sxe.get(season, ()):
+                    logger.debug('None of the conditions were met,'
+                                 ' ignoring found episode')
+                    return False
                 if None is not wq:
                     if quality in wq:
                         cur_status, cur_quality = Quality.split_composite_status(self.sxe_ep_obj[season][episode].status)
@@ -3863,6 +3999,7 @@ class TVEpisode(TVEpisodeBase):
         self._timestamp = None  # type: Optional[int]
         self._timezone = None  # type: Optional[AnyStr]
         self._tvid = int(show_obj.tvid)  # type: int
+        self._video_codec = None  # type: Optional[int]
 
         self.check_for_meta_files()
         self.lock = threading.RLock()
@@ -3872,6 +4009,38 @@ class TVEpisode(TVEpisodeBase):
         self.scene_season = 0  # type: int
         self.specify_episode(self._season, self._episode, existing_only=existing_only, show_result=show_result)
         self.wanted_quality = []  # type: List
+
+    @property
+    def eps_aired_in_season(self):
+        # type: (...) -> int
+        return self.show_obj.aired_in_season.get(self._season, 0)
+
+    @property
+    def eps_aired_in_scene_season(self):
+        # type: (...) -> int
+        return self.show_obj.aired_in_scene_season.get(
+            self._scene_season, 0) if self.show_obj._scene else self.eps_aired_in_season
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, *arg):
+        # statues without quality can't have a video codec
+        if 100 > arg[0]:
+            self._video_codec = None
+        self.dirty_setter('_status')(self, *arg)
+
+    @property
+    def video_codec(self):
+        # type: (...) -> Optional[int]
+        return self._video_codec
+
+    @video_codec.setter
+    def video_codec(self, *args):
+        # type: (Optional[int]) -> None
+        self.dirty_setter('_video_codec')(self, *args)
 
     @property
     def network(self):
@@ -3989,11 +4158,6 @@ class TVEpisode(TVEpisodeBase):
         self.dirty_setter('_indexerid')(self, int(val))
 
     def _set_location(self, val):
-        if any(val):
-            logger.debug(f'Setter sets location to {val}')
-        else:
-            logger.debug(f'Setter clears location')
-
         # self._location = newLocation
         self.dirty_setter('_location')(self, val)
 
@@ -4167,8 +4331,6 @@ class TVEpisode(TVEpisodeBase):
         :param episode: episode number
         :param show_result:
         """
-        logger.debug(f'{self._show_obj.tvid_prodid}: Loading episode details from DB for episode {season}x{episode}')
-
         show_result = show_result and next(iter(show_result), None)
         if not show_result or episode != show_result['episode'] or season != show_result['season']:
             with db.DBConnection() as sg_db:
@@ -4226,7 +4388,11 @@ class TVEpisode(TVEpisodeBase):
         self._subtitles_searchcount = show_result['subtitles_searchcount']
         self._timestamp = show_result['timestamp'] or self._make_timestamp()
         self._version = self._version if not show_result['version'] else int(show_result['version'])
-        self.location = show_result['location'] and os.path.normpath(show_result['location']) or self.location
+        self._video_codec = show_result['video_codec']
+        # not the location setter, it asks the disk for the file and its size for every episode that is loaded,
+        # that is slow on a network drive. The show lists a folder once and gives the size, 0 if the file is gone
+        self._location = show_result['location'] and os.path.normpath(show_result['location']) or self._location
+        self._file_size = self._show_obj.ep_file_size(self._location)
 
         if None is not show_result['release_group']:
             self._release_group = show_result['release_group']
@@ -4272,9 +4438,9 @@ class TVEpisode(TVEpisodeBase):
                 ep_time = datetime.time(hour=0, minute=0)
             tzinfo = None
             if isinstance(self._timezone, string_types) and self._timezone:
-                tzinfo = tz.gettz(self._timezone, zoneinfo_priority=True)
+                tzinfo = tz.gettz(self._timezone)
             elif isinstance(self._network, string_types) and self._network:
-                tzinfo = tz.gettz(self._network, zoneinfo_priority=True)
+                tzinfo = tz.gettz(self._network)
             elif isinstance(self._show_obj.timezone, string_types) and self._show_obj.timezone:
                 tzinfo = self._show_obj.timezone
             elif isinstance(self._show_obj.network, string_types) and self._show_obj.network:
@@ -4313,9 +4479,6 @@ class TVEpisode(TVEpisodeBase):
             season = self._season
         if None is episode:
             episode = self._episode
-
-        logger.debug(f'{self._show_obj.tvid_prodid}: Loading episode details from'
-                     f' {sickgear.TVInfoAPI(self._show_obj.tvid).name} for episode {season}x{episode}')
 
         try:
             if cached_show:
@@ -4366,13 +4529,13 @@ class TVEpisode(TVEpisodeBase):
             logger.error(f'{sickgear.TVInfoAPI(self.tvid).name} timed out, unable to create the episode')
             return False
 
-        if getattr(ep_info, 'absolute_number', None) in (None, ''):
-            logger.debug(f'This episode ({self.show_obj.unique_name} - {season}x{episode})'
-                         f' has no absolute number on {sickgear.TVInfoAPI(self.tvid).name}')
-        else:
-            logger.debug(f'{self._show_obj.tvid_prodid}:'
-                         f' The absolute_number for {season}x{episode} is : {ep_info["absolute_number"]}')
-            self.absolute_number = int(ep_info['absolute_number'])
+        # an episode with no absolute number is counted for one log line per show in load_episodes_from_tvinfo
+        if getattr(ep_info, 'absolute_number', None) not in (None, ''):
+            absolute_number = int(ep_info['absolute_number'])
+            if absolute_number != self._absolute_number:
+                logger.debug(f'{self._show_obj.tvid_prodid}:'
+                             f' The absolute_number for {season}x{episode} is : {absolute_number}')
+            self.absolute_number = absolute_number
 
         if switch and None is not switch_list:
             if self._name != self.dict_prevent_nonetype(ep_info, 'episodename'):
@@ -4490,6 +4653,7 @@ class TVEpisode(TVEpisodeBase):
         if not os.path.isfile(self._location):
 
             if self._status in [SKIPPED, UNAIRED, UNKNOWN, WANTED]:
+                msg = None
                 very_old_delta = datetime.timedelta(days=90)
                 very_old_airdate = datetime.date.fromordinal(1) < self._airdate < (today - very_old_delta)
 
@@ -4523,13 +4687,10 @@ class TVEpisode(TVEpisodeBase):
                     self.status = (SKIPPED, WANTED)[update and not self._show_obj.paused and 0 < self._season
                                                     and not very_old_airdate]
 
-                else:
-                    msg = 'Not touching episode status %s, with air date in the past, because there is no file'
+                # else, there is no file and the status stays as it is
 
-            else:
-                msg = 'Not touching episode status %s, because there is no file'
-
-            logger.debug(msg % statusStrings[self._status])
+                if msg:
+                    logger.debug(msg % statusStrings[self._status])
 
         # if we have a media file then it's downloaded
         elif sickgear.helpers.has_media_ext(self._location):
@@ -4772,7 +4933,6 @@ class TVEpisode(TVEpisodeBase):
         """
 
         if not self.dirty and not force_save:
-            logger.debug(f'{self._show_obj.tvid_prodid}: Not creating SQL queue - record is not dirty')
             return
 
         self.dirty = False
@@ -4786,7 +4946,7 @@ class TVEpisode(TVEpisodeBase):
             release_name, is_proper, showid, season, episode, absolute_number,
             version, release_group,
             network, network_id, network_country, network_country_code, network_is_stream,
-            airtime, runtime, timestamp, timezone,
+            airtime, runtime, timestamp, timezone, video_codec,
             scene_absolute_number, scene_season, scene_episode)
             VALUES
             ((SELECT episode_id FROM tv_episodes
@@ -4800,7 +4960,7 @@ class TVEpisode(TVEpisodeBase):
             ,?,?,?,?
             ,?,?
             ,?,?,?,?,?
-            ,?,?,?,?,
+            ,?,?,?,?,?,
             (SELECT scene_absolute_number FROM tv_episodes
              WHERE indexer = ? AND showid = ? AND season = ? AND episode = ?),
             (SELECT scene_season FROM tv_episodes
@@ -4818,7 +4978,7 @@ class TVEpisode(TVEpisodeBase):
                   self._version, self._release_group,
                   self._network, self._network_id,
                   self._network_country, self._network_country_code, self._network_is_stream,
-                  time_to_int(self._airtime), self._runtime, self._timestamp, self._timezone,
+                  time_to_int(self._airtime), self._runtime, self._timestamp, self._timezone, self._video_codec,
                   self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
                   self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode,
                   self._show_obj.tvid, self._show_obj.prodid, self._season, self._episode]]
@@ -4832,7 +4992,6 @@ class TVEpisode(TVEpisodeBase):
         """
 
         if not self.dirty and not force_save:
-            logger.debug(f'{self._show_obj.tvid_prodid}: Not saving episode to db - record is not dirty')
             return
 
         logger.debug(f'{self._show_obj.tvid_prodid}: Saving episode details to database')
@@ -4867,6 +5026,7 @@ class TVEpisode(TVEpisodeBase):
             timestamp=self._timestamp,
             timezone=self._timezone,
             version=self._version,
+            video_codec=self._video_codec,
         )
 
         control_value_dict = dict(

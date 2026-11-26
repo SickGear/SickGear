@@ -18,8 +18,9 @@
 
 import unittest
 import test_lib as test
-from sickgear import cache_db, mainDB, failed_db
 from six import integer_types
+
+from sickgear import cache_db, mainDB, failed_db
 
 
 class DBBasicTests(test.SickbeardTestDBCase):
@@ -45,6 +46,48 @@ class DBBasicTests(test.SickbeardTestDBCase):
         self.assertEqual(cache_db.TEST_BASE_VERSION is not None, self.is_testdb(cache_db.MAX_DB_VERSION))
         self.assertEqual(mainDB.TEST_BASE_VERSION is not None, self.is_testdb(mainDB.MAX_DB_VERSION))
         self.assertEqual(failed_db.TEST_BASE_VERSION is not None, self.is_testdb(failed_db.MAX_DB_VERSION))
+
+    def test_download_identity(self):
+        from sickgear import failed_history, history
+        from sickgear.common import DOWNLOAD_CLIENTS, SNATCHED, Quality
+
+        puid = '[[provider]]-abc123'
+        history._log_history_item(Quality.composite_status(SNATCHED, Quality.HDTV), 1, 123, 1, 2, Quality.HDTV,
+                                  'Show.S01E02.720p.HDTV.x264-GRP', 'provider', puid=puid,
+                                  client=DOWNLOAD_CLIENTS.SABNZBD, client_uid='SABnzbd_nzo_x1')
+        row = history.find_data_by_puidstr(puid)
+        self.assertEqual('Show.S01E02.720p.HDTV.x264-GRP', row['resource'])
+        self.assertEqual('SABnzbd_nzo_x1', row['client_uid'])
+        self.assertIsNone(history.find_data_by_puidstr('[[provider]]-other'))
+
+        self.assertFalse(failed_history.has_failed(puid=puid))
+        failed_history.add_failed('Show.S01E02.720p.HDTV.x264-GRP', puid=puid,
+                                  client=DOWNLOAD_CLIENTS.SABNZBD, client_uid='SABnzbd_nzo_x1')
+        self.assertTrue(failed_history.has_failed(puid=puid))
+        self.assertTrue(failed_history.has_failed(client=DOWNLOAD_CLIENTS.SABNZBD, client_uid='SABnzbd_nzo_x1'))
+        # only trusted clients are matched by client uid
+        self.assertFalse(failed_history.has_failed(client=DOWNLOAD_CLIENTS.NZBGET, client_uid='SABnzbd_nzo_x1'))
+
+    def test_show_queue_words(self):
+        from sickgear import db
+        with db.DBConnection('cache.db') as cache:
+            cache.action('INSERT INTO show_queue (tvid, prodid, action_id, uid, rls_ignore_words, rls_require_words,'
+                         ' rls_global_exclude_ignore, rls_global_exclude_require) VALUES (?,?,?,?,?,?,?,?)',
+                         [1, 123, 2, 1, 'regex:^a, b', 'c', 'd,e', ''])
+            row = cache.select('SELECT * FROM show_queue WHERE uid = 1')[0]
+        self.assertEqual(('regex:^a, b', 'c', 'd,e', ''), tuple(
+            row[k] for k in ('rls_ignore_words', 'rls_require_words',
+                             'rls_global_exclude_ignore', 'rls_global_exclude_require')))
+
+    def test_upgrade_with_existing_columns(self):
+        from sickgear import db
+        with db.DBConnection('cache.db') as cache:
+            columns = cache.table_info('show_queue')
+            # run the steps from 7 again, the columns that they add exist
+            cache.action('UPDATE db_version SET db_version = ?', [7])
+            db.upgrade_database(cache, cache_db.InitialSchema)
+            self.assertEqual(cache_db.MAX_DB_VERSION, cache.check_db_version())
+            self.assertEqual(list(columns), list(cache.table_info('show_queue')))
 
     def test_mass_action(self):
         field_list = ['show_id', 'indexer_id', 'indexer', 'show_name', 'location', 'network', 'genre', 'classification',
