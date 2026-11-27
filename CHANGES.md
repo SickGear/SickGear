@@ -1,4 +1,9 @@
-﻿### 3.37.0 (2026-11-26 23:00:00 UTC)
+﻿### 3.37.1 (2026-11-27 00:05:00 UTC)
+
+* Fix a backlog or manual search at a newznab provider fails with an error for a show that uses scene numbering
+
+
+### 3.37.0 (2026-11-26 23:00:00 UTC)
 
 * Update apprise 1.11.0 (158c4e1) to 1.13.1 (cf4da87)
 * Update browser_ua from user-agents 2.1.38 (a78437e) to v2.1.246 (53a8923)
