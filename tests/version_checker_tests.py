@@ -6,7 +6,7 @@ sys.path.insert(1, abspath(join(dirname(__file__), '..')))
 sys.path.insert(1, abspath(join(dirname(__file__), '..', 'lib')))
 
 from sickgear import logger
-from sickgear.version_checker import log_output
+from sickgear.version_checker import log_output, remote_web_url
 
 
 class LogOutputTests(unittest.TestCase):
@@ -28,6 +28,25 @@ class LogOutputTests(unittest.TestCase):
     def test_no_output(self):
         self.assertEqual('', log_output(None))
         self.assertEqual('', log_output(''))
+
+
+class RemoteWebUrlTests(unittest.TestCase):
+    """ the newer version link goes to the site of the git remote in use, a GitLab path has the /- part """
+
+    def test_gitlab_ssh(self):
+        self.assertEqual('https://gitlab.com/SickGear/SickGear/-',
+                         remote_web_url('git@gitlab.com:SickGear/SickGear.git'))
+
+    def test_github_https(self):
+        self.assertEqual('https://github.com/SickGear/SickGear',
+                         remote_web_url('https://github.com/SickGear/SickGear.git\n'))
+
+    def test_ssh_url_with_user_and_port(self):
+        self.assertEqual('https://gitlab.com/a/b/-', remote_web_url('ssh://git@gitlab.com:22/a/b.git'))
+
+    def test_unknown_gives_github(self):
+        for cur_url in (None, '', 'D:/local/repo'):
+            self.assertEqual('https://github.com/SickGear/SickGear', remote_web_url(cur_url))
 
 
 if '__main__' == __name__:
