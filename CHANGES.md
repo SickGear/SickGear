@@ -10,6 +10,7 @@
 * Fix the update check names GitHub in its error and newer version link when the git remote is another site
 * Change log one line per database at start for its upgrade checks, not two lines for each step not needed
 * Change an update after a force push of the same code to reset the branch, not stop as ahead of the remote
+* Fix the edit show info language menu opening a second, plain browser list over its own
 
 
 ### 3.37.1 (2026-11-27 00:05:00 UTC)
