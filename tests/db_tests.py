@@ -17,10 +17,12 @@
 # along with SickGear.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+from unittest import mock
+
 import test_lib as test
 from six import integer_types
 
-from sickgear import cache_db, mainDB, failed_db
+from sickgear import cache_db, db, mainDB, failed_db
 
 
 class DBBasicTests(test.SickbeardTestDBCase):
@@ -113,6 +115,19 @@ class DBBasicTests(test.SickbeardTestDBCase):
         for i, f in enumerate(field_list):
             self.assertEqual(str(result[-1][0][f]), str(insert_para[i]),
                              msg=f'Field {f}: {result[-1][0][f]} != {insert_para[i]}')
+
+    def test_mass_action_count_line(self):
+        # the count line is for a logged transaction only, and counts the rows a write changed, not a select
+        queries = [['UPDATE tv_shows SET paused = 0'], ['SELECT * FROM tv_shows'], ['SELECT * FROM tv_shows']]
+        for cur_log, cur_lines in ((False, []),
+                                   (True, ['Transaction with 3 queries executed affected at least 1 row'])):
+            with test.db.DBConnection() as sg_db, mock.patch.object(db.logger, 'debug') as debug, \
+                    mock.patch.object(db.logger, 'log'):
+                sg_db.action('INSERT INTO tv_shows (show_id, indexer_id, indexer) VALUES (1, 2, 1)')
+                sg_db.mass_action(queries, log_transaction=cur_log)
+                sg_db.action('DELETE FROM tv_shows')
+            self.assertEqual(cur_lines, [cur_c.args[0] for cur_c in debug.call_args_list
+                                         if cur_c.args[0].startswith('Transaction')])
 
 
 if '__main__' == __name__:

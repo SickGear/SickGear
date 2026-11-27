@@ -238,16 +238,16 @@ class DBConnection(object):
                     if not log_transaction:
                         for cur_query in queries:
                             sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
-                            affected += abs(cursor.rowcount)
+                            affected += max(0, cursor.rowcount)  # a select gives -1
                     else:
                         for cur_query in queries:
                             logger.log(cur_query[0] if 1 == len(cur_query)
                                        else '%s with args %s' % tuple(cur_query), logger.DB)
                             sql_result.append(cursor.execute(*tuple(cur_query)).fetchall())
-                            affected += abs(cursor.rowcount)
+                            affected += max(0, cursor.rowcount)  # a select gives -1
 
                     self.connection.commit()
-                    if 0 < affected:
+                    if log_transaction and 0 < affected:
                         logger.debug(f'Transaction with {len(queries)} queries executed affected at least {affected:d}'
                                      f' row{helpers.maybe_plural(affected)}')
                     return sql_result
