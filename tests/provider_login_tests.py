@@ -204,9 +204,10 @@ class CookieSettingTests(unittest.TestCase):
 class LoginSettingSaveTests(unittest.TestCase):
     """ a saved change to a login setting lets the next search update the provider cache, it does not wait """
 
-    def save(self, digest, form=None, **attrs):
+    def save(self, digest, form=None, seed=None, **attrs):
         provider = TorrentProvider('Cookie Prov')
         provider.digest = 'uid=1;pass=old'
+        seed and seed(provider)
         for cur_attr, cur_value in attrs.items():
             setattr(provider, cur_attr, cur_value)
         provider.cache = mock.MagicMock()
@@ -235,6 +236,26 @@ class LoginSettingSaveTests(unittest.TestCase):
         provider = self.save('uid=1;pass=old', form={'cookie_prov_uid': '456'}, uid='123')
         self.assertEqual('456', provider.uid)
         provider.cache.set_last_update.assert_called_once()
+
+    @staticmethod
+    def seed_site_cookies(provider):
+        for cur_dom in ('site.test', 'cdn.other.test'):
+            provider.session.cookies.set('sess', 'old', domain=cur_dom)
+        sickgear.MEMCACHE.setdefault('cookies', {}).update(
+            {'www.site.test': provider.session.cookies.copy(), 'img.unrelated.test': 'keep'})
+
+    def test_changed_cookie_drops_old_site_cookies(self):
+        provider = self.save('uid=1;pass=new', seed=self.seed_site_cookies)
+        self.assertEqual(0, len(provider.session.cookies))
+        self.assertNotIn('www.site.test', sickgear.MEMCACHE['cookies'])
+        self.assertEqual('keep', sickgear.MEMCACHE['cookies'].pop('img.unrelated.test'))
+
+    def test_same_cookie_keeps_site_cookies(self):
+        provider = self.save('uid=1;pass=old', seed=self.seed_site_cookies)
+        self.assertEqual(2, len(provider.session.cookies))
+        self.assertIn('www.site.test', sickgear.MEMCACHE['cookies'])
+        for cur_dom in ('www.site.test', 'img.unrelated.test'):
+            sickgear.MEMCACHE['cookies'].pop(cur_dom)
 
 
 if '__main__' == __name__:

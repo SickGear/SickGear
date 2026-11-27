@@ -10185,6 +10185,13 @@ class ConfigProviders(Config):
         def login_changed(p, was):
             if was != login_of(p):
                 p.cache.set_last_update(datetime(2000, 1, 1))
+                # drop cookies the site set for the old login, they live in memory only, as after a restart
+                doms = {cur_c.domain.lstrip('.') for cur_c in p.session.cookies}
+                p.session.cookies.clear()
+                mem = sickgear.MEMCACHE.get('cookies', {})
+                for cur_d in [d for d in mem if any(d.split(':')[0] == x or d.split(':')[0].endswith(f'.{x}')
+                                                    for x in doms)]:
+                    del mem[cur_d]
                 logger.debug(f'{p.name} login setting changed, the next recent search updates its cache')
 
         # update torrent source settings
