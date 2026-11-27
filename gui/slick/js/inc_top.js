@@ -85,7 +85,9 @@ $(function(){
 
 	// handle menus heights on init and when window is resized
 	let activemenu$ = $('.dropdown.active .dropdown-menu li');
-	let tailloc = location.href.replace(/.*\/([^\/]+)\/?$/, '/$1');
+	// the page is marked by its path, the query of a history layout is not a page of its own, so History is marked and
+	// not the layout icon beside it; a show page is marked by its query, the show
+	let tailloc = location.pathname.replace(/.*\/([^\/]+)\/?$/, '/$1');
 	if (-1 !== tailloc.indexOf('view-show')){
 		tailloc = location.href.replace(/.*\/([^\/]+)\/?$/, '$1');
 	}

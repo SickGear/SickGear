@@ -14,6 +14,7 @@
 * Change dark theme links and quality buttons back to pre-3.37.0 colours, and make menus and form controls dark
 * Add theme NoGlare: the dark theme with dark status colours and badges, and no bright fill behind text
 * Change episode NFO and TBN mark tips to name the file and say if it exists, not just Yes or No
+* Change the Shows menu to mark History, not a layout icon beside it, when a history layout page is open
 
 
 ### 3.37.1 (2026-11-27 00:05:00 UTC)
