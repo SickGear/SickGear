@@ -313,6 +313,7 @@ class GitUpdateManager(UpdateManager):
         self._old_branch = None
         self._num_commits_behind = 0
         self._num_commits_ahead = 0
+        self._rewritten = False  # True when a force push rebuilt the remote branch with the local code in it
         self._cur_pr_number = self.get_cur_pr_number()
 
     def _find_working_git(self):
@@ -470,6 +471,7 @@ class GitUpdateManager(UpdateManager):
 
         self._num_commits_behind = 0
         self._num_commits_ahead = 0
+        self._rewritten = False
 
         # get all new info from the git remote
         _, _, exit_status = self._run_git(['fetch', f'{sickgear.GIT_REMOTE}'])
@@ -513,6 +515,16 @@ class GitUpdateManager(UpdateManager):
                 except (BaseException, Exception):
                     logger.debug("git didn't return numbers for behind and ahead, not using it")
                     return
+
+            if self._num_commits_ahead and self._num_commits_behind:
+                # a force push rebuilt the remote branch, the local commits are not ahead when the code of the local
+                # branch is one the remote branch has, e.g. the same trees with other parents
+                trees, _, _ = self._run_git(['log', '--format=%T', 'HEAD..@{upstream}'], fail_ok=True)
+                tree, _, _ = self._run_git(['rev-parse', 'HEAD^{tree}'], fail_ok=True)
+                if tree and tree.strip() in (trees or '').split():
+                    logger.log('The remote branch was rewritten and has the local code, an update resets to it')
+                    self._rewritten = True
+                    self._num_commits_ahead = 0
 
             logger.debug(f'cur_commit = {self._cur_commit_hash}'
                          f', newest_commit = {self._newest_commit_hash}'
@@ -630,7 +642,10 @@ class GitUpdateManager(UpdateManager):
         self._old_commit_hash = self._cur_commit_hash
 
         if self.branch == self._find_installed_branch():
-            if not self._cur_pr_number:
+            if self._rewritten:
+                # a pull would merge the old and the rebuilt commits, the local code is in the remote branch
+                _, _, exit_status = self._run_git(['reset', '--keep', '@{upstream}'])
+            elif not self._cur_pr_number:
                 _, _, exit_status = self._run_git(['pull', '-f', '--no-rebase', f'{sickgear.GIT_REMOTE}',
                                                    f'{self.branch}'])
             else:
