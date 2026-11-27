@@ -207,6 +207,14 @@ class TouchFileTests(unittest.TestCase):
         self.assertIn(self.file, cur_log.output[0])
         self.assertIn('Permission denied', cur_log.output[0])
 
+    def test_read_only_file_warns_once(self):
+        os.chmod(self.file, stat.S_IREAD)
+        with self.assertLogs('sg.helper', 'DEBUG') as cur_log:
+            helpers.touch_file(self.file, 1163122200)
+            helpers.touch_file(self.file, 1163122200)
+        self.assertEqual(['WARNING', 'DEBUG'],
+                         [_l.split(':')[0] for _l in cur_log.output if 'Unable to set the modify date' in _l])
+
     def test_writable_file(self):
         self.assertTrue(helpers.touch_file(self.file, 1163122200))
         self.assertEqual(1163122200, int(os.path.getmtime(self.file)))

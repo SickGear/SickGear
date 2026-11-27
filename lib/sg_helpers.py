@@ -1425,6 +1425,10 @@ def remove_file(filepath, tree=False, prefix_failure='', log_level=logging.INFO)
     return (None, result)[filepath and not os.path.exists(filepath)]
 
 
+# files whose modify date could not be set this run, a file is warned about once, as each show refresh tries it again
+_touch_failed = set()
+
+
 def touch_file(name, atime=None, dir_name=None):
     # type: (AnyStr, int, AnyStr) -> bool
     """
@@ -1450,7 +1454,9 @@ def touch_file(name, atime=None, dir_name=None):
                 os.utime(name, (atime, atime))
             return True
         except (BaseException, Exception) as e:
-            logger.warning(f'Unable to set the modify date of {name}: {getattr(e, "strerror", None) or e}')
+            (logger.warning, logger.debug)[name in _touch_failed](
+                f'Unable to set the modify date of {name}: {getattr(e, "strerror", None) or e}')
+            _touch_failed.add(name)
 
     return False
 
