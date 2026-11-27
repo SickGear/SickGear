@@ -1,6 +1,7 @@
 ﻿### 3.38.x (2026-xx-xx xx:xx:00 UTC)
 
 * Fix a show that uses scene numbering gets too few newznab results per season search, a busy season can miss a release
+* Change log no debug line per episode for its status check and file name pattern in a show update, 6,500 a night
 
 
 ### 3.37.1 (2026-11-27 00:05:00 UTC)

@@ -4645,10 +4645,6 @@ class TVEpisode(TVEpisodeBase):
                            ' not bothering to change the episode statuses since it\'d probably be invalid')
             return
 
-        if self._location:
-            logger.debug(f'{self._show_obj.tvid_prodid}: Setting status for {season}x{episode}'
-                         f' based on status {statusStrings[self._status]} and existence of {self._location}')
-
         # if we don't have the file
         if not os.path.isfile(self._location):
 
@@ -5247,7 +5243,6 @@ class TVEpisode(TVEpisodeBase):
 
             result_name = result_name.replace('%RG', 'SickGear')
             result_name = result_name.replace('%rg', 'SickGear')
-            logger.debug(f'Episode has no release name, replacing it with a generic one: {result_name}')
 
         if not replace_map['%RT']:
             result_name = re.sub('([ _.-]*)%RT([ _.-]*)', r'\2', result_name)
@@ -5361,8 +5356,6 @@ class TVEpisode(TVEpisodeBase):
                 result_name = result_name.replace(cur_name_group, cur_name_group_result)
 
         result_name = self._format_string(result_name, replace_map)
-
-        logger.debug(f'formatting pattern: {pattern} -> {result_name}')
 
         return result_name
 
