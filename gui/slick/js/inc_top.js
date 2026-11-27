@@ -51,20 +51,32 @@ function updateMenu(menuHeader) {
 	});
 }
 
+// the theme menu item goes from light to dark, to NoGlare, the dark style sheet with an overlay after it,
+// and back to light
 function setStyle(){
-	let style$, fromTheme='light', toTheme = 'dark';
+	let style$ = $('link[rel*="stylesheet"][href*="/css/light.css"], link[rel*="stylesheet"][href*="/css/dark.css"]').first(),
+		overlay$ = $('#noglare-css'), toTheme;
 
-	if (!(style$ = $('link[rel*="stylesheet"][href*="light"]')).length){
-		style$ = $('link[rel*="stylesheet"][href*="dark"]');
-		fromTheme='dark';
+	if (/\/light\.css/.test(style$.attr('href'))){
+		toTheme = 'dark';
+		style$.attr('href', style$.attr('href').replace('/light.css', '/dark.css'));
+	} else if (!overlay$.length){
+		toTheme = 'dark-noglare';
+		$('<link rel="stylesheet" id="noglare-css">')
+			.attr('href', style$.attr('href').replace('/dark.css', '/noglare.css')).insertAfter(style$);
+	} else {
 		toTheme = 'light';
+		overlay$.remove();
+		style$.attr('href', style$.attr('href').replace('/dark.css', '/light.css'));
 	}
-	style$.disabled = !0;
-	style$.attr('href', style$.attr('href').replace(fromTheme, toTheme));
-	$.get($.SickGear.Root + '/add-shows/toggle-theme',
-		{'theme': toTheme});
-	style$.disabled = !1;
-	return !0;
+	$.get($.SickGear.Root + '/add-shows/toggle-theme', {'theme': toTheme});
+	// the item names the theme in use, in its tip too, and the theme the next click moves to
+	let names = {'light': 'Light', 'dark': 'Dark', 'dark-noglare': 'NoGlare'},
+		next = {'light': 'dark', 'dark': 'dark-noglare', 'dark-noglare': 'light'};
+	$('#theme').attr('title', 'Theme in use: ' + names[toTheme]);
+	$('.theme-name-now').text(names[toTheme]);
+	$('.theme-name-next').text(names[next[toTheme]]);
+	return !1;
 }
 
 $(function(){
@@ -73,7 +85,9 @@ $(function(){
 
 	// handle menus heights on init and when window is resized
 	let activemenu$ = $('.dropdown.active .dropdown-menu li');
-	let tailloc = location.href.replace(/.*\/([^\/]+)\/?$/, '/$1');
+	// the page is marked by its path, the query of a history layout is not a page of its own, so History is marked and
+	// not the layout icon beside it; a show page is marked by its query, the show
+	let tailloc = location.pathname.replace(/.*\/([^\/]+)\/?$/, '/$1');
 	if (-1 !== tailloc.indexOf('view-show')){
 		tailloc = location.href.replace(/.*\/([^\/]+)\/?$/, '$1');
 	}
@@ -84,7 +98,7 @@ $(function(){
 	$('.dropdown-toggle').dropdownHover();
 
 	// add event to change theme on click of the selected element
-	$('#theme').click(function(){setStyle();});
+	$('#theme').click(function(){return setStyle();});
 
 	(/undefined/i.test(document.createElement('input').placeholder)) && $('body').addClass('no-placeholders');
 

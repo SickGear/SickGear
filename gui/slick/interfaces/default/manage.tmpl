@@ -186,7 +186,7 @@ th.col-legend .rotate-body, th.col-legend .rotate-body2{left:calc(50% + 7px)}
 #bulk-change-table th.sort-size, #bulk-change-table-sticky th.sort-size{width:1%; padding:4px 4px 17px; vertical-align:bottom; text-align:center}
 #bulk-change-table th.sort-size select.size-type, #bulk-change-table-sticky th.sort-size select.size-type{margin-bottom:0}
 
-#set $theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
+#set $theme_suffix = ('', '-dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]
 .tip,.tip-average{margin:0 2px}
 .tip-average{border-top:1px solid #echo ('#999', '#666')[not $theme_suffix]#}
 .tip-average,.tip-average i{display:inline-block; line-height:8px}

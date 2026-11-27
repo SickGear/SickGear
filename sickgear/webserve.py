@@ -1692,7 +1692,7 @@ r.close()
     @staticmethod
     def toggle_theme(theme):
 
-        if theme in ('dark', 'light'):
+        if theme in ('dark', 'light', 'dark-noglare'):
             sickgear.THEME_NAME = theme
 
     def toggle_paused(self, tvid_prodid):

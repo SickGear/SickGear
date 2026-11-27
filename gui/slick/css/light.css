@@ -3,6 +3,9 @@
 	--link-hover:#09a2ff;
 	--text:#000;
 	--deselect-text:#eee;
+	--btn-inverse-top:#555;
+	--btn-inverse-bottom:#222;
+	--btn-inverse-active:#222;
 	--green-text:#393;
 }
 /* =======================================================================
@@ -1218,6 +1221,27 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 .btn.disabled,
 .btn[disabled]{
 	background:#e6e6e6 none;
+}
+
+/* the quality buttons, dark grey, a chosen one darker */
+.btn-inverse{
+	background-color:var(--btn-inverse-bottom);
+	background-image:linear-gradient(to bottom, var(--btn-inverse-top), var(--btn-inverse-bottom));
+	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+	filter:none
+}
+
+.btn-inverse:hover,
+.btn-inverse:active,
+.btn-inverse.active,
+.btn-inverse.disabled,
+.btn-inverse[disabled]{
+	background-color:var(--btn-inverse-active)
+}
+
+/* the grey text of a quality button not chosen, as in the dark theme, the grey text of the page is too dark on the button */
+.btn-inverse.dark-bg:not(.active){
+	color:#a3a3a3
 }
 
 .btn-primary,

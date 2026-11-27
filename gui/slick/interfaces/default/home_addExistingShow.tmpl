@@ -34,7 +34,7 @@ var config = { sortArticle: #echo ['!1','!0'][$sg_var('SORT_ARTICLE')]# }
 	<h1 class="title">$title</h1>
 #end if
 
-<img class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" width="32" height="32" border="0">
+<img class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32#echo ('', '-dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]#.gif" width="32" height="32" border="0">
 
 <h3>Existing show folders</h3>
 <form id="addShowForm" method="post" action="$sbRoot/add-shows/add-new-show" accept-charset="utf-8">

@@ -16,7 +16,7 @@
 #set $restart = 'Restart SickGear for new features on this page'
 #set $show_message = ($show_message, $restart)[None is $has_art]
 #set global $page_body_attr = 'display-show" class="' + $css
-#set theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
+#set theme_suffix = ('', '-dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]
 ##
 #import os.path, os, re
 #set global $inc_top_glide = True

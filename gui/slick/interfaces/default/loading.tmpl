@@ -2,7 +2,7 @@
 #from sickgear import WEB_PORT, WEB_ROOT, PID, ENABLE_HTTPS, THEME_NAME
 #set sg_root = $getVar('sbRoot', WEB_ROOT)
 #set sg_pid = $getVar('sbPID', str(PID))
-#set theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+#set theme_suffix = ('', '-dark')[($getVar('sbThemeName', THEME_NAME) or '').startswith('dark')]
 ##
 <!DOCTYPE html>
 <head>

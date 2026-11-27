@@ -30,10 +30,11 @@
 				<input type="checkbox" class="epCheck #echo 'hide' if $UNAIRED == int($ep['status']) else ''#" id="$ep_str" name="$ep_str">
 			</td>
 
-    #set $nfo, $nfo_img = (('No', '-no'), ('Yes', ''))[int($ep['hasnfo'])]
-    #set $tbn, $tbn_img = (('No', '-no'), ('Yes', ''))[int($ep['hastbn'])]
-			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" width="23" height="11"><br>
-			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" width="23" height="11"></td>
+    ## the tip of a mark says which file it is for and whether the episode has it
+    #set $nfo, $nfo_img = (('No episode info file (.nfo)', '-no'), ('Episode info file (.nfo) found', ''))[int($ep['hasnfo'])]
+    #set $tbn, $tbn_img = (('No episode thumbnail (.tbn)', '-no'), ('Episode thumbnail (.tbn) found', ''))[int($ep['hastbn'])]
+			<td align="center" class="meta"><img src="$sbRoot/images/nfo${nfo_img}.gif" alt="$nfo" title="$nfo" class="addQTip" width="23" height="11"><br>
+			<img src="$sbRoot/images/tbn${tbn_img}.gif" alt="$tbn" title="$tbn" class="addQTip" width="23" height="11"></td>
 
     #if $epLoc and $show_obj._location and $epLoc.lower().startswith($show_obj._location.lower())
         #set $epLoc = $epLoc[len($show_obj._location)+1:]

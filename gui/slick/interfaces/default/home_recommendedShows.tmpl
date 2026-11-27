@@ -20,7 +20,7 @@
 <h1 class="title">$title</h1>
 #end if
 
-<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32<%= '-dark' if 'dark' == sickgear.THEME_NAME else '' %>.gif" width="32" height="32" border="0">
+<image class="preload-image" style="position:absolute;top:-999px" src="$sbRoot/images/loading32<%= '-dark' if (sickgear.THEME_NAME or '').startswith('dark') else '' %>.gif" width="32" height="32" border="0">
 
 <div id="newShowPortal">
 

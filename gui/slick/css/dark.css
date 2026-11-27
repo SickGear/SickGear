@@ -1,6 +1,11 @@
 :root{
-	--link:#00bfff;
-	--link-hover:#add8e6;
+	--link:#2d8fbf;
+	--link-hover:#09a2ff;
+	--link-page:#337ab7;
+	--link-page-hover:#23527c;
+	--btn-inverse-top:#555;
+	--btn-inverse-bottom:#222;
+	--btn-inverse-active:#222;
 	--text:#ddd;
 	--green-text:#393;
 }
@@ -1308,6 +1313,22 @@ fieldset[disabled] .form-control{
 	background:#15528f none;
 }
 
+/* the quality buttons, dark grey, a chosen one darker */
+.btn-inverse{
+	background-color:var(--btn-inverse-bottom);
+	background-image:linear-gradient(to bottom, var(--btn-inverse-top), var(--btn-inverse-bottom));
+	border-color:rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+	filter:none
+}
+
+.btn-inverse:hover,
+.btn-inverse:active,
+.btn-inverse.active,
+.btn-inverse.disabled,
+.btn-inverse[disabled]{
+	background-color:var(--btn-inverse-active)
+}
+
 .btn-primary,
 .btn-primary:hover,
 .btn-warning,
@@ -1617,8 +1638,46 @@ div.token-input-dropdown ul li{
 	background-color:#232323
 }
 
+/* the field of the box, the chosen languages and the open list dark, the field was white with light grey text;
+   the field to type in a darker fill as the other fields */
+ul.token-input-list li input{
+	background-color:#181818;
+	color:var(--text)
+}
+
+ul.token-input-list li.token-input-input-token input{
+	border-color:#555
+}
+
+li.token-input-token{
+	background-color:#1a3524;
+	border:1px solid #2f5a3c;
+	color:#b9d9bf
+}
+
+li.token-input-token span{
+	color:#b9d9bf
+}
+
 li.token-input-selected-token{
-	color:#232323
+	background-color:#15528f;
+	color:#fff
+}
+
+div.token-input-dropdown{
+	border-color:#444
+}
+
+div.token-input-dropdown p,
+div.token-input-dropdown ul li.token-input-dropdown-item,
+div.token-input-dropdown ul li.token-input-dropdown-item2{
+	background-color:#232323;
+	color:var(--text)
+}
+
+div.token-input-dropdown ul li.token-input-selected-dropdown-item{
+	background-color:#15528f;
+	color:#fff
 }
 
 /* =======================================================================
@@ -1754,23 +1813,33 @@ body .select2-results__options .select2-results__option {
 	color: var(--text) !important;
 	background-color: #121212;
 }
-body .select2-results__option--selected, 
+/* the show picker and language menus, the chosen row in a light red and the row under the pointer a dark blue, 4.5:1
+   or more on the dark menu */
+body .select2-results__options .select2-results__option--selected,
 body .select2-results__option--selected span,
 body #select2-infosrc-lang-select-results .select2-results__option--selected span{
-	color: rgb(204, 0, 0) !important;
+	color:#ff8a8a !important
 }
-body .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
-	background-color: #5897fb;
-	color: white;
+body .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable{
+	background-color:#15528f;
+	color:#fff
+}
+body .select2-results__options .select2-results__option--selected.select2-results__option--highlighted,
+body .select2-results__option--selected.select2-results__option--highlighted span,
+body #select2-infosrc-lang-select-results .select2-results__option--selected.select2-results__option--highlighted span{
+	color:#fff !important
 }
 
 .qtip-bootstrap .add-shows-title,
-.qtip-bootstrap .browse-title,
+.qtip-bootstrap .browse-title{
+	color:var(--text)
+}
+
 a{
-	color:var(--link)	/* DeepSkyBlue*/
+	color:var(--link-page)
 }
 a:focus, a:hover {
-	color:var(--link-hover)	/* LightBlue; */
+	color:var(--link-page-hover)
 }
 
 .profile-menu,
@@ -1796,4 +1865,23 @@ a:focus, a:hover {
 }
 .deselect-text{
 	color:var(--text);
+}
+
+/* the arrows of a number field and the scroll bars the browser draws, in their dark form; the open list of a menu keeps
+   its own colours, with the browser dark form its chosen row is a light blue */
+input[type="number"]{
+	color-scheme:dark
+}
+
+html{
+	scrollbar-color:#5a5a5a #1e1e1e
+}
+
+/* the chosen rows of a list box, as the ignore words, a dark blue with white text, not grey or dark text on blue;
+   the browser sets the fill and text of a chosen row with important, the gradient and the text fill colour win over it */
+select[multiple] option:checked,
+select[size] option:checked{
+	background:#15528f linear-gradient(#15528f, #15528f);
+	color:#fff;
+	-webkit-text-fill-color:#fff
 }

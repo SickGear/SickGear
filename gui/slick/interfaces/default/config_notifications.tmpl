@@ -22,7 +22,7 @@
 	<h1 class="title">$title</h1>
 #end if
 
-<img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sickgear.THEME_NAME]#.gif" height="16" width="16" style="display:none">
+<img src="$sbRoot/images/loading16#echo ('', '-dark')[($sickgear.THEME_NAME or '').startswith('dark')]#.gif" height="16" width="16" style="display:none">
 <div id="config">
 	<div id="config-content">
 		<form id="configForm" action="$sbRoot/config/notifications/save-notifications" method="post">

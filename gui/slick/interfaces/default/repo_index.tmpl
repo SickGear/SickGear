@@ -5,7 +5,7 @@
 #set $sg_root = $getVar('sbRoot', WEB_ROOT)
 #set $sg_pid = $getVar('sbPID', str(PID))
 ##set $sg_use_https = $getVar('sbHttpsEnabled', ENABLE_HTTPS)
-#set $theme_suffix = ('', '-dark')['dark' == $getVar('sbThemeName', THEME_NAME)]
+#set $theme_suffix = ('', '-dark')[($getVar('sbThemeName', THEME_NAME) or '').startswith('dark')]
 ##
 <!DOCTYPE html>
 <html lang="en">
