@@ -4552,6 +4552,20 @@ fieldset[disabled] .navbar-default .btn-link:focus{
 	background-color:#f5f5f5
 }
 
+/* the field to type in of a box of tokens, as the subtitle languages, looks as the other fields, with a border, across
+   the box, so it shows where to type; the script that sizes it to the text it holds is overruled */
+ul.token-input-list li.token-input-input-token{
+	float:none
+}
+
+ul.token-input-list li.token-input-input-token input{
+	box-sizing:border-box;
+	width:calc(100% - 6px) !important;
+	margin:3px;
+	border:1px solid #ccc;
+	border-radius:3px
+}
+
 .dropdown-menu li.menu-item-noicon{
 	padding:0 0 0 20px
 }
