@@ -303,20 +303,30 @@ class GenericMetadata(object):
         return None
 
     @staticmethod
-    def _valid_show(fetched_show_info, show_obj):
-        # type: (Dict, sickgear.tv.TVShow) -> bool
+    def _valid_show(fetched_show_info, show_obj, tvid=None):
+        # type: (Dict, sickgear.tv.TVShow, Optional[int]) -> bool
         """
         Test the integrity of fetched show data
 
         :param fetched_show_info: the object returned from the tvinfo source
         :param show_obj: Show that the fetched data relates to
+        :param tvid: the tvinfo source the data was fetched from, when not the source of the show
         :return: True if fetched_show_obj is valid data otherwise False
         """
         if not (isinstance(fetched_show_info, dict) and
                 isinstance(getattr(fetched_show_info, 'data', None), (list, dict)) and
                 'seriesname' in getattr(fetched_show_info, 'data', [])) and \
                 not hasattr(fetched_show_info, 'seriesname'):
-            logger.warning(f'Show {show_obj.name} not found on {sickgear.TVInfoAPI(show_obj.tvid).name} ')
+            # a show missing on another source than its own only means fewer images to choose from, unless its id there
+            # is one that the user locked, as the user set that id and the not found count only covers its own source
+            # import here, as indexermapper imports helpers, which imports this module
+            from ..indexermapper import MapStatus
+            tvid = tvid or show_obj.tvid
+            mapped = (getattr(show_obj, 'ids', None) or {}).get(tvid) or {}
+            locked = tvid != show_obj.tvid and MapStatus.NO_AUTOMATIC_CHANGE == mapped.get('status')
+            (logger.warning, logger.debug)[tvid != show_obj.tvid and not locked](
+                f'Show {show_obj.name} not found on {sickgear.TVInfoAPI(tvid).name}'
+                + ('', f', for the locked id {mapped.get("id")}')[locked])
             return False
         return True
 
@@ -829,7 +839,7 @@ class GenericMetadata(object):
                     tvinfo_config['language'] = show_lang
 
                 t = sickgear.TVInfoAPI(tv_id).setup(**tvinfo_config)
-                return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_src == show_obj.tvid],
+                return t.get_show((show_obj.ids[tv_id]['id'], show_obj.prodid)[tv_id == show_obj.tvid],
                                   load_episodes=False, banners=True, posters=True, fanart=True, language=show_lang)
             except (BaseTVinfoError, IOError) as e:
                 logger.warning(f'Unable to look up show on {sickgear.TVInfoAPI(tv_id).name},'
@@ -901,7 +911,7 @@ class GenericMetadata(object):
                 yield r
 
         for tv_src in show_infos:
-            if not self._valid_show(show_infos[tv_src], show_obj):
+            if not self._valid_show(show_infos[tv_src], show_obj, tv_src):
                 continue
 
             if 'poster_thumb' == image_type:
