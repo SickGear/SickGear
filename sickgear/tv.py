@@ -4019,7 +4019,7 @@ class TVEpisode(TVEpisodeBase):
     def eps_aired_in_scene_season(self):
         # type: (...) -> int
         return self.show_obj.aired_in_scene_season.get(
-            self._scene_season, 0) if self.show_obj._scene else self.eps_aired_in_season
+            self.scene_season, 0) if self.show_obj._scene else self.eps_aired_in_season
 
     @property
     def status(self):
