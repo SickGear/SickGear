@@ -53,6 +53,20 @@ def log_output(output):
     return logger.JOINED_LINES.join(_l.rstrip() for _l in (output or '').splitlines() if _l.strip())
 
 
+def remote_web_url(remote_url):
+    # type: (Optional[AnyStr]) -> AnyStr
+    """
+    :param remote_url: url of a git remote, e.g. git@gitlab.com:SickGear/SickGear.git
+    :return: web page of the repo, a GitLab page ends with /- for the commit and compare pages that follow
+    """
+    found = re.search(r'^(?:\w+://)?(?:[^@/]+@)?([\w.-]+\.\w+)(?::\d+)?[:/](\S+?)(?:\.git)?/?$',
+                      (remote_url or '').strip())
+    if not found:
+        return 'https://github.com/SickGear/SickGear'
+    # shortcut: /- for gitlab hosts only, other self hosted sites take their GitHub style path
+    return f'https://{found.group(1)}/{found.group(2)}' + ('', '/-')['gitlab' in found.group(1)]
+
+
 class PackagesUpdater(Job):
 
     def __init__(self):
@@ -457,11 +471,11 @@ class GitUpdateManager(UpdateManager):
         self._num_commits_behind = 0
         self._num_commits_ahead = 0
 
-        # get all new info from GitHub
+        # get all new info from the git remote
         _, _, exit_status = self._run_git(['fetch', f'{sickgear.GIT_REMOTE}'])
 
         if 0 != exit_status:
-            logger.error("Unable to contact github, can't check for update")
+            logger.error(f"Unable to contact git remote {sickgear.GIT_REMOTE}, can't check for update")
             return
 
         if not self._cur_pr_number:
@@ -515,7 +529,7 @@ class GitUpdateManager(UpdateManager):
     def set_newest_text(self):
         # if we're up-to-date then don't set this
         newest_text = None
-        url = f'https://github.com/{self.github_repo_user}/{self.github_repo}'
+        url = remote_web_url(self._run_git(['remote', 'get-url', f'{sickgear.GIT_REMOTE}'], fail_ok=True)[0])
 
         if self._num_commits_ahead:
             newest_text = f'Local branch is ahead of {self.branch}. Automatic update not possible.'
@@ -557,7 +571,7 @@ class GitUpdateManager(UpdateManager):
         try:
             self._check_github_for_update()
         except (BaseException, Exception) as e:
-            logger.error(f'Unable to contact github, can"t check for update: {e!r}')
+            logger.error(f"Unable to contact git remote {sickgear.GIT_REMOTE}, can't check for update: {e!r}")
             return False
 
         if 0 < self._num_commits_behind:

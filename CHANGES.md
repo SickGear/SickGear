@@ -7,6 +7,7 @@
 * Fix a changed login setting sends the old site cookies too, until a restart
 * Fix the image lookup logs a show not found on another tv info source as not found on its own source
 * Change log no database transaction line per query batch, it repeats other lines and miscounts selects
+* Fix the update check names GitHub in its error and newer version link when the git remote is another site
 
 
 ### 3.37.1 (2026-11-27 00:05:00 UTC)
