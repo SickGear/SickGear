@@ -351,6 +351,27 @@ $(function(){
 		return (/\./.test(text) ? text : text + '.0') + ' ' + units[n][0];
 	}
 
+	// the counts of a Downloads cell in a tip, as the Size column has, made on the first hover of the cell, not for each
+	// of the rows when the page loads
+	$('#bulk-change-table').on('mouseenter', 'td.ui-downloads', function(){
+		var cell$ = $(this);
+		if (cell$.data('qtip'))
+			return;
+		var downloaded = +cell$.attr('data-downloaded'), snatched = +cell$.attr('data-snatched'),
+			total = +cell$.attr('data-total');
+		cell$.qtip({
+			content: {text: !total ? '<span class="grey-text">no aired episodes</span>'
+				: downloaded + ' <span class="grey-text">downloaded</span>'
+					+ (snatched ? '<br>' + snatched + ' <span class="grey-text">snatched</span>' : '')
+					+ '<br>' + (total - downloaded) + ' <span class="grey-text">not downloaded</span>'
+					+ '<div style="width:100%; border-top:1px dotted; margin-top:3px"></div>'
+					+ '<div style="margin-top:3px">' + total + ' <span class="grey-text">aired episodes</span></div>'},
+			show: {solo: !0, ready: !0},
+			position: {viewport: $(window), my: 'left center', adjust: {y: -10, x: 0}},
+			style: {classes: 'qtip-dark qtip-rounded qtip-shadow'}
+		});
+	});
+
 	// read the size of every show folder, slow on a large or network drive, so only when the button asks for it
 	function readSizes(){
 		var url = $.SickGear.Root + '/home/media_stats';
