@@ -801,6 +801,9 @@ def init_stage_1(console_logging):
     STATES_DATA_FILE = os.path.join(DATA_DIR, 'states-data.json')
 
     THEME_NAME = check_setting_str(CFG, 'GUI', 'theme_name', 'dark')
+    # the theme was named dark-low-glare while it was tried out
+    if 'dark-low-glare' == THEME_NAME:
+        THEME_NAME = 'dark-noglare'
     GUI_NAME = check_setting_str(CFG, 'GUI', 'gui_name', 'slick')
     DEFAULT_HOME = check_setting_str(CFG, 'GUI', 'default_home', 'episodes')
     FANART_LIMIT = check_setting_int(CFG, 'GUI', 'fanart_limit', 3)

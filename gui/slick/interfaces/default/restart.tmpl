@@ -6,7 +6,7 @@
 #set sg_root = $getVar('sg_root', WEB_ROOT)
 #set sg_pid = $getVar('sg_pid', str(PID))
 #set sg_use_https = $getVar('sg_https_enabled', ENABLE_HTTPS)
-#set theme_suffix = ('', '-dark')['dark' == $getVar('sg_theme_name', THEME_NAME)]
+#set theme_suffix = ('', '-dark')[($getVar('sg_theme_name', THEME_NAME) or '').startswith('dark')]
 #set do_shutdown = bool($getVar('shutdown', False))  ## can be None so must enforce bool
 ##
 <!DOCTYPE html>

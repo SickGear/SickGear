@@ -21,7 +21,7 @@
 #set $restart = 'Restart SickGear for new features on this page'
 #set $show_message = (None, $restart)[not $varExists('fanart')]
 #set global $page_body_attr  = 'episode-view" class="' + $css
-#set theme_suffix = ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]
+#set theme_suffix = ('', '-dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]
 ##
 #import os.path
 #include $os.path.join($sg_str('PROG_DIR'), 'gui/slick/interfaces/default/inc_top.tmpl')

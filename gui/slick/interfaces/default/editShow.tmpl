@@ -439,7 +439,7 @@
 								<p>for unlocked IDs</p>
 							</span>
 							<span id="save-wait" class="component-desc hide">
-								<span><img src="$sbRoot/images/loading16#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#.gif" style="margin-right:6px">Saving...</span>
+								<span><img src="$sbRoot/images/loading16#echo ('', '-dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]#.gif" style="margin-right:6px">Saving...</span>
 							</span>
 						</div>
 					</div>

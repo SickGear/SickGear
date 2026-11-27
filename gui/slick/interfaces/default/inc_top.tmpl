@@ -41,7 +41,7 @@
 	<meta name="msapplication-TileColor" content="#2b5797">
 	<meta name="msapplication-TileImage" content="$sbRoot/images/ico/mstile-144x144.png">
 	<meta name="msapplication-config" content="$sbRoot/css/browserconfig.xml">
-	<meta name="theme-color" content="#echo '#%s' % ('333', '15528F')['dark' == $sg_str('THEME_NAME', 'dark')]#">
+	<meta name="theme-color" content="#echo '#%s' % {'dark': '15528F', 'dark-noglare': '152F46'}.get($sg_str('THEME_NAME', 'dark'), '333')#">
 
 	## fonts of the first view load with the style sheets, so text and icons are drawn at their size and do not move
 	<link rel="preload" href="$sbRoot/css/fonts/OpenSans-Regular-webfont.woff" as="font" type="font/woff" crossorigin>
@@ -55,7 +55,10 @@
 	<link rel="stylesheet" href="$sbRoot/css/lib/pnotify.custom.min.css?v=$sbPID">
 	<link rel="stylesheet" href="$sbRoot/css/lib/token-input.min.css?v=$sbPID">
 	<link rel="stylesheet" href="$sbRoot/css/style.css?v=$sbPID">
-	<link rel="stylesheet" href="$sbRoot/css/${sg_str('THEME_NAME', 'dark')}.css?v=$sbPID">
+	<link rel="stylesheet" href="$sbRoot/css/#echo ('light', 'dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]#.css?v=$sbPID">
+#if 'dark-noglare' == $sg_str('THEME_NAME', 'dark')
+	<link rel="stylesheet" id="noglare-css" href="$sbRoot/css/noglare.css?v=$sbPID">
+#end if
 #if $getVar('inc_top_glide', None)
 ##	Required Core Stylesheet
 	<link rel="stylesheet" href="$sbRoot/css/lib/glide.core.min.css">
@@ -92,7 +95,7 @@
 #end if
 	<script charset="utf-8">
 	<!--
-		var sbRoot = '$sbRoot', anonURL = '$sg_str('ANON_REDIRECT')', themeSpinner = '#echo ('', '-dark')['dark' == $sg_str('THEME_NAME', 'dark')]#',
+		var sbRoot = '$sbRoot', anonURL = '$sg_str('ANON_REDIRECT')', themeSpinner = '#echo ('', '-dark')[($sg_str('THEME_NAME', 'dark') or '').startswith('dark')]#',
 			top_image_html = '<img src="$sbRoot/images/top.gif" width="31" height="11" alt="Jump to top">';
 		\$.SickGear = {Root: '${sbRoot}', PID: '${sbPID}', anonURL: '$sg_str('ANON_REDIRECT')'};
 	//-->
@@ -306,7 +309,11 @@
 					<li id="NAVconfig" class="dropdown$current_menu_config">
 						<a href="$sbRoot/config/general/" class="dropdown-toggle" data-toggle="dropdown" $hover_dropdown tabindex="$tab#set $tab += 1#"><img src="$sbRoot/images/menu/system18.png" class="navbaricon hidden-xs"><b class="caret hidden-xs"></b><span class="visible-xs">Config <b class="caret"></b></span></a>
 						<ul class="dropdown-menu">
-        					<li><a href="#" id="theme" tabindex="$tab#set $tab += 1#"><i class="glyphicon glyphicon-lamp"></i>Light or Dark</a></li>
+## the theme item, the theme in use on a small grey line, in its tip too, over the theme a click moves to
+#set $theme_names = {'light': 'Light', 'dark': 'Dark', 'dark-noglare': 'NoGlare'}
+#set $cur_theme = $sg_str('THEME_NAME', 'dark') or 'dark'
+#set $next_theme = {'light': 'dark', 'dark': 'dark-noglare'}.get($cur_theme, 'light')
+							<li><a href="#" id="theme" title="Theme in use: $theme_names.get($cur_theme, 'Dark')" tabindex="$tab#set $tab += 1#"><i class="glyphicon glyphicon-lamp"></i><span class="theme-item-text"><small>Theme: <span class="theme-name-now">$theme_names.get($cur_theme, 'Dark')</span></small><br>Switch to <span class="theme-name-next">$theme_names[$next_theme]</span></span></a></li>
 							<li class="divider"></li>
 							<li class="menu-item-noicon opacity60">Settings...</li>
 							<li><a href="$sbRoot/config/general/" tabindex="$tab#set $tab += 1#"><i class="sgicon-config"></i>General</a></li>

@@ -1,0 +1,354 @@
+/* =======================================================================
+NoGlare: the dark theme with no bright background behind text, loaded after dark.css.
+Status rows and counts are dark fills of their colour with light text tinted to it, badges are a dark fill of their
+colour with a border and light text, large blue surfaces are a darker blue. Colours of the status rows are from a
+mock-up of the show page that was found easy to read.
+========================================================================== */
+
+:root{
+	--ng-text:#ddd;
+	--ng-unaired:#211b0f;
+	--ng-unaired-text:#d7ceb0;
+	--ng-good:#1a3524;
+	--ng-good-text:#b9d9bf;
+	--ng-snatched:#40163b;
+	--ng-snatched-text:#ecc2e8;
+	--ng-wanted:#4a0c0e;
+	--ng-wanted-text:#f3c4c4;
+	--ng-qual:#3d2f08;
+	--ng-qual-text:#ecd9a0;
+	--ng-skipped:#173242;
+	--ng-skipped-text:#bcdcec;
+	--ng-archived:#1f2e26;
+	--ng-archived-text:#bcd2c2;
+	--ng-unknown:#262626;
+	--ng-blue:#152f46;
+	--ng-blue-dark:#0e283f;
+	--ng-badge-base:#15171a;
+	--link:#00bfff;
+	--link-hover:#add8e6;
+	--link-page:#00bfff;
+	--link-page-hover:#add8e6;
+	--btn-inverse-top:#173a5a;
+	--btn-inverse-bottom:#0e283f;
+	--btn-inverse-active:#2672b6
+}
+
+/* the title of an add show or browse tip in the link colour */
+.qtip-bootstrap .add-shows-title,
+.qtip-bootstrap .browse-title{
+	color:var(--link)
+}
+
+/* episode status rows and status cells, on the show page, the episode view and the manage pages, plain and over
+   the fanart of a show page */
+.unaired,
+#display-show .tablesorter tr.unaired,
+#display-show.back-art.pro.ii .tablesorter tr.unaired{
+	background-color:var(--ng-unaired);
+	color:var(--ng-unaired-text)
+}
+
+.unknown{
+	background-color:var(--ng-unknown);
+	color:var(--ng-text)
+}
+
+.good,
+.back-art.pro.ii .good,
+#display-show .tablesorter tr.good,
+#display-show.back-art.pro.ii .tablesorter tr.good{
+	background-color:var(--ng-good);
+	color:var(--ng-good-text)
+}
+
+.snatched,
+.back-art.pro.ii .snatched,
+#display-show .tablesorter tr.snatched,
+#display-show.back-art.pro.ii .tablesorter tr.snatched{
+	background-color:var(--ng-snatched);
+	color:var(--ng-snatched-text)
+}
+
+.wanted,
+.back-art.pro.ii .wanted,
+#display-show .tablesorter tr.wanted,
+#display-show.back-art.pro.ii .tablesorter tr.wanted{
+	background-color:var(--ng-wanted);
+	color:var(--ng-wanted-text)
+}
+
+.qual,
+.back-art.pro.ii .qual,
+#display-show .tablesorter tr.qual,
+#display-show.back-art.pro.ii .tablesorter tr.qual{
+	background-color:var(--ng-qual);
+	color:var(--ng-qual-text)
+}
+
+.skipped,
+.back-art.pro.ii .skipped,
+#display-show .tablesorter tr.skipped,
+#display-show.back-art.pro.ii .tablesorter tr.skipped{
+	background-color:var(--ng-skipped);
+	color:var(--ng-skipped-text)
+}
+
+.archived,
+#display-show .tablesorter tr.archived,
+#display-show.back-art.pro.ii .tablesorter tr.archived{
+	background-color:var(--ng-archived);
+	color:var(--ng-archived-text)
+}
+
+/* the text and links of a status row take the tint of the row */
+#display-show .tablesorter tr.unaired td, #display-show .tablesorter tr.unaired a{color:var(--ng-unaired-text)}
+#display-show .tablesorter tr.good td, #display-show .tablesorter tr.good a{color:var(--ng-good-text)}
+#display-show .tablesorter tr.snatched td, #display-show .tablesorter tr.snatched a{color:var(--ng-snatched-text)}
+#display-show .tablesorter tr.wanted td, #display-show .tablesorter tr.wanted a{color:var(--ng-wanted-text)}
+#display-show .tablesorter tr.qual td, #display-show .tablesorter tr.qual a{color:var(--ng-qual-text)}
+#display-show .tablesorter tr.skipped td, #display-show .tablesorter tr.skipped a{color:var(--ng-skipped-text)}
+#display-show .tablesorter tr.archived td, #display-show .tablesorter tr.archived a{color:var(--ng-archived-text)}
+
+/* the status counts of a season and the status filter boxes, a dark fill of the status with a border and light text */
+span.good, .status-badge.good{
+	background-color:var(--ng-good);
+	border:1px solid #3f7a52;
+	color:var(--ng-good-text)
+}
+
+span.snatched, .status-badge.snatched{
+	background-color:var(--ng-snatched);
+	border:1px solid #8a3f80;
+	color:var(--ng-snatched-text)
+}
+
+span.wanted, .status-badge.wanted{
+	background-color:var(--ng-wanted);
+	border:1px solid #a8383b;
+	color:var(--ng-wanted-text)
+}
+
+span.qual, .status-badge.qual{
+	background-color:var(--ng-qual);
+	border:1px solid #9a7a1f;
+	color:var(--ng-qual-text)
+}
+
+span.skipped, .status-badge.skipped{
+	background-color:var(--ng-skipped);
+	border:1px solid #3f7fa0;
+	color:var(--ng-skipped-text)
+}
+
+/* the yellow More Gear button, a dark amber fill with an amber border and light amber text, not black text on a bright
+   yellow fill */
+.btn.btn-yellow{
+	background-color:#4a3a06;
+	background-image:none;
+	border:1px solid #c9971a;
+	color:#f5dc8a;
+	text-shadow:none
+}
+
+.btn.btn-yellow:hover,
+.btn.btn-yellow:active,
+.btn.btn-yellow:focus,
+.btn.btn-yellow.active{
+	background-color:#5e4a08;
+	background-image:none;
+	border-color:#e0ad2a;
+	color:#fbe7a6;
+	text-shadow:none
+}
+
+/* a blue button with white text, 4.5:1 or more at the top of the fill, the text colour was 3.4:1 on Update Show and
+   the Delete buttons of a provider */
+.btn.btn-primary,
+.btn.btn-primary:hover,
+.btn.btn-danger,
+.btn.btn-danger:hover,
+.btn.btn-success,
+.btn.btn-success:hover,
+.btn.btn-warning,
+.btn.btn-warning:hover,
+.btn.btn-info,
+.btn.btn-info:hover{
+	color:#fff
+}
+
+/* the green and gold hover of the Restart and Logout menu items and buttons, and the gold header of the Logout dialog,
+   a darker fill, the text was 3.3:1 */
+.dropdown-menu > li > a.hover-green:hover, .dropdown-menu > li > a.hover-green:focus,
+.btn.hover-green:hover,
+.modal-footer .green:hover{
+	background-color:#335f2c
+}
+
+.modal-dialog.gold .modal-header,
+.dropdown-menu > li > a.hover-gold:hover, .dropdown-menu > li > a.hover-gold:focus{
+	background-color:#7a4a05
+}
+
+/* a chosen quality button has white text on the blue */
+.btn-inverse.active{
+	color:#fff
+}
+
+/* the arrows of the cast list, dark as the pin button below them, not white squares */
+.glide-arrows button{
+	background-color:rgba(0, 0, 0, 0.5)
+}
+
+.glide-arrows button svg{
+	fill:#ddd
+}
+
+/* quality and video codec badges: the colour of each, --q, gives a dark fill, a border and a light text, no bright fill
+   behind the text */
+span.quality, .videocodec-btn{
+	--q:#666;
+	background-color:color-mix(in srgb, var(--q) 30%, var(--ng-badge-base));
+	background-image:none;
+	border:1px solid color-mix(in srgb, var(--q) 70%, #fff);
+	color:color-mix(in srgb, var(--q) 25%, #fff);
+	text-shadow:none;
+	-webkit-box-shadow:none;
+	box-shadow:none
+}
+
+span.Custom{--q:#8e3fc8}
+span.HD, span.HD1080p{--q:#3d8fd9}
+span.HD720p{--q:#6aa51a}
+span.UHD2160p{--q:#e04a48}
+span.RawHD{--q:#d27a10}
+span.SD{--q:#4d8f10}
+span.Any{--q:#888}
+span.Unknown{--q:#aaa; color:color-mix(in srgb, var(--q) 25%, #fff)}
+span.Proper{--q:#5fa310}
+
+.vc-unknown{--q:#aaa}
+.vc-264{--q:#5a82d8}
+.vc-265{--q:#4a9a4a}
+.vc-xvid{--q:#c04848}
+.vc-mpeg1{--q:#999}
+.vc-mpeg2{--q:#888}
+.vc-vp9{--q:#3cb0b0}
+.vc-vc1{--q:#d8702c}
+.vc-av1{--q:#76b276}
+.vc-av2{--q:#5363c0}
+.vc-vvc{--q:#6266d8}
+
+/* large blue surfaces with text, the top bar and the column headers of tables, a darker blue, over the fanart of a
+   show page too, the selectors of dark.css that set them */
+.navbar-default{
+	background-color:var(--ng-blue);
+	background-image:none
+}
+
+.tablesorter th,
+.sickbeardTable thead .seasoncols td{
+	background-color:var(--ng-blue-dark)
+}
+
+.back-art.pro.ii .navbar-default,
+.back-art.pro.ii .day-of-week .day-number,
+.translucent.pro.ii .day-of-week .day-number,
+.back-art.pro.ii .sickbeardTable .seasoncols th,
+.translucent.pro.ii .sickbeardTable .seasoncols th,
+#display-show.back-art.pro.ii .sickbeardTable .seasoncols th,
+#display-show.translucent.pro.ii .sickbeardTable .seasoncols th,
+.back-art.pro.ii .sickbeardTable thead .seasoncols td,
+.translucent.pro.ii .sickbeardTable thead .seasoncols td{
+	background-color:rgba(14, 40, 63, 0.85)
+}
+
+/* the count in a status filter box takes the light text of its box, it was black on the bright box */
+span.good b, span.snatched b, span.wanted b, span.qual b, span.skipped b, span.unaired b{
+	color:inherit
+}
+
+/* tags and labels, e.g. genres, the show status, the folder of a show, a dark blue with light text */
+.label{
+	background-color:#1f3a55;
+	color:#dde8f2
+}
+
+/* notices, e.g. an update is available, a dark fill of their colour with light text */
+.alert-success{
+	background-color:#1a3524;
+	background-image:none;
+	border-color:#3f7a52;
+	color:#cfe8d3
+}
+
+.alert-success a{
+	color:#a6dbb2
+}
+
+.alert-info{
+	background-color:#173242;
+	background-image:none;
+	border-color:#3f7fa0;
+	color:#cde4f0
+}
+
+.alert-warning{
+	background-color:#3d2f08;
+	background-image:none;
+	border-color:#9a7a1f;
+	color:#f0e0b0
+}
+
+.alert-danger{
+	background-color:#4a0c0e;
+	background-image:none;
+	border-color:#a8383b;
+	color:#f6d0d0
+}
+
+/* coloured tags, e.g. the state of a scheduled task, a dark fill of their colour with light text */
+.yellow-bg{background-color:#3d3a10; color:#ece5a8}
+.green-bg{background-color:#1a3524; color:#cfe8d3}
+.red-bg{background-color:#4a0c0e; color:#f6d0d0}
+.blue-bg{background-color:#173a5c; color:#d4e6f6}
+
+/* red and grey text read 4.5:1 or more on the dark page */
+.red-text{color:#ff7b70}
+.grey-text{color:#b0b0b0}
+
+/* the ended tag in the show picker of a show page, more specific than the style of the page */
+html body .select2-container .ended .label,
+html body .select2-results .ended .label{
+	background-color:#3a3a3a
+}
+
+/* the day headings of the daily schedule, a darker blue, so the date of today reads 4.5:1 or more */
+.day-of-week .day-number{
+	background-color:var(--ng-blue)
+}
+
+/* the short code tips under a field, as apikey, light text on a dark fill, not dark red on white */
+code{
+	background-color:#2a2a2a;
+	border:1px solid #444;
+	color:#f0b3c8
+}
+
+/* the NFO and TBN marks of an episode row, light grey images with dark text, drawn here instead: a file there is a
+   dark box with white text, a missing file a dashed outline with grey text, both readable and plainly different */
+td.meta img[src$="/nfo.gif"]{
+	content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='23' height='11'%3E%3Crect x='0.5' y='0.5' width='22' height='10' rx='2' fill='%233a3a3a' stroke='%236a6a6a'/%3E%3Ctext x='11.5' y='8.5' font-family='Verdana,Arial,sans-serif' font-size='8' font-weight='bold' text-anchor='middle' fill='%23fff'%3ENFO%3C/text%3E%3C/svg%3E")
+}
+
+td.meta img[src$="/nfo-no.gif"]{
+	content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='23' height='11'%3E%3Crect x='0.5' y='0.5' width='22' height='10' rx='2' fill='none' stroke='%238a8a8a' stroke-dasharray='2 1.5'/%3E%3Ctext x='11.5' y='8.5' font-family='Verdana,Arial,sans-serif' font-size='8' font-weight='bold' text-anchor='middle' fill='%23b0b0b0'%3ENFO%3C/text%3E%3C/svg%3E")
+}
+
+td.meta img[src$="/tbn.gif"]{
+	content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='23' height='11'%3E%3Crect x='0.5' y='0.5' width='22' height='10' rx='2' fill='%233a3a3a' stroke='%236a6a6a'/%3E%3Ctext x='11.5' y='8.5' font-family='Verdana,Arial,sans-serif' font-size='8' font-weight='bold' text-anchor='middle' fill='%23fff'%3ETBN%3C/text%3E%3C/svg%3E")
+}
+
+td.meta img[src$="/tbn-no.gif"]{
+	content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='23' height='11'%3E%3Crect x='0.5' y='0.5' width='22' height='10' rx='2' fill='none' stroke='%238a8a8a' stroke-dasharray='2 1.5'/%3E%3Ctext x='11.5' y='8.5' font-family='Verdana,Arial,sans-serif' font-size='8' font-weight='bold' text-anchor='middle' fill='%23b0b0b0'%3ETBN%3C/text%3E%3C/svg%3E")
+}

@@ -12,6 +12,7 @@
 * Change an update after a force push of the same code to reset the branch, not stop as ahead of the remote
 * Fix the edit show info language menu opening a second, plain browser list over its own
 * Change dark theme links and quality buttons back to pre-3.37.0 colours, and make menus and form controls dark
+* Add theme NoGlare: the dark theme with dark status colours and badges, and no bright fill behind text
 
 
 ### 3.37.1 (2026-11-27 00:05:00 UTC)

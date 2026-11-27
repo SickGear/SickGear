@@ -4566,6 +4566,11 @@ ul.token-input-list li.token-input-input-token input{
 	border-radius:3px
 }
 
+/* the theme menu item, two lines beside its icon */
+.dropdown-menu .theme-item-text{display:inline-block; vertical-align:middle; line-height:1.2}
+/* the theme in use, the small line, the colour of the item text, a little lighter, so it follows the item on hover */
+.dropdown-menu .theme-item-text small{opacity:0.75}
+
 .dropdown-menu li.menu-item-noicon{
 	padding:0 0 0 20px
 }
