@@ -129,6 +129,14 @@ class DBBasicTests(test.SickbeardTestDBCase):
             self.assertEqual(cur_lines, [cur_c.args[0] for cur_c in debug.call_args_list
                                          if cur_c.args[0].startswith('Transaction')])
 
+    def test_upgrade_check_lines(self):
+        # a database with no upgrade to do logs one line for its checks, not two lines per upgrade step
+        with test.db.DBConnection('cache.db') as sg_db, mock.patch.object(db.logger, 'debug') as debug,                 mock.patch.object(db.logger, 'log'):
+            db.upgrade_database(sg_db, cache_db.InitialSchema)
+        lines = [cur_c.args[0] for cur_c in debug.call_args_list]
+        self.assertEqual(1, len(lines), lines)
+        self.assertRegex(lines[0], r'^cache\.db structure is up-to-date, \d+ checks$')
+
 
 if '__main__' == __name__:
     print('==================')
