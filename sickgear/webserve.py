@@ -1853,7 +1853,17 @@ class Home(MainHandler):
         t.submenu = self.home_menu()
         t.layout = sickgear.HOME_LAYOUT
 
-        # Get all show snatched / downloaded / next air date stats
+        t.show_stat = self.show_stats()
+
+        return t.respond()
+
+    @staticmethod
+    def show_stats():
+        # type: (...) -> Dict[AnyStr, Dict]
+        """
+        :return: snatched, downloaded and total episodes, next and last air date, of each show, keyed by tvid_prodid,
+         the figures of the Downloads column of the show list and of the bulk change page
+        """
         today = dt_date.today().toordinal()
         status_quality = ','.join([str(x) for x in Quality.SNATCHED_ANY])
         status_download = ','.join([str(x) for x in Quality.DOWNLOADED + Quality.ARCHIVED])
@@ -1887,12 +1897,7 @@ class Home(MainHandler):
                    status_quality, status_download, today, UNAIRED, WANTED,
                    today))
 
-        t.show_stat = {}
-
-        for cur_result in sql_result:
-            t.show_stat[TVidProdid({cur_result['tvid']: cur_result['prodid']})()] = cur_result
-
-        return t.respond()
+        return {TVidProdid({_r['tvid']: _r['prodid']})(): _r for _r in sql_result}
 
     def test_sabnzbd(self, host=None, username=None, password=None, apikey=None):
         self.set_header('Cache-Control', 'max-age=0,no-cache,no-store')
@@ -7418,6 +7423,9 @@ class Manage(MainHandler):
                                                             int(_r['size'] / _r['files']))
                        for _r in sql_result}
             t.sizes_from = 'database'
+        # downloaded of total episodes, the Downloads column of the show list
+        t.show_stat = Home.show_stats()
+
         # in the order the table script sorts the names, shows with no folder last, so the rows do not move when it starts
         def sort_name(show_obj):
             name = getattr(show_obj, 'unique_name', show_obj.name)

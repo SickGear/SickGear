@@ -1,6 +1,5 @@
 #import sickgear
 #import re
-#from sickgear.common import qualityPresets, qualityPresetStrings
 #from sickgear.helpers import human
 ##
 #set global $title = 'Bulk Change'
@@ -29,14 +28,6 @@
 	type: 'text'
 });
 
-\$.tablesorter.addParser({
-	id: 'quality',
-	is: function(s) { return !1; },
-	format: function(s) {
-		return s.replace('hd1080p', 5).replace('hd720p', 4).replace('hd', 3).replace('sd', 2).replace('any', 1).replace('best', 0).replace('custom', 7);
-	},
-	type: 'numeric'
-});
 ##
 #set $enable_tvinfo = True
 ## an empty column starts and one ends the block of action columns, the last holds the end of the Remove label, so the
@@ -45,8 +36,8 @@
     ("'digit'", '!1', 'action'),
     ("'showNames'", '!0', False),
     ("'size'", '!1', False),
+    ("'digit'", '!1', False),
     ((None, "'tvinfo'")[$enable_tvinfo], '!1', False),
-    ("'quality'", '!0', False),
     ((None, "'sports'")[$has_any_sports], '!0', True),
     ("'scene'", '!0', True),
     ((None, "'anime'")[$has_any_anime], '!0', True),
@@ -99,10 +90,11 @@
 			// no size, i.e. no media files, a failed folder read or no folder, is empty, the sort keeps it at the bottom
 			2: function(node) {var size = parseInt($(node).closest('[data-tvid_prodid]').attr('data-size'), 10); return 0 < size && size < $.SickGear.high ? size : ''},
 #end raw
+			## by the share of episodes downloaded, then by the total of episodes, a show with no data is empty, the sort keeps it at the bottom
+			3: function(node) {var n = \$(node), got = +n.attr('data-downloaded'), all = +n.attr('data-total'); return all ? Math.round(got / all * 1e6) * 1e5 + all : ''},
 #if $enable_tvinfo
-			3: function(node) {return \$(node).find('i').attr('data-tvid')},
+			4: function(node) {return \$(node).find('i').attr('data-tvid')},
 #end if
-			#echo ('4','3')[not $enable_tvinfo]#: function(node) {return \$(node).find('span').text().toLowerCase()},
 #echo ',\n'.join($text_extract)#
 		}
 	});
@@ -142,9 +134,8 @@
 #bulk-change-table:not(.hasFilters) thead th.sort-size{padding:4px 4px 17px}
 #bulk-change-table:not(.hasFilters) thead th.col-checkbox{padding:4px 4px 17px}
 #bulk-change-table:not(.hasFilters) thead th.sort-action{padding:4px 11px 17px}
-## the Status and Quality widths come from their filter boxes and cells, kept when a filter leaves few or no rows
+## the Status width comes from its filter box and cells, kept when a filter leaves few or no rows
 #bulk-change-table thead th.sort-icon-status{min-width:96px}
-#bulk-change-table thead th.sort-icon-quality{width:62px}
 #bulk-change-table thead th.filter-select{min-width:55px}
 ## the labels, tick all boxes and size menu stand on a common line over the sort arrows, Show Name on that line too
 #bulk-change-table thead th, #bulk-change-table-sticky thead th{vertical-align:bottom; padding-bottom:17px}
@@ -155,7 +146,7 @@
 .tablesorter.rotate th.tablesorter-header.sort-icon-bottom{background-position:center bottom 7px}
 .tablesorter.rotate th.tablesorter-header.sort-icon-status{background-position:center bottom 7px}
 .tablesorter.rotate th.tablesorter-header.sort-size{background-position:center bottom 5px}
-.tablesorter.rotate th.tablesorter-header.sort-icon-quality{background-position:center bottom 7px}
+.tablesorter.rotate th.tablesorter-header.sort-icon-downloads{background-position:center bottom 7px}
 .tablesorter.rotate th.tablesorter-header.sort-action{background-position:center bottom 5px; padding:4px 11px; text-align:left}
 ## a tick all box stands upright under its slanted label, over the boxes of its column, as the Edit box does
 .tablesorter.rotate th.sort-action input.bulk-check{display:block; margin:0 0 0 2px}
@@ -212,16 +203,26 @@ $xsrf_form_html
 
 <a href="#" id="skip-to-filters" class="sr-only sr-only-focusable">Skip to the filters, or press /</a>
 <a href="#" id="skip-to-actions" class="sr-only sr-only-focusable">Skip to Submit, past the rows of shows</a>
+## the Downloads column as wide as its longest figure from the start, 8 px a digit, 13 px for " / ", 9 px of cell padding and
+## 50 px for the share, as (100%),
+## else it widens as the rows or the page font arrive and the columns after it move
+#set $dl_digits = 1
+#for $cur_dl_stat in $show_stat.values()
+    #if $cur_dl_stat['ep_total']
+        #set $cur_dl_digits = len('%s%s' % ($cur_dl_stat['ep_downloaded'] or 0, $cur_dl_stat['ep_total']))
+        #set $dl_digits = ($dl_digits, $cur_dl_digits)[$cur_dl_digits > $dl_digits]
+    #end if
+#end for
 <table id="bulk-change-table" class="sickbeardTable tablesorter rotate hover-highlight" cellspacing="1" border="0" cellpadding="0" aria-label="Shows">
 	<thead>
 		<tr>
 			<th class="col-checkbox"><div>Edit</div><input type="checkbox" class="bulk-check" id="edit-check" data-action="edit-check" title="Tick all for Edit" aria-label="Tick all for Edit"></th>
 			<th class="text-nowrap narrow sort-icon-left" style="text-align:left">Show Name</th>
 			<th class="sort-size narrow dir-none" title="#echo ('Total size: all media files of a show; average, largest and smallest file: one of its media files', 'Total size: all files in a show folder; average, largest and smallest file: one of its media files')['folder' == $sizes_from]#"><select class="size-type form-control form-control-inline input-sm" aria-label="Size measure" title="Choose the size to show and sort by"><option value="Size" title="All the media files of a show, or all the files in its folder after Read folder sizes">Total size</option><option value="AverageSize" title="The average size of one media file of a show">Average file</option><option value="Largest" title="The largest media file of a show">Largest file</option><option value="Smallest" title="The smallest media file of a show">Smallest file</option></select></th>
+			<th class="col-legend narrow sort-icon-downloads" style="width:#echo 8 * $dl_digits + 72#px" title="Downloaded of all aired episodes, as the show list Downloads"><div class="rotate-holder"><div class="rotate-body">Downloads</div></div></th>
 #if $enable_tvinfo
 			<th class="col-legend narrow sort-icon-bottom"><div class="rotate-holder"><div class="rotate-body">TV Info</div></div></th>
 #end if
-			<th class="col-legend narrow sort-icon-quality"><div class="rotate-holder"><div class="rotate-body">Quality</div></div></th>
 #if $has_any_sports
 			<th class="col-legend narrow sort-icon-bottom filter-select filter-exact"><div class="rotate-holder"><div class="rotate-body">Sports</div></div></th>
 #end if
@@ -299,14 +300,20 @@ $xsrf_form_html
     #set $display_name = (re.sub(r'^((?:A(?!\s+to)n?)|The)\s(\w)', r'<span class="article">\1</span> \2', getattr($cur_show_obj, 'unique_name', $cur_show_obj.name)), getattr($cur_show_obj, 'unique_name', $cur_show_obj.name))[$sickgear.SORT_ARTICLE]
 			<td class="tvShow">#if not $show_loc#<i class="img-warning-16" role="img" title="Location no longer exists" aria-label="Location no longer exists"></i>#end if#<a href="$sbRoot/home/view-show?tvid_prodid=${cur_show_obj.tvid_prodid}">$display_name</a></td>
 			<td>#if 0 < $show_size < $max#<span class="text-nowrap ui-size">$human($show_size)</span>#elif 0 == $show_size#<span class="text-nowrap ui-size grey-text" title="no media files">---</span>#end if#</td>
+    ## downloaded of total episodes, the figures of the Downloads column of the show list, the counts in a tip as the Size column has
+    #set $cur_stat = $show_stat.get($cur_show_obj.tvid_prodid)
+    #set $cur_downloaded = ($cur_stat and $cur_stat['ep_downloaded']) or 0
+    #set $cur_total = ($cur_stat and $cur_stat['ep_total']) or 0
+    #if $cur_total
+    ## the share the column sorts by, in whole percent rounded down, so 100% is only a complete show and under 1% reads <1%
+    #set $cur_pct = $cur_downloaded * 100 // $cur_total
+			<td class="text-nowrap ui-downloads" data-downloaded="$cur_downloaded" data-snatched="#echo $cur_stat['ep_snatched'] or 0#" data-total="$cur_total">$cur_downloaded / $cur_total <span class="grey-text">(#echo ('&lt;1', $cur_pct)[bool($cur_pct or not $cur_downloaded)]#%)</span></td>
+    #else
+			<td class="grey-text ui-downloads" data-downloaded="0" data-snatched="0" data-total="0">?</td>
+    #end if
     #if $enable_tvinfo
 			#set $tvinfo_config = $sickgear.TVInfoAPI($cur_show_obj.tvid).config
 			<td><i class="icon16 $tvinfo_config['slug']" data-tvid="$cur_show_obj.tvid" role="img" aria-label="$tvinfo_config['name']"></i></td>
-    #end if
-    #if $cur_show_obj.quality in $qualityPresets
-			<td><span class="quality $qualityPresetStrings[$cur_show_obj.quality]">$qualityPresetStrings[$cur_show_obj.quality]</span></td>
-    #else
-			<td><span class="quality Custom">Custom</span></td>
     #end if
     #if $has_any_sports
 			<td>#if 1 == int($cur_show_obj.is_sports) then $yes else $no#</td>
@@ -338,9 +345,9 @@ $xsrf_form_html
 	</tbody>
 </table>
 <div id="tfoot" tabindex="-1">
-	<span style="width:20%" class="pull-left"><input class="btn pull-left" type="button" value="Edit Selected" id="bulk-change-edit"></span>
+	<span style="width:20%" class="pull-left"><input class="btn pull-left" type="button" value="Edit" id="bulk-change-edit" disabled></span>
 	<span class="stats grey-text" aria-live="polite"></span> <button type="button" class="btn" id="footer-clear-filters" hidden>Clear filters</button> <span id="hidden-ticks" class="grey-text" hidden></span>
-	<span style="width:20%" class="pull-right"><input class="btn pull-right" type="button" value="Submit" id="bulk-change-submit"></span>
+	<span style="width:20%" class="pull-right"><input class="btn pull-right" type="button" value="Submit" id="bulk-change-submit" disabled></span>
 </div>
 </form>
 
