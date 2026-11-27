@@ -441,9 +441,11 @@ def upgrade_database(connection, schema):
     logger.log('Checking database structure...', logger.MESSAGE)
     connection.is_upgrading = False
     connection.new_db = 0 == connection.check_db_version()
-    _process_upgrade(connection, schema)
+    checks = _process_upgrade(connection, schema)
     if connection.is_upgrading:
         connection.upgrade_log('Finished')
+    else:
+        logger.debug(f'{os.path.basename(connection.filename)} structure is up-to-date, {checks} checks')
 
 
 def _pretty_name(class_name):
@@ -460,8 +462,11 @@ def _restore_database(filename, version):
 
 
 def _process_upgrade(connection, upgrade_class):
+    # type: (...) -> int
+    """
+    :return: number of upgrade steps checked, a step is logged only when it runs
+    """
     instance = upgrade_class(connection)
-    logger.debug(f'Checking "{_pretty_name(upgrade_class.__name__)}" database upgrade')
     if not instance.test():
         connection.is_upgrading = True
         connection.upgrade_log(f'{getattr(upgrade_class, "pretty_name", None) or _pretty_name(upgrade_class.__name__)}')
@@ -486,11 +491,8 @@ def _process_upgrade(connection, upgrade_class):
                 logger.log_error_and_exit('Database upgrade failed, can\'t determine old db version, not restoring.')
 
         logger.debug(f'{upgrade_class.__name__} upgrade completed')
-    else:
-        logger.debug(f'{upgrade_class.__name__} upgrade not required')
 
-    for upgradeSubClass in upgrade_class.__subclasses__():
-        _process_upgrade(connection, upgradeSubClass)
+    return 1 + sum(_process_upgrade(connection, cur_class) for cur_class in upgrade_class.__subclasses__())
 
 
 # Base migration class. All future DB changes should be subclassed from this class
